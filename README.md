@@ -2,7 +2,7 @@
 ### Интерактивная веб-платформа для изучения карате, прикладного анализа техник (бункай) и 3D-визуализации движений
 
 <p align="center">
-  <img src="client/src/assets/karate_master_realistic.jpg" alt="Bunkai Explorer Hero Banner" width="100%" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="docs/screenshots/01_home_page.png" alt="Главная страница Bunkai Explorer" width="100%" style="border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);" />
 </p>
 
 <p align="center">
@@ -12,7 +12,6 @@
   <img src="https://img.shields.io/badge/Express-4.19-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
   <img src="https://img.shields.io/badge/Microsoft%20SQL%20Server-2022-CC292B?style=for-the-badge&logo=microsoftsqlserver&logoColor=white" alt="MSSQL" />
   <img src="https://img.shields.io/badge/Socket.IO-4.7-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO" />
-  <img src="https://img.shields.io/badge/Docker-Supported-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
 </p>
 
 ---
@@ -25,7 +24,7 @@
 
 ---
 
-## ✨ Ключевые возможности
+## 🖥️ Интерфейс приложения
 
 ### 🥋 3D Motion Lab & Виртуальное Додзё
 * **Процедурное 3D Додзё** — традиционный японский зал с татами, деревянными балками, сёдзи и атмосферным освещением на Three.js / React Three Fiber.
@@ -36,49 +35,70 @@
   * *Блоки (Уке)*: Агэ-уке, Гэдан-барай, Сото-уке, Учи-уке, Шуто-уке.
   * *Удары ногами (Гери)*: Маэ-гери, Маваши-гери, Йоко-гери, Уширо-гери.
 * **Интерактивное управление**: вращение камеры 360°, плавный зум, пауза/воспроизведение, контроль скорости (0.25x – 2.0x), пошаговая навигация.
-* **Bunkai Duel Scene** — интерактивная сцена парного взаимодействия (атакующий и защищающийся).
 
 <p align="center">
-  <img src="client/src/assets/karateka_3d_render.jpg" alt="3D Сенсей Рендер" width="31%" style="border-radius: 8px; margin: 1%;" />
-  <img src="client/src/assets/karateka_master_3d.jpg" alt="3D Мастер Каратэ" width="31%" style="border-radius: 8px; margin: 1%;" />
-  <img src="client/src/assets/karateka_hero.jpg" alt="3D Боевая Стойка" width="31%" style="border-radius: 8px; margin: 1%;" />
+  <img src="docs/screenshots/04_motion_lab_3d.png" alt="3D Motion Lab и виртуальный Сенсей" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
 </p>
 
-### 📚 Интерактивный каталог 26 Ката Шотокан и Бункай
+---
+
+### 📚 Интерактивный каталог 26 Ката Шотокан
 * Полный иллюстрированный реестр всех 26 официальных ката Шотокан (от *Heian Shodan* до *Unsu* и *Gojushiho Dai*).
-* Пошаговый разбор движений с таймингами, ключевыми акцентами и видео-вставками (YouTube / локальное видео).
-* Пользовательские бункаи: публикация разборов применения техник с поддержкой модерации сообщества.
+* Пошаговый разбор движений с таймингами, ключевыми акцентами и видео-вставками.
 * Гибкий поиск, фильтрация по сложности (ученические, мастерские), тегам и авторам.
 
 <p align="center">
-  <img src="client/public/images/kata/kata_heian_shodan.jpg" alt="Ката Heian Shodan" width="23%" style="border-radius: 8px; margin: 1%;" />
-  <img src="client/public/images/kata/step-gedan-barai.jpg" alt="Блок Gedan Barai" width="23%" style="border-radius: 8px; margin: 1%;" />
-  <img src="client/public/images/kata/step-oi-tsuki.jpg" alt="Удар Oi Tsuki" width="23%" style="border-radius: 8px; margin: 1%;" />
-  <img src="client/public/images/kata/step-shuto-uke.jpg" alt="Блок Shuto Uke" width="23%" style="border-radius: 8px; margin: 1%;" />
+  <img src="docs/screenshots/02_kata_catalog.png" alt="Каталог 26 Ката Шотокан" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
 </p>
 
-### 💬 Real-Time Сообщество и Чат (Socket.IO)
-* **Общий чат Додзё** для открытого общения всех практикующих.
+---
+
+### 🔍 Детальный разбор Ката и шагов техники
+* Подробные карточки каждого шага ката с указанием стойки, направления, типа блока или удара.
+* Интегрированный видеоплеер для синхронного изучения движений.
+
+<p align="center">
+  <img src="docs/screenshots/03_kata_detail.png" alt="Детальная страница ката с разбором шагов" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+</p>
+
+---
+
+### 📖 Каталог Бункаев (прикладных расшифровок)
+* Публикация и изучение практических боевых расшифровок элементов ката.
+* Система комментариев, обсуждений и модерации материалов сообщества.
+
+<p align="center">
+  <img src="docs/screenshots/06_bunkai_catalog.png" alt="Каталог Бункаев" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+</p>
+
+---
+
+### 💬 Real-Time Сообщество и Чат Додзё
+* **Общий чат Додзё** для открытого общения всех практикующих в реальном времени.
 * **Приватные диалоги (1-на-1)** между подтвержденными друзьями.
-* **Система друзей**: поиск пользователей, отправка, подтверждение, отклонение заявок, предотвращение дубликатов и самозаявок.
-* Надежная аутентификация WebSocket-хэндшейка по JWT, автоматическое переподключение и защита от спама.
+* **Система друзей**: поиск пользователей, отправка, подтверждение, отклонение заявок.
+* Надежная аутентификация WebSocket-соединения по JWT и автопереподключение на базе Socket.IO.
 
-### 🛡️ Безопасность и Архитектура Доступа (Guest-Gating)
+<p align="center">
+  <img src="docs/screenshots/05_chat_dojo.png" alt="Чат Додзё в реальном времени" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" />
+</p>
+
+---
+
+## 🛡️ Безопасность и Архитектура Доступа (Guest-Gating)
+
 * **Строгая трехролевая модель**: `guest`, `user`, `admin`.
-* **Guest-Gating**: неавторизованные гости не имеют доступа к контенту — автоматический редирект на регистрацию/вход. Сервер возвращает `401 Unauthorized` на любые защищенные маршруты.
+* **Guest-Gating**: неавторизованные посетители не имеют доступа к содержимому платформы — автоматический редирект на регистрацию/вход. Сервер возвращает `401 Unauthorized` на любые защищенные эндпоинты при отсутствии токена.
 * **JWT Access + httpOnly Refresh Cookie** с автоматической ротацией токенов.
-* Защита от эскалации привилегий: пользователи не могут повысить себя до роли `admin` через API.
+* Защита от эскалации привилегий: пользователи не могут повысить себе роль через клиентское API.
 
-### ⚙️ Архитектура базы данных Zero-SQL (MSSQL Stored Procedures)
+---
+
+## ⚙️ Архитектура базы данных Zero-SQL (MSSQL Stored Procedures)
+
 * **Сервер не генерирует сырой SQL**. Вся бизнес-логика (права, видимость по ролям, защита от накруток, каскады, модерация, аудит) полностью инкапсулирована в Microsoft SQL Server.
 * **~45 хранимых процедур, 3 пользовательские функции и триггеры автообновления**.
 * Единая точка вызова `execProc.js` транслирует ошибки процедур формата `ERR|<HTTP-код>|<сообщение>` в типизированные HTTP-ответы API.
-
-### 🛠️ Панель администратора
-* **Модерация контента**: очередь входящих ката и бункаев (`pending` → `approved` / `rejected`).
-* **Управление пользователями**: поиск, блокировка, смена ролей, удаление.
-* **Журнал действий (Activity Logs)**: полный аудит критических системных операций.
-* **Менеджер резервного копирования**: создание реальных бэкапов базы данных через `sqlcmd` с логированием статуса.
 
 ---
 
@@ -135,12 +155,11 @@ graph TD
 | **Frontend** | React 18, Vite 5, React Router 6 | Компонентная структура SPA и клиентский роутинг |
 | **3D Графика** | Three.js, `@react-three/fiber`, `@react-three/drei` | 3D-сцена Додзё, скелетная анимация сенсея, освещение |
 | **Стейт & Анимации** | Zustand, Framer Motion | Глобальное состояние авторизации и плавные UI-переходы |
-| **Стилизация** | Custom CSS (Japanese Dark Aesthetic, Gold Accents) | Адаптивный тематический интерфейс |
+| **Стилизация** | Custom CSS (Japanese Dark Aesthetic, Gold Accents) | Адаптивный темный тематический интерфейс |
 | **Backend** | Node.js 18+, Express 4, Helmet, Morgan | REST API сервер, CORS, безопасность HTTP-заголовков |
 | **Реалтайм** | Socket.IO 4.7 (Client & Server) | Двусторонний транспорт сообщений чатов |
 | **Аутентификация** | JWT (`jsonwebtoken`), `bcryptjs`, Cookie-Parser | Access/Refresh токены, безопасное хеширование |
 | **База данных** | Microsoft SQL Server (MSSQL), `tedious`, `sequelize` | Реляционная СУБД, выполнение хранимых процедур |
-| **Контейнеризация** | Docker, Docker Compose | Воспроизводимый запуск базы и сервисов в изоляции |
 
 ---
 
@@ -149,72 +168,44 @@ graph TD
 ### Требования
 * **Node.js** версии 18 или выше
 * **npm** версии 9+
-* **Docker & Docker Compose** (для запуска MSSQL в контейнере) ИЛИ локально установленный **Microsoft SQL Server**
+* **Microsoft SQL Server**
 
 ---
 
-### Вариант 1. Запуск базы данных в Docker (рекомендуется)
+### 1. Инициализация базы данных
 
-1. Запустите контейнер с Microsoft SQL Server:
-```bash
-docker compose up mssql -d
-```
+Примените файлы схемы, триггеров и процедур к вашему серверу MSSQL (через `sqlcmd` или SQL Server Management Studio):
 
-2. Инициализируйте схему базы данных и процедуры:
 ```bash
-# Применение схемы, триггеров и процедур
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -Q "CREATE DATABASE BunkaiExplorer"
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d BunkaiExplorer -i database/schema.sql
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d BunkaiExplorer -i database/triggers.sql
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d BunkaiExplorer -i database/procedures.sql
-```
-
-3. Сгенерируйте и примените сиды начальных данных:
-```bash
-cd server
-npm install
-npm run seed:sql
-sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd' -d BunkaiExplorer -i ../database/seed.sql
+sqlcmd -S localhost -U sa -P '<пароль>' -Q "CREATE DATABASE BunkaiExplorer"
+sqlcmd -S localhost -U sa -P '<пароль>' -d BunkaiExplorer -i database/schema.sql
+sqlcmd -S localhost -U sa -P '<пароль>' -d BunkaiExplorer -i database/triggers.sql
+sqlcmd -S localhost -U sa -P '<пароль>' -d BunkaiExplorer -i database/procedures.sql
 ```
 
 ---
 
-### Вариант 2. Запуск приложения целиком через Docker Compose
+### 2. Запуск Backend (`/server`)
 
-```bash
-docker compose up --build
-```
-
----
-
-### Локальная разработка (Backend & Frontend)
-
-#### Запуск Backend (`/server`):
 ```bash
 cd server
 npm install
 npm run dev
 ```
-Сервер будет доступен по адресу: `http://localhost:5000`
 
-#### Запуск Frontend (`/client`):
+Сервер API и сокетов будет запущен по адресу: `http://localhost:5000`
+
+---
+
+### 3. Запуск Frontend (`/client`)
+
 ```bash
 cd client
 npm install
 npm run dev
 ```
-Клиент откроется по адресу: `http://localhost:5173`
 
----
-
-## 🔑 Учетные записи по умолчанию (Seed)
-
-После применения `seed.sql` в системе доступны следующие тестовые аккаунты:
-
-| Логин | Пароль | Роль | Возможности |
-|---|---|---|---|
-| `admin` | `Admin#12345` | **admin** | Полный доступ: админ-панель, модерация ката/бункаев, управление пользователями, просмотр логов, бэкапы |
-| `demo_user` | `Demo#12345` | **user** | Стандартный доступ: просмотр ката, публикация бункаев, добавление в друзья, общий и личные чаты |
+Клиентское веб-приложение откроется по адресу: `http://localhost:5173`
 
 ---
 
@@ -233,9 +224,10 @@ Graduation_Project/
 │       ├── hooks/                        # Кастомные React-хуки (useChatSocket)
 │       ├── layouts/                      # Layouts и RouteGuards (Guest-Gating)
 │       ├── pages/                        # Страницы приложения
-│       │   ├── admin/                    # Панель администратора (пользователи, модерация, логи, бэкапы)
+│       │   ├── admin/                    # Панель администратора
 │       │   ├── MotionLabPage.jsx         # 3D-лаборатория стоек и ударов
 │       │   ├── KataDetailPage.jsx       # Страница ката с пошаговым разбором
+│       │   ├── BunkaiCatalog.jsx         # Каталог бункаев
 │       │   └── ChatPage.jsx              # Общий и личный чат (Socket.IO)
 │       ├── store/                        # Хранилище Zustand (authStore)
 │       └── three/                        # 3D-сцены: Dojo, KaratekaAvatar, BunkaiDuelScene
@@ -245,6 +237,7 @@ Graduation_Project/
 │   ├── procedures.sql                    # ~45 хранимых процедур (вся бизнес-логика)
 │   └── seed.template.sql                 # Шаблон начального наполнения
 ├── docs/                                 # Документация проекта
+│   ├── screenshots/                      # Реальные скриншоты интерфейса
 │   └── api.md                            # Спецификация REST API и кодов ошибок
 ├── server/                               # Бэкенд (Node.js + Express)
 │   ├── server.js                         # Точка входа HTTP и Socket.IO
@@ -256,16 +249,15 @@ Graduation_Project/
 │       ├── services/                     # Сервисы (authService, backupService, mediaService)
 │       └── sockets/                      # Обработчики событий Socket.IO (chatSocket.js)
 ├── uploads/                              # Локальное хранилище аватаров и медиа
-├── docker-compose.yml                    # Конфигурация Docker Compose
 └── README.md                             # Документация проекта
 ```
 
 ---
 
-## 🧪 Сценарии ручной верификации
+## 🧪 Сценарии проверки
 
-1. **Проверка Guest-Gating**: Откройте `http://localhost:5173/` в режиме инкогнито без авторизации — приложение немедленно выполнит редирект на `/register`. Попытка прямого вызова `curl http://localhost:5000/api/kata` вернет `401 Unauthorized`.
-2. **Регистрация и Вход**: Зарегистрируйте нового пользователя. Учетная запись автоматически получит роль `user`, запишет сессионный токен и откроет доступ к каталогу.
-3. **3D Motion Lab**: Перейдите в раздел *Motion Lab* — взаимодействуйте с 3D-моделью мастера в японском додзё, переключайте стойки (*Zenkutsu-dachi*, *Kiba-dachi*) и удары (*Gyaku-zuki*, *Mae-geri*), регулируйте скорость анимации.
-4. **Модерация контента**: Под пользователем `demo_user` отправьте новый разбор бункая к выбранному ката. Материал появится со статусом `pending`. Войдите под `admin` в раздел `/admin/moderation` и утвердите публикацию.
-5. **Real-Time Чат**: Откройте приложение в двух разных браузерах (под `admin` и `demo_user`), отправьте сообщение в чат Додзё — сообщение отобразится мгновенно без перезагрузки страницы.
+1. **Проверка Guest-Gating**: Откройте `http://localhost:5173/` без авторизации — приложение автоматически выполнит редирект на `/register`. Запрос к API без токена возвращает `401 Unauthorized`.
+2. **Регистрация и Вход**: Зарегистрируйте аккаунт на странице `/register`. Пользователь получает доступ к каталогам и личному кабинету.
+3. **3D Motion Lab**: В разделе *Motion Lab* доступно управление 3D-моделью мастера в японском додзё, переключение стоек (*Zenkutsu-dachi*, *Kiba-dachi*) и ударов (*Gyaku-zuki*, *Mae-geri*), а также регулировка скорости анимации.
+4. **Каталог Ката и Бункай**: Просмотр списка 26 ката Шотокан, переход на страницу с разбором шагов техники и видеоматериалами.
+5. **Real-Time Чат**: Откройте чат Додзё и отправьте сообщение — доставка участникам происходит мгновенно по WebSocket (Socket.IO).
