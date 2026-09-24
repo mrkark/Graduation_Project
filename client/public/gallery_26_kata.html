@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>26 ката Шотокан — Галерея превью</title>
+  <style>
+    :root {
+      --bg: #0b0c10;
+      --card-bg: #15181f;
+      --card-border: #232834;
+      --card-border-hover: #c5a059;
+      --text-main: #f0f2f5;
+      --text-muted: #8c93a4;
+      --gold: #c5a059;
+      --gold-glow: rgba(197, 160, 89, 0.25);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      padding: 40px 24px 80px;
+      line-height: 1.5;
+    }
+
+    header {
+      max-width: 1400px;
+      margin: 0 auto 36px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(197, 160, 89, 0.1);
+      border: 1px solid rgba(197, 160, 89, 0.25);
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 720px;
+      margin: 0 auto 24px;
+    }
+
+    /* Instruction banner */
+    .instruction-box {
+      max-width: 1000px;
+      margin: 0 auto 40px;
+      background: #11141c;
+      border: 1px solid #1f2533;
+      border-left: 4px solid var(--gold);
+      border-radius: 8px;
+      padding: 16px 20px;
+      text-align: left;
+      font-size: 13.5px;
+      color: #b3bac9;
+    }
+
+    .instruction-box strong {
+      color: #fff;
+    }
+
+    .instruction-box ol {
+      margin-left: 20px;
+      margin-top: 8px;
+    }
+
+    .instruction-box li {
+      margin-bottom: 4px;
+    }
+
+    .instruction-box code {
+      background: #1a1f2c;
+      color: var(--gold);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    /* Responsive Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 1280px) {
+      .grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 540px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* Card */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: var(--card-border-hover);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 0 0 16px var(--gold-glow);
+    }
+
+    /* Image Wrapper 16:9 */
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 */
+      background: #0f1118;
+      overflow: hidden;
+    }
+
+    .thumb-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .card:hover .thumb-img {
+      transform: scale(1.05);
+    }
+
+    .num-pill {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(11, 12, 16, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 4px;
+      z-index: 2;
+      letter-spacing: 1px;
+    }
+
+    /* Info */
+    .card-body {
+      padding: 16px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+    }
+
+    .card-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .kata-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .kata-kanji {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .kata-stance {
+      font-size: 12px;
+      color: #9da6b9;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .kata-desc {
+      font-size: 12.5px;
+      color: #6f778a;
+      line-height: 1.45;
+      margin-bottom: 12px;
+      flex-grow: 1;
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 11px;
+    }
+
+    .action-btn {
+      color: var(--gold);
+      background: rgba(197, 160, 89, 0.12);
+      border: 1px solid rgba(197, 160, 89, 0.3);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: var(--gold);
+      color: #0b0c10;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 5, 8, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 24px;
+    }
+
+    .modal-content {
+      background: #141720;
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+
+    .modal-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid #232834;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      color: #8c93a4;
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .close-btn:hover { color: #fff; }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-preview-wrap {
+      width: 100%;
+      padding-top: 56.25%;
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      border: 1px solid #282f40;
+    }
+
+    .modal-preview-img {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    .prompt-box {
+      background: #0c0e14;
+      border: 1px solid #202636;
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+      margin-top: 14px;
+    }
+
+    .prompt-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .prompt-text {
+      font-family: monospace;
+      font-size: 12.5px;
+      color: #d1d6e3;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+    }
+
+    .copy-btn {
+      background: var(--gold);
+      color: #0b0c10;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .copy-btn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">Shotokan Karate Kata Series</div>
+    <h1>26 ката Шотокан</h1>
+    <p class="subtitle">
+      Официальная галерея 26 стандартных ката Шотокан (JKA / SKIF). Единый кинематографичный стиль 16:9, точность стоек и аутентичный дух будо.
+    </p>
+
+    <div class="instruction-box">
+      <strong>📌 Инструкция: как обновить изображения</strong>
+      <ol>
+        <li>Все изображения превью хранятся в папке <code>client/public/images/kata/</code> и <code>uploads/thumbnails/</code>.</li>
+        <li>Имена файлов строго стандартизированы: <code>kata_heian_shodan.jpg</code>, <code>kata_heian_nidan.jpg</code> ... <code>kata_chinte.jpg</code>.</li>
+        <li>Кликните на любую карточку ниже, чтобы открыть полноразмерный вид и <strong>скопировать готовый промпт для Midjourney / Flux</strong>.</li>
+        <li>При генерации сохраняйте файлы с соответствующими именами в папку <code>client/public/images/kata/</code> — галерея подхватит их автоматически.</li>
+      </ol>
+    </div>
+  </header>
+
+  <main class="grid" id="kataGrid"></main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Ката</div>
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-preview-wrap">
+          <img src="" id="modalImg" class="modal-preview-img" alt="Preview">
+        </div>
+        <div id="modalDetails" style="font-size: 13.5px; color: #a4adbf; margin-bottom: 16px;"></div>
+        <div class="prompt-box">
+          <div class="prompt-label">
+            <span>Промпт для Midjourney / Flux / SDXL</span>
+            <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Скопировать</button>
+          </div>
+          <div class="prompt-text" id="modalPrompt"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const KATAS = [
+      {
+        id: 1,
+        name: "Heian Shodan",
+        kanji: "平安初段",
+        file: "kata_heian_shodan.jpg",
+        stance: "Zenkutsu-dachi",
+        technique: "Gedan-barai",
+        desc: "Первое движение ката — низкая передняя стойка Дзэнкуцу-дати с мощным сметающим блоком Гэдан-барай.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Heian Shodan in a traditional Japanese wooden dojo. He is locked in a deep, grounded Zenkutsu-dachi (front stance, left knee bent over toe, right leg straight behind), executing a crisp left Gedan-barai (downward low block), with his right fist chambered tightly at his hip in hikite. His head is turned left gazing along the line of the block, torso in 45-degree hanmi. He wears a pure white heavy canvas karate-gi with seamless full-length sleeves extending strictly down to wrists, no patches, no chest embroidery, no logos, and a worn pure black belt with no embroidery. Dark polished cedar hinoki floorboards with soft reflections, paper shoji screens in soft bokeh, warm raking side sunlight entering at 45 degrees, subtle golden rim light, floating dust motes, two arms only, anatomically perfect, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 2,
+        name: "Heian Nidan",
+        kanji: "平安二段",
+        file: "kata_heian_nidan.jpg",
+        stance: "Kokutsu-dachi",
+        technique: "Haiwan-uke / Age-uke",
+        desc: "Открывающий блок двумя руками вверх-назад в задней стойке Кокуцу-дати, 70% веса на задней ноге.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Heian Nidan in a traditional Japanese wooden dojo. He is positioned in a sharp, balanced Kokutsu-dachi (back stance, 70% weight on rear right leg), executing the signature opening block: right forearm raised in Haiwan-uke (upper back-arm block angled back) and left arm in Jodan Age-uke (rising block) simultaneously, both fists tightly clenched. Head turned left looking over left shoulder, strict profile stance alignment, intense zanshin gaze. Exactly two arms, no extra limbs. He wears a pure white heavy canvas karate-gi with full-length sleeves extending to wrists, no patches, no logos, worn black belt without embroidery. Dark polished cedar wooden floor with soft reflections, warm side raking light through shoji screens, golden rim lighting, cinematic depth of field, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 3,
+        name: "Heian Sandan",
+        kanji: "平安三段",
+        file: "kata_heian_sandan.jpg",
+        stance: "Kiba-dachi",
+        technique: "Tettsui-uchi",
+        desc: "Разворот с топочущим шагом (фумикоми) в стойку всадника Киба-дати с сокрушительным ударом молотом Тэтцуи-ути.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Heian Sandan in a traditional Japanese wooden dojo. He is rooted in a wide, deep Kiba-dachi (iron horse stance, feet strictly parallel, low center of gravity), executing a powerful snapping right Tettsui-uchi (hammer-fist strike to the side), with his left fist tightly placed at his right shoulder. Head turned sharply to the right locking onto the strike target, chest facing forward (shomen). Exactly two arms, perfect anatomy. He wears a pure white heavy canvas karate-gi with full-length sleeves extending to wrists, no patches, no chest badges, worn plain black belt. Dark polished cedar wood floor, paper shoji screens in soft background, warm cinematic side lighting, golden rim light, atmospheric dust motes, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 4,
+        name: "Heian Yondan",
+        kanji: "平安四段",
+        file: "kata_heian_yondan.jpg",
+        stance: "Kokutsu-dachi",
+        technique: "Morote Shuto-uke",
+        desc: "Медленное величественное раскрытие ладоней ребром (сюто) на вдохе в глубокой стойке Кокуцу-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Heian Yondan in a traditional Japanese wooden dojo. He is sank into a deep, graceful Kokutsu-dachi (back stance), executing the majestic opening Morote Jodan Shuto-uke (double knife-hand upper block with open hands: lead hand at eye level, rear hand guarding solar plexus), razor-sharp hand alignment, focused calm breathing. Gaze directed straight forward through the open knife-hand, torso in hanmi. Exactly two arms, five fingers per hand, no mutations. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, plain black belt. Dark polished cedar wooden floor, soft lantern and sunlight through shoji panels, cinematic depth of field, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 5,
+        name: "Heian Godan",
+        kanji: "平安五段",
+        file: "kata_heian_godan.jpg",
+        stance: "Kosa-dachi",
+        technique: "Gedan Juji-uke",
+        desc: "Приземление в стойку скрещенных ног Коса-дати после прыжка с мгновенным нижним крестообразным блоком кулаками.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Heian Godan in a traditional Japanese wooden dojo. He is grounded in an immovable Kosa-dachi (crossed-leg stance, balls of feet gripping the floor), executing a tight Gedan Juji-uke (downward X-block with crossed wrists directly over the front knee), both fists clenched with intense downward kime. Gaze directed downward-forward at the crossed wrists with fierce focus, torso slightly leaning forward in locked tension. Exactly two arms, perfect leg crossing. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn plain black belt. Dark polished wooden floor with reflections, warm raking sunlight through shoji, golden rim light, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 6,
+        name: "Tekki Shodan",
+        kanji: "鉄騎初段",
+        file: "kata_tekki_shodan.jpg",
+        stance: "Kiba-dachi",
+        technique: "Kagi-zuki",
+        desc: "Линейная стойка железного всадника Киба-дати с горизонтальным крюковым ударом Каги-цуки перед грудью.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Tekki Shodan in a traditional Japanese wooden dojo. He is planted in an immovable, wide Kiba-dachi (iron horse stance, knees pressed outward, parallel feet), head snapped sharply to his right, executing a crisp horizontal right Kagi-tsuki (hook punch across his torso at solar plexus height) while his left fist firmly guards the right elbow. Torso facing strictly forward toward the camera, eyes locked to the right along the line of attack. Exactly two arms, symmetrical powerful legs. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no chest patches, worn black belt. Dark polished cedar wood floor, shoji screens, dramatic side lighting, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 7,
+        name: "Tekki Nidan",
+        kanji: "鉄騎二段",
+        file: "kata_tekki_nidan.jpg",
+        stance: "Kiba-dachi",
+        technique: "Ryosho Jodan Kosa-uke",
+        desc: "Подъем скрещенных открытых ладоней «ножницами» над головой в широкой и глубокой стойке всадника.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Tekki Nidan in a traditional Japanese wooden dojo. He is in a wide, grounded Kiba-dachi (horse stance), raising both arms overhead with wrists crossed in Ryosho Jodan Kosa-uke (open-hand scissor block above forehead), fingers extended together in tension. Upright torso, gaze directed forward and slightly upward through the crossed open hands with resolute expression. Exactly two arms, perfect hand anatomy. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt without embroidery. Dark polished cedar floor, warm sunlight filtering through shoji screens, golden rim lighting, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 8,
+        name: "Tekki Sandan",
+        kanji: "鉄騎三段",
+        file: "kata_tekki_sandan.jpg",
+        stance: "Kiba-dachi",
+        technique: "Chudan Hasami-uke",
+        desc: "Компактный встречный сжимающий блок-удар локтями и кулаками в стойке всадника с предельным кимэ.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Tekki Sandan in a traditional Japanese wooden dojo. He is locked in a deep, rooted Kiba-dachi (horse stance), elbows tucked tight to his ribs, executing a rapid compact Chudan Hasami-uke / Morote Tsuki (scissor squeeze double punch at midsection), fists clenched tight with maximum kime. Torso completely square and upright, gaze piercing straight forward with intense martial spirit. Exactly two arms, no extra limbs. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn plain black belt. Dark polished cedar floorboards with reflections, warm raking side light, atmospheric dust motes, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 9,
+        name: "Bassai-dai",
+        kanji: "披塞大",
+        file: "kata_bassai_dai.jpg",
+        stance: "Kosa-dachi",
+        technique: "Kosa-uke Kamae",
+        desc: "Мощный первый шаг вперед в Коса-дати: правый кулак накрыт открытой ладонью («взятие крепости»).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Bassai-dai in a traditional Japanese wooden dojo. He is stepping aggressively forward into a loaded Kosa-dachi (crossed-foot forward stance), executing the legendary opening posture: right clenched fist wrapped and enclosed tightly inside his open left palm at solar plexus level (Kosa-uke fortress posture), elbows flexed with coiled spring tension. Gaze locked straight ahead with unstoppable determination, square torso. Exactly two arms, authentic martial grip. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar wood floor, warm dramatic side lighting, shoji screens, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 10,
+        name: "Bassai-sho",
+        kanji: "披塞小",
+        file: "kata_bassai_sho.jpg",
+        stance: "Kokutsu-dachi",
+        technique: "Morote Bo-uke",
+        desc: "Защита и перехват шеста двумя раскрытыми руками по диагонали в сбалансированной стойке Кокуцу-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Bassai-sho in a traditional Japanese wooden dojo. He is set in a refined Kokutsu-dachi (back stance), executing Morote Bo-uke (high-low open-hand staff defense): lead left hand extended upward on a high diagonal with open grasping palm, rear right hand open guarding down by the hip, sharp angular alignment. Gaze focused diagonally upward along the line of defense, torso in hanmi. Exactly two arms, elegant martial tension. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, warm sunlight through shoji screens, golden rim light, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 11,
+        name: "Kanku-dai",
+        kanji: "観空大",
+        file: "kata_kanku_dai.jpg",
+        stance: "Heiko-dachi",
+        technique: "Kanku-kamae",
+        desc: "Самый знаменитый силуэт каратэ: подъем соединенных ладоней над головой в форме треугольника («созерцание неба»).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Kanku-dai in a traditional Japanese wooden dojo. He stands upright in Heiko-dachi (parallel feet, shoulder-width apart), both hands raised high above his head toward the heavens with thumbs and index fingers joined to form a triangular window (Kanku-kamae). Head tilted gently upward, gazing with spiritual focus through the triangular opening toward the sky and light. Exactly two arms, ten distinct fingers, serene majestic posture. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt. Dark polished cedar floor, warm golden sunlight streaming through shoji panels, atmospheric dust motes, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 12,
+        name: "Kanku-sho",
+        kanji: "観空小",
+        file: "kata_kanku_sho.jpg",
+        stance: "Zenkutsu-dachi",
+        technique: "Tsukami-uke (Right hand)",
+        desc: "Атакующий выпад в Дзэнкуцу-дати с жестким прямым захватом кисти противника правой рукой.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Kanku-sho in a traditional Japanese wooden dojo. He is driven forward into a deep powerful Zenkutsu-dachi (front stance, right leg forward), executing a sharp right-hand Tsukami-uke (tight grasping claw block seizing an opponent's wrist) extended forward, while his left fist is chambered firmly at his waist in hikite. Eyes fixed with razor-sharp intensity straight forward, forward-driving torso. Exactly two arms, precise finger tension. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar wood floorboards with reflections, warm raking side sunlight, cinematic depth of field, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 13,
+        name: "Enpi",
+        kanji: "燕飛",
+        file: "kata_empi.jpg",
+        stance: "Zenkutsu-dachi",
+        technique: "Age-zuki",
+        desc: "Взрывной удар кулаком снизу вверх (Агэ-цуки) с резким падением центра тяжести («полёт ласточки»).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Enpi in a traditional Japanese wooden dojo. He is dropped into an ultra-low Zenkutsu-dachi with lowered center of gravity, exploding upward with a right Age-zuki (rising swallow uppercut punch thrusting vertically), while his left palm covers and guards above his head, hips rotating powerfully upward. Gaze directed sharply upward along the vertical line of the punch, dynamic spiraling torso. Exactly two arms, explosive kinetic energy. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, dramatic directional light through shoji, golden rim lighting, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 14,
+        name: "Jion",
+        kanji: "慈恩",
+        file: "kata_jion.jpg",
+        stance: "Heisoku-dachi (Feet together)",
+        technique: "Jion-kamae",
+        desc: "Ноги вместе, правый кулак накрыт раскрытой левой ладонью перед грудью (древнее шаолиньское приветствие).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Jion in a traditional Japanese wooden dojo. He is standing upright in formal Heisoku-dachi (feet pressed together side by side, heels and toes touching), performing the sacred Shaolin greeting (Jion-kamae): his right clenched fist is completely covered and clasped by his open left palm, held quietly in front of his chest at throat level, elbows relaxed. Calm, unshakeable zen expression, gaze looking straight forward through the opponent, perfectly vertical spine. Exactly two arms, harmonious posture. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, warm temple-like side light, shoji panels, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 15,
+        name: "Jitte",
+        kanji: "十手",
+        file: "kata_jitte.jpg",
+        stance: "Zenkutsu-dachi",
+        technique: "Bo-uke / Yama-gamae",
+        desc: "Мощный высокий блок-перехват шеста открытой ладонью в широкой Дзэнкуцу-дати («десять рук»).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Jitte in a traditional Japanese wooden dojo. He is anchored in a massive Zenkutsu-dachi (front stance), executing the Bo-uke weapon defense (Yama-gamae posture): left open hand raised high in a hooking overhead block to catch and deflect a bo staff, right arm bent protecting chest level with fist ready. Resolute commanding presence, gaze locked firmly forward on the incoming attack, square torso. Exactly two arms, authentic martial poise. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar wood floor, dramatic side light, paper shoji, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 16,
+        name: "Jiin",
+        kanji: "慈陰",
+        file: "kata_jiin.jpg",
+        stance: "Kiba-dachi",
+        technique: "Gedan Juji-uke",
+        desc: "Плотный нижний крестообразный блок двумя кулаками над пахом в широкой низкой Киба-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Jiin in a traditional Japanese wooden dojo. He is settled in a wide, low Kiba-dachi (iron horse stance), executing a resolute Gedan Juji-uke (downward X-block with crossed wrists directly above the groin), both fists tightly clenched, shoulders dropped, pelvis tucked under. Stern, steady gaze looking directly forward with unyielding monastic gravity, upright spine. Exactly two arms, perfect symmetrical stance. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor with soft reflections, warm raking sunlight, shoji screens, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 17,
+        name: "Hangetsu",
+        kanji: "半月",
+        file: "kata_hangetsu.jpg",
+        stance: "Hangetsu-dachi",
+        technique: "Morote Uchi-uke",
+        desc: "Полулунная стойка с круговым натяжением стоп и медленный изометрический блок с дыханием ибуки.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Hangetsu in a traditional Japanese wooden dojo. He is planted in a signature Hangetsu-dachi (half-moon stance, toes and knees turned inward with circular isometric tension), executing Morote Chudan Uchi-uke (slow double middle block with both forearms bent upward at chest level), fists clenched, full dynamic breathing (ibuki) with visible muscular tension in core and arms. Direct unblinking forward gaze, square torso. Exactly two arms, rooted grounded stance. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, warm side light, subtle dust motes in sunbeams, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 18,
+        name: "Gankaku",
+        kanji: "岩鶴",
+        file: "kata_gankaku.jpg",
+        stance: "Tsuruashi-dachi",
+        technique: "Tate-uraken + Gedan-barai",
+        desc: "Непоколебимый баланс на одной ноге («журавль на скале») с вертикальным уракэн у виска и нижним блоком.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Gankaku in a traditional Japanese wooden dojo. He is balanced on one leg in a flawless Tsuruashi-dachi (crane stance on bent left leg, right foot hooked securely behind left knee joint), executing the famous crane guard: right fist in vertical Tate-uraken beside his temple, left arm extended downward in Gedan-barai along his thigh. Proud, balanced silhouette (\"crane on a rock\"), gaze piercing sharply to the side along the line of the strike. Exactly two arms, single supporting leg with razor balance. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, warm sunlight, shoji screens in bokeh, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 19,
+        name: "Nijushiho",
+        kanji: "二十四歩",
+        file: "kata_nijushiho.jpg",
+        stance: "Kokutsu-dachi",
+        technique: "Awase-tsuki",
+        desc: "Одновременный сдвоенный удар Авасэ-цуки (кулак снизу в челюсть, кулак прямо в живот) в стойке Кокуцу-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Nijushiho in a traditional Japanese wooden dojo. He is anchored in a low, resilient Kokutsu-dachi (back stance), delivering a simultaneous Awase-tsuki (dual punch: upper right fist striking upward under the jaw, lower left fist driving straight into the solar plexus), both fists locked at full extension with supreme kime. Gaze focused dead ahead between the two fists, torso in hanmi. Exactly two arms, precise joint geometry. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor with reflections, warm raking side light through shoji, golden rim lighting, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 20,
+        name: "Sochin",
+        kanji: "壯鎭",
+        file: "kata_sochin.jpg",
+        stance: "Fudo-dachi",
+        technique: "Muso-kamae",
+        desc: "Несгибаемая стойка укоренения Фудо-дати и защитная позиция Мусо-камаэ («спокойствие перед бурей»).",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Sochin in a traditional Japanese wooden dojo. He is rooted in a massive Fudo-dachi (immovable stance, 50/50 diagonal weight distribution, knees forced wide), holding the iconic Muso-kamae: right forearm raised in vertical Tate-uke at shoulder height, left arm extended straight downward in Gedan-barai. Heavy, granite-like gaze radiating immovable power (\"tranquility in the storm\"), chest open. Exactly two arms, monstrously stable stance. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt. Dark polished cedar floor, warm golden side light, shoji screens, atmospheric dust motes, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 21,
+        name: "Meikyo",
+        kanji: "明鏡",
+        file: "kata_meikyo.jpg",
+        stance: "Heisoku-dachi",
+        technique: "Meikyo-kamae",
+        desc: "Обе ладони повернуты внутренними сторонами к лицу мастера, словно вглядываясь в чистое зеркало души.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Meikyo in a traditional Japanese wooden dojo. He stands upright in formal Heisoku-dachi (feet together), holding both open hands twenty centimeters in front of his face with palms turned inward facing his own eyes as if gazing into a polished sacred bronze mirror (Meikyo-kamae), fingers together, elbows relaxed. Serene meditative expression, looking directly into the mirror space between his palms, straight noble posture. Exactly two arms, clean five-finger hands. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, soft diffused sunlight through shoji, cinematic depth of field, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 22,
+        name: "Chinte",
+        kanji: "珍手",
+        file: "kata_chinte.jpg",
+        stance: "Kiba-dachi",
+        technique: "Nihon-nukite",
+        desc: "Древний окинавский укол двумя пальцами (вилка «глаза дракона») с поддержкой предплечья ладонью.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Chinte in a traditional Japanese wooden dojo. He is grounded in a solid Kiba-dachi (horse stance), thrusting his right hand forward in the ancient Nihon-nukite (two-finger eye spear strike: index and middle fingers extended rigid in a fork, other fingers curled tight), while his left open palm cups under the right elbow. Intense, piercing gaze focused right along the tips of the two striking fingers, torso in three-quarter profile. Exactly two arms, exact two-finger hand shape. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt. Dark polished cedar floor, warm raking side light, shoji screens, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 23,
+        name: "Unsu",
+        kanji: "雲手",
+        file: "kata_unsu.jpg",
+        stance: "Nekoashi-dachi",
+        technique: "Keito-uke",
+        desc: "Острый изгиб кисти Кэйто-укэ («гребень петуха / рука, раздвигающая облака») в пружинящей кошачьей стойке.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Unsu in a traditional Japanese wooden dojo. He is coiled in a low, spring-loaded Nekoashi-dachi (cat stance, 90% weight on rear leg, front ball of foot resting lightly), with lead right wrist sharply bent in Keito-uke (chicken-head wrist block: wrist bent upward forming a prominent bony crest, fingers pointing down), left hand ready at his hip. Fierce lightning-quick gaze slicing forward (\"parting the clouds\"), coiled explosive torso ready to leap. Exactly two arms, accurate martial wrist bend. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, dramatic side lighting, shoji screens, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 24,
+        name: "Wankan",
+        kanji: "王冠",
+        file: "kata_wankan.jpg",
+        stance: "Nekoashi-dachi",
+        technique: "Tsukami-uke",
+        desc: "Королевское достоинство («корона короля»): мягкий круговой перехватывающий блок ладонью в стойке Некоаси-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Wankan in a traditional Japanese wooden dojo. He is posed in an elegant Nekoashi-dachi (cat stance), executing a soft circular Tsukami-uke (royal grasping block: lead open hand extended forward with fingers curved in a firm grasping cup, rear hand supporting at chest), dignified regal composure (\"king's crown\"). Calm, penetrating gaze, torso in refined hanmi. Exactly two arms, natural hand tension. Pure white heavy canvas karate-gi with full-length sleeves to wrists, no patches, worn black belt. Dark polished cedar floor, warm sunlight filtering through shoji, golden rim lighting, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 25,
+        name: "Gojushiho-dai",
+        kanji: "五十四歩大",
+        file: "kata_gojushiho_dai.jpg",
+        stance: "Zenkutsu-dachi",
+        technique: "Washide",
+        desc: "Удар щепотью пяти сомкнутых пальцев («клюв орла / дятел») в горло противника в глубокой Дзэнкуцу-дати.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Gojushiho-dai in a traditional Japanese wooden dojo. He is lunged forward in a deep, powerful Zenkutsu-dachi (front stance), executing a forward strike with Washide (eagle beak / woodpecker hand: all five fingertips pressed tightly together into a sharp spear point) aimed at throat level, with his left hand open supporting the right forearm. Predatory, laser-focused gaze along the line of the beak strike, torso in forward attacking angle. Exactly two arms, precise fingertip convergence. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt. Dark polished cedar floor with reflections, warm raking sunlight, shoji panels, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      },
+      {
+        id: 26,
+        name: "Gojushiho-sho",
+        kanji: "五十四歩小",
+        file: "kata_gojushiho_sho.jpg",
+        stance: "Kokutsu-dachi",
+        technique: "Ippon-nukite",
+        desc: "Хирургически точный пробивающий укол одним пальцем (Иппон-нукитэ) с поддержкой локтя открытой ладонью.",
+        prompt: "Cinematic 8k medium-full photograph, low-angle shot, of exactly one solo Japanese karate master, 49-year-old male with an athletic lean physique, short hair with subtle grey temples, performing kata Gojushiho-sho in a traditional Japanese wooden dojo. He is anchored in a sharp, crisp Kokutsu-dachi (back stance), delivering a lethal Ippon-nukite (single-finger spear thrust: fist tightly clenched with only the index finger extended rigid like an iron needle) straight forward, while his left open palm lies flat underneath the right elbow for support. Piercing surgical gaze targeting a vital point, strict profile alignment. Exactly two arms, distinct single-finger extension. Pure white heavy canvas karate-gi with full-length sleeves down to wrists, no patches, worn black belt. Dark polished cedar floor, warm golden side light through shoji, atmospheric dust motes, photorealistic masterpiece --ar 16:9 --style raw --v 6.1"
+      }
+    ];
+
+    const grid = document.getElementById("kataGrid");
+
+    KATAS.forEach(k => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.onclick = () => openModal(k);
+
+      // Auto-detect relative path whether opened from root or client/public
+      const candidates = [
+        `client/public/images/kata/${k.file}`,
+        `images/kata/${k.file}`,
+        `uploads/thumbnails/${k.file}`
+      ];
+      const imgSrc = candidates[0];
+
+      card.innerHTML = `
+        <div class="thumb-wrap">
+          <div class="num-pill">${String(k.id).padStart(2, '0')}</div>
+          <img src="${imgSrc}" class="thumb-img" alt="${k.name}" onerror="
+            if (this.src.indexOf('client/public/') !== -1) {
+              this.src = 'images/kata/${k.file}';
+            } else if (this.src.indexOf('images/kata/') !== -1) {
+              this.src = 'uploads/thumbnails/${k.file}';
+            } else {
+              this.src = 'https://placehold.co/1376x768/15181f/c5a059?text=${encodeURIComponent(k.kanji + ' (' + k.name + ')')}';
+            }
+          ">
+        </div>
+        <div class="card-body">
+          <div class="card-header-row">
+            <span class="kata-name">${k.name}</span>
+            <span class="kata-kanji">${k.kanji}</span>
+          </div>
+          <div class="kata-stance">🥋 ${k.stance} • ${k.technique}</div>
+          <div class="kata-desc">${k.desc}</div>
+          <div class="card-footer">
+            <span style="color:#565f73">16:9 Cinematic</span>
+            <button class="action-btn" onclick="event.stopPropagation(); openModal(KATAS[${k.id - 1}])">Промпт & Фото</button>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+
+    let currentPromptText = "";
+
+    function openModal(kata) {
+      document.getElementById("modalTitle").innerText = `${String(kata.id).padStart(2, '0')}. ${kata.name} (${kata.kanji})`;
+      const cardImg = document.querySelector(`.card:nth-child(${kata.id}) .thumb-img`);
+      document.getElementById("modalImg").src = cardImg ? cardImg.src : `images/kata/${kata.file}`;
+      document.getElementById("modalDetails").innerHTML = `
+        <strong>Стойка:</strong> ${kata.stance} &nbsp;|&nbsp; 
+        <strong>Ключевая техника:</strong> ${kata.technique}<br>
+        <span style="display:inline-block; margin-top:4px;">${kata.desc}</span>
+      `;
+      currentPromptText = kata.prompt;
+      document.getElementById("modalPrompt").innerText = kata.prompt;
+      document.getElementById("copyBtn").innerText = "Скопировать";
+      document.getElementById("modalOverlay").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    function copyPrompt() {
+      navigator.clipboard.writeText(currentPromptText).then(() => {
+        const btn = document.getElementById("copyBtn");
+        btn.innerText = "Скопировано!";
+        setTimeout(() => { btn.innerText = "Скопировать"; }, 2000);
+      });
+    }
+
+    window.onclick = function(e) {
+      const modal = document.getElementById("modalOverlay");
+      if (e.target === modal) closeModal();
+    }
+  </script>
+</body>
+</html>

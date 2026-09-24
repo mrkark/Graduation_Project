@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bunkai-explorer-mssql
+    environment:
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: 'ChangeMe#12345'
+      MSSQL_PID: 'Developer'
+    ports:
+      - '1433:1433'
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ['CMD-SHELL', '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: ./server
+    container_name: bunkai-explorer-server
+    depends_on:
+      mssql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      CLIENT_URL: http://localhost:5173
+      DB_HOST: mssql
+      DB_PORT: 1433
+      DB_NAME: BunkaiExplorer
+      DB_USER: sa
+      DB_PASSWORD: 'ChangeMe#12345'
+      DB_ENCRYPT: 'true'
+      DB_TRUST_SERVER_CERT: 'true'
+      JWT_ACCESS_SECRET: change_this_access_secret_in_production
+      JWT_REFRESH_SECRET: change_this_refresh_secret_in_production
+    ports:
+      - '5000:5000'
+    volumes:
+      - ./uploads:/app/uploads
+
+  client:
+    build: ./client
+    container_name: bunkai-explorer-client
+    depends_on:
+      - server
+    environment:
+      VITE_API_URL: http://localhost:5000/api
+      VITE_SOCKET_URL: http://localhost:5000
+    ports:
+      - '5173:5173'
+
+volumes:
+  mssql-data:

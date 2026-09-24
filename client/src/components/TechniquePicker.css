@@ -1,0 +1,242 @@
+/* =========================================================
+   TECHNIQUEPICKER.CSS — Каталог техник Сётокан с живым поиском
+   ========================================================= */
+
+.tech-picker {
+  background: linear-gradient(175deg, #181512 0%, #100e0b 100%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1.4rem;
+  box-shadow: var(--shadow-dojo);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  max-height: 80vh;
+}
+
+.tech-picker__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1.1rem;
+}
+
+.tech-picker__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.tech-picker__title-row h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--washi);
+  flex: 1;
+}
+
+.btn-close-picker {
+  padding: 0.3em 0.7em;
+  font-size: 0.9rem;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tech-picker__subtitle {
+  font-size: 0.86rem;
+  color: var(--washi-dim);
+  margin: 0;
+}
+
+/* Строка поиска */
+.tech-picker__search-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.tech-picker__search-input {
+  width: 100%;
+  padding: 0.8em 2.4em 0.8em 1.1em;
+  font-size: 0.96rem;
+  background: #090807;
+  border: 1px solid var(--gold);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.tech-picker__search-input:focus {
+  box-shadow: 0 0 14px var(--gold-glow);
+}
+
+.tech-picker__clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--washi-dim);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* Категории */
+.tech-picker__categories {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.tech-picker__cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45em 0.9em;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--washi-dim);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tech-picker__cat-btn:hover {
+  border-color: var(--gold);
+  color: var(--washi);
+}
+
+.tech-picker__cat-btn.active {
+  background: rgba(197, 160, 89, 0.15);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.cat-kanji {
+  font-family: var(--font-kanji);
+  font-size: 0.88rem;
+  color: var(--crimson-bright);
+}
+
+/* Сетка карточек техник */
+.tech-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.1rem;
+  overflow-y: auto;
+  padding-right: 6px;
+  max-height: 480px;
+}
+
+.tech-card {
+  background: linear-gradient(170deg, #1c1814 0%, #110f0d 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.tech-card:hover {
+  transform: translateY(-2px);
+  border-left-color: var(--crimson-bright);
+  border-color: var(--gold);
+  background: #221d18;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
+}
+
+.tech-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tech-card__badge-kanji {
+  width: 32px;
+  height: 32px;
+  background: #2a2219;
+  border: 1px solid var(--gold);
+  color: var(--gold-bright);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.tech-card__level {
+  font-size: 0.74rem;
+  color: var(--washi-dim);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tech-card__names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tech-card__ru {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tech-card__romaji {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--gold);
+}
+
+.tech-card__kanji-txt {
+  font-family: var(--font-kanji);
+  color: var(--washi-muted);
+}
+
+.tech-card__desc {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--washi-dim);
+  margin: 0;
+  flex: 1;
+}
+
+.btn-select-tech {
+  padding: 0.4em 0.8em;
+  font-size: 0.82rem;
+  margin-top: 0.4rem;
+  width: 100%;
+}
+
+.tech-picker__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--washi-dim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.empty-kanji {
+  font-family: var(--font-kanji);
+  font-size: 3rem;
+  color: var(--washi-muted);
+}

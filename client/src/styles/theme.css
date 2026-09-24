@@ -1,0 +1,25 @@
+@import './variables.css';
+@import './global.css';
+
+.washi-panel {
+  background:
+    radial-gradient(ellipse at top left, rgba(197, 160, 89, 0.08), transparent 60%),
+    var(--bg-panel);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--gold);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
+}
+
+.divider-vertical {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+  opacity: 0.35;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}

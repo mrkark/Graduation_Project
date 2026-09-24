@@ -1,0 +1,24 @@
+.page-loader {
+  padding: 120px 0;
+  text-align: center;
+  color: var(--washi-dim);
+  font-family: var(--font-display);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border-subtle);
+  color: var(--washi-dim);
+}
+.badge-beginner { color: var(--gold-soft); border-color: var(--gold-soft); }
+.badge-intermediate { color: var(--gold); border-color: var(--gold); }
+.badge-advanced { color: var(--crimson-bright); border-color: var(--crimson-bright); }
+.badge-pending { color: var(--washi-dim); }
+.badge-approved { color: #7fae7f; border-color: #7fae7f; }
+.badge-rejected { color: var(--crimson-bright); border-color: var(--crimson-bright); }

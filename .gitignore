@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.env
+*.env
+!.env.example
+
+# загруженные пользователем файлы
+uploads/*
+!uploads/avatars/.gitkeep
+!uploads/videos/.gitkeep
+!uploads/thumbnails/.gitkeep
+
+# сгенерированный seed с реальными хешами паролей
+database/seed.sql
+
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Временные артефакты обработки текстур и 3D
+scratch_*
+debug_*
+uv_map_preview.png
+client/scratch_*

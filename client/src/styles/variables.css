@@ -1,0 +1,86 @@
+/*
+  Bunkai Explorer — Токены дизайна в стиле каратэ и традиционной Японии.
+  Палитра: глубокая тушь (Суми), алый лак (Ака), золотой лист (Кин), рисовая бумага (Васи).
+*/
+:root {
+  /* --- Цвета фона и поверхностей (Суми / 墨) --- */
+  --ink-deep: #080706;
+  --ink-darkest: #0d0b09;
+  --bg-main: #12100e;
+  --bg-panel: #1a1714;
+  --bg-panel-light: #24201b;
+  --bg-surface-translucent: rgba(26, 23, 20, 0.82);
+  --wood-dark: #080706;
+
+  /* --- Алый акцент (Ака / 赤 — печать Ханко, ворота Тории, энергия Ки) --- */
+  --crimson-deep: #8a1919;
+  --crimson: #bf2626;
+  --crimson-bright: #e63946;
+  --crimson-glow: rgba(191, 38, 38, 0.35);
+  --red: var(--crimson);
+  --red-light: var(--crimson-bright);
+
+  /* --- Золото и латунь (Кин / 金 — мастерство, окантовка, свет) --- */
+  --gold-dark: #8c7035;
+  --gold: #c5a059;
+  --gold-bright: #e8c57b;
+  --gold-glow: rgba(197, 160, 89, 0.28);
+
+  /* --- Рисовая бумага (Васи / 和紙 — текст) --- */
+  --washi: #f5efe6;
+  --washi-dim: #c5baa8;
+  --washi-muted: #8c8172;
+  --text-main: var(--washi);
+  --text-muted: var(--washi-dim);
+  --paper: var(--washi);
+  --paper-dark: var(--washi-dim);
+
+  /* --- Границы и линии --- */
+  --border: rgba(197, 160, 89, 0.22);
+  --border-subtle: rgba(197, 160, 89, 0.14);
+  --border-faint: rgba(255, 255, 255, 0.07);
+  --border-gold: rgba(197, 160, 89, 0.45);
+  --border-crimson: rgba(191, 38, 38, 0.4);
+
+  /* --- Статусы --- */
+  --danger: #d93838;
+  --success: #6e944f;
+  --warning: #e59e35;
+
+  /* --- Типографика --- */
+  --font-display: 'Cinzel', 'Shippori Mincho', serif;
+  --font-kanji: 'Shippori Mincho', 'Noto Serif JP', serif;
+  --font-body: 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* --- Радиусы и тени --- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --shadow-dojo: 0 16px 36px -12px rgba(0, 0, 0, 0.75);
+  --shadow-card: 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-glow-gold: 0 0 20px rgba(197, 160, 89, 0.2);
+  --shadow-glow-crimson: 0 0 24px rgba(191, 38, 38, 0.35);
+
+  /* --- Слои --- */
+  --z-header: 100;
+  --z-modal: 200;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

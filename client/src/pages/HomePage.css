@@ -1,0 +1,508 @@
+/* =========================================================
+   HOMEPAGE.CSS — Реалистичный Мастер Каратэ, Текст слева
+   ========================================================= */
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 5rem;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  padding-bottom: 5rem;
+}
+
+/* --- ПОЛНОЭКРАННЫЙ HERO С РЕАЛИСТИЧНЫМ МАСТЕРОМ --- */
+.hero-split {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 85px);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: #090807;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.95);
+}
+
+/* Фоновое полотно с реальным мастером справа (статично, без вращения) */
+.hero-split__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: right 8% center;
+  background-repeat: no-repeat;
+  z-index: 1;
+}
+
+/* Направленный градиент: глубокая темнота слева для текста, чистый мастер справа */
+.hero-split__gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    linear-gradient(90deg, 
+      rgba(9, 8, 7, 0.97) 0%, 
+      rgba(9, 8, 7, 0.93) 38%, 
+      rgba(9, 8, 7, 0.62) 56%, 
+      rgba(9, 8, 7, 0.1) 78%, 
+      transparent 100%
+    ),
+    linear-gradient(180deg, 
+      rgba(9, 8, 7, 0.4) 0%, 
+      transparent 25%, 
+      rgba(9, 8, 7, 0.95) 100%
+    );
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Основной контейнер */
+.hero-split__container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 4;
+  padding-top: 2.5rem;
+  padding-bottom: 3.5rem;
+  width: 100%;
+}
+
+/* Левая колонка с описанием приложения */
+.hero-split__text-col {
+  max-width: 630px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.hero-split__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.hero-split__badge-text {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.hero-split__title {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5.2vw, 4rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.05em;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.9);
+}
+
+.hero-split__title-gold {
+  color: var(--gold-bright);
+  background: linear-gradient(135deg, #ffffff 0%, var(--gold-bright) 50%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.hero-split__kanji-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  font-family: var(--font-kanji);
+  color: var(--crimson-bright);
+  letter-spacing: 0.16em;
+  font-size: 1.25rem;
+}
+
+.kanji-main {
+  font-weight: 700;
+}
+
+.kanji-separator {
+  color: var(--gold);
+}
+
+.kanji-sub {
+  font-size: 0.95rem;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+}
+
+.hero-split__quote {
+  font-family: var(--font-kanji);
+  font-size: 1.18rem;
+  line-height: 1.5;
+  color: var(--washi);
+  border-left: 3px solid var(--crimson-bright);
+  padding-left: 1.2rem;
+  margin: 0.3rem 0;
+  font-style: italic;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.hero-split__desc {
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--washi-dim);
+  max-width: 58ch;
+  margin: 0;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.hero-split__actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+
+.btn-hero-split {
+  padding: 0.9em 2.1em;
+  font-size: 0.98rem;
+  gap: 0.7em;
+}
+
+.btn-kanji {
+  font-family: var(--font-kanji);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* Статистика внизу текста */
+.hero-split__stats {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  margin-top: 0.6rem;
+  padding: 0.95rem 1.4rem;
+  background: rgba(14, 12, 10, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  width: fit-content;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+}
+
+.stat-pill {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-pill__num {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  line-height: 1.1;
+}
+
+.stat-pill__txt {
+  font-size: 0.74rem;
+  color: var(--washi-muted);
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+}
+
+.stat-pill-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(197, 160, 89, 0.25);
+}
+
+/* Индикатор прокрутки */
+.hero-split__scroll-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--washi-dim);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  z-index: 4;
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.hero-split__scroll-hint:hover {
+  opacity: 1;
+  color: var(--gold-bright);
+  transform: translateX(-50%) translateY(2px);
+}
+
+.scroll-arrow {
+  font-size: 1.1rem;
+  color: var(--gold);
+  animation: bounce-arrow 1.8s infinite ease-in-out;
+}
+
+@keyframes bounce-arrow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+
+/* --- СЕКЦИЯ СТОЛПОВ КАРАТЭДО --- */
+.dojo-pillars {
+  display: flex;
+  flex-direction: column;
+  gap: 2.4rem;
+  padding-top: 1rem;
+}
+
+.section-title-wrap {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.section-kanji-sub {
+  font-family: var(--font-kanji);
+  font-size: 0.95rem;
+  color: var(--gold);
+  letter-spacing: 0.25em;
+  margin-bottom: 0.2rem;
+}
+
+.section-title {
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  color: var(--washi);
+  margin: 0;
+}
+
+.section-line {
+  width: 90px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--crimson-bright), transparent);
+  margin-top: 0.9rem;
+}
+
+/* СТОЛПЫ В 1 ЛИНИЮ НА БОЛЬШИХ ЭКРАНАХ */
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.4rem;
+}
+
+@media (max-width: 1080px) and (min-width: 681px) {
+  .pillars-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pillar-card {
+  background: linear-gradient(170deg, var(--bg-panel) 0%, #120f0d 100%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  padding: 1.8rem 1.4rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pillar-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle at top right, rgba(197, 160, 89, 0.08), transparent 70%);
+  pointer-events: none;
+}
+
+.pillar-card:hover {
+  transform: translateY(-4px);
+  border-top-color: var(--crimson-bright);
+  border-color: rgba(197, 160, 89, 0.4);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.8), 0 0 18px rgba(197, 160, 89, 0.15);
+}
+
+.pillar-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pillar-card__kanji-badge {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #2b241c 0%, #171410 100%);
+  border: 1px solid var(--gold);
+  color: var(--gold-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-size: 1.3rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.pillar-card:hover .pillar-card__kanji-badge {
+  transform: scale(1.08);
+  border-color: var(--crimson-bright);
+  color: #fff;
+  background: var(--crimson);
+}
+
+.pillar-card__en {
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  color: var(--washi-muted);
+}
+
+.pillar-card__title {
+  font-size: 1.18rem;
+  color: var(--washi);
+  margin: 0;
+}
+
+.pillar-card__desc {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--washi-dim);
+  flex: 1;
+  margin: 0;
+}
+
+.pillar-card__link {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--gold-bright);
+  margin-top: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: gap 0.2s ease, color 0.2s ease;
+}
+
+.pillar-card__link:hover {
+  color: #fff;
+  gap: 0.7rem;
+}
+
+/* --- СЕКЦИЯ ПРИНЦИПОВ НИДЗЮ КУН --- */
+.philosophy-section {
+  position: relative;
+  background: linear-gradient(180deg, #161310 0%, #0d0b09 100%);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--crimson);
+  border-radius: var(--radius-sm);
+  padding: 3rem 2.5rem;
+  box-shadow: var(--shadow-dojo);
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+}
+
+.philosophy-watermark {
+  position: absolute;
+  top: 50%;
+  right: 4%;
+  transform: translateY(-50%);
+  font-family: var(--font-kanji);
+  font-size: clamp(8rem, 16vw, 15rem);
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.02);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.philosophy-content {
+  position: relative;
+  z-index: 2;
+  max-width: 840px;
+}
+
+.philosophy-eyebrow {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--gold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.philosophy-heading {
+  font-size: clamp(1.6rem, 2.8vw, 2.2rem);
+  color: var(--washi);
+  margin: 0 0 1.9rem;
+}
+
+.philosophy-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.philosophy-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4rem;
+}
+
+.philosophy-rule__num {
+  font-family: var(--font-kanji);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--crimson-bright);
+  line-height: 1.2;
+  flex-shrink: 0;
+  width: 28px;
+}
+
+.philosophy-rule strong {
+  display: block;
+  font-size: 1.04rem;
+  color: var(--washi);
+  margin-bottom: 0.25rem;
+}
+
+.philosophy-rule p {
+  font-size: 0.88rem;
+  color: var(--washi-dim);
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .hero-split__bg {
+    background-position: center top;
+  }
+  .hero-split__stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+  .stat-pill-divider {
+    display: none;
+  }
+  .philosophy-section {
+    padding: 2rem 1.4rem;
+  }
+}

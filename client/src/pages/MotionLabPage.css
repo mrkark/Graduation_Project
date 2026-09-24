@@ -1,0 +1,375 @@
+/* =========================================================
+   MOTIONLABPAGE.CSS — AI Додзё Лаборатория 3D Motion Capture
+   ========================================================= */
+
+.motion-lab-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.motion-lab__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.motion-lab__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.motion-lab__title-wrap h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.3rem);
+}
+
+.motion-lab__desc {
+  font-size: 0.96rem;
+  color: var(--washi-dim);
+  max-width: 78ch;
+  margin: 0;
+}
+
+/* Верхняя панель управления */
+.motion-lab__config-panel {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.4rem;
+  background: linear-gradient(180deg, var(--bg-panel) 0%, #151210 100%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1.2rem 1.6rem;
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap;
+}
+
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.config-group--action {
+  flex: 0 0 auto;
+  min-width: 200px;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.mode-btn {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  color: var(--washi-dim);
+  padding: 0.55em 0.85em;
+  font-size: 0.82rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  border-color: var(--gold);
+  color: var(--washi);
+}
+
+.mode-btn.active {
+  background: rgba(197, 160, 89, 0.15);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.btn-process {
+  width: 100%;
+  padding: 0.8em 1.4em;
+  font-weight: 600;
+}
+
+/* Шкала процесса AI */
+.processing-bar-wrap {
+  background: rgba(18, 15, 12, 0.95);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1.2rem 1.6rem;
+  box-shadow: var(--shadow-glow-gold);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.processing-steps {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--washi-muted);
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.processing-steps span.done {
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: #0a0907;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--crimson-bright), var(--gold-bright));
+  transition: width 0.4s ease;
+}
+
+/* Рабочая зона: Полноэкранное 3D Додзё */
+.motion-lab__workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: calc(100vh - 280px);
+  height: calc(100vh - 280px);
+  flex: 1 1 auto;
+}
+
+.workspace-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+.panel-badge-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem 1.1rem;
+  background: #0e0c0a;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+  color: var(--washi-dim);
+}
+
+/* Левая панель с анализом скелета */
+.video-analysis-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.video-mock-view {
+  flex: 1;
+  background: #090807;
+  position: relative;
+  min-height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-overlay {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-svg {
+  width: 90%;
+  height: 90%;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.4));
+}
+
+.video-meta-tags {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 0.6rem;
+}
+
+.meta-tag {
+  background: rgba(14, 12, 10, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 3px 8px;
+  border-radius: 2px;
+  font-size: 0.74rem;
+  color: var(--gold-bright);
+}
+
+/* Правая 3D-панель */
+.scene-3d-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+}
+
+.canvas-container {
+  flex: 1 1 auto;
+  min-height: 580px;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.scene-controls {
+  padding: 0.85rem 1.2rem;
+  background: #0e0c0a;
+  border-top: 1px solid var(--border);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.ctrl-label {
+  font-size: 0.76rem;
+  color: var(--washi-muted);
+  margin-right: 0.35rem;
+}
+
+.speed-selector,
+.camera-views {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.btn-speed,
+.btn-view {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--washi-dim);
+  padding: 0.3em 0.65em;
+  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-speed:hover,
+.btn-view:hover {
+  border-color: var(--gold);
+  color: var(--washi);
+}
+
+.btn-speed.active,
+.btn-view.active {
+  background: rgba(197, 160, 89, 0.2);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+/* Дашборд биомеханики */
+.biomech-dashboard {
+  background: linear-gradient(175deg, var(--bg-panel) 0%, #120f0d 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1.6rem 1.8rem;
+  box-shadow: var(--shadow-card);
+}
+
+.biomech-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+}
+
+.biomech-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.biomech-card__title {
+  font-size: 0.76rem;
+  color: var(--washi-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.biomech-card__val {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+
+.biomech-card__sub {
+  font-size: 0.8rem;
+  color: var(--washi-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Кнопки ударов руками */
+.btn-strike {
+  border-color: rgba(197, 160, 89, 0.45);
+  background: rgba(30, 24, 18, 0.6);
+  font-weight: 500;
+}
+
+.btn-strike:hover {
+  border-color: var(--gold-bright, #e5b842);
+  background: rgba(197, 160, 89, 0.18);
+  box-shadow: 0 0 10px rgba(197, 160, 89, 0.25);
+}
+
+.btn-strike.active {
+  background: rgba(197, 160, 89, 0.28) !important;
+  border-color: var(--gold-bright, #e5b842) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 14px rgba(197, 160, 89, 0.45);
+}
+
+/* Кнопка сброса в стойку Йой */
+.btn-yoi-reset {
+  border-color: var(--gold, #c5a059);
+  background: rgba(197, 160, 89, 0.12);
+  color: var(--gold-bright, #e5b842);
+  font-weight: 600;
+}
+
+.btn-yoi-reset:hover {
+  background: rgba(197, 160, 89, 0.25);
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.35);
+}
+
+.btn-yoi-reset.active {
+  background: rgba(197, 160, 89, 0.35) !important;
+  border-color: var(--gold-bright, #e5b842) !important;
+  box-shadow: 0 0 16px rgba(197, 160, 89, 0.5);
+}
+
