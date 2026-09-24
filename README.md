@@ -2,6 +2,10 @@
 ### Интерактивная веб-платформа для изучения карате, прикладного анализа техник (бункай) и 3D-визуализации движений
 
 <p align="center">
+  <img src="client/src/assets/karate_master_realistic.jpg" alt="Bunkai Explorer Hero Banner" width="100%" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/Three.js-0.163-black?style=for-the-badge&logo=three.js&logoColor=white" alt="Three.js" />
   <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" />
@@ -34,11 +38,24 @@
 * **Интерактивное управление**: вращение камеры 360°, плавный зум, пауза/воспроизведение, контроль скорости (0.25x – 2.0x), пошаговая навигация.
 * **Bunkai Duel Scene** — интерактивная сцена парного взаимодействия (атакующий и защищающийся).
 
+<p align="center">
+  <img src="client/src/assets/karateka_3d_render.jpg" alt="3D Сенсей Рендер" width="31%" style="border-radius: 8px; margin: 1%;" />
+  <img src="client/src/assets/karateka_master_3d.jpg" alt="3D Мастер Каратэ" width="31%" style="border-radius: 8px; margin: 1%;" />
+  <img src="client/src/assets/karateka_hero.jpg" alt="3D Боевая Стойка" width="31%" style="border-radius: 8px; margin: 1%;" />
+</p>
+
 ### 📚 Интерактивный каталог 26 Ката Шотокан и Бункай
 * Полный иллюстрированный реестр всех 26 официальных ката Шотокан (от *Heian Shodan* до *Unsu* и *Gojushiho Dai*).
 * Пошаговый разбор движений с таймингами, ключевыми акцентами и видео-вставками (YouTube / локальное видео).
 * Пользовательские бункаи: публикация разборов применения техник с поддержкой модерации сообщества.
 * Гибкий поиск, фильтрация по сложности (ученические, мастерские), тегам и авторам.
+
+<p align="center">
+  <img src="client/public/images/kata/kata_heian_shodan.jpg" alt="Ката Heian Shodan" width="23%" style="border-radius: 8px; margin: 1%;" />
+  <img src="client/public/images/kata/step-gedan-barai.jpg" alt="Блок Gedan Barai" width="23%" style="border-radius: 8px; margin: 1%;" />
+  <img src="client/public/images/kata/step-oi-tsuki.jpg" alt="Удар Oi Tsuki" width="23%" style="border-radius: 8px; margin: 1%;" />
+  <img src="client/public/images/kata/step-shuto-uke.jpg" alt="Блок Shuto Uke" width="23%" style="border-radius: 8px; margin: 1%;" />
+</p>
 
 ### 💬 Real-Time Сообщество и Чат (Socket.IO)
 * **Общий чат Додзё** для открытого общения всех практикующих.
@@ -172,19 +189,17 @@ docker compose up --build
 
 ### Локальная разработка (Backend & Frontend)
 
-#### Настройка Backend (`/server`):
+#### Запуск Backend (`/server`):
 ```bash
 cd server
-cp .env.example .env
 npm install
 npm run dev
 ```
 Сервер будет доступен по адресу: `http://localhost:5000`
 
-#### Настройка Frontend (`/client`):
+#### Запуск Frontend (`/client`):
 ```bash
 cd client
-cp .env.example .env
 npm install
 npm run dev
 ```
@@ -200,9 +215,6 @@ npm run dev
 |---|---|---|---|
 | `admin` | `Admin#12345` | **admin** | Полный доступ: админ-панель, модерация ката/бункаев, управление пользователями, просмотр логов, бэкапы |
 | `demo_user` | `Demo#12345` | **user** | Стандартный доступ: просмотр ката, публикация бункаев, добавление в друзья, общий и личные чаты |
-
-> [!NOTE]  
-> Пароли хешируются с использованием соли `bcrypt` в момент генерации сида скриптом `npm run seed:sql`. В production обязательно измените пароль администратора!
 
 ---
 
@@ -257,9 +269,3 @@ Graduation_Project/
 3. **3D Motion Lab**: Перейдите в раздел *Motion Lab* — взаимодействуйте с 3D-моделью мастера в японском додзё, переключайте стойки (*Zenkutsu-dachi*, *Kiba-dachi*) и удары (*Gyaku-zuki*, *Mae-geri*), регулируйте скорость анимации.
 4. **Модерация контента**: Под пользователем `demo_user` отправьте новый разбор бункая к выбранному ката. Материал появится со статусом `pending`. Войдите под `admin` в раздел `/admin/moderation` и утвердите публикацию.
 5. **Real-Time Чат**: Откройте приложение в двух разных браузерах (под `admin` и `demo_user`), отправьте сообщение в чат Додзё — сообщение отобразится мгновенно без перезагрузки страницы.
-
----
-
-## 📜 Лицензия
-
-Проект разработан в рамках дипломной работы (Graduation Project). Все права защищены.
