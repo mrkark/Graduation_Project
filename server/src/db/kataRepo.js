@@ -35,6 +35,13 @@ function mapStepRow(row) {
     Duration: row.Duration,
     Image_URL: row.Image_URL,
     Video_URL: row.Video_URL,
+    Clip_ID: row.Clip_ID || null,
+    Clip_Name: row.Clip_Name || null,
+    Stance_In: row.Stance_In || null,
+    Stance_Out: row.Stance_Out || null,
+    Root_Displacement_X: row.Root_Displacement_X || 0,
+    Root_Displacement_Z: row.Root_Displacement_Z || 0,
+    Root_Rotation_Y: row.Root_Rotation_Y || 0,
   };
 }
 
@@ -47,14 +54,14 @@ async function list({ userId, userRole, search, difficulty, style, status, sort,
     Style: style || null,
     Status: status || null,
     Sort: sort || 'newest',
-    Offset: offset,
-    Limit: limit,
+    Offset: typeof offset === 'number' ? offset : 0,
+    Limit: typeof limit === 'number' ? limit : 20,
   });
   const total = rows[0]?.Total_Count || 0;
   return { items: rows.map(mapKataRow), total };
 }
 
-async function getById(kataId, { userId, userRole }) {
+async function getById(kataId, { userId, userRole } = {}) {
   const rows = await callProcedure('sp_Kata_GetById', { KataId: kataId, UserId: userId, UserRole: userRole });
   const kata = mapKataRow(rows[0]);
   if (!kata) return null;

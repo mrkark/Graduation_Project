@@ -1,0 +1,208 @@
+{
+  "kata": "tekki_shodan",
+  "confidence": "high",
+  "duration": 31.48,
+  "movesCount": 20,
+  "events": [
+    {
+      "moveNumber": 1,
+      "technique": [
+        "L:haishu_uke"
+      ],
+      "form": "kiba",
+      "startTime": 1.2,
+      "endTime": 2.46,
+      "kiai": false
+    },
+    {
+      "moveNumber": 2,
+      "technique": [
+        "L:mae_empi"
+      ],
+      "form": null,
+      "startTime": 2.46,
+      "endTime": 3.9,
+      "kiai": false
+    },
+    {
+      "moveNumber": 3,
+      "technique": [
+        "L:gedan_barai"
+      ],
+      "form": null,
+      "startTime": 3.9,
+      "endTime": 5.34,
+      "kiai": false
+    },
+    {
+      "moveNumber": 4,
+      "technique": [
+        "R:kagi_zuki"
+      ],
+      "form": null,
+      "startTime": 5.34,
+      "endTime": 6.78,
+      "kiai": false
+    },
+    {
+      "moveNumber": 5,
+      "technique": [
+        "R:uchi_uke"
+      ],
+      "form": "kiba",
+      "startTime": 6.78,
+      "endTime": 8.24,
+      "kiai": false
+    },
+    {
+      "moveNumber": 6,
+      "technique": [
+        "R:gedan_barai",
+        "L:nagashi_uke"
+      ],
+      "form": null,
+      "startTime": 8.24,
+      "endTime": 9.68,
+      "kiai": false
+    },
+    {
+      "moveNumber": 7,
+      "technique": [
+        "L:ura_zuki"
+      ],
+      "form": null,
+      "startTime": 9.68,
+      "endTime": 11.12,
+      "kiai": false
+    },
+    {
+      "moveNumber": 8,
+      "technique": [],
+      "form": "nami_gaeshi:L",
+      "startTime": 11.12,
+      "endTime": 12.84,
+      "kiai": false
+    },
+    {
+      "moveNumber": 9,
+      "technique": [],
+      "form": "nami_gaeshi:R",
+      "startTime": 12.84,
+      "endTime": 14.56,
+      "kiai": false
+    },
+    {
+      "moveNumber": 10,
+      "technique": [
+        "L:yoko_zuki",
+        "R:kagi_zuki"
+      ],
+      "form": null,
+      "startTime": 14.56,
+      "endTime": 16.0,
+      "kiai": true
+    },
+    {
+      "moveNumber": 11,
+      "technique": [
+        "L:haishu_uke"
+      ],
+      "form": null,
+      "startTime": 16.25,
+      "endTime": 17.69,
+      "kiai": false
+    },
+    {
+      "moveNumber": 12,
+      "technique": [
+        "R:mae_empi"
+      ],
+      "form": null,
+      "startTime": 17.69,
+      "endTime": 19.13,
+      "kiai": false
+    },
+    {
+      "moveNumber": 13,
+      "technique": [
+        "R:gedan_barai"
+      ],
+      "form": null,
+      "startTime": 19.13,
+      "endTime": 20.57,
+      "kiai": false
+    },
+    {
+      "moveNumber": 14,
+      "technique": [
+        "L:kagi_zuki"
+      ],
+      "form": null,
+      "startTime": 20.57,
+      "endTime": 22.01,
+      "kiai": false
+    },
+    {
+      "moveNumber": 15,
+      "technique": [
+        "L:uchi_uke"
+      ],
+      "form": "kiba",
+      "startTime": 22.01,
+      "endTime": 23.47,
+      "kiai": false
+    },
+    {
+      "moveNumber": 16,
+      "technique": [
+        "L:gedan_barai",
+        "R:nagashi_uke"
+      ],
+      "form": null,
+      "startTime": 23.47,
+      "endTime": 24.91,
+      "kiai": false
+    },
+    {
+      "moveNumber": 17,
+      "technique": [
+        "R:ura_zuki"
+      ],
+      "form": null,
+      "startTime": 24.91,
+      "endTime": 26.35,
+      "kiai": false
+    },
+    {
+      "moveNumber": 18,
+      "technique": [],
+      "form": "nami_gaeshi:R",
+      "startTime": 26.35,
+      "endTime": 28.07,
+      "kiai": false
+    },
+    {
+      "moveNumber": 19,
+      "technique": [],
+      "form": "nami_gaeshi:L",
+      "startTime": 28.07,
+      "endTime": 29.79,
+      "kiai": false
+    },
+    {
+      "moveNumber": 20,
+      "technique": [
+        "R:yoko_zuki",
+        "L:kagi_zuki"
+      ],
+      "form": null,
+      "startTime": 29.79,
+      "endTime": 31.23,
+      "kiai": true
+    }
+  ],
+  "kiaiMoves": [
+    10,
+    20
+  ]
+}

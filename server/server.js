@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const app = require('./src/app');
-const sequelize = require('./src/config/database');
+const { poolPromise } = require('./src/config/database');
 const { registerChatSocket } = require('./src/sockets/chatSocket');
 
 const PORT = process.env.PORT || 5000;
@@ -24,11 +24,11 @@ app.set('io', io);
 
 async function start() {
   try {
-    await sequelize.authenticate();
-    console.log('✔ Подключение к Microsoft SQL Server установлено.');
+    await poolPromise;
+    console.log('✔ Подключение к Microsoft SQL Server (библиотека mssql) установлено.');
   } catch (err) {
     console.error('✘ Не удалось подключиться к базе данных:', err.message);
-    console.error('  Проверьте .env (DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD) и что схема создана (database/schema.sql).');
+    console.error('  Проверьте .env (DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD) и доступность MSSQL на Docker.');
     process.exit(1);
   }
 

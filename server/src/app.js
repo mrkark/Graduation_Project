@@ -48,6 +48,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/animations', require('./routes/animationRoutes'));
 
 app.use(notFoundHandler);
 app.use(errorHandler);

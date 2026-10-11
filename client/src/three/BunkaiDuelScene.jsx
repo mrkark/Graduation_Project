@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import KarateMasterModel from './KarateMasterModel';
+import TraditionalDojo from './TraditionalDojo';
 
 /**
  * Интерактивная 3D-сцена Бункая (боевое взаимодействие минимум 2-3 бойцов: Тори и Укэ)
@@ -52,8 +53,24 @@ function getCombatPoses(scenarioId, phaseProgress) {
   // phaseProgress: от 0.0 до 3.0 (плавная интерполяция фаз)
   const p = Math.max(0, Math.min(3, phaseProgress));
 
+  let toriStance = 'ready';
+  let ukeStance = 'ready';
+
   if (scenarioId === 'age_uke_empi') {
-    // Тори позиции
+    if (p < 0.8) {
+      toriStance = 'ready';
+      ukeStance = 'ready';
+    } else if (p < 1.8) {
+      toriStance = 'ready';
+      ukeStance = 'oi_zuki';
+    } else if (p < 2.5) {
+      toriStance = 'age_uke';
+      ukeStance = 'zenkutsu';
+    } else {
+      toriStance = 'empi_uchi';
+      ukeStance = 'zenkutsu';
+    }
+
     const toriAngles = {
       leftHipX: 0.1 + p * 0.18,
       leftHipZ: 0.05,
@@ -61,18 +78,16 @@ function getCombatPoses(scenarioId, phaseProgress) {
       rightHipX: -0.1 - p * 0.12,
       rightHipZ: -0.05,
       rightKneeX: 0.1,
-      // В фазе 2-3 поднимает блок, затем локоть
       leftShoulderX: p < 2 ? -0.2 - p * 0.6 : -1.4,
       leftShoulderZ: p < 2 ? 0.2 + p * 0.1 : 0.35,
       leftElbowX: p < 2 ? 0.5 + p * 0.5 : 1.6,
       rightShoulderX: p < 2.5 ? 0.3 : -1.1,
       rightShoulderZ: -0.15,
-      rightElbowX: p < 2.5 ? 0.8 : 2.2, // взлет правого локтя
+      rightElbowX: p < 2.5 ? 0.8 : 2.2,
       torsoRotX: 0.04,
       torsoRotY: p > 2 ? -0.25 : 0,
     };
 
-    // Укэ позиции (атакующий)
     const ukeAngles = {
       leftHipX: p > 1 ? 0.65 : 0.15,
       leftHipZ: 0.05,
@@ -90,51 +105,98 @@ function getCombatPoses(scenarioId, phaseProgress) {
       torsoRotY: 0.05,
     };
 
-    const toriPos = [0, -1.05, p > 1 ? 0.25 : 0];
-    const ukePos = [0, -1.05, p > 1 ? 1.35 : 1.7];
+    const toriPos = [0, 0, p > 1 ? 0.25 : 0];
+    const ukePos = [0, 0, p > 1 ? 1.35 : 1.7];
 
-    return { toriAngles, ukeAngles, toriPos, ukePos };
+    return { toriAngles, ukeAngles, toriPos, ukePos, toriStance, ukeStance };
+  } else if (scenarioId === 'gedan_counter') {
+    if (p < 0.8) {
+      toriStance = 'ready';
+      ukeStance = 'ready';
+    } else if (p < 1.8) {
+      toriStance = 'ready';
+      ukeStance = 'mae_geri';
+    } else if (p < 2.5) {
+      toriStance = 'gedan_barai';
+      ukeStance = 'zenkutsu';
+    } else {
+      toriStance = 'tetsui_uchi';
+      ukeStance = 'zenkutsu';
+    }
+
+    const toriAngles = {
+      leftHipX: p > 1 ? 0.25 : 0.08,
+      rightHipX: p > 1 ? -0.45 : -0.08,
+      leftShoulderX: p > 1 ? -0.55 : -0.2,
+      leftShoulderZ: p > 1 ? 0.35 : 0.15,
+      rightShoulderX: p >= 2.5 ? -1.1 : 0.4,
+    };
+
+    const ukeAngles = {
+      leftHipX: p > 0.8 ? 0.6 : 0.12,
+      rightHipX: p > 0.8 ? -0.5 : -0.1,
+      rightShoulderX: p > 0.8 ? -1.1 : -0.2,
+    };
+
+    const toriPos = [0, 0, p > 1 ? -0.2 : 0];
+    const ukePos = [0, 0, p > 0.8 ? 1.35 : 1.8];
+
+    return { toriAngles, ukeAngles, toriPos, ukePos, toriStance, ukeStance };
+  } else {
+    // shuto_counter
+    if (p < 0.8) {
+      toriStance = 'ready';
+      ukeStance = 'ready';
+    } else if (p < 1.8) {
+      toriStance = 'ready';
+      ukeStance = 'oi_zuki';
+    } else if (p < 2.5) {
+      toriStance = 'kokutsu';
+      ukeStance = 'zenkutsu';
+    } else {
+      toriStance = 'gyaku_zuki';
+      ukeStance = 'zenkutsu';
+    }
+
+    const toriAngles = {
+      leftHipX: p > 1 ? 0.32 : 0.08,
+      leftHipZ: 0.06,
+      leftKneeX: p > 1 ? 0.35 : 0.1,
+      rightHipX: p > 1 ? -0.55 : -0.08,
+      rightHipZ: -0.12,
+      rightKneeX: p > 1 ? 1.2 : 0.12,
+      leftShoulderX: p > 1 ? -0.45 : -0.2,
+      leftShoulderZ: p > 1 ? 0.42 : 0.15,
+      leftElbowX: p > 1 ? 0.75 : 0.4,
+      rightShoulderX: p >= 2.5 ? -1.15 : 0.5,
+      rightShoulderZ: -0.15,
+      rightElbowX: p >= 2.5 ? 0.1 : 1.9,
+      torsoRotX: 0.03,
+      torsoRotY: p > 1 ? 0.2 : 0,
+    };
+
+    const ukeAngles = {
+      leftHipX: p > 0.8 ? 0.7 : 0.12,
+      leftHipZ: 0.05,
+      leftKneeX: p > 0.8 ? 1.05 : 0.15,
+      rightHipX: p > 0.8 ? -0.45 : -0.1,
+      rightHipZ: -0.05,
+      rightKneeX: 0.1,
+      rightShoulderX: p > 0.8 ? -1.25 : -0.25,
+      rightShoulderZ: -0.08,
+      rightElbowX: p > 0.8 ? 0.12 : 0.8,
+      leftShoulderX: 0.45,
+      leftShoulderZ: 0.2,
+      leftElbowX: 1.8,
+      torsoRotX: p > 0.8 ? 0.06 : 0,
+      torsoRotY: -0.06,
+    };
+
+    const toriPos = [0, 0, p > 1 ? -0.25 : 0];
+    const ukePos = [0, 0, p > 0.8 ? 1.3 : 1.8];
+
+    return { toriAngles, ukeAngles, toriPos, ukePos, toriStance, ukeStance };
   }
-
-  // По умолчанию: shuto_counter
-  const toriAngles = {
-    leftHipX: p > 1 ? 0.32 : 0.08,
-    leftHipZ: 0.06,
-    leftKneeX: p > 1 ? 0.35 : 0.1,
-    rightHipX: p > 1 ? -0.55 : -0.08,
-    rightHipZ: -0.12,
-    rightKneeX: p > 1 ? 1.2 : 0.12,
-    leftShoulderX: p > 1 ? -0.45 : -0.2,
-    leftShoulderZ: p > 1 ? 0.42 : 0.15,
-    leftElbowX: p > 1 ? 0.75 : 0.4,
-    rightShoulderX: p >= 2.5 ? -1.15 : 0.5, // контрудар в финальной фазе
-    rightShoulderZ: -0.15,
-    rightElbowX: p >= 2.5 ? 0.1 : 1.9,
-    torsoRotX: 0.03,
-    torsoRotY: p > 1 ? 0.2 : 0,
-  };
-
-  const ukeAngles = {
-    leftHipX: p > 0.8 ? 0.7 : 0.12,
-    leftHipZ: 0.05,
-    leftKneeX: p > 0.8 ? 1.05 : 0.15,
-    rightHipX: p > 0.8 ? -0.45 : -0.1,
-    rightHipZ: -0.05,
-    rightKneeX: 0.1,
-    rightShoulderX: p > 0.8 ? -1.25 : -0.25,
-    rightShoulderZ: -0.08,
-    rightElbowX: p > 0.8 ? 0.12 : 0.8,
-    leftShoulderX: 0.45,
-    leftShoulderZ: 0.2,
-    leftElbowX: 1.8,
-    torsoRotX: p > 0.8 ? 0.06 : 0,
-    torsoRotY: -0.06,
-  };
-
-  const toriPos = [0, -1.05, p > 1 ? -0.25 : 0];
-  const ukePos = [0, -1.05, p > 0.8 ? 1.3 : 1.8];
-
-  return { toriAngles, ukeAngles, toriPos, ukePos };
 }
 
 function DojoCombatRing() {
@@ -194,37 +256,37 @@ function DuelSimulation({ scenario, phase, isPlaying, speed, showUke2 }) {
 
   return (
     <>
-      <DojoCombatRing />
+      <TraditionalDojo position={[0, 0, 0]} showStaticKarateka={false} />
 
       {/* ТОРИ — Мастер каратэ (Белое доги, 5-й Дан) */}
       <group ref={toriGroupRef} position={discretePoses.toriPos} rotation={[0, 0, 0]}>
-        <KarateMasterModel role="tori" angles={discretePoses.toriAngles} />
+        <KarateMasterModel
+          role="tori"
+          stance={discretePoses.toriStance}
+          angles={discretePoses.toriAngles}
+        />
       </group>
 
       {/* УКЭ 1 — Атакующий (Тёмно-синее доги цвета индиго) */}
       <group ref={ukeGroupRef} position={discretePoses.ukePos} rotation={[0, Math.PI, 0]}>
-        <KarateMasterModel role="uke" angles={discretePoses.ukeAngles} />
+        <KarateMasterModel
+          role="uke"
+          stance={discretePoses.ukeStance}
+          angles={discretePoses.ukeAngles}
+        />
       </group>
 
       {/* УКЭ 2 — Фланговый нападающий (для соревновательного бункая) */}
       {showUke2 && (
-        <group position={[-1.6, -1.05, 0.6]} rotation={[0, Math.PI / 2.5, 0]}>
+        <group position={[-1.6, 0, 0.6]} rotation={[0, Math.PI / 2.5, 0]}>
           <KarateMasterModel
             role="uke2"
-            angles={{
-              leftHipX: 0.15,
-              rightHipX: -0.15,
-              leftShoulderX: -0.85,
-              leftShoulderZ: 0.25,
-              leftElbowX: 1.1,
-              rightShoulderX: 0.35,
-              rightElbowX: 1.8,
-            }}
+            stance="zenkutsu"
           />
         </group>
       )}
 
-      <ContactShadows position={[0, -1.05, 0]} opacity={0.65} scale={7} blur={2.2} far={2.5} />
+      <ContactShadows position={[0, 0.002, 0]} opacity={0.65} scale={7} blur={2.2} far={2.5} />
     </>
   );
 }
@@ -247,21 +309,24 @@ export default function BunkaiDuelScene({ height = 480 }) {
     <div className="bunkai-duel-widget" style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
       {/* 3D Сцена */}
       <div style={{ width: '100%', height, position: 'relative', background: '#0c0907' }}>
-        <Canvas shadows camera={{ position: [3.4, 2.0, 3.8], fov: 38 }}>
+        <Canvas shadows camera={{ position: [3.4, 1.8, 3.6], fov: 38 }}>
           <color attach="background" args={['#0c0907']} />
 
-          {/* Освещение Додзё */}
-          <ambientLight intensity={0.7} color="#fbf4ea" />
+          {/* Мягкое боевое освещение Додзё */}
+          <ambientLight intensity={0.40} color="#fff1e0" />
+          <hemisphereLight skyColor="#fff6ec" groundColor="#3a281c" intensity={0.50} />
           <directionalLight
             position={[4, 7, 3]}
-            intensity={1.3}
+            intensity={0.90}
             color="#fff8ef"
             castShadow
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
+            shadow-bias={-0.0003}
+            shadow-normalBias={0.03}
           />
-          <pointLight position={[-4, 3, -3]} intensity={0.7} color="#c59b27" />
-          <pointLight position={[3, 2, -3]} intensity={0.5} color="#a12828" />
+          <pointLight position={[-4, 3, -3]} intensity={0.35} color="#c59b27" />
+          <pointLight position={[3, 2, -3]} intensity={0.25} color="#a12828" />
 
           <DuelSimulation
             scenario={currentScenario}
@@ -276,7 +341,7 @@ export default function BunkaiDuelScene({ height = 480 }) {
             enablePan={false}
             minDistance={2.0}
             maxDistance={7.5}
-            target={[0, 0.4, 0.6]}
+            target={[0, 0.95, 0.6]}
           />
         </Canvas>
 

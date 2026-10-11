@@ -24,6 +24,7 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminKataPage from './pages/admin/AdminKataPage';
 import AdminBunkaiPage from './pages/admin/AdminBunkaiPage';
 import AdminLogsPage from './pages/admin/AdminLogsPage';
+import AdminAnimationsPage from './pages/admin/AdminAnimationsPage';
 import AdminBackupsPage from './pages/admin/AdminBackupsPage';
 
 import NotFoundPage from './pages/NotFoundPage';
@@ -57,6 +58,10 @@ export default function App() {
             </RedirectIfAuthenticated>
           }
         />
+        <Route element={<MainLayout />}>
+          <Route path="/motion-lab" element={<MotionLabPage />} />
+          <Route path="/aimocap" element={<MotionLabPage />} />
+        </Route>
 
         {/* Все остальные маршруты требуют авторизации — иначе редирект на /register */}
         <Route element={<RequireAuth />}>
@@ -91,6 +96,7 @@ export default function App() {
             <Route path="/friends" element={<FriendsPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/motion-lab" element={<MotionLabPage />} />
+            <Route path="/aimocap" element={<MotionLabPage />} />
 
             <Route element={<RequireAdmin />}>
               <Route path="/admin" element={<AdminLayout />}>
@@ -99,6 +105,7 @@ export default function App() {
                 <Route path="kata" element={<AdminKataPage />} />
                 <Route path="bunkai" element={<AdminBunkaiPage />} />
                 <Route path="logs" element={<AdminLogsPage />} />
+                <Route path="animations" element={<AdminAnimationsPage />} />
                 <Route path="backups" element={<AdminBackupsPage />} />
               </Route>
             </Route>

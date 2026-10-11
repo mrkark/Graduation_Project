@@ -1,0 +1,412 @@
+{
+  "kata": "bassai_dai",
+  "confidence": "med",
+  "duration": 55.61,
+  "movesCount": 40,
+  "events": [
+    {
+      "moveNumber": 1,
+      "technique": [
+        "R:morote_uke"
+      ],
+      "form": "j:0.12:0.0",
+      "startTime": 1.2,
+      "endTime": 2.7,
+      "kiai": false
+    },
+    {
+      "moveNumber": 2,
+      "technique": [
+        "L:uchi_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 2.7,
+      "endTime": 3.96,
+      "kiai": false
+    },
+    {
+      "moveNumber": 3,
+      "technique": [
+        "R:uchi_uke"
+      ],
+      "form": null,
+      "startTime": 3.96,
+      "endTime": 5.4,
+      "kiai": false
+    },
+    {
+      "moveNumber": 4,
+      "technique": [
+        "L:soto_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 5.4,
+      "endTime": 6.86,
+      "kiai": false
+    },
+    {
+      "moveNumber": 5,
+      "technique": [
+        "R:uchi_uke"
+      ],
+      "form": null,
+      "startTime": 6.86,
+      "endTime": 8.3,
+      "kiai": false
+    },
+    {
+      "moveNumber": 6,
+      "technique": [
+        "R:soto_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 8.3,
+      "endTime": 9.56,
+      "kiai": false
+    },
+    {
+      "moveNumber": 7,
+      "technique": [
+        "L:uchi_uke"
+      ],
+      "form": null,
+      "startTime": 9.56,
+      "endTime": 11.0,
+      "kiai": false
+    },
+    {
+      "moveNumber": 8,
+      "technique": [
+        "L:tate_shuto_uke"
+      ],
+      "form": "heisoku",
+      "startTime": 11.0,
+      "endTime": 12.26,
+      "kiai": false
+    },
+    {
+      "moveNumber": 9,
+      "technique": [
+        "R:zuki"
+      ],
+      "form": null,
+      "startTime": 12.26,
+      "endTime": 13.7,
+      "kiai": false
+    },
+    {
+      "moveNumber": 10,
+      "technique": [
+        "R:uchi_uke"
+      ],
+      "form": null,
+      "startTime": 13.7,
+      "endTime": 15.14,
+      "kiai": false
+    },
+    {
+      "moveNumber": 11,
+      "technique": [
+        "L:zuki"
+      ],
+      "form": null,
+      "startTime": 15.14,
+      "endTime": 16.58,
+      "kiai": false
+    },
+    {
+      "moveNumber": 12,
+      "technique": [
+        "L:uchi_uke"
+      ],
+      "form": null,
+      "startTime": 16.58,
+      "endTime": 18.02,
+      "kiai": false
+    },
+    {
+      "moveNumber": 13,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 18.02,
+      "endTime": 19.38,
+      "kiai": false
+    },
+    {
+      "moveNumber": 14,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 19.38,
+      "endTime": 20.74,
+      "kiai": false
+    },
+    {
+      "moveNumber": 15,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 20.74,
+      "endTime": 22.1,
+      "kiai": false
+    },
+    {
+      "moveNumber": 16,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 22.1,
+      "endTime": 23.46,
+      "kiai": false
+    },
+    {
+      "moveNumber": 17,
+      "technique": [],
+      "form": "yoko_fumikomi:R",
+      "startTime": 23.46,
+      "endTime": 24.63,
+      "kiai": true
+    },
+    {
+      "moveNumber": 18,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 24.88,
+      "endTime": 26.39,
+      "kiai": false
+    },
+    {
+      "moveNumber": 19,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 26.39,
+      "endTime": 27.75,
+      "kiai": false
+    },
+    {
+      "moveNumber": 20,
+      "technique": [
+        "R:morote_age_uke"
+      ],
+      "form": "heisoku",
+      "startTime": 27.75,
+      "endTime": 29.01,
+      "kiai": false
+    },
+    {
+      "moveNumber": 21,
+      "technique": [
+        "R:hasami"
+      ],
+      "form": "zenkutsu",
+      "startTime": 29.01,
+      "endTime": 30.27,
+      "kiai": false
+    },
+    {
+      "moveNumber": 22,
+      "technique": [
+        "R:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 30.27,
+      "endTime": 31.53,
+      "kiai": false
+    },
+    {
+      "moveNumber": 23,
+      "technique": [
+        "L:nagashi_uke",
+        "R:nukite"
+      ],
+      "form": "zenkutsu",
+      "startTime": 31.53,
+      "endTime": 32.99,
+      "kiai": false
+    },
+    {
+      "moveNumber": 24,
+      "technique": [
+        "L:manji_uke"
+      ],
+      "form": "heisoku",
+      "startTime": 32.99,
+      "endTime": 34.25,
+      "kiai": false
+    },
+    {
+      "moveNumber": 25,
+      "technique": [
+        "R:gedan_barai"
+      ],
+      "form": "kiba",
+      "startTime": 34.25,
+      "endTime": 35.71,
+      "kiai": false
+    },
+    {
+      "moveNumber": 26,
+      "technique": [],
+      "form": "mikazuki:R",
+      "startTime": 35.71,
+      "endTime": 36.88,
+      "kiai": false
+    },
+    {
+      "moveNumber": 27,
+      "technique": [
+        "R:empi"
+      ],
+      "form": "kiba",
+      "startTime": 36.88,
+      "endTime": 38.14,
+      "kiai": false
+    },
+    {
+      "moveNumber": 28,
+      "technique": [
+        "R:gedan_barai",
+        "L:hikite"
+      ],
+      "form": null,
+      "startTime": 38.14,
+      "endTime": 39.58,
+      "kiai": false
+    },
+    {
+      "moveNumber": 29,
+      "technique": [
+        "L:gedan_barai",
+        "R:hikite"
+      ],
+      "form": null,
+      "startTime": 39.58,
+      "endTime": 41.02,
+      "kiai": false
+    },
+    {
+      "moveNumber": 30,
+      "technique": [
+        "R:gedan_barai",
+        "L:hikite"
+      ],
+      "form": null,
+      "startTime": 41.02,
+      "endTime": 42.46,
+      "kiai": false
+    },
+    {
+      "moveNumber": 31,
+      "technique": [
+        "L:yama_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 42.46,
+      "endTime": 43.72,
+      "kiai": false
+    },
+    {
+      "moveNumber": 32,
+      "technique": [
+        "L:hikite"
+      ],
+      "form": "heisoku",
+      "startTime": 43.72,
+      "endTime": 44.98,
+      "kiai": false
+    },
+    {
+      "moveNumber": 33,
+      "technique": [
+        "R:yama_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 44.98,
+      "endTime": 46.24,
+      "kiai": false
+    },
+    {
+      "moveNumber": 34,
+      "technique": [
+        "R:hikite"
+      ],
+      "form": "heisoku",
+      "startTime": 46.24,
+      "endTime": 47.5,
+      "kiai": false
+    },
+    {
+      "moveNumber": 35,
+      "technique": [
+        "L:yama_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 47.5,
+      "endTime": 48.76,
+      "kiai": false
+    },
+    {
+      "moveNumber": 36,
+      "technique": [
+        "R:sukui_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 48.76,
+      "endTime": 50.02,
+      "kiai": false
+    },
+    {
+      "moveNumber": 37,
+      "technique": [
+        "L:sukui_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 50.02,
+      "endTime": 51.28,
+      "kiai": false
+    },
+    {
+      "moveNumber": 38,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 51.28,
+      "endTime": 52.64,
+      "kiai": false
+    },
+    {
+      "moveNumber": 39,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 52.64,
+      "endTime": 54.0,
+      "kiai": false
+    },
+    {
+      "moveNumber": 40,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 54.0,
+      "endTime": 55.36,
+      "kiai": true
+    }
+  ],
+  "kiaiMoves": [
+    17,
+    40
+  ]
+}

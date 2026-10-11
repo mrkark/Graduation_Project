@@ -1,12 +1,12 @@
 /* Стили для обновленной пошаговой инструкции ката */
 
 .kata-step-viewer {
-  background: var(--color-surface, #141416);
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
-  border-radius: 14px;
-  padding: 1.5rem;
-  margin-top: 1.8rem;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+  background: var(--bg-panel, #14110e);
+  border: 1px solid rgba(197, 160, 89, 0.22);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
 }
 
 .kata-step-header {

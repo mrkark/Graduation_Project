@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getKata, deleteKata, approveKata, rejectKata } from '../api/kata';
 import { useAuthStore } from '../store/authStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
-import KaratekaAvatar from '../three/KaratekaAvatar';
+import KataSequencer, { resolveKataSlug } from '../three/KataSequencer';
 import { resolveMediaUrl } from '../utils/media';
 import '../three/avatarWidget.css';
 import './KataDetailPage.css';
@@ -17,6 +17,7 @@ export default function KataDetailPage() {
   const navigate = useNavigate();
   const { user, role } = useAuthStore();
   const [kata, setKata] = useState(null);
+  const [kataJsonData, setKataJsonData] = useState(null);
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,7 +33,49 @@ export default function KataDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const stepsCount = kata?.Steps?.length || 0;
+  const kataSlug = useMemo(() => (kata?.Title ? resolveKataSlug(kata.Title) : null), [kata?.Title]);
+
+  useEffect(() => {
+    if (!kataSlug) return;
+    fetch(`/kata_data/${kataSlug}.json`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setKataJsonData(data))
+      .catch(() => {});
+  }, [kataSlug]);
+
+  // Объединяем шаги из БД и канонические шаги из /kata_data/*.json
+  const effectiveSteps = useMemo(() => {
+    if (!kata) return [];
+    const dbSteps = kata.Steps || [];
+    const events = kataJsonData?.events || [];
+    if (events.length === 0 || events.length <= dbSteps.length) return dbSteps;
+
+    return events.map((ev, idx) => {
+      const existing = dbSteps[idx];
+      if (existing) {
+        return {
+          ...existing,
+          Duration: existing.Duration || (ev.endTime - ev.startTime),
+          kiai: ev.kiai || existing.Title?.includes('КИАЙ'),
+        };
+      }
+      const techniqueName = (ev.technique && ev.technique.length > 0)
+        ? ev.technique.join(', ')
+        : (ev.form ? `Стойка ${ev.form}` : 'Каноническая техника');
+      return {
+        Step_ID: `canonical_${ev.moveNumber}`,
+        Step_Number: ev.moveNumber,
+        Title: `Шаг ${ev.moveNumber}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
+        Technique: techniqueName,
+        Direction: ev.form ? `Стойка: ${ev.form}` : 'Линия эмбусэн',
+        Description: `Каноническое движение #${ev.moveNumber} ката ${kata.Title}. Позиция: ${ev.form || 'базовая'}.${ev.kiai ? ' Боевой выкрик КИАЙ!' : ''}`,
+        Duration: ev.endTime - ev.startTime,
+        kiai: ev.kiai,
+      };
+    });
+  }, [kata, kataJsonData]);
+
+  const stepsCount = effectiveSteps.length;
 
   const goToPrevStep = useCallback(() => {
     setActiveStepIdx((prev) => Math.max(0, prev - 1));
@@ -59,7 +102,7 @@ export default function KataDetailPage() {
   if (loading) return <p className="loading">Загрузка…</p>;
   if (error || !kata) return <p className="empty-state">{error}</p>;
 
-  const activeStep = kata.Steps?.[activeStepIdx] || kata.Steps?.[0];
+  const activeStep = effectiveSteps[activeStepIdx] || effectiveSteps[0];
 
   function getStanceFromStep(step) {
     if (!step) return 'ready';
@@ -185,49 +228,15 @@ export default function KataDetailPage() {
                 </span>
               </div>
 
-              {/* БОЛЬШОЕ ВИЗУАЛЬНОЕ 3D ОКНО В ТРАДИЦИОННОМ ДОДЗЁ */}
-              <div className="kata-step-media-window">
-                <div className="kata-step-overlay-top">
-                  <span className="kata-step-num-badge">
-                    Шаг #{activeStep.Step_Number}
-                  </span>
-                  <div className="kata-step-badges-right">
-                    {isKiai && (
-                      <span style={{ fontSize: '0.8rem', padding: '4px 12px', borderRadius: 20, background: '#b91c1c', color: '#fff', fontWeight: 800, letterSpacing: '0.05em', boxShadow: '0 2px 10px rgba(185,28,28,0.6)' }}>
-                        ⚡ КИАЙ
-                      </span>
-                    )}
-                    {activeStep.Direction && (
-                      <span style={{ fontSize: '0.8rem', padding: '4px 12px', borderRadius: 20, background: 'rgba(14, 14, 16, 0.85)', color: 'var(--color-gold)', border: '1px solid rgba(197, 155, 39, 0.4)', fontWeight: 600 }}>
-                        🧭 {activeStep.Direction}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ width: '100%', height: '100%', flex: 1, minHeight: 640, position: 'relative' }}>
-                  <KaratekaAvatar
-                    height="100%"
-                    initialStance={activeStance}
-                    key={`main-${activeStepIdx}-${activeStance}`}
-                  />
-                </div>
-
-                <div className="kata-step-overlay-bottom" style={{ pointerEvents: 'none', bottom: 82 }}>
-                  <div>
-                    <h4 className="kata-step-overlay-title">{activeStep.Title}</h4>
-                    {activeStep.Technique && (
-                      <div className="kata-step-overlay-tech">
-                        🥋 {activeStep.Technique}
-                      </div>
-                    )}
-                  </div>
-                  {activeStep.Duration && (
-                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                      ⏱ ~{activeStep.Duration} сек
-                    </span>
-                  )}
-                </div>
+              {/* ИНТЕРАКТИВНЫЙ 3D СЕКВЕНСЕР КАТА */}
+              <div style={{ marginBottom: '1.4rem' }}>
+                <KataSequencer
+                  kataTitle={kata.Title}
+                  steps={effectiveSteps}
+                  height={500}
+                  activeStepIndex={activeStepIdx}
+                  onStepChange={setActiveStepIdx}
+                />
               </div>
 
               {/* ДЕТАЛЬНОЕ ОПИСАНИЕ И ИНСТРУКЦИЯ ТЕКУЩЕГО ШАГА */}
@@ -259,11 +268,11 @@ export default function KataDetailPage() {
 
                 {/* Лента номеров всех шагов для быстрого перехода */}
                 <div className="kata-step-scrubber">
-                  {kata.Steps.map((step, idx) => {
-                    const stepKiai = step.Title?.includes('КИАЙ') || step.Technique?.includes('КИАЙ') || step.Description?.includes('КИАЙ');
+                  {effectiveSteps.map((step, idx) => {
+                    const stepKiai = step.Title?.includes('КИАЙ') || step.Technique?.includes('КИАЙ') || step.Description?.includes('КИАЙ') || step.kiai;
                     return (
                       <button
-                        key={step.Step_ID}
+                        key={step.Step_ID || idx}
                         className={`kata-step-scrubber-dot ${idx === activeStepIdx ? 'active' : ''} ${stepKiai ? 'is-kiai' : ''}`}
                         onClick={() => setActiveStepIdx(idx)}
                         title={`Шаг ${step.Step_Number}: ${step.Title}`}

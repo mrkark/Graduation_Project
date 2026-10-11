@@ -1,4 +1,4 @@
-const { callProcedure } = require('./execProc');
+const { callProcedure, callProcedureWithRecordsets } = require('./execProc');
 
 function mapBunkaiRow(row) {
   if (!row) return null;
@@ -38,14 +38,14 @@ async function list({ userId, userRole, search, kataId, difficulty, status, sort
     Difficulty: difficulty || null,
     Status: status || null,
     Sort: sort || 'newest',
-    Offset: offset,
-    Limit: limit,
+    Offset: typeof offset === 'number' ? offset : 0,
+    Limit: typeof limit === 'number' ? limit : 20,
   });
   const total = rows[0]?.Total_Count || 0;
   return { items: rows.map(mapBunkaiRow), total };
 }
 
-async function getById(bunkaiId, { userId, userRole }) {
+async function getById(bunkaiId, { userId, userRole } = {}) {
   const rows = await callProcedure('sp_Bunkai_GetById', { BunkaiId: bunkaiId, UserId: userId, UserRole: userRole });
   return mapBunkaiRow(rows[0]);
 }
@@ -94,4 +94,56 @@ async function setStatus(bunkaiId, status, { userId, userRole }) {
   return getById(rows[0].Bunkai_ID, { userId, userRole });
 }
 
-module.exports = { list, getById, create, update, remove, setStatus };
+async function getStepsWithParticipants(bunkaiId) {
+  const [stepsRows, participantsRows] = await callProcedureWithRecordsets('sp_Bunkai_GetStepsWithParticipants', {
+    BunkaiId: bunkaiId,
+  });
+
+  const participantsByStep = new Map();
+  (participantsRows || []).forEach((p) => {
+    if (!participantsByStep.has(p.Step_ID)) {
+      participantsByStep.set(p.Step_ID, []);
+    }
+    participantsByStep.get(p.Step_ID).push({
+      bspId: p.BSP_ID,
+      stepId: p.Step_ID,
+      role: p.Role,
+      clipId: p.Clip_ID,
+      clipName: p.Clip_Name,
+      clipTitle: p.Clip_Title,
+      clipDuration: p.Clip_Duration,
+      interactionType: p.Interaction_Type,
+      optimalDistance: p.Optimal_Distance,
+      initialStance: p.Initial_Stance,
+      offsetX: p.Offset_X,
+      offsetZ: p.Offset_Z,
+      rotationY: p.Rotation_Y,
+      delaySeconds: p.Delay_Seconds,
+    });
+  });
+
+  return (stepsRows || []).map((s) => ({
+    stepId: s.Step_ID,
+    bunkaiId: s.Bunkai_ID,
+    stepNumber: s.Step_Number,
+    title: s.Title,
+    description: s.Description,
+    duration: s.Duration,
+    participantCount: s.Participant_Count,
+    targetDistance: s.Target_Distance,
+    targetAngle: s.Target_Angle,
+    participants: participantsByStep.get(s.Step_ID) || [],
+  }));
+}
+
+async function saveSteps(bunkaiId, { userId, userRole }, steps) {
+  await callProcedure('sp_Bunkai_SaveSteps', {
+    BunkaiId: bunkaiId,
+    UserId: userId,
+    UserRole: userRole,
+    StepsJson: JSON.stringify(steps || []),
+  });
+  return getStepsWithParticipants(bunkaiId);
+}
+
+module.exports = { list, getById, create, update, remove, setStatus, getStepsWithParticipants, saveSteps };

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
-import RealisticSenseiModel from './RealisticSenseiModel';
+import KarateMasterModel from './KarateMasterModel';
 import TraditionalDojo from './TraditionalDojo';
 
 /**
@@ -9,36 +9,40 @@ import TraditionalDojo from './TraditionalDojo';
  */
 export const SHOTOKAN_STANCES = {
   ready: {
-    label: 'Стойка Йой (Хэйко-дати / Сидзэнтай)',
-    desc: 'Каноническая исходная стойка Йой: стопы на ширине плеч, кулаки опущены вниз и вперед перед собой, концентрация внимания (Дзансин).',
+    label: 'Стойка Йой (Сидзэнтай / Хэйко)',
+    desc: 'Каноническая исходная стойка готовности: стопы на ширине плеч, кулаки опущены вниз и вперед перед собой, концентрация внимания (Дзансин).',
   },
   zenkutsu: {
-    label: 'Дзэнкуцу-дати + Ой-цуки (Прямой удар в чудан)',
-    desc: 'Низкая наступательная стойка: левая нога согнута под 90° впереди, правая прямая сзади. Правый кулак наносит пробивающий удар в солнечное сплетение, левый кулак в хикитэ у бедра.',
+    label: 'Дзэнкуцу-дати (Передняя стойка)',
+    desc: 'Низкая наступательная стойка: переднее колено согнуто под 90°, задняя нога прямая, распределение веса 70/30.',
   },
-  gedan_barai: {
-    label: 'Дзэнкуцу-дати + Гэдан-барай (Нижний смет)',
-    desc: 'Канонический нижний смет: левое предплечье сметает нижнюю атаку под углом 45° над передним бедром, правый кулак отведен в хикитэ у бедра.',
-  },
-  age_uke: {
-    label: 'Дзэнкуцу-дати + Агэ-укэ (Верхний блок головы)',
-    desc: 'Защита головы от удара сверху: левое предплечье поднято под углом 45° над лбом, кулак направлен наружу, правый в хикитэ.',
+  zenkutsu_dachi_right: {
+    label: 'Дзэнкуцу-дати (Правая)',
+    desc: 'Правосторонняя передняя наступательная стойка Шотокан.',
   },
   kokutsu: {
-    label: 'Кокуцу-дати + Сюто-укэ (Блок ребром ладони)',
-    desc: 'Защитная стойка мастера: 70% веса на согнутой задней ноге. Передняя рука блокирует ребром открытой ладони (сюто), задняя ладонь у солнечного сплетения.',
+    label: 'Кокуцу-дати (Защитная стойка)',
+    desc: 'Защитная стойка мастера: 70% веса на согнутой задней ноге, стопы под прямым углом.',
   },
-  kiba: {
-    label: 'Киба-дати + Каги-цуки (Стойка всадника с крюком)',
-    desc: 'Стойка всадника из ката Тэкки: колени широко разведены наружу, мощный укорененный центр тяжести с боковым крюком кулаком.',
+  kokutsu_dachi_right: {
+    label: 'Кокуцу-дати (Правая)',
+    desc: 'Правосторонняя задняя защитная стойка.',
+  },
+  heiko: {
+    label: 'Хэйко-дати (Параллельная)',
+    desc: 'Параллельная стойка на ширине плеч.',
   },
   fudo: {
-    label: 'Фудо-дати (Стойка мастера Сочин — Непоколебимость)',
-    desc: 'Монолитная боевая стойка мастера каратэ Сочин: укорененный центр тяжести, вертикальный защитный кулак мусо-камаэ.',
+    label: 'Фудо-дати (Укоренённая)',
+    desc: 'Монолитная боевая стойка мастера: укоренённый центр тяжести (50/50).',
+  },
+  kiba: {
+    label: 'Киба-дати (Стойка всадника)',
+    desc: 'Стойка всадника из ката Тэкки: колени широко разведены наружу, мощный центр тяжести.',
   },
   gankaku: {
-    label: 'Цуру-аси-дати (Журавль на скале — Ганкаку)',
-    desc: 'Балансирующая стойка на одной ноге. Правая стопа поджата к колену, готовность нанести взрывной удар ногой и бэкфист.',
+    label: 'Цуру-аси-дати (Журавль на скале)',
+    desc: 'Балансирующая стойка на одной ноге. Стопа поджата к колену.',
   },
 };
 
@@ -47,31 +51,57 @@ export const SHOTOKAN_STANCES = {
  */
 export const KARATE_TECHNIQUES = [
   // Удары руками (Цуки и Учи)
-  { id: 'choku_zuki',   label: '👊 Чоку-цуки (Прямой)', category: 'hands' },
-  { id: 'oi_zuki',      label: '👊 Ой-цуки (С шагом)', category: 'hands' },
-  { id: 'gyaku_zuki',   label: '💥 Гяку-цуки (Реверс)', category: 'hands' },
-  { id: 'kizami_zuki',  label: '⚡ Кизами-цуки (Джеб)', category: 'hands' },
-  { id: 'ren_zuki',     label: '🔄 Рэн-цуки (Двойка)', category: 'hands' },
-  { id: 'uraken_uchi',  label: '🥊 Уракэн-учи (Бэкфист)', category: 'hands' },
-  { id: 'tetsui_uchi',  label: '🔨 Тэтцуи-учи (Молот)', category: 'hands' },
-  { id: 'empi_uchi',    label: '💥 Эмпи-учи (Локоть)', category: 'hands' },
-  { id: 'shuto_uchi',   label: '✋ Сюто-учи (Ладонь)', category: 'hands' },
-  { id: 'morote_zuki',  label: '⚡ Моротэ-цуки (Двойной)', category: 'hands' },
-  { id: 'hook',         label: '🥊 Каги-цуки (Крюк)', category: 'hands' },
+  { id: 'oi_zuki_right',      label: '👊 Ой-цуки (Правый)', category: 'hands' },
+  { id: 'oi_zuki_left',       label: '👊 Ой-цуки (Левый)', category: 'hands' },
+  { id: 'gyaku_zuki_right',   label: '💥 Гяку-цуки (Правый реверс)', category: 'hands' },
+  { id: 'gyaku_zuki_left',    label: '💥 Гяку-цуки (Левый реверс)', category: 'hands' },
+  { id: 'chudan_zuki_right',  label: '👊 Чудан-цуки (Корпус)', category: 'hands' },
+  { id: 'jodan_zuki_right',   label: '🎯 Дзёдан-цуки (Голова)', category: 'hands' },
+  { id: 'choku_zuki',         label: '👊 Чоку-цуки (Прямой)', category: 'hands' },
+  { id: 'kizami_zuki',        label: '⚡ Кизами-цуки (Джеб)', category: 'hands' },
+  { id: 'ren_zuki',           label: '🔄 Рэн-цуки (Двойка)', category: 'hands' },
+  { id: 'uraken_uchi',        label: '🥊 Уракэн-учи (Бэкфист)', category: 'hands' },
+  { id: 'tetsui_uchi',        label: '🔨 Тэтцуи-учи (Молот)', category: 'hands' },
+  { id: 'empi_uchi',          label: '💥 Эмпи-учи (Локоть)', category: 'hands' },
+  { id: 'shuto_uchi',         label: '✋ Сюто-учи (Ладонь)', category: 'hands' },
 
   // Защитные блоки
-  { id: 'age_uke',      label: '🛡️ Агэ-укэ (Верхний блок)', category: 'blocks' },
-  { id: 'soto_uke',     label: '🛡️ Сото-укэ (Блок снаружи)', category: 'blocks' },
-  { id: 'uchi_uke',     label: '🛡️ Ути-укэ (Блок изнутри)', category: 'blocks' },
-  { id: 'gedan_barai',  label: '🥋 Гэдан-барай (Нижний смет)', category: 'blocks' },
-  { id: 'shuto_uke',    label: '✋ Сюто-укэ (Ребро ладони)', category: 'blocks' },
+  { id: 'gedan_barai_left',   label: '🥋 Гэдан-барай (Левый смет)', category: 'blocks' },
+  { id: 'gedan_barai_right',  label: '🥋 Гэдан-барай (Правый смет)', category: 'blocks' },
+  { id: 'age_uke_left',       label: '🛡️ Агэ-укэ (Левый верхний)', category: 'blocks' },
+  { id: 'age_uke_right',      label: '🛡️ Агэ-укэ (Правый верхний)', category: 'blocks' },
+  { id: 'soto_uke',           label: '🛡️ Сото-укэ (Снаружи-внутрь)', category: 'blocks' },
+  { id: 'uchi_uke',           label: '🛡️ Ути-укэ (Изнутри-наружу)', category: 'blocks' },
+  { id: 'shuto_uke',          label: '✋ Сюто-укэ (Ребро ладони)', category: 'blocks' },
 
-  // Удары ногами и перемещения
-  { id: 'mae_geri',     label: '🦶 Маэ-гэри (Прямой)', category: 'kicks' },
-  { id: 'yoko_geri',    label: '🦶 Ёко-гэри (Боковой)', category: 'kicks' },
-  { id: 'mawashi_geri', label: '🔄 Маваси-гэри (Круговой)', category: 'kicks' },
-  { id: 'ushiro_geri',  label: '🦶 Усиро-гэри (Назад)', category: 'kicks' },
-  { id: 'step',         label: '🥋 Цуги-аси (Подшаг)', category: 'moves' },
+  // Удары ногами
+  { id: 'mae_geri_right',     label: '🦶 Маэ-гэри (Правый прямой)', category: 'kicks' },
+  { id: 'mae_geri_left',      label: '🦶 Маэ-гэри (Левый прямой)', category: 'kicks' },
+  { id: 'mae_geri_chamber_right', label: '🦵 Камаэ колена Маэ-гэри', category: 'kicks' },
+  { id: 'yoko_geri',          label: '🦶 Ёко-гэри (Боковой)', category: 'kicks' },
+  { id: 'mawashi_geri',       label: '🔄 Маваси-гэри (Круговой)', category: 'kicks' },
+  { id: 'ushiro_geri',        label: '🦶 Усиро-гэри (Назад)', category: 'kicks' },
+
+  // Локомоция (Шаги и перемещения)
+  { id: 'step_forward',       label: '👣 Шаг вперед (Сури-аси)', category: 'moves' },
+  { id: 'step_backward',      label: '👣 Шаг назад', category: 'moves' },
+  { id: 'slide_forward',      label: '🥋 Цуги-аси (Скольжение вперед)', category: 'moves' },
+  { id: 'slide_backward',     label: '🥋 Скольжение назад', category: 'moves' },
+
+  // Развороты и пивоты
+  { id: 'turn_left',          label: '🔄 Разворот влево (45°)', category: 'moves' },
+  { id: 'turn_right',         label: '🔄 Разворот вправо (45°)', category: 'moves' },
+  { id: 'pivot_left',         label: '📐 Пивот таза Koshi влево', category: 'moves' },
+  { id: 'pivot_right',        label: '📐 Пивот таза Koshi вправо', category: 'moves' },
+  { id: 'turn_with_step_left',label: '👣 Разворот с шагом', category: 'moves' },
+
+  // Хикитэ и взведения
+  { id: 'hikite_right',       label: '⚡ Хикитэ правый к ребрам', category: 'moves' },
+  { id: 'hikite_left',        label: '⚡ Хикитэ левый к ребрам', category: 'moves' },
+  { id: 'chamber_left',       label: '🛡️ Чембер на блок', category: 'moves' },
+
+  // Ката целиком
+  { id: 'heian_shodan_preview', label: '📜 Хэйан Шодан (Превью формы)', category: 'moves' },
 ];
 
 function RotatingGroup({ animate, children }) {
@@ -116,25 +146,28 @@ export default function KaratekaAvatar({
         <Canvas shadows camera={{ position: [0, 1.15, 2.6], fov: 44 }}>
           <color attach="background" args={['#17120d']} />
 
-          {/* Теплое гармоничное освещение традиционного зала Додзё */}
-          <ambientLight intensity={0.95} color="#fff6ea" />
+          {/* Мягкое атмосферное освещение традиционного зала Додзё */}
+          <ambientLight intensity={0.40} color="#fff1e0" />
+          <hemisphereLight skyColor="#fff6ec" groundColor="#3a281c" intensity={0.50} />
           <directionalLight
-            position={[4, 6, 4]}
-            intensity={1.6}
-            color="#fffcf5"
+            position={[4, 7, 3.5]}
+            intensity={0.95}
+            color="#fff8f0"
             castShadow
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
+            shadow-bias={-0.0003}
+            shadow-normalBias={0.03}
           />
-          <pointLight position={[-3, 2, -2]} intensity={0.7} color="#f5b358" />
-          <pointLight position={[3, 2, -2]} intensity={0.7} color="#f5b358" />
+          <pointLight position={[-3.5, 2.2, -2.5]} intensity={0.35} color="#e59e45" distance={10} />
+          <pointLight position={[3.5, 2.2, -2.5]} intensity={0.35} color="#e59e45" distance={10} />
 
           {/* Полное 3D традиционное Додзё: 18x18м, татами, сёдзи, камидза, свиток и фонари */}
           <TraditionalDojo />
 
           <RotatingGroup animate={animate}>
             <Suspense fallback={null}>
-              <RealisticSenseiModel
+              <KarateMasterModel
                 role={role}
                 stance={stance}
                 activeClip={activeClip}

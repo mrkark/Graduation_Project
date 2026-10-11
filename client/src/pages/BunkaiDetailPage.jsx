@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getBunkai, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
+import { getBunkai, getBunkaiSteps, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
 import { useAuthStore } from '../store/authStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
-import BunkaiDuelScene from '../three/BunkaiDuelScene';
+import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
 import '../three/avatarWidget.css';
 
 const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
@@ -15,13 +15,20 @@ export default function BunkaiDetailPage() {
   const navigate = useNavigate();
   const { user, role } = useAuthStore();
   const [bunkai, setBunkai] = useState(null);
+  const [bunkaiSteps, setBunkaiSteps] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    getBunkai(id)
-      .then(setBunkai)
+    Promise.all([
+      getBunkai(id),
+      getBunkaiSteps(id).catch(() => []),
+    ])
+      .then(([bunkaiData, stepsData]) => {
+        setBunkai(bunkaiData);
+        setBunkaiSteps(stepsData);
+      })
       .catch((err) => setError(err.response?.data?.error?.message || 'Бункай не найден'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -87,9 +94,13 @@ export default function BunkaiDetailPage() {
       <div style={{ marginBottom: '2rem' }}>
         <h3 style={{ marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>🥋</span>
-          <span>3D-Симуляция боевого применения (Тори & Укэ)</span>
+          <span>3D-Симуляция боевого применения (Тори, Укэ 1 и Укэ 2)</span>
         </h3>
-        <BunkaiDuelScene height={460} />
+        <BunkaiMultiAvatarPlayer
+          steps={bunkaiSteps}
+          defaultParticipantMode={bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'}
+          height={540}
+        />
       </div>
 
       <div className="detail-grid">

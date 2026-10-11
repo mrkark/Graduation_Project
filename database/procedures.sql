@@ -266,10 +266,15 @@ CREATE OR ALTER PROCEDURE dbo.sp_KataStep_ListByKata
 AS
 BEGIN
     SET NOCOUNT ON;
-    SELECT Step_ID, Kata_ID, Step_Number, Title, Description, Technique, Direction, Duration, Image_URL, Video_URL
-    FROM dbo.KataSteps
-    WHERE Kata_ID = @KataId
-    ORDER BY Step_Number ASC;
+    SELECT
+        s.Step_ID, s.Kata_ID, s.Step_Number, s.Title, s.Description, s.Technique,
+        s.Direction, s.Duration, s.Image_URL, s.Video_URL,
+        s.Clip_ID, c.Clip_Name, s.Stance_In, s.Stance_Out,
+        s.Root_Displacement_X, s.Root_Displacement_Z, s.Root_Rotation_Y
+    FROM dbo.KataSteps s
+    LEFT JOIN dbo.AnimationClips c ON c.Clip_ID = s.Clip_ID
+    WHERE s.Kata_ID = @KataId
+    ORDER BY s.Step_Number ASC;
 END
 GO
 
@@ -1311,6 +1316,215 @@ BEGIN
 
     INSERT INTO dbo.ActivityLogs (User_ID, Action, Entity_Type, Entity_ID, Details, Ip_Address)
     VALUES (@UserId, @Action, @EntityType, @EntityId, @Details, @IpAddress);
+END
+GO
+
+-- =========================================================
+-- Анимации, переходы, расширенный бункай и реестр пропусков
+-- =========================================================
+
+CREATE OR ALTER PROCEDURE dbo.sp_Animation_ListClips
+    @Category NVARCHAR(50) = NULL,
+    @InteractionType NVARCHAR(30) = NULL,
+    @Search NVARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        Clip_ID, Clip_Name, Display_Name, Category, Source_Type, File_Path,
+        Duration, Stance_In, Stance_Out, Lead_In, Lead_Out,
+        Interaction_Type, Optimal_Distance, Tolerance_Min, Tolerance_Max,
+        Contact_Bone_Self, Contact_Bone_Target, Contact_Time_Start, Contact_Time_End,
+        Is_Active, Created_At
+    FROM dbo.AnimationClips
+    WHERE Is_Active = 1
+      AND (@Category IS NULL OR Category = @Category)
+      AND (@InteractionType IS NULL OR Interaction_Type = @InteractionType)
+      AND (@Search IS NULL OR Display_Name LIKE N'%' + @Search + N'%' OR Clip_Name LIKE N'%' + @Search + N'%')
+    ORDER BY Category, Display_Name;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Animation_ListTransitions
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        t.Transition_ID, t.From_Stance, t.To_Stance,
+        t.Transition_Clip_ID, c.Clip_Name AS Transition_Clip_Name,
+        t.Blending_Duration, t.Is_Direct_Blend_Allowed, t.Notes
+    FROM dbo.ClipTransitions t
+    LEFT JOIN dbo.AnimationClips c ON c.Clip_ID = t.Transition_Clip_ID
+    ORDER BY t.From_Stance, t.To_Stance;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Animation_LogMissing
+    @ClipName NVARCHAR(100),
+    @ContextType NVARCHAR(50),
+    @ContextEntityId INT = NULL,
+    @FromStance NVARCHAR(50) = NULL,
+    @ToStance NVARCHAR(50) = NULL,
+    @UserId INT = NULL,
+    @Notes NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @existingId INT;
+
+    SELECT @existingId = Request_ID
+    FROM dbo.MissingAnimationRequests
+    WHERE Clip_Name = @ClipName
+      AND Context_Type = @ContextType
+      AND ISNULL(From_Stance, N'') = ISNULL(@FromStance, N'')
+      AND ISNULL(To_Stance, N'') = ISNULL(@ToStance, N'')
+      AND Status IN (N'pending', N'in_production');
+
+    IF @existingId IS NOT NULL
+    BEGIN
+        UPDATE dbo.MissingAnimationRequests
+        SET Request_Count = Request_Count + 1,
+            Last_Requested_At = SYSUTCDATETIME(),
+            Notes = COALESCE(@Notes, Notes)
+        WHERE Request_ID = @existingId;
+
+        SELECT Request_ID, Request_Count, Status
+        FROM dbo.MissingAnimationRequests
+        WHERE Request_ID = @existingId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.MissingAnimationRequests
+            (Clip_Name, Context_Type, Context_Entity_ID, From_Stance, To_Stance, Requested_By_User_ID, Request_Count, Status, Notes)
+        VALUES
+            (@ClipName, @ContextType, @ContextEntityId, @FromStance, @ToStance, @UserId, 1, N'pending', @Notes);
+
+        DECLARE @newId INT = SCOPE_IDENTITY();
+        SELECT Request_ID, Request_Count, Status
+        FROM dbo.MissingAnimationRequests
+        WHERE Request_ID = @newId;
+    END
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Animation_ListMissingRequests
+    @Status NVARCHAR(20) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        r.Request_ID, r.Clip_Name, r.Context_Type, r.Context_Entity_ID,
+        r.From_Stance, r.To_Stance, r.Request_Count, r.Status, r.Notes,
+        r.First_Requested_At, r.Last_Requested_At,
+        u.Username AS Requested_By_Username
+    FROM dbo.MissingAnimationRequests r
+    LEFT JOIN dbo.Users u ON u.User_ID = r.Requested_By_User_ID
+    WHERE (@Status IS NULL OR r.Status = @Status)
+    ORDER BY r.Request_Count DESC, r.Last_Requested_At DESC;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Bunkai_GetStepsWithParticipants
+    @BunkaiId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        s.Step_ID, s.Bunkai_ID, s.Step_Number, s.Title, s.Description,
+        s.Duration, s.Participant_Count, s.Target_Distance, s.Target_Angle
+    FROM dbo.BunkaiSteps s
+    WHERE s.Bunkai_ID = @BunkaiId
+    ORDER BY s.Step_Number;
+
+    SELECT
+        p.BSP_ID, p.Step_ID, p.Role, p.Clip_ID,
+        c.Clip_Name, c.Display_Name AS Clip_Title, c.Duration AS Clip_Duration,
+        c.Interaction_Type, c.Optimal_Distance,
+        p.Initial_Stance, p.Offset_X, p.Offset_Z, p.Rotation_Y, p.Delay_Seconds
+    FROM dbo.BunkaiStepParticipants p
+    JOIN dbo.BunkaiSteps s ON s.Step_ID = p.Step_ID
+    LEFT JOIN dbo.AnimationClips c ON c.Clip_ID = p.Clip_ID
+    WHERE s.Bunkai_ID = @BunkaiId
+    ORDER BY s.Step_Number, p.Role;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Bunkai_SaveSteps
+    @BunkaiId INT,
+    @UserId INT,
+    @UserRole NVARCHAR(20),
+    @StepsJson NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @authorId INT;
+    SELECT @authorId = Author_ID FROM dbo.Bunkai WHERE Bunkai_ID = @BunkaiId;
+
+    IF @authorId IS NULL
+        THROW 50000, N'ERR|404|BUNKAI_NOT_FOUND|Бункай не найден', 1;
+
+    IF @authorId <> @UserId AND @UserRole <> N'admin'
+        THROW 50000, N'ERR|403|FORBIDDEN|Нет прав на редактирование бункая', 1;
+
+    BEGIN TRANSACTION;
+
+    DELETE FROM dbo.BunkaiSteps WHERE Bunkai_ID = @BunkaiId;
+
+    DECLARE @i INT = 0;
+    DECLARE @totalSteps INT = (SELECT COUNT(*) FROM OPENJSON(@StepsJson));
+
+    WHILE @i < @totalSteps
+    BEGIN
+        DECLARE @stepPath NVARCHAR(50) = '$[' + CAST(@i AS NVARCHAR(10)) + ']';
+        DECLARE @stepNum INT = JSON_VALUE(@StepsJson, @stepPath + '.stepNumber');
+        DECLARE @title NVARCHAR(200) = JSON_VALUE(@StepsJson, @stepPath + '.title');
+        DECLARE @desc NVARCHAR(MAX) = JSON_VALUE(@StepsJson, @stepPath + '.description');
+        DECLARE @dur FLOAT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.duration') AS FLOAT), 2.5);
+        DECLARE @pCount INT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.participantCount') AS INT), 2);
+        DECLARE @dist FLOAT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.targetDistance') AS FLOAT), 1.4);
+        DECLARE @angle FLOAT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.targetAngle') AS FLOAT), 0.0);
+
+        INSERT INTO dbo.BunkaiSteps (Bunkai_ID, Step_Number, Title, Description, Duration, Participant_Count, Target_Distance, Target_Angle)
+        VALUES (@BunkaiId, ISNULL(@stepNum, @i + 1), ISNULL(@title, N'Эпизод ' + CAST(@i + 1 AS NVARCHAR(10))), @desc, @dur, @pCount, @dist, @angle);
+
+        DECLARE @newStepId INT = SCOPE_IDENTITY();
+
+        DECLARE @partJson NVARCHAR(MAX) = JSON_QUERY(@StepsJson, @stepPath + '.participants');
+        IF @partJson IS NOT NULL
+        BEGIN
+            INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
+            SELECT
+                @newStepId,
+                pj.role,
+                pj.clipId,
+                pj.initialStance,
+                ISNULL(pj.offsetX, 0.0),
+                ISNULL(pj.offsetZ, 0.0),
+                ISNULL(pj.rotationY, 0.0),
+                ISNULL(pj.delaySeconds, 0.0)
+            FROM OPENJSON(@partJson) WITH (
+                role NVARCHAR(20) '$.role',
+                clipId INT '$.clipId',
+                initialStance NVARCHAR(50) '$.initialStance',
+                offsetX FLOAT '$.offsetX',
+                offsetZ FLOAT '$.offsetZ',
+                rotationY FLOAT '$.rotationY',
+                delaySeconds FLOAT '$.delaySeconds'
+            ) AS pj;
+        END
+
+        SET @i = @i + 1;
+    END
+
+    COMMIT TRANSACTION;
+
+    EXEC dbo.sp_Bunkai_GetStepsWithParticipants @BunkaiId = @BunkaiId;
 END
 GO
 

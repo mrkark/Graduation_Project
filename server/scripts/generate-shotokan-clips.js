@@ -12,13 +12,15 @@
  */
 const fs = require('fs');
 const path = require('path');
-const THREE = require('three');
-const { FBXLoader } = require('three/examples/jsm/loaders/FBXLoader.js');
+const { createRequire } = require('module');
 
 global.window = { URL: { createObjectURL: () => '' } };
 global.document = { createElementNS: () => ({ setAttribute: () => {}, addEventListener: () => {} }) };
 
 const clientDir = path.resolve(__dirname, '..', '..', 'client');
+const clientRequire = createRequire(path.join(clientDir, 'package.json'));
+const THREE = clientRequire('three');
+const { FBXLoader } = clientRequire('three/examples/jsm/loaders/FBXLoader.js');
 const fbxPath = path.join(clientDir, 'public', 'models', 'sensei.fbx');
 const animsPublicDir = path.join(clientDir, 'public', 'anims');
 const animsDistDir = path.join(clientDir, 'dist', 'anims');
@@ -1181,4 +1183,319 @@ generateClip('step', 1.4, [
   { t: 1.4, pose: () => poseReady(0) },
 ]);
 
+// 22. Санбон-цуки (Тройная связка ударов руками: Ой-цуки Дзёдан + Гяку-цуки Чудан + Ой-цуки Чудан)
+generateClip('sanbon_zuki', 2.0, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // Удар 1: Ой-цуки в лицо (Дзёдан)
+  { t: 0.35, pose: () => {
+      aim('Spine', 'Spine1', 0, 1, 0.05);
+      aim('RightShoulder', 'RightArm', -0.06, 0.12, 0.40);
+      aim('RightArm', 'RightForeArm', -0.04, 0.22, 0.96);
+      aim('RightForeArm', 'RightHand', -0.02, 0.20, 0.97);
+      poseHikite('left');
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.70, 0.70);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.74, -0.66);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.84;
+      fistBoth();
+    }
+  },
+  // Удар 2: Реверсивный Гяку-цуки в корпус (Чудан) со скручиванием таза
+  { t: 0.75, pose: () => {
+      aim('Spine', 'Spine1', -0.04, 1, 0.04);
+      aim('LeftShoulder', 'LeftArm', 0.08, -0.02, 0.40);
+      aim('LeftArm', 'LeftForeArm', 0.05, -0.02, 0.98);
+      aim('LeftForeArm', 'LeftHand', 0.02, -0.02, 0.98);
+      poseHikite('right');
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.70, 0.70);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.74, -0.66);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.83;
+      fistBoth();
+    }
+  },
+  // Удар 3: Завершающий мощный Ой-цуки Чудан с максимальным Кимэ
+  { t: 1.15, pose: () => {
+      aim('Spine', 'Spine1', 0.04, 1, 0.06);
+      aim('RightShoulder', 'RightArm', -0.08, -0.02, 0.40);
+      aim('RightArm', 'RightForeArm', -0.06, -0.02, 0.98);
+      aim('RightForeArm', 'RightHand', -0.02, -0.02, 0.98);
+      poseHikite('left');
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.68, 0.72);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.74, -0.66);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.82;
+      fistBoth();
+    }
+  },
+  { t: 1.45, pose: () => {
+      // Удержание кимэ
+      aim('RightArm', 'RightForeArm', -0.06, -0.02, 0.98);
+      aim('RightForeArm', 'RightHand', -0.02, -0.02, 0.98);
+      poseHikite('left');
+      fistBoth();
+    }
+  },
+  { t: 2.0, pose: () => poseReady(0) },
+]);
+
+// 23. Маэ-гэри + Гяку-цуки (Связка: удар ногой с выпадом и добивающим ударом кулака)
+generateClip('mae_geri_gyaku_zuki', 2.1, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // Фаза 1: Подъем колена к груди (камера)
+  { t: 0.35, pose: () => {
+      aim('RightUpLeg', 'RightLeg', -0.05, 0.88, 0.48);
+      aim('RightLeg', 'RightFoot', 0.0, -0.78, -0.62);
+      aim('LeftArm', 'LeftForeArm', 0.18, -0.15, 0.92);
+      aim('RightArm', 'RightForeArm', -0.18, -0.15, 0.92);
+      rig.bones.Hips.position.y = rig.hipsRestY * 1.02;
+      fistBoth();
+    }
+  },
+  // Фаза 2: Хлесткий удар Маэ-гэри вперед (подушечками пальцев коси)
+  { t: 0.65, pose: () => {
+      aim('RightUpLeg', 'RightLeg', -0.02, 0.45, 0.88);
+      aim('RightLeg', 'RightFoot', 0.0, 0.48, 0.88);
+      aim('RightFoot', 'RightToeBase', 0.0, 0.55, 0.82);
+      aim('LeftArm', 'LeftForeArm', 0.22, -0.18, 0.90);
+      aim('RightArm', 'RightForeArm', -0.22, -0.18, 0.90);
+      rig.bones.Hips.position.y = rig.hipsRestY * 1.01;
+      fistBoth();
+    }
+  },
+  // Фаза 3: Приземление ноги вперед в Дзэнкуцу-дати и замах
+  { t: 0.95, pose: () => {
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.74, -0.66);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.14, -0.68, 0.72);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      poseHikite('left');
+      aim('RightArm', 'RightForeArm', -0.18, -0.45, 0.85);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.84;
+      fistBoth();
+    }
+  },
+  // Фаза 4: Взрывной реверс Гяку-цуки левой рукой от бедра
+  { t: 1.30, pose: () => {
+      aim('Spine', 'Spine1', -0.05, 1, 0.05);
+      aim('LeftShoulder', 'LeftArm', 0.08, -0.02, 0.40);
+      aim('LeftArm', 'LeftForeArm', 0.05, -0.02, 0.98);
+      aim('LeftForeArm', 'LeftHand', 0.02, -0.02, 0.98);
+      poseHikite('right');
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.74, -0.66);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.14, -0.68, 0.72);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.82;
+      fistBoth();
+    }
+  },
+  { t: 1.60, pose: () => {
+      aim('LeftArm', 'LeftForeArm', 0.05, -0.02, 0.98);
+      poseHikite('right');
+      fistBoth();
+    }
+  },
+  { t: 2.1, pose: () => poseReady(0) },
+]);
+
+// 24. Агэ-укэ + Гяку-цуки (Канонический Кихон-Иппон Бункай: верхний сбив и контрудар в ребра)
+generateClip('age_uke_gyaku_zuki', 2.0, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // Защита: Восходящий блок Агэ-укэ левой рукой
+  { t: 0.45, pose: () => {
+      aim('Spine', 'Spine1', 0, 1, 0.04);
+      aim('LeftShoulder', 'LeftArm', 0.10, 0.35, 0.25);
+      aim('LeftArm', 'LeftForeArm', 0.20, 0.72, 0.65);
+      aim('LeftForeArm', 'LeftHand', -0.65, 0.55, 0.50);
+      poseHikite('right');
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.68, 0.72);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.74, -0.66);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.83;
+      fistBoth();
+    }
+  },
+  // Контратака: Срыв в прямой удар Гяку-цуки правой рукой
+  { t: 1.05, pose: () => {
+      aim('Spine', 'Spine1', 0.04, 1, 0.05);
+      poseHikite('left');
+      aim('RightShoulder', 'RightArm', -0.08, -0.02, 0.40);
+      aim('RightArm', 'RightForeArm', -0.06, -0.02, 0.98);
+      aim('RightForeArm', 'RightHand', -0.02, -0.02, 0.98);
+      aim('LeftUpLeg', 'LeftLeg', 0.14, -0.68, 0.72);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.74, -0.66);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.82;
+      fistBoth();
+    }
+  },
+  { t: 1.45, pose: () => {
+      aim('RightArm', 'RightForeArm', -0.06, -0.02, 0.98);
+      poseHikite('left');
+      fistBoth();
+    }
+  },
+  { t: 2.0, pose: () => poseReady(0) },
+]);
+
+// 25. Маньдзи-укэ (卍受け — Двойной вихревой блок верхний/нижний в Кокуцу-дати)
+generateClip('manji_uke', 1.8, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // Замах: руки скрещиваются перед грудью
+  { t: 0.35, pose: () => {
+      aim('LeftArm', 'LeftForeArm', -0.25, -0.20, 0.92);
+      aim('RightArm', 'RightForeArm', 0.25, 0.10, 0.94);
+      aim('LeftUpLeg', 'LeftLeg', 0.12, -0.85, 0.50);
+      aim('RightUpLeg', 'RightLeg', -0.20, -0.65, -0.72);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.88;
+      fistBoth();
+    }
+  },
+  // Разворот в Кокуцу-дати: левая рука вниз (Гэдан-барай), правая рука за голову (Дзёдан Учи-укэ)
+  { t: 0.85, pose: () => {
+      aim('Spine', 'Spine1', -0.04, 1, 0.02);
+      // Верхний блок за голову назад
+      aim('RightShoulder', 'RightArm', -0.12, 0.40, -0.30);
+      aim('RightArm', 'RightForeArm', -0.18, 0.70, -0.68);
+      aim('RightForeArm', 'RightHand', 0.35, 0.55, -0.75);
+      // Нижний смет вперед
+      aim('LeftShoulder', 'LeftArm', 0.12, -0.20, 0.30);
+      aim('LeftArm', 'LeftForeArm', 0.24, -0.72, 0.64);
+      aim('LeftForeArm', 'LeftHand', -0.22, -0.70, 0.66);
+      // Стойка Кокуцу-дати
+      aim('LeftUpLeg', 'LeftLeg', 0.12, -0.85, 0.50);
+      aim('LeftLeg', 'LeftFoot', 0, -0.94, -0.34);
+      aim('RightUpLeg', 'RightLeg', -0.22, -0.62, -0.75);
+      aim('RightLeg', 'RightFoot', 0, -0.90, -0.42);
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.84;
+      fistBoth();
+    }
+  },
+  { t: 1.30, pose: () => {
+      // Удержание позы
+      aim('RightForeArm', 'RightHand', 0.35, 0.55, -0.75);
+      aim('LeftForeArm', 'LeftHand', -0.22, -0.70, 0.66);
+      fistBoth();
+    }
+  },
+  { t: 1.8, pose: () => poseReady(0) },
+]);
+
+// 26. Ганкаку-Сюто (Стойка журавля Цуру-аси-дати с балансом на одной ноге и рубящим блоком Сюто)
+generateClip('gankaku_shuto', 2.0, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // Подъем правой ноги и зацеп за колено
+  { t: 0.45, pose: () => {
+      // Баланс на левой ноге
+      aim('LeftUpLeg', 'LeftLeg', 0.02, -0.98, 0.12);
+      aim('LeftLeg', 'LeftFoot', 0, -0.99, -0.12);
+      // Правая нога согнута и прижата сзади к колену (Цуру-аси)
+      aim('RightUpLeg', 'RightLeg', -0.35, 0.45, 0.82);
+      aim('RightLeg', 'RightFoot', 0.35, -0.85, -0.40);
+      aim('RightFoot', 'RightToeBase', 0.0, -0.90, 0.35);
+      // Руки скрещены
+      aim('LeftArm', 'LeftForeArm', 0.20, 0.0, 0.95);
+      aim('RightArm', 'RightForeArm', -0.20, 0.20, 0.92);
+      rig.bones.Hips.position.y = rig.hipsRestY * 1.02;
+      fistBoth();
+    }
+  },
+  // Выход в фиксацию Ганкаку: правая рука рубит Сюто в шею, левая рука прикрывает корпус
+  { t: 0.95, pose: () => {
+      aim('Spine', 'Spine1', 0.03, 1, 0.02);
+      aim('LeftUpLeg', 'LeftLeg', 0.02, -0.98, 0.12);
+      aim('RightUpLeg', 'RightLeg', -0.38, 0.48, 0.80);
+      aim('RightLeg', 'RightFoot', 0.38, -0.85, -0.38);
+      // Правая рука — рубящий Сюто
+      aim('RightShoulder', 'RightArm', -0.10, 0.25, 0.35);
+      aim('RightArm', 'RightForeArm', -0.35, 0.20, 0.90);
+      aim('RightForeArm', 'RightHand', 0.45, 0.10, 0.88);
+      // Левая рука — блок Какивакэ / защита корпуса
+      aim('LeftShoulder', 'LeftArm', 0.08, -0.10, 0.20);
+      aim('LeftArm', 'LeftForeArm', 0.30, -0.35, 0.88);
+      aim('LeftForeArm', 'LeftHand', -0.20, -0.10, 0.96);
+      rig.bones.Hips.position.y = rig.hipsRestY * 1.04;
+      makeShuto('right');
+      makeFist('left');
+    }
+  },
+  { t: 1.45, pose: () => {
+      aim('RightForeArm', 'RightHand', 0.45, 0.10, 0.88);
+      makeShuto('right');
+    }
+  },
+  { t: 2.0, pose: () => poseReady(0) },
+]);
+
+// 27. Ката Хэйан Шодан (Каноническая форма: Дзэнкуцу-дати, Гэдан-барай, Ой-цуки, Агэ-укэ)
+generateClip('heian_shodan', 6.0, [
+  { t: 0.0, pose: () => poseReady(0) },
+  // 1. Шаг влево в Дзэнкуцу-дати + Гэдан-барай левой рукой
+  { t: 1.0, pose: () => {
+      poseZenkutsu(0);
+      aim('Spine', 'Spine1', -0.05, 1, 0.02);
+      aim('LeftShoulder', 'LeftArm', 0.12, -0.20, 0.30);
+      aim('LeftArm', 'LeftForeArm', 0.22, -0.74, 0.65);
+      aim('LeftForeArm', 'LeftHand', -0.20, -0.72, 0.66);
+      poseHikite('right');
+      fistBoth();
+    }
+  },
+  // 2. Шаг вперед в Дзэнкуцу-дати + Ой-цуки правой рукой
+  { t: 2.0, pose: () => {
+      poseZenkutsu(0);
+      aim('Spine', 'Spine1', 0.03, 1, 0.03);
+      aim('RightShoulder', 'RightArm', -0.06, 0.0, 0.40);
+      aim('RightArm', 'RightForeArm', -0.05, 0.0, 0.98);
+      aim('RightForeArm', 'RightHand', -0.02, 0.0, 0.98);
+      poseHikite('left');
+      fistBoth();
+    }
+  },
+  // 3. Разворот на 180° с блоком Гэдан-барай правой рукой
+  { t: 3.2, pose: () => {
+      aim('LeftUpLeg', 'LeftLeg', 0.16, -0.74, -0.66);
+      aim('LeftLeg', 'LeftFoot', 0, -0.92, -0.38);
+      aim('RightUpLeg', 'RightLeg', -0.16, -0.68, 0.72);
+      aim('RightLeg', 'RightFoot', 0, -0.92, -0.38);
+      aim('RightShoulder', 'RightArm', -0.12, -0.20, 0.30);
+      aim('RightArm', 'RightForeArm', -0.22, -0.74, 0.65);
+      aim('RightForeArm', 'RightHand', 0.20, -0.72, 0.66);
+      poseHikite('left');
+      rig.bones.Hips.position.y = rig.hipsRestY * 0.83;
+      fistBoth();
+    }
+  },
+  // 4. Шаг вперед с ударом Ой-цуки левой рукой
+  { t: 4.2, pose: () => {
+      poseZenkutsu(0);
+      aim('LeftShoulder', 'LeftArm', 0.08, 0.0, 0.40);
+      aim('LeftArm', 'LeftForeArm', 0.05, 0.0, 0.98);
+      aim('LeftForeArm', 'LeftHand', 0.02, 0.0, 0.98);
+      poseHikite('right');
+      fistBoth();
+    }
+  },
+  // 5. Восходящий блок Агэ-укэ
+  { t: 5.1, pose: () => {
+      poseZenkutsu(0);
+      aim('LeftShoulder', 'LeftArm', 0.10, 0.35, 0.25);
+      aim('LeftArm', 'LeftForeArm', 0.20, 0.72, 0.65);
+      aim('LeftForeArm', 'LeftHand', -0.65, 0.55, 0.50);
+      poseHikite('right');
+      fistBoth();
+    }
+  },
+  // Возврат в исходную стойку Йой
+  { t: 6.0, pose: () => poseReady(0) },
+]);
+
 console.log('\n🥋 Все клипы техники каратэ успешно перегенерированы с правильной биомеханикой, сжатыми кулаками и высокими ударами!');
+
+

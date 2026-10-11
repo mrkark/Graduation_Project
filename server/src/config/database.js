@@ -1,28 +1,32 @@
-const { Sequelize } = require('sequelize');
+const sql = require('mssql');
 require('dotenv').config();
 
-const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASSWORD, {
-  host: process.env.DB_HOST,
+const config = {
+  server: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 1433,
-  dialect: 'mssql',
-  dialectOptions: {
-    options: {
-      encrypt: process.env.DB_ENCRYPT === 'true',
-      trustServerCertificate: process.env.DB_TRUST_SERVER_CERT === 'true',
-      enableArithAbort: true,
-    },
-  },
-  logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  define: {
-    timestamps: false, // управляем полями Created_At/Updated_At вручную под T-SQL-схему
-    freezeTableName: true,
+  database: process.env.DB_NAME || 'BunkaiExplorer',
+  user: process.env.DB_USER || 'mrkark',
+  password: process.env.DB_PASSWORD || 'mrkark9000',
+  options: {
+    encrypt: process.env.DB_ENCRYPT === 'true',
+    trustServerCertificate: process.env.DB_TRUST_SERVER_CERT === 'true',
+    enableArithAbort: true,
   },
   pool: {
     max: 10,
     min: 0,
-    acquire: 30000,
-    idle: 10000,
+    idleTimeoutMillis: 30000,
   },
-});
+};
 
-module.exports = sequelize;
+const poolPromise = new sql.ConnectionPool(config)
+  .connect()
+  .then((pool) => {
+    return pool;
+  })
+  .catch((err) => {
+    console.error('✘ Ошибка подключения к базе данных через mssql:', err.message);
+    throw err;
+  });
+
+module.exports = { sql, poolPromise };

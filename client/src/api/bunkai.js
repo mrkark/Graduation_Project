@@ -27,3 +27,14 @@ export async function rejectBunkai(id) {
   const { data } = await api.post(`/bunkai/${id}/reject`);
   return data.data;
 }
+
+export async function getBunkaiSteps(id) {
+  const { data } = await api.get(`/bunkai/${id}/steps`);
+  return data.data;
+}
+
+export async function saveBunkaiSteps(id, steps) {
+  const { data } = await api.put(`/bunkai/${id}/steps`, { steps });
+  return data.data;
+}
+

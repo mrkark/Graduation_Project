@@ -1,26 +1,26 @@
 import React from 'react';
-import RealisticSenseiModel from './RealisticSenseiModel';
+import KaratekaLowpolyModel from './KaratekaLowpolyModel';
 
 export const STYLES = {
   tori: {
-    giColor: '#fdfbf7',
-    beltColor: '#121212',
-    skinColor: '#d69e72',
+    giColor: '#faf9f6',
+    beltColor: '#141414',
+    skinColor: '#ffffff',
   },
   uke: {
-    giColor: '#2b333e',
-    beltColor: '#8b2500',
-    skinColor: '#cb966c',
+    giColor: '#243346',
+    beltColor: '#181818',
+    skinColor: '#ffffff',
   },
   uke2: {
-    giColor: '#3d2626',
-    beltColor: '#4a1212',
-    skinColor: '#cb966c',
+    giColor: '#342b2b',
+    beltColor: '#3a1212',
+    skinColor: '#ffffff',
   },
 };
 
 /**
- * Определение наиболее подходящей канонической стойки Шотокан по переданным параметрам
+ * Определение наиболее подходящей канонической техники / стойки Шотокан по переданным параметрам
  */
 function resolveStance(stance, angles) {
   if (stance) return stance;
@@ -37,40 +37,78 @@ function resolveStance(stance, angles) {
   // Если правая нога сильно поджата
   if (angles.rightKneeX && angles.rightKneeX > 1.8) return 'gankaku';
 
-  // Если таз на обычной высоте ожидания
-  if (angles.hipsY && angles.hipsY > 0.90) return 'ready';
+  // Если локоть наносит удар
+  if (angles.rightElbowX && angles.rightElbowX > 2.0) return 'empi_uchi';
+
+  // Если правая рука делает прямой контрудар
+  if (angles.rightShoulderX && angles.rightShoulderX < -1.0) return 'gyaku_zuki';
+
+  // Если левая рука поднята высоко над лбом (верхний блок)
+  if (angles.leftShoulderX && angles.leftShoulderX < -1.0) return 'age_uke';
+
+  // Если левая рука выполняет блок ребром ладони (шуто-укэ)
+  if (angles.leftShoulderZ && angles.leftShoulderZ > 0.35) return 'shuto_uke';
 
   // Если левая рука делает смет вниз
-  if (angles.leftShoulderX && angles.leftShoulderX > -0.65 && angles.leftShoulderZ > 0.3) return 'gedan_barai';
+  if (angles.leftShoulderX && angles.leftShoulderX > -0.65 && angles.leftShoulderZ > 0.25) return 'gedan_barai';
 
-  // Если левая рука поднята высоко над лбом
-  if (angles.leftShoulderX && angles.leftShoulderX < -1.6) return 'age_uke';
+  // Если переднее бедро вынесено вперед в длинную боевую стойку
+  if (angles.leftHipX && angles.leftHipX > 0.25) return 'zenkutsu';
+
+  // Если таз на обычной высоте ожидания
+  if (angles.hipsY && angles.hipsY > 0.90) return 'ready';
 
   return 'ready';
 }
 
 /**
- * KarateMasterModel — Реалистичный человек-мастер каратэ в белом кимоно (доги)
- * с анатомическим управлением суставами и правильной посадкой подошв на татами
+ * KarateMasterModel — Аутентичный мастер каратэ Шотокан
+ * Высокодетализированная rigged PBR-модель из Blender (karateka_lowpoly.blend / glb):
+ * - Анатомический скелет из 64 костей
+ * - Высококачественные текстуры кожи лица и тела (diffuse, normal, roughness)
+ * - Плотное хлопковое кимоно (Белое для Тори, Индиго для Укэ) с фактурой плетения
+ * - Черный пояс Kuro-Obi (5-й Дан)
+ * - Полная поддержка 34 канонических техник и стоек Шотокан
  */
 export default function KarateMasterModel({
   role = 'tori',
-  stance = 'ready',
+  stance = null,
   angles = null,
   activeClip = null,
+  speed = 1.0,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
+  kataMode = false,
+  kataClipName = 'heian_shodan',
+  kataTimeRange = null,
+  kataScrubProgress = null,
+  isPlaying = true,
+  replayTrigger = 0,
+  onStepEnd = null,
+  onTimeUpdate = null,
+  onRootMove = null,
 }) {
   const finalStance = resolveStance(stance, angles);
-  const normalizedRole = role === 'uke2' ? 'uke' : role;
 
   return (
-    <RealisticSenseiModel
-      role={normalizedRole}
+    <KaratekaLowpolyModel
+      role={role}
       stance={finalStance}
+      angles={angles}
       activeClip={activeClip}
+      speed={speed}
       position={position}
       rotation={rotation}
+      kataMode={kataMode}
+      kataClipName={kataClipName}
+      kataTimeRange={kataTimeRange}
+      kataScrubProgress={kataScrubProgress}
+      isPlaying={isPlaying}
+      replayTrigger={replayTrigger}
+      onStepEnd={onStepEnd}
+      onTimeUpdate={onTimeUpdate}
+      onRootMove={onRootMove}
     />
   );
 }
+

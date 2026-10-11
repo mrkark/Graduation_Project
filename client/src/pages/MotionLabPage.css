@@ -373,3 +373,243 @@
   box-shadow: 0 0 16px rgba(197, 160, 89, 0.5);
 }
 
+/* =========================================================
+   НОВЫЙ БЛОК: СТОЙКИ И КАТАЛОГ ТЕХНИК
+   ========================================================= */
+
+.motion-lab__stances-section,
+.motion-lab__techniques-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  background: linear-gradient(180deg, var(--bg-panel, #181411) 0%, #120e0b 100%);
+  border: 1px solid var(--border, rgba(197, 160, 89, 0.2));
+  border-radius: 8px;
+  padding: 1.1rem 1.4rem;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn-yoi-quick {
+  background: rgba(197, 160, 89, 0.15);
+  border: 1px solid var(--color-gold, #c5a059);
+  color: #f7e7c4;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-yoi-quick:hover {
+  background: rgba(197, 160, 89, 0.3);
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.35);
+}
+
+/* Сетка стоек */
+.stances-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.stance-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(22, 17, 13, 0.85);
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.stance-card:hover {
+  border-color: var(--color-gold, #c5a059);
+  background: rgba(197, 160, 89, 0.12);
+  transform: translateY(-2px);
+}
+
+.stance-card.active {
+  border-color: #f3c258;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.32) 0%, rgba(40, 28, 18, 0.9) 100%);
+  box-shadow: 0 0 14px rgba(197, 160, 89, 0.35);
+}
+
+.stance-card__icon {
+  font-size: 1.4rem;
+}
+
+.stance-card__label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff8ef;
+}
+
+.stance-card__jp {
+  font-size: 0.72rem;
+  color: rgba(220, 200, 175, 0.75);
+  margin-top: 2px;
+}
+
+/* Поиск */
+.search-wrap {
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 280px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  pointer-events: none;
+  font-size: 0.88rem;
+  opacity: 0.6;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 30px 7px 32px;
+  background: rgba(10, 8, 6, 0.8);
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--color-gold, #c5a059);
+  box-shadow: 0 0 8px rgba(197, 160, 89, 0.25);
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+/* Табы категорий */
+.technique-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.tech-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(25, 20, 16, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d6cbba;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tech-tab:hover {
+  border-color: rgba(197, 160, 89, 0.6);
+  color: #ffffff;
+}
+
+.tech-tab.active {
+  background: rgba(197, 160, 89, 0.22);
+  border-color: var(--color-gold, #c5a059);
+  color: #ffd875;
+  font-weight: 700;
+}
+
+/* Сетка кнопок приемов */
+.techniques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tech-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(24, 19, 15, 0.9);
+  border: 1px solid rgba(197, 160, 89, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.tech-btn:hover {
+  border-color: #f3c258;
+  background: rgba(197, 160, 89, 0.16);
+  transform: translateY(-1px);
+}
+
+.tech-btn.active {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.35) 0%, rgba(35, 25, 16, 0.95) 100%);
+  border-color: #f3c258;
+  box-shadow: 0 0 14px rgba(197, 160, 89, 0.45);
+}
+
+.tech-btn__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.tech-btn__name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff8ef;
+}
+
+.tech-btn__playing-pulse {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #38ef7d;
+  letter-spacing: 0.05em;
+  animation: pulse 1s infinite;
+}
+
+.tech-btn__jp {
+  font-size: 0.72rem;
+  color: rgba(220, 200, 175, 0.75);
+}
+
+.tech-btn__level {
+  font-size: 0.68rem;
+  color: var(--color-gold, #c5a059);
+  margin-top: 2px;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+

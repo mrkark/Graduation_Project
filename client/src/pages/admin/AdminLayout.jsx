@@ -13,6 +13,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/kata">Модерация ката</NavLink>
           <NavLink to="/admin/bunkai">Модерация бункаев</NavLink>
           <NavLink to="/admin/logs">Журнал действий</NavLink>
+          <NavLink to="/admin/animations">Запросы анимаций</NavLink>
           <NavLink to="/admin/backups">Резервные копии</NavLink>
         </nav>
         <div>

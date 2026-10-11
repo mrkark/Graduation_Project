@@ -24,3 +24,18 @@ scratch_*
 debug_*
 uv_map_preview.png
 client/scratch_*
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Blender backups
+*.blend1
+
+# Archives
+*.zip
+
+# Backup models
+*_backup.glb
+
+

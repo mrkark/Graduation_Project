@@ -20,6 +20,9 @@ router.post('/', createBunkaiValidator, validateRequest, bunkaiController.create
 router.put('/:id', updateBunkaiValidator, validateRequest, bunkaiController.update);
 router.delete('/:id', idParamValidator, validateRequest, bunkaiController.remove);
 
+router.get('/:id/steps', idParamValidator, validateRequest, bunkaiController.getSteps);
+router.put('/:id/steps', idParamValidator, validateRequest, bunkaiController.saveSteps);
+
 router.post('/:id/approve', idParamValidator, validateRequest, adminMiddleware, bunkaiController.approve);
 router.post('/:id/reject', idParamValidator, validateRequest, adminMiddleware, bunkaiController.reject);
 

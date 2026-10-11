@@ -1,14 +1,14 @@
-import axios from 'axios';
+/**
+ * Bunkai Explorer — Клиент HTTP-запросов на базе нативного fetch (без Axios).
+ * Поддерживает Bearer-токены, автоматическую ротацию refresh-токенов при 401
+ * и совместим по сигнатуре с существующими модулями API.
+ */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // отправляет httpOnly refresh-cookie
-});
-
 let accessToken = null;
 let onUnauthorized = null;
+let refreshPromise = null;
 
 export function setAccessToken(token) {
   accessToken = token;
@@ -18,48 +18,117 @@ export function getAccessToken() {
   return accessToken;
 }
 
-// Вызывается, когда refresh тоже не удался — сбрасываем пользователя до guest
 export function setUnauthorizedHandler(handler) {
   onUnauthorized = handler;
 }
 
-api.interceptors.request.use((config) => {
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
-  }
-  return config;
-});
+function buildUrl(path, params) {
+  const fullUrl = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  if (!params) return fullUrl;
 
-let refreshPromise = null;
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const { config, response } = error;
-    const code = response?.data?.error?.code;
-    const isAuthRoute = config?.url?.includes('/auth/');
-
-    if (response?.status === 401 && !isAuthRoute && !config._retried && (code === 'TOKEN_EXPIRED' || code === 'NO_TOKEN')) {
-      config._retried = true;
-      try {
-        if (!refreshPromise) {
-          refreshPromise = api.post('/auth/refresh').finally(() => {
-            refreshPromise = null;
-          });
-        }
-        const { data } = await refreshPromise;
-        setAccessToken(data.data.accessToken);
-        config.headers.Authorization = `Bearer ${data.data.accessToken}`;
-        return api(config);
-      } catch (refreshErr) {
-        setAccessToken(null);
-        if (onUnauthorized) onUnauthorized();
-        return Promise.reject(refreshErr);
-      }
+  const url = new URL(fullUrl);
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '') {
+      url.searchParams.append(key, String(val));
     }
+  });
+  return url.toString();
+}
 
-    return Promise.reject(error);
+async function request(path, options = {}) {
+  const { params, headers = {}, body, _retried = false, ...restOptions } = options;
+  const url = buildUrl(path, params);
+
+  const requestHeaders = {
+    ...headers,
+  };
+
+  if (accessToken && !requestHeaders.Authorization) {
+    requestHeaders.Authorization = `Bearer ${accessToken}`;
   }
-);
+
+  let requestBody = body;
+  if (body && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob)) {
+    requestHeaders['Content-Type'] = 'application/json';
+    requestBody = JSON.stringify(body);
+  }
+
+  const fetchOptions = {
+    ...restOptions,
+    headers: requestHeaders,
+    body: requestBody,
+    credentials: 'include', // отправляет httpOnly refresh-cookie
+  };
+
+  let response;
+  try {
+    response = await fetch(url, fetchOptions);
+  } catch (netErr) {
+    const error = new Error(netErr.message || 'Ошибка сети');
+    error.isNetworkError = true;
+    throw error;
+  }
+
+  let data = null;
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+  } else {
+    data = await response.text();
+  }
+
+  if (response.ok) {
+    return { data, status: response.status, headers: response.headers };
+  }
+
+  // Обработка 401 и ротация токенов
+  const errorCode = data?.error?.code;
+  const isAuthRoute = path.includes('/auth/');
+
+  if (
+    response.status === 401 &&
+    !isAuthRoute &&
+    !_retried &&
+    (errorCode === 'TOKEN_EXPIRED' || errorCode === 'NO_TOKEN')
+  ) {
+    try {
+      if (!refreshPromise) {
+        refreshPromise = request('/auth/refresh', { method: 'POST', _retried: true }).finally(() => {
+          refreshPromise = null;
+        });
+      }
+
+      const refreshRes = await refreshPromise;
+      const newAccessToken = refreshRes?.data?.data?.accessToken;
+      if (newAccessToken) {
+        setAccessToken(newAccessToken);
+        return request(path, { ...options, _retried: true });
+      }
+    } catch (refreshErr) {
+      setAccessToken(null);
+      if (onUnauthorized) onUnauthorized();
+      const err = new Error(refreshErr.message || 'Сессия истекла');
+      err.response = { status: 401, data: refreshErr?.response?.data || null };
+      throw err;
+    }
+  }
+
+  const err = new Error(data?.error?.message || `Ошибка запроса: ${response.status}`);
+  err.status = response.status;
+  err.response = { status: response.status, data };
+  throw err;
+}
+
+const api = {
+  get: (url, config = {}) => request(url, { ...config, method: 'GET' }),
+  post: (url, body, config = {}) => request(url, { ...config, body, method: 'POST' }),
+  put: (url, body, config = {}) => request(url, { ...config, body, method: 'PUT' }),
+  patch: (url, body, config = {}) => request(url, { ...config, body, method: 'PATCH' }),
+  delete: (url, config = {}) => request(url, { ...config, method: 'DELETE' }),
+};
 
 export default api;

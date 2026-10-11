@@ -108,4 +108,35 @@ async function reject(req, res, next) {
   }
 }
 
-module.exports = { list, getById, create, update, remove, approve, reject };
+// GET /api/bunkai/:id/steps — получение структурированных 3D-эпизодов с участниками
+async function getSteps(req, res, next) {
+  try {
+    const steps = await bunkaiRepo.getStepsWithParticipants(req.params.id);
+    return ok(res, steps);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+// PUT /api/bunkai/:id/steps — сохранение настроенных 3D-эпизодов автором или админом
+async function saveSteps(req, res, next) {
+  try {
+    const steps = await bunkaiRepo.saveSteps(
+      req.params.id,
+      { userId: req.user.User_ID, userRole: req.userRole },
+      req.body.steps || []
+    );
+    await logActivity({
+      userId: req.user.User_ID,
+      action: 'save_bunkai_steps',
+      entityType: 'Bunkai',
+      entityId: Number(req.params.id),
+      ip: req.ip,
+    });
+    return ok(res, steps);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+module.exports = { list, getById, create, update, remove, approve, reject, getSteps, saveSteps };
