@@ -75,3 +75,24 @@
 .auth-alt a:hover {
   color: #fff;
 }
+
+@media (max-width: 480px) {
+  .auth-page {
+    padding: 1.5rem 1rem;
+    align-items: flex-start;
+  }
+
+  .auth-card {
+    padding: 1.8rem 1.25rem;
+  }
+
+  .auth-card h1 {
+    font-size: 1.45rem;
+  }
+
+  .auth-card::before {
+    top: 10px;
+    right: 12px;
+    font-size: 0.78rem;
+  }
+}

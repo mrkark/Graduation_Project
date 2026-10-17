@@ -534,3 +534,52 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* Мобильная адаптивность Aimokap студии */
+@media (max-width: 768px) {
+  .mocap-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+  }
+
+  .mocap-source-switcher {
+    width: 100%;
+  }
+
+  .source-tab-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    font-size: 0.82rem;
+    padding: 0.55rem 0.8rem;
+  }
+
+  .mocap-3d-stage {
+    height: 380px !important;
+    min-height: 380px !important;
+  }
+
+  .mocap-hud-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .hud-cell {
+    padding: 8px 10px;
+  }
+
+  .hud-cell__val {
+    font-size: 1.05rem;
+  }
+
+  .qr-modal-card {
+    padding: 1.4rem 1.2rem;
+  }
+
+  .qr-image {
+    width: 160px;
+    height: 160px;
+  }
+}

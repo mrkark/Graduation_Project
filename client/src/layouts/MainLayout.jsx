@@ -1,9 +1,29 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import './MainLayout.css';
 
 export default function MainLayout() {
   const { user, role, logout } = useAuthStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+
+  // Автоматически закрывать мобильное меню при переходе по ссылке
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Блокировка скролла страницы при открытом мобильном меню
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   return (
     <div className="site">
@@ -30,7 +50,8 @@ export default function MainLayout() {
             </div>
           </Link>
 
-          <nav className="site-nav">
+          {/* Десктопная навигация */}
+          <nav className="site-nav site-nav--desktop">
             <NavLink to="/kata" className="site-nav__link">
               <span className="site-nav__icon">型</span>
               <span>Ката</span>
@@ -59,29 +80,133 @@ export default function MainLayout() {
             )}
           </nav>
 
-          <div className="site-user">
-            <Link to="/profile" className="site-user__card" title="Личный профиль">
-              <div className="site-user__avatar-badge">
-                {(user?.Display_Name || user?.Username || '門')[0].toUpperCase()}
-              </div>
-              <div className="site-user__info">
-                <span className="site-user__name">
-                  {user?.Display_Name || user?.Username}
-                </span>
-                <span className="site-user__role">
-                  {role === 'admin'
-                    ? 'Инструктор (Sensei)'
-                    : role === 'moderator'
-                    ? 'Модератор (Senpai)'
-                    : 'Ученик (Deshi)'}
-                </span>
-              </div>
-            </Link>
-            <button className="btn btn-logout" onClick={() => logout()} title="Завершить тренировку">
-              Выйти
+          {/* Правая часть: пользователь и кнопка меню */}
+          <div className="site-header__right-group">
+            <div className="site-user site-user--desktop">
+              <Link to="/profile" className="site-user__card" title="Личный профиль">
+                <div className="site-user__avatar-badge">
+                  {(user?.Display_Name || user?.Username || '門')[0].toUpperCase()}
+                </div>
+                <div className="site-user__info">
+                  <span className="site-user__name">
+                    {user?.Display_Name || user?.Username}
+                  </span>
+                  <span className="site-user__role">
+                    {role === 'admin'
+                      ? 'Инструктор (Sensei)'
+                      : role === 'moderator'
+                      ? 'Модератор (Senpai)'
+                      : 'Ученик (Deshi)'}
+                  </span>
+                </div>
+              </Link>
+              <button className="btn btn-logout" onClick={() => logout()} title="Завершить тренировку">
+                Выйти
+              </button>
+            </div>
+
+            {/* Мобильная кнопка-гамбургер */}
+            <button
+              type="button"
+              className={`site-mobile-toggle ${mobileMenuOpen ? 'is-active' : ''}`}
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label="Меню навигации"
+            >
+              <span className="hamburger-bar" />
+              <span className="hamburger-bar" />
+              <span className="hamburger-bar" />
             </button>
           </div>
         </div>
+
+        {/* Выезжающий мобильный дровер Додзё */}
+        {mobileMenuOpen && (
+          <div className="site-mobile-backdrop" onClick={() => setMobileMenuOpen(false)}>
+            <div className="site-mobile-drawer" onClick={(e) => e.stopPropagation()}>
+              <div className="site-mobile-drawer__head">
+                <div className="site-seal site-seal--sm">
+                  <span className="site-seal__kanji">道</span>
+                </div>
+                <span className="site-mobile-drawer__title">Меню Додзё</span>
+                <button
+                  type="button"
+                  className="site-mobile-close-btn"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Профиль в мобильном меню */}
+              <div className="site-mobile-user">
+                <div className="site-user__avatar-badge">
+                  {(user?.Display_Name || user?.Username || '門')[0].toUpperCase()}
+                </div>
+                <div className="site-user__info">
+                  <span className="site-user__name">{user?.Display_Name || user?.Username}</span>
+                  <span className="site-user__role">
+                    {role === 'admin'
+                      ? 'Инструктор (Sensei)'
+                      : role === 'moderator'
+                      ? 'Модератор (Senpai)'
+                      : 'Ученик (Deshi)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Навигационные ссылки */}
+              <nav className="site-mobile-nav">
+                <NavLink to="/" end className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">本</span>
+                  <span>Главная Додзё</span>
+                </NavLink>
+                <NavLink to="/kata" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">型</span>
+                  <span>Каталог Ката (26 форм)</span>
+                </NavLink>
+                <NavLink to="/bunkai" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">解</span>
+                  <span>Каталог Бункаев (Боевой анализ)</span>
+                </NavLink>
+                <NavLink to="/motion-lab" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">動</span>
+                  <span>AI Мокап & Aimokap</span>
+                </NavLink>
+                <NavLink to="/chat" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">話</span>
+                  <span>Чат тренировочного зала</span>
+                </NavLink>
+                <NavLink to="/friends" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">友</span>
+                  <span>Соратники и друзья</span>
+                </NavLink>
+                <NavLink to="/profile" className="site-mobile-nav__link">
+                  <span className="site-mobile-nav__kanji">門</span>
+                  <span>Личный профиль</span>
+                </NavLink>
+                {(role === 'admin' || role === 'moderator') && (
+                  <NavLink to="/admin" className="site-mobile-nav__link site-mobile-nav__link--admin">
+                    <span className="site-mobile-nav__kanji">役</span>
+                    <span>{role === 'admin' ? 'Панель администратора' : 'Панель модератора'}</span>
+                  </NavLink>
+                )}
+              </nav>
+
+              <div className="site-mobile-footer">
+                <button
+                  type="button"
+                  className="btn btn-logout site-mobile-logout"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                >
+                  🚪 Завершить тренировку (Выйти)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="site-main">

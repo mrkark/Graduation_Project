@@ -359,17 +359,211 @@
   width: 100%;
 }
 
+/* Группа справа в шапке */
+.site-header__right-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Кнопка-гамбургер для мобильных экранов */
+.site-mobile-toggle {
+  display: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  transition: all 0.2s ease;
+}
+
+.site-mobile-toggle:hover {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: var(--gold);
+}
+
+.hamburger-bar {
+  width: 22px;
+  height: 2px;
+  background: var(--gold-bright);
+  border-radius: 2px;
+  transition: all 0.25s ease;
+}
+
+.site-mobile-toggle.is-active .hamburger-bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+.site-mobile-toggle.is-active .hamburger-bar:nth-child(2) {
+  opacity: 0;
+}
+.site-mobile-toggle.is-active .hamburger-bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+/* Мобильный бэкдроп и выезжающий дровер */
+.site-mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+
+.site-mobile-drawer {
+  width: 82%;
+  max-width: 320px;
+  height: 100%;
+  background: #110f0c;
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  padding: 1.4rem;
+  overflow-y: auto;
+  animation: slideDrawer 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDrawer {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.site-mobile-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 1.2rem;
+}
+
+.site-mobile-drawer__title {
+  font-family: var(--font-display);
+  color: var(--washi);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.05em;
+}
+
+.site-mobile-close-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--washi-dim);
+  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.site-mobile-close-btn:hover {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+}
+
+.site-mobile-user {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.2rem;
+}
+
+.site-mobile-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.site-mobile-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 1rem;
+  color: var(--washi);
+  text-decoration: none;
+  font-size: 0.94rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.site-mobile-nav__link:hover,
+.site-mobile-nav__link.active {
+  background: rgba(197, 160, 89, 0.1);
+  border-color: var(--border);
+  color: var(--gold-bright);
+}
+
+.site-mobile-nav__kanji {
+  font-family: var(--font-kanji);
+  font-size: 1.15rem;
+  color: var(--gold);
+  width: 20px;
+  text-align: center;
+}
+
+.site-mobile-nav__link--admin {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.9rem;
+  color: var(--gold-bright);
+}
+
+.site-mobile-footer {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.site-mobile-logout {
+  width: 100%;
+  justify-content: center;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+}
+
 /* Мобильная адаптивность */
 @media (max-width: 860px) {
-  .site-header__inner {
-    flex-wrap: wrap;
-    gap: 1rem;
+  .site-header__topbar {
+    display: none; /* скрываем тонкую полосу на мобильных для экономии места */
   }
-  .site-nav {
-    order: 3;
-    width: 100%;
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding-bottom: 0.3rem;
+  
+  .site-header__inner {
+    padding: 0.65rem 1rem;
+  }
+
+  .site-nav--desktop {
+    display: none;
+  }
+
+  .site-user--desktop {
+    display: none;
+  }
+
+  .site-mobile-toggle {
+    display: flex;
   }
 }

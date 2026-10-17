@@ -612,4 +612,38 @@
   100% { opacity: 0.4; }
 }
 
+/* Мобильная адаптивность MotionLab */
+@media (max-width: 768px) {
+  .motion-lab__title-wrap h1 {
+    font-size: 1.6rem;
+  }
+
+  .motion-lab__config-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .config-group,
+  .config-group--action {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .mode-toggle {
+    flex-wrap: wrap;
+  }
+
+  .mode-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .motion-lab__viewport {
+    height: 380px !important;
+    min-height: 380px !important;
+  }
+}
+
 

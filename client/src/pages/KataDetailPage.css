@@ -675,3 +675,79 @@
   border-radius: 2px;
   letter-spacing: 0.04em;
 }
+
+/* Мобильная адаптивность страницы разбора ката */
+@media (max-width: 768px) {
+  .kata-detail-page {
+    gap: 1.2rem;
+  }
+
+  .kata-banner {
+    padding: 1.1rem;
+  }
+
+  .kata-banner__inner {
+    gap: 1rem;
+  }
+
+  .kata-banner__title {
+    font-size: 1.5rem;
+  }
+
+  .kata-banner__actions {
+    width: 100%;
+  }
+
+  .kata-banner__actions .btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .kata-stage-header {
+    padding: 0.8rem 1rem;
+  }
+
+  .kata-stage-viewport {
+    min-height: 380px !important;
+    height: 380px;
+  }
+
+  .scrubber-bar {
+    padding: 0.8rem 0.9rem;
+    gap: 0.5rem;
+  }
+
+  .btn-scrubber-nav {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+  }
+
+  .scrubber-step-btn {
+    min-width: 34px;
+    height: 34px;
+    font-size: 0.8rem;
+  }
+
+  .kata-stage-controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+  }
+
+  .control-pill-group {
+    flex-wrap: wrap;
+  }
+
+  .step-master-card {
+    padding: 1.2rem;
+  }
+
+  .step-master-card__title {
+    font-size: 1.15rem;
+  }
+
+  .steps-ledger-list {
+    max-height: 320px;
+  }
+}
