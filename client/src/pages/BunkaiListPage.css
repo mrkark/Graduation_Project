@@ -67,7 +67,29 @@
 
 .bunkai-search-input:focus {
   outline: none;
-  border-color: var(--text-primary);
+  border-color: var(--gold);
+}
+
+.bunkai-sort-select {
+  padding: 0.85rem 2.6rem 0.85rem 1.25rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.bunkai-sort-select:hover {
+  border-color: var(--gold);
+}
+
+.bunkai-sort-select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
 }
 
 /* --- 3. СЕТКА БОЕВЫХ СИТУАЦИЙ (ENCOUNTER UNITS) --- */

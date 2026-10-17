@@ -62,7 +62,7 @@ export default function BunkaiListPage() {
         </Link>
       </header>
 
-      {/* 2. ПОИСК */}
+      {/* 2. ПОИСК И СОРТИРОВКА */}
       <div className="bunkai-search-bar">
         <input
           type="text"
@@ -71,6 +71,16 @@ export default function BunkaiListPage() {
           onChange={(e) => updateParam('search', e.target.value)}
           placeholder="Поиск по названию или технике (гэдан-барай, залом кисти, кудзуси, маэ-гэри)…"
         />
+        <select
+          className="bunkai-sort-select"
+          value={sort}
+          onChange={(e) => updateParam('sort', e.target.value)}
+          style={{ width: 'auto', minWidth: '220px' }}
+        >
+          <option value="newest">Сначала новые сценарии</option>
+          <option value="oldest">Сначала ранние сценарии</option>
+          <option value="title">По названию (А–Я)</option>
+        </select>
       </div>
 
       {/* 3. СПИСОК БОЕВЫХ СИТУАЦИЙ */}

@@ -202,21 +202,78 @@ export default function MainLayout() {
         <Outlet />
       </main>
 
-      {/* ЛАКОНИЧНЫЙ ФУТЕР */}
-      <footer className="site-footer">
-        <div className="container site-footer__container">
-          <div className="site-footer__brand">
-            <strong>BUNKAI EXPLORER</strong>
-            <span>Традиционное каратэдо Сётокан и трёхмерная биомеханика</span>
+      {/* АРХИТЕКТУРНЫЙ ФУТЕР В СТИЛИСТИКЕ ТРАДИЦИОННОГО ДОДЗЁ */}
+      <footer className="dojo-footer">
+        <div className="container dojo-footer__container">
+          <div className="dojo-footer__grid">
+            {/* 1. Идентичность и философия школы */}
+            <div className="dojo-footer__col dojo-footer__col--brand">
+              <div className="dojo-footer__logo">
+                <span className="dojo-footer__logo-title">BUNKAI EXPLORER</span>
+                <span className="dojo-footer__logo-kanji">空手道 · 分解</span>
+              </div>
+              <p className="dojo-footer__desc">
+                Интерактивная среда для глубокого освоения 26 канонических ката Сётокан,
+                пространственного анализа траекторий эмбусэн и боевой биомеханики бункай.
+              </p>
+              <div className="dojo-footer__motto">
+                <span className="dojo-footer__motto-mark">「空手に先手なし」</span>
+                <span className="dojo-footer__motto-trans">В каратэ нет первого нападения</span>
+              </div>
+            </div>
+
+            {/* 2. Навигация по залам Додзё */}
+            <div className="dojo-footer__col">
+              <h4 className="dojo-footer__heading">Хранилище форм</h4>
+              <ul className="dojo-footer__list">
+                <li><Link to="/kata">Атлас 26 Ката (型)</Link></li>
+                <li><Link to="/bunkai">Боевые сценарии Бункай (分解)</Link></li>
+                <li><Link to="/motion-lab">AI Мокап Лаборатория (Aimokap)</Link></li>
+                <li><Link to="/bunkai/new">Мастерская симуляции боя</Link></li>
+              </ul>
+            </div>
+
+            {/* 3. Канон и традиция */}
+            <div className="dojo-footer__col">
+              <h4 className="dojo-footer__heading">Канон Сётокан</h4>
+              <ul className="dojo-footer__list">
+                <li><Link to="/kata/1">Школа Хэйан (Базовые формы)</Link></li>
+                <li><Link to="/kata">Мастерские ката (Дан)</Link></li>
+                <li><Link to="/bunkai">Контроль дистанции Ма-ай</Link></li>
+                <li><Link to="/motion-lab">Анализ биомеханики Кимэ</Link></li>
+              </ul>
+            </div>
+
+            {/* 4. Личный кабинет практикующего */}
+            <div className="dojo-footer__col">
+              <h4 className="dojo-footer__heading">Путь каратэка</h4>
+              <ul className="dojo-footer__list">
+                {user ? (
+                  <>
+                    <li><Link to="/profile">Личный профиль ученика</Link></li>
+                    <li><Link to="/chat">Сообщения Додзё</Link></li>
+                    <li><Link to="/friends">Соратники (Друзья)</Link></li>
+                    {isStaff && <li><Link to="/admin">Панель управления</Link></li>}
+                  </>
+                ) : (
+                  <>
+                    <li><Link to="/login">Вход в систему</Link></li>
+                    <li><Link to="/register">Регистрация в Додзё</Link></li>
+                  </>
+                )}
+              </ul>
+            </div>
           </div>
-          <div className="site-footer__links">
-            <Link to="/kata">Ката</Link>
-            <Link to="/bunkai">Бункай</Link>
-            <Link to="/motion-lab">Aimokap</Link>
-            <Link to="/bunkai/new">Студия</Link>
-          </div>
-          <div className="site-footer__copy">
-            © {new Date().getFullYear()} Bunkai Explorer. Путь каратэ начинается и заканчивается с уважения.
+
+          {/* Нижняя полоса с копирайтом и традиционной печатью */}
+          <div className="dojo-footer__bottom">
+            <div className="dojo-footer__copy">
+              © {new Date().getFullYear()} Bunkai Explorer. Традиционная школа Сётокан каратэдо. Все права сохранены.
+            </div>
+            <div className="dojo-footer__seal-wrap">
+              <span className="dojo-footer__seal-label">伝統の継承</span>
+              <div className="dojo-footer__hanko">武道</div>
+            </div>
           </div>
         </div>
       </footer>

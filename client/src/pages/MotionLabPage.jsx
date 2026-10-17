@@ -483,13 +483,16 @@ export default function MotionLabPage() {
     : SHOTOKAN_STANCES[masterStance] || SHOTOKAN_STANCES.ready;
 
   return (
-    <div className="motion-lab-page">
+    <div className="container motion-lab-page fade-in">
       {/* Заголовок страницы */}
       <div className="motion-lab__header">
+        <span className="section-kicker" style={{ marginBottom: '0.4rem' }}>
+          松濤館流 · AI ДОДЗЁ БИОМЕХАНИКА
+        </span>
         <div className="motion-lab__title-wrap">
           <span style={{ fontSize: '2.4rem' }}>🥋</span>
           <div>
-            <h1>3D Додзё Лаборатория (AI Мокап)</h1>
+            <h1>3D Додзё Лаборатория (Aimokap)</h1>
             <p className="motion-lab__desc">
               Интерактивная среда тестирования биомеханики, канонических техник и стоек каратэ Шотокан. Отрабатывайте удары руками (цуки, учи), блоки, удары ногами и боевые связки со замедленной съёмкой в реальном времени.
             </p>

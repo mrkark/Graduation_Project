@@ -285,30 +285,180 @@
   color: var(--accent-red);
 }
 
-/* Подвал сайта (Чистый минималистичный) */
-.footer {
+/* =========================================================
+   ПОДВАЛ ДОДЗЁ (DOJO FOOTER — ТРАДИЦИОННАЯ АРХИТЕКТУРА)
+   ========================================================= */
+
+.dojo-footer {
   border-top: 1px solid var(--border);
-  padding: 3rem 0;
-  background: var(--bg-surface);
+  padding: 4.5rem 0 2.5rem;
+  background: linear-gradient(180deg, #110e0c 0%, #090807 100%);
   margin-top: auto;
+  position: relative;
 }
 
-.footer__container {
+.dojo-footer::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90px;
+  height: 2px;
+  background: var(--accent-red);
+}
+
+.dojo-footer__grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 3rem;
+  margin-bottom: 3.5rem;
+}
+
+@media (max-width: 992px) {
+  .dojo-footer__grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .dojo-footer__grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+/* Колонка бренда */
+.dojo-footer__logo {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.dojo-footer__logo-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.dojo-footer__logo-kanji {
+  font-family: var(--font-kanji);
+  font-size: 0.9rem;
+  color: var(--accent-red);
+}
+
+.dojo-footer__desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+  max-width: 380px;
+}
+
+.dojo-footer__motto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.9rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-xs);
+  width: fit-content;
+}
+
+.dojo-footer__motto-mark {
+  font-family: var(--font-kanji);
+  font-size: 0.95rem;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.dojo-footer__motto-trans {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* Колонки навигации */
+.dojo-footer__heading {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+
+.dojo-footer__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dojo-footer__list a {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  transition: all 0.16s ease;
+  display: inline-block;
+}
+
+.dojo-footer__list a:hover {
+  color: var(--gold-bright);
+  transform: translateX(3px);
+}
+
+/* Нижняя панель */
+.dojo-footer__bottom {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
-.footer__copy {
-  font-size: 0.85rem;
+.dojo-footer__copy {
+  font-size: 0.84rem;
   color: var(--text-muted);
 }
 
-.footer__kicker {
+.dojo-footer__seal-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dojo-footer__seal-label {
   font-family: var(--font-kanji);
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   color: var(--text-faint);
   letter-spacing: 0.1em;
+}
+
+/* Традиционная квадратная печать Ханко */
+.dojo-footer__hanko {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-red);
+  color: #ffffff;
+  border: 1px solid #e53e3e;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(185, 28, 28, 0.4);
+  user-select: none;
 }

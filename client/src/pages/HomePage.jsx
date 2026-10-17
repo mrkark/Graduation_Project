@@ -1,62 +1,53 @@
 import { Link } from 'react-router-dom';
-import karateMasterRealistic from '../assets/karate_master_realistic.jpg';
 import './HomePage.css';
 
 export default function HomePage() {
   return (
-    <div className="home">
-      {/* 1. ПЕРВЫЙ ЭКРАН: АНАТОМИЯ МАСТЕРСТВА И ВЕКТОРЫ СИЛЫ */}
-      <section className="hero container">
-        <div className="hero__content">
-          <span className="hero__kicker">
-            松濤館流 · JKA Анатомия мастерства
-          </span>
+    <div className="home fade-in">
+      {/* 1. ПЕРВЫЙ ЭКРАН: ФОТОГРАФИЯ МАСТЕРА В ТРАДИЦИОННОМ ДОДЗЁ */}
+      <section className="hero-dojo">
+        {/* Фоновое аутентичное фото мастера в традиционном зале */}
+        <div className="hero-dojo__bg" />
+        {/* Градиентное затемнение для контрастности текста */}
+        <div className="hero-dojo__scrim" />
 
-          <h1 className="hero__headline">
-            Анатомия формы. <br />
-            Биомеханика поединка.
-          </h1>
+        <div className="container hero-dojo__container">
+          <div className="hero-dojo__content">
+            <span className="hero-dojo__kicker">
+              伝統空手道 · 松濤館流 (СЁТОКАН КАРАТЭДО)
+            </span>
 
-          <p className="hero__description">
-            Интерактивный свод 26 канонических ката Сётокан. Траектории перемещений эмбусэн,
-            геометрия стоек и расшифровка прикладного бункай в трёхмерном пространстве.
-          </p>
+            <h1 className="hero-dojo__headline">
+              Путь истинной формы. <br />
+              Боевой дух Додзё.
+            </h1>
 
-          <div className="hero__telemetry">
-            <span>Стандарт: <strong>JKA</strong></span>
-            <span>·</span>
-            <span>Вектор: <strong>Сёмэн (0°)</strong></span>
-            <span>·</span>
-            <span>Фокус силы: <strong>Кимэ (Тюдан)</strong></span>
-          </div>
+            <p className="hero-dojo__description">
+              Интерактивная среда изучения 26 канонических ката мастера Гитина Фунакоси.
+              Пространственная геометрия эмбусэн, механика стоек и прикладной бункай в трёхмерном пространстве.
+            </p>
 
-          <div className="hero__actions">
-            <Link to="/kata" className="btn btn-primary hero__btn-main">
-              Изучить 26 ката в 3D →
-            </Link>
-            <Link to="/bunkai" className="btn btn-subtle hero__btn-secondary">
-              Боевая механика Бункай
-            </Link>
-          </div>
-        </div>
+            <div className="hero-dojo__telemetry">
+              <span>Канон: <strong>JKA</strong></span>
+              <span>·</span>
+              <span>Стойка: <strong>Дзэнкуцу-дати</strong></span>
+              <span>·</span>
+              <span>Концентрация: <strong>Кимэ (極め)</strong></span>
+            </div>
 
-        <div className="hero__visual">
-          <div className="hero__image-frame">
-            <img
-              src={karateMasterRealistic}
-              alt="Мастер Сётокан Каратэ в момент Кимэ"
-              className="hero__image"
-              loading="eager"
-            />
-            <div className="hero__image-badge">
-              <span className="hero__image-badge-title">極め · KIME (Фокус силы)</span>
-              <span className="hero__image-badge-sub">Стойка Дзэнкуцу-дати</span>
+            <div className="hero-dojo__actions">
+              <Link to="/kata" className="btn btn-primary hero-dojo__btn-main">
+                Войти в зал Ката (3D) →
+              </Link>
+              <Link to="/bunkai" className="btn btn-subtle hero-dojo__btn-secondary">
+                Боевые разборы Бункай
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. ТРИ СТОЛПА КАНОНИЧЕСКОЙ БИОМЕХАНИКИ */}
+      {/* 2. ТРИ СТОЛПА ДОДЗЁ (ФОРМА, СМЫСЛ, ДИСТАНЦИЯ) */}
       <section className="pillars-section">
         <div className="container">
           <div className="pillars-grid">
@@ -99,7 +90,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. КАТА ХЭЙАН: БАЗОВЫЙ КАНОН */}
+      {/* 3. ВИТРИНА НАЧАЛЬНЫХ ФОРМ ХЭЙАН */}
       <section className="showcase-section container">
         <div className="showcase-header">
           <div>
@@ -117,7 +108,7 @@ export default function HomePage() {
             <h3 className="showcase-card__title">Хэйан Сёдан</h3>
             <span className="showcase-card__jp">平安初段 · 21 шаг</span>
             <p className="showcase-card__desc">
-              Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. Освоение оси эмбусэн.
+              Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. Освоение крестообразной оси эмбусэн.
             </p>
             <span className="showcase-card__action">Изучить в 3D →</span>
           </Link>
@@ -144,7 +135,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. МАСТЕРСКАЯ БОЕВОГО МОДЕЛИРОВАНИЯ (СТУДИЯ) */}
+      {/* 4. ТЕМАТИЧЕСКИЙ БАННЕР-СВИТОК «ЭМБУСЭН» */}
+      <section className="container">
+        <div className="scroll-banner">
+          <div className="scroll-banner__inner">
+            <div>
+              <span className="scroll-banner__stamp">演武線の掟 · КАНОН ПЕРЕМЕЩЕНИЙ</span>
+              <h3 className="scroll-banner__title">Священная Линия «Эмбусэн»</h3>
+              <p className="scroll-banner__quote">
+                «Ката — это не танец. Каждый шаг на линии эмбусэн — это решение реального поединка, где жизнь и смерть разделены долей секунды.»
+              </p>
+              <span className="scroll-banner__author">— Мастер Анко Итосу, реформатор окинавского каратэ</span>
+            </div>
+
+            <div className="scroll-banner__axis-box">
+              <div className="scroll-banner__axis-header">4 Направления боя (Сихо)</div>
+              <div className="scroll-banner__axis-grid">
+                <div className="scroll-banner__axis-item">
+                  <strong>Сёмэн (正面)</strong> · Фронт (0°)
+                </div>
+                <div className="scroll-banner__axis-item">
+                  <strong>Усиро (後ろ)</strong> · Тыл (180°)
+                </div>
+                <div className="scroll-banner__axis-item">
+                  <strong>Миги (右)</strong> · Правый фланг (90°)
+                </div>
+                <div className="scroll-banner__axis-item">
+                  <strong>Хидари (左)</strong> · Левый фланг (270°)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. МАСТЕРСКАЯ БОЕВОГО МОДЕЛИРОВАНИЯ (СТУДИЯ) */}
       <section className="studio-callout-section">
         <div className="container studio-callout__container">
           <div className="studio-callout__text">
@@ -163,7 +188,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. ФИЛОСОФСКОЕ НАСТАВЛЕНИЕ МАСТЕРА ФУНАКОСИ */}
+      {/* 6. ФИЛОСОФСКОЕ НАСТАВЛЕНИЕ МАСТЕРА ФУНАКОСИ */}
       <section className="quote-section container">
         <blockquote className="quote-editorial">
           <p className="quote-text">

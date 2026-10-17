@@ -1,26 +1,34 @@
 /* =========================================================
-   VARIABLES.CSS — Художественное направление: SHOTOKAN EDITORIAL
-   Концепция: Анатомия мастерства каратэ, эстетика архива JKA,
-              глубокий графит туши Суми, хлопковый белый доги,
-              векторы биомеханики и киноварная точка удара (Кимэ).
+   VARIABLES.CSS — Эстетика традиционного японского додзё
+   Сочетание средневековой японской архитектуры (хиноки, кедр),
+   состаренной бумаги свитков, глубокой туши Суми и киновари печатей.
    ========================================================= */
 
 :root {
-  /* --- Фоновые поверхности (Глубокий графит и матовая студия) --- */
-  --bg-canvas: #0b0c0e;           /* Основной глубокий графитово-угольный фон */
-  --bg-surface: #131519;          /* Матовая поверхность функциональных блоков */
-  --bg-subtle: #1a1d23;           /* Вторичные фоновые блоки */
-  --bg-hover: #22262e;            /* Состояние при наведении */
-  --bg-panel: #131519;
-  --bg-panel-light: #1a1d23;
-  --bg-panel-elevated: #22262e;
-  --bg-surface-translucent: rgba(11, 12, 14, 0.94);
+  /* --- Поверхности средневекового Додзё (Тёмное дерево, кедр, татами) --- */
+  --bg-canvas: #0c0b0a;           /* Тёмный глубокий фон зала додзё */
+  --bg-surface: #151311;          /* Морёное тёмное дерево (хиноки) панелей */
+  --bg-subtle: #1c1916;           /* Вторичный деревянный тон */
+  --bg-hover: #26221e;            /* Наведение на деревянный элемент */
+  --bg-panel: #151311;
+  --bg-panel-light: #1c1916;
+  --bg-panel-elevated: #24201c;
+  --bg-surface-translucent: rgba(12, 11, 10, 0.94);
 
-  /* --- Типографика (Контрастный хлопок доги и серебристый штрих) --- */
-  --text-primary: #f8f9fa;        /* Белоснежный тон хлопкового кимоно для заголовков */
-  --text-secondary: #c5c8d0;      /* Светло-серебристый для основного текста */
-  --text-muted: #828999;          /* Технический стальной для подписей и параметров */
-  --text-faint: #434957;          /* Тёмно-стальной для вспомогательных меток */
+  /* --- Материалы традиционного японского интерьера --- */
+  --wood-dark: #120f0d;
+  --wood-medium: #1f1a16;
+  --wood-border: #322b24;
+  --wood-grain: #3d342c;
+  --tatami-border: #42392f;
+  --tatami-accent: #8c8068;
+  --paper-washi: #ede7dc;
+
+  /* --- Типографика (Хлопок доги, состаренная бумага свитков) --- */
+  --text-primary: #f5f2eb;        /* Натуральный небелёный хлопок традиционного кимоно */
+  --text-secondary: #c9c3b6;      /* Тёплый серебристый тон бумаги */
+  --text-muted: #8c8477;          /* Приглушённая патина дерева */
+  --text-faint: #524c43;          /* Глубокий пепельный штрих */
   --text-main: var(--text-primary);
   --paper: var(--bg-canvas);
   --paper-dark: var(--bg-subtle);
@@ -28,64 +36,64 @@
   --washi-dim: var(--text-secondary);
   --washi-muted: var(--text-muted);
 
-  /* --- Киноварный акцент фокуса удара (Кимэ / 極め) --- */
-  --accent-red: #c5221f;          /* Точный киноварный акцент точки концентрации силы */
-  --accent-red-hover: #e02926;
-  --accent-red-subtle: rgba(197, 34, 31, 0.12);
-  --accent-red-border: rgba(197, 34, 31, 0.35);
+  /* --- Традиционная киноварная печать (Ханко / 印鑑) --- */
+  --accent-red: #b91c1c;          /* Благородный тёмно-красный оттиск печати */
+  --accent-red-hover: #d32f2f;
+  --accent-red-subtle: rgba(185, 28, 28, 0.14);
+  --accent-red-border: rgba(185, 28, 28, 0.38);
   --crimson: var(--accent-red);
-  --crimson-bright: #e02926;
-  --crimson-glow: rgba(197, 34, 31, 0.25);
+  --crimson-bright: #d32f2f;
+  --crimson-glow: rgba(185, 28, 28, 0.22);
   --red: var(--accent-red);
-  --red-light: #e02926;
-  --red-seal: #c5221f;
+  --red-light: #d32f2f;
+  --red-seal: #b91c1c;
 
-  /* --- Стальные технические линии и благородный ранг --- */
-  --vector-line: #3b414f;         /* Векторная линия траектории перемещения */
-  --vector-active: #c5221f;       /* Активный вектор удара */
-  --gold: #b39247;                /* Приглушённое мастерское золото */
-  --gold-soft: #c4a75e;
-  --gold-bright: #d9bc73;
-  --gold-dark: #8c7132;
-  --gold-glow: rgba(179, 146, 71, 0.2);
+  /* --- Благородная состаренная латунь (Орнаменты камидза) --- */
+  --vector-line: #3a3229;         /* Тонкая линия разметки пола додзё */
+  --vector-active: #b91c1c;       /* Активная ось атаки */
+  --gold: #bfa15f;                /* Состаренная латунь */
+  --gold-soft: #cfb57a;
+  --gold-bright: #dfc88f;
+  --gold-dark: #8c7339;
+  --gold-glow: rgba(191, 161, 95, 0.22);
 
-  /* --- Тонкие прецизионные разделители (1px hairline) --- */
-  --border: #232730;              /* Тонкая граница блоков */
-  --border-subtle: #1c2028;       /* Внутренняя легкая линия */
-  --border-faint: #16181f;
-  --border-focus: #f8f9fa;        /* Контрастный белый фокус полей ввода */
+  /* --- Архитектурные деревянные разделители --- */
+  --border: #2c251f;              /* Стык деревянных брусьев */
+  --border-subtle: #211c17;       /* Внутренняя лёгкая линия */
+  --border-faint: #1a1613;
+  --border-focus: #bfa15f;        /* Латунный фокус элементов ввода */
 
-  /* --- Функциональные пояса Сётокан (Оби / 帯) --- */
-  --belt-white: #e5e7eb;
-  --belt-yellow: #eab308;
-  --belt-orange: #f97316;
-  --belt-green: #22c55e;
-  --belt-blue: #3b82f6;
-  --belt-brown: #a16207;
-  --belt-black: #f8f9fa;
+  /* --- Пояса Сётокан (Оби / 帯) --- */
+  --belt-white: #e8e4db;
+  --belt-yellow: #d4a017;
+  --belt-orange: #d96818;
+  --belt-green: #2a8747;
+  --belt-blue: #2c6eb5;
+  --belt-brown: #824d1e;
+  --belt-black: #f5f2eb;
 
   /* --- Статусы --- */
-  --danger: #ef4444;
-  --success: #10b981;
-  --warning: #f59e0b;
+  --danger: #c53030;
+  --success: #2f855a;
+  --warning: #c05621;
 
-  /* --- Типографика --- */
+  /* --- Шрифты --- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Cinzel', 'Shippori Mincho', 'Playfair Display', Georgia, serif;
   --font-display: var(--font-serif);
   --font-kanji: 'Shippori Mincho', 'Noto Serif JP', serif;
   --font-body: var(--font-sans);
 
-  /* --- Архитектурная геометрия --- */
+  /* --- Архитектурные пропорции и мягкие тени додзё --- */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-pill: 9999px;
-  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
-  --shadow-lift: 0 8px 30px rgba(0, 0, 0, 0.6);
-  --shadow-dojo: 0 12px 40px rgba(0, 0, 0, 0.7);
+  --shadow-subtle: 0 2px 6px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 4px 22px rgba(0, 0, 0, 0.55);
+  --shadow-lift: 0 8px 32px rgba(0, 0, 0, 0.65);
+  --shadow-dojo: 0 14px 45px rgba(0, 0, 0, 0.8);
 
   /* --- Z-индексы --- */
   --z-header: 100;

@@ -5,22 +5,23 @@
 .motion-lab-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
   width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
+  padding-bottom: 4rem;
 }
 
 .motion-lab__header {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .motion-lab__title-wrap {
   display: flex;
-  align-items: center;
-  gap: 0.9rem;
+  align-items: flex-start;
+  gap: 1.25rem;
 }
 
 .motion-lab__title-wrap h1 {
