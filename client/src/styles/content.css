@@ -1,83 +1,69 @@
 /* =========================================================
-   CONTENT.CSS — Страницы каталога, карточки и разборы Додзё
+   CONTENT.CSS — Каталоги, карточки и контентные страницы
    ========================================================= */
 
-/* --- Заголовок страницы (Сёдзи / Додзё) --- */
+/* --- Заголовок страницы (Page Header) --- */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 1.2rem;
-  margin-bottom: 2.2rem;
-  padding-bottom: 1.4rem;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
-  position: relative;
 }
 
-.page-header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 100px;
-  height: 3px;
-  background: var(--crimson-bright);
-  box-shadow: 0 0 10px var(--crimson-glow);
+.page-header h1 {
+  margin: 0;
+  font-size: 2.4rem;
 }
 
 .page-subtitle {
-  color: var(--washi-dim);
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
   margin: 0.35rem 0 0;
-  letter-spacing: 0.02em;
 }
 
-/* --- Панель фильтров и инструментов --- */
+/* --- Панель поиска и фильтров (Toolbar) --- */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.2rem;
+  gap: 1rem;
   align-items: flex-end;
-  margin-bottom: 1.6rem;
-  padding: 1.2rem 1.6rem;
-  background: linear-gradient(180deg, var(--bg-panel) 0%, #0e0e13 100%);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--gold);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
+  margin-bottom: 2rem;
 }
 
 .toolbar .field {
   margin-bottom: 0;
-  min-width: 170px;
+  min-width: 180px;
   flex: 1;
 }
 
 .toolbar .field--grow {
   flex: 2;
-  min-width: 250px;
+  min-width: 280px;
 }
 
 /* Быстрые фильтры поясов каратэ */
 .filter-chips {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 1.8rem;
+  margin-bottom: 2.5rem;
 }
 
 .filter-chip {
-  background: rgba(18, 18, 24, 0.85);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  color: var(--washi-dim);
-  padding: 0.42rem 1rem;
-  font-size: 0.84rem;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.16s ease;
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -85,224 +71,230 @@
 }
 
 .filter-chip:hover {
-  border-color: var(--gold);
-  color: #fff;
-  background: rgba(28, 28, 38, 0.95);
-  transform: translateY(-1px);
+  border-color: #d0d0c8;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
 }
 
 .filter-chip.active {
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-  color: #0b0907;
-  border-color: var(--gold-bright);
-  font-weight: 700;
-  box-shadow: 0 0 16px var(--gold-glow);
+  background: var(--text-primary);
+  color: #ffffff;
+  border-color: var(--text-primary);
+  font-weight: 500;
 }
 
-/* --- КАРТОЧКИ ТЕХНИК ДОДЗЁ (Нафуда / 名札) --- */
+/* --- СЕТКА КАРТОЧЕК (GRID CARDS) --- */
+.grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.grid-cards {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .grid-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Карточка Ката / Бункай */
 .card {
-  background: linear-gradient(175deg, var(--bg-panel) 0%, #0b0b0f 100%);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--gold-dark);
+  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
-  transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
   text-decoration: none;
-  position: relative;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-subtle);
 }
 
 .card:hover {
-  border-left-color: var(--crimson-bright);
-  border-color: var(--gold-bright);
-  transform: translateY(-4px);
-  box-shadow: 0 18px 36px -10px rgba(0, 0, 0, 0.9), 0 0 20px rgba(203, 163, 78, 0.2);
+  transform: translateY(-3px);
+  border-color: #d0d0c8;
+  box-shadow: var(--shadow-lift);
 }
 
 .card__thumb {
   aspect-ratio: 16 / 9;
-  background: #060608 center/cover no-repeat;
+  background: var(--bg-subtle) center/cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border);
   position: relative;
   overflow: hidden;
 }
 
-.card__thumb::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
-  pointer-events: none;
-}
-
 .card__belt-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  top: 12px;
+  left: 12px;
   z-index: 2;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 600;
   padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  border: 1px solid var(--border-subtle);
 }
 
 .card__kanji-seal {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 12px;
+  right: 12px;
   z-index: 2;
   font-family: var(--font-kanji);
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--gold-bright);
-  background: rgba(10, 10, 14, 0.85);
-  backdrop-filter: blur(4px);
-  padding: 3px 8px;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--border);
-  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--accent-red);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--accent-red-border);
 }
 
 .card__fallback {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  z-index: 1;
-  color: var(--gold);
+  gap: 0.25rem;
+  color: var(--text-muted);
 }
 
 .card__kanji {
-  font-family: var(--font-kanji, serif);
-  font-size: 2.4rem;
-  line-height: 1;
-  color: var(--gold-bright);
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+  font-family: var(--font-kanji);
+  font-size: 2.5rem;
+  color: var(--text-faint);
 }
 
 .card__body {
-  padding: 1.4rem 1.5rem 1.6rem;
+  padding: 1.4rem;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
   flex: 1;
-}
-
-.card__title {
-  font-family: var(--font-display);
-  font-size: 1.18rem;
-  font-weight: 700;
-  color: var(--washi);
-  line-height: 1.35;
-  transition: color 0.2s ease;
-}
-
-.card:hover .card__title {
-  color: #fff;
-  text-shadow: 0 0 10px var(--gold-glow);
 }
 
 .card__meta {
   display: flex;
-  gap: 0.9rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
   font-size: 0.8rem;
-  color: var(--washi-dim);
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.card__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.card__jp {
+  font-family: var(--font-kanji);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
 }
 
 .card__desc {
   font-size: 0.88rem;
-  color: var(--washi-dim);
-  flex: 1;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 1.2rem;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.6;
-  margin: 0;
+  flex: 1;
 }
 
 .card__meta--footer {
-  margin-top: auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border-subtle);
 }
 
 .card__view-action {
-  color: var(--gold-bright);
-  font-weight: 700;
   font-size: 0.82rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  transition: transform 0.2s ease, color 0.2s ease;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .card:hover .card__view-action {
-  transform: translateX(4px);
-  color: #fff;
+  color: var(--accent-red);
 }
 
-/* --- ПАГИНАЦИЯ --- */
+/* --- ПОСТРАНИЧНАЯ НАВИГАЦИЯ --- */
 .pagination {
   display: flex;
+  gap: 0.4rem;
   justify-content: center;
-  gap: 0.65rem;
-  margin-top: 2.8rem;
+  align-items: center;
+  margin-top: 3rem;
 }
 
-/* --- СТРАНИЦЫ ДЕТАЛЕЙ ТЕХНИКИ --- */
-.detail-header {
+.pagination .btn {
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+/* --- СЕКЦИЯ КОММЕНТАРИЕВ --- */
+.comments-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.comments-title {
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.comment-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.2rem 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.comment-card__head {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 2rem;
-  padding-bottom: 1.6rem;
-  border-bottom: 1px solid var(--border);
-  position: relative;
+  margin-bottom: 0.5rem;
+  font-size: 0.84rem;
 }
 
-.detail-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
+.comment-card__author {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-  align-items: start;
+.comment-card__date {
+  color: var(--text-muted);
 }
 
-@media (max-width: 900px) {
-  .detail-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
+.comment-card__text {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
 }
 
 /* --- ЧАТ ДОДЗЁ --- */
 .chat-page {
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 1.6rem;
+  gap: 1.5rem;
   height: 640px;
 }
 
@@ -314,58 +306,46 @@
 }
 
 .chat-rooms {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  padding: 0.75rem;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
+  gap: 0.35rem;
   overflow-y: auto;
-}
-
-@media (max-width: 768px) {
-  .chat-rooms {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 0.6rem;
-    gap: 0.5rem;
-  }
 }
 
 .chat-rooms__item {
   text-align: left;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 1rem;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--washi-dim);
+  color: var(--text-secondary);
   border-radius: var(--radius-xs);
-  transition: all 0.2s ease;
+  cursor: pointer;
   font-size: 0.9rem;
-  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
 .chat-rooms__item:hover {
-  background: rgba(203, 163, 78, 0.1);
-  color: var(--washi);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
 }
 
 .chat-rooms__item.active {
-  background: rgba(203, 163, 78, 0.18);
-  border-color: var(--gold);
-  color: var(--gold-bright);
-  font-weight: 700;
-  border-left: 3px solid var(--crimson-bright);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-weight: 600;
+  border-left: 3px solid var(--text-primary);
 }
 
 .chat-window {
   display: flex;
   flex-direction: column;
-  background: #08080c;
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
   height: 640px;
 }
 
@@ -373,23 +353,21 @@
   padding: 0.85rem 1.2rem;
   border-bottom: 1px solid var(--border);
   font-size: 0.82rem;
-  color: var(--washi-dim);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  background: var(--bg-panel);
+  gap: 0.5rem;
 }
 
 .chat-window__status-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #64748b;
+  background: #a1a1aa;
 }
 
 .chat-window__status-dot.online {
-  background: #22c55e;
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+  background: var(--success);
 }
 
 .chat-window__messages {
@@ -398,25 +376,22 @@
   padding: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.8rem;
 }
 
 .chat-msg {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  max-width: 78%;
-  padding: 0.85rem 1.1rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
+  max-width: 75%;
+  padding: 0.75rem 1rem;
+  background: var(--bg-subtle);
   border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  color: var(--text-primary);
 }
 
 .chat-msg--own {
   align-self: flex-end;
-  background: linear-gradient(135deg, rgba(133, 19, 19, 0.35) 0%, rgba(18, 18, 24, 0.85) 100%);
-  border-color: rgba(230, 46, 46, 0.35);
-  border-right: 3px solid var(--crimson-bright);
+  background: #18181b;
+  color: #ffffff;
 }
 
 .chat-window__form {
@@ -424,56 +399,51 @@
   gap: 0.8rem;
   padding: 1rem;
   border-top: 1px solid var(--border);
-  background: var(--bg-panel);
 }
 
-/* --- ДРУЗЬЯ (Соратники Додзё) --- */
+/* --- ДРУЗЬЯ (Соратники) --- */
 .friend-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.4rem;
   border: 1px solid var(--border);
-  border-left: 4px solid var(--gold);
-  background: var(--bg-panel);
-  margin-bottom: 0.85rem;
+  background: var(--bg-surface);
+  margin-bottom: 0.75rem;
   border-radius: var(--radius-sm);
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
 }
 
 .friend-card__name {
-  color: var(--washi);
-  font-weight: 700;
-  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .friend-card__actions {
   display: flex;
-  gap: 0.7rem;
+  gap: 0.6rem;
 }
 
 .tabs {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1.8rem;
+  margin-bottom: 2rem;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
 }
 
 .tabs button {
   background: none;
   border: none;
-  color: var(--washi-dim);
-  padding: 0.75rem 1.4rem;
+  color: var(--text-secondary);
+  padding: 0.75rem 1.25rem;
   border-bottom: 2px solid transparent;
-  font-size: 0.94rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  white-space: nowrap;
+  font-size: 0.92rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .tabs button.active {
-  color: var(--gold-bright);
-  border-bottom-color: var(--crimson-bright);
-  text-shadow: 0 0 10px var(--gold-glow);
+  color: var(--text-primary);
+  border-bottom-color: var(--text-primary);
+  font-weight: 600;
 }

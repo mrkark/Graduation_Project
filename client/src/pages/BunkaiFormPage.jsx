@@ -339,16 +339,13 @@ export default function BunkaiFormPage() {
     <div className="bunkai-studio">
       {/* ВЕРХНИЙ БАР СТУДИИ */}
       <header className="bunkai-studio__header">
-        <div className="bunkai-studio__header-left">
-          <span className="hanko hanko--lg">分解場</span>
-          <div>
-            <h1 className="bunkai-studio__title">
-              {isEdit ? 'Студия разбора бункай (Редактирование)' : 'Студия боевого применения Сётокан (Бункай-дзё)'}
-            </h1>
-            <p className="bunkai-studio__subtitle">
-              Конструктор тактических связок: симуляция 3D-аватаров, шкала Ма-ай и таймлайн эпизодов
-            </p>
-          </div>
+        <div>
+          <h1 className="bunkai-studio__title">
+            {isEdit ? 'Редактор бункай' : 'Мастерская разбора бункай'}
+          </h1>
+          <p className="bunkai-studio__subtitle">
+            Тактическое моделирование: 3D-симуляция участников, дистанция Ма-ай и эпизоды боя
+          </p>
         </div>
 
         <div className="bunkai-studio__header-actions">
@@ -560,17 +557,16 @@ export default function BunkaiFormPage() {
       <section className="bunkai-inspector">
         <div className="bunkai-inspector__header">
           <div>
-            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <span className="hanko">第{activeEpisodeIdx + 1}幕</span>
-              <span>Параметры эпизода {activeEpisodeIdx + 1} из {episodes.length}</span>
+            <h3 style={{ margin: 0 }}>
+              Параметры эпизода {activeEpisodeIdx + 1} из {episodes.length}
             </h3>
-            <p style={{ margin: '0.2rem 0 0', color: 'var(--washi-dim)', fontSize: '0.84rem' }}>
+            <p style={{ margin: '0.2rem 0 0', color: 'var(--text-secondary)', fontSize: '0.86rem' }}>
               Тонкая настройка анимаций, углов, фазы взаимодействия и дистанции Ма-ай
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-            <span className="badge badge--gold">Фаза: {currentEp.phase || 'Встречный сбив'}</span>
+            <span className="badge">Фаза: {currentEp.phase || 'Встречный сбив'}</span>
             {episodes.length > 1 && (
               <button
                 type="button"

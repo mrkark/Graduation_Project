@@ -1,98 +1,81 @@
 /* =========================================================
-   AUTHPAGES.CSS — Вход и Регистрация в стиле Додзё
+   AUTHPAGES.CSS — Вход и Регистрация (Светлый стиль)
    ========================================================= */
 
 .auth-page {
-  min-height: 100vh;
+  min-height: calc(100vh - 64px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.5rem 1.5rem;
-  background-color: var(--bg-main);
-  background-image:
-    radial-gradient(ellipse 800px 500px at 50% 12%, rgba(191, 38, 38, 0.22), transparent 60%),
-    radial-gradient(circle 500px at 50% 85%, rgba(197, 160, 89, 0.08), transparent 70%),
-    linear-gradient(180deg, #090807 0%, #13100e 50%, #090807 100%);
-  background-attachment: fixed;
+  padding: 3rem 1.5rem;
+  background-color: var(--bg-canvas);
 }
 
 .auth-card {
   width: 100%;
-  max-width: 440px;
-  background: linear-gradient(175deg, #1c1814 0%, #12100d 100%);
+  max-width: 420px;
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-top: 3px solid var(--gold);
   border-radius: var(--radius-sm);
-  padding: 2.4rem 2.2rem;
-  box-shadow: var(--shadow-dojo), 0 0 25px rgba(191, 38, 38, 0.12);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--shadow-subtle);
   position: relative;
-}
-
-.auth-card::before {
-  content: '空手道';
-  position: absolute;
-  top: 14px;
-  right: 18px;
-  font-family: var(--font-kanji);
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.2em;
-  opacity: 0.7;
 }
 
 .auth-card h1 {
   text-align: center;
-  font-size: 1.7rem;
-  color: var(--washi);
-  margin-bottom: 0.4rem;
-  letter-spacing: 0.04em;
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
 .auth-sub {
-  color: var(--washi-dim);
-  font-size: 0.88rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
   text-align: center;
-  margin: 0 auto 1.8rem;
-  max-width: 36ch;
+  margin: 0 auto 2rem;
   line-height: 1.5;
 }
 
-.auth-alt {
-  text-align: center;
-  font-size: 0.88rem;
-  color: var(--washi-dim);
-  margin-top: 1.4rem;
+.auth-form {
+  display: flex;
+  flex-direction: column;
 }
 
-.auth-alt a {
-  color: var(--gold-bright);
+.auth-submit-btn {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem 1.4rem;
+  font-size: 0.95rem;
+}
+
+.auth-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 1.8rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.auth-switch a {
+  color: var(--text-primary);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.auth-alt a:hover {
-  color: #fff;
-}
-
-@media (max-width: 480px) {
-  .auth-page {
-    padding: 1.5rem 1rem;
-    align-items: flex-start;
-  }
-
-  .auth-card {
-    padding: 1.8rem 1.25rem;
-  }
-
-  .auth-card h1 {
-    font-size: 1.45rem;
-  }
-
-  .auth-card::before {
-    top: 10px;
-    right: 12px;
-    font-size: 0.78rem;
-  }
+.auth-switch a:hover {
+  color: var(--accent-red);
 }

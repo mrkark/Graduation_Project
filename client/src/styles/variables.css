@@ -1,83 +1,91 @@
 /* =========================================================
-   VARIABLES.CSS — Дизайн-система Додзё Сётокан Каратэдо
-   Палитра: Глубокая тушь Суми (墨), Алая киноварь Тории/Ханко (赤),
-            Императорское золото Кин (金), Рисовая бумага Васи (和紙).
+   VARIABLES.CSS — Новая дизайн-система Bunkai Explorer
+   Эстетика: Современный японский минимализм, бумага Васи (和紙),
+             глубокая тушь Суми (墨), сдержанный лак Уруси (漆),
+             принцип свободного пространства «Ма» (間).
    ========================================================= */
 
 :root {
-  /* --- Фон и поверхности Додзё (Суми / 墨 — чистый уголь и благородный черный) --- */
-  --ink-black: #08080a;
-  --ink-deep: #0d0d12;
-  --bg-main: #0a0a0e;
-  --bg-panel: #121218;
-  --bg-panel-light: #181822;
-  --bg-panel-elevated: #20202c;
-  --bg-surface-translucent: rgba(18, 18, 24, 0.88);
-  --wood-dark: #0f0d0b;
+  /* --- Фоновые поверхности (Спокойная светлая бумага Васи) --- */
+  --bg-canvas: #fbfbfa;           /* Основной фон страницы — мягкая рисовая бумага */
+  --bg-surface: #ffffff;          /* Чистый белый для функциональных блоков и карточек */
+  --bg-subtle: #f5f5f1;           /* Мягкий нейтральный фон для вторичных секций */
+  --bg-hover: #ecece6;            /* Фон элементов при наведении */
+  --bg-panel: #ffffff;            /* Совместимость с компонентами */
+  --bg-panel-light: #f7f7f4;
+  --bg-panel-elevated: #ffffff;
+  --bg-surface-translucent: rgba(251, 251, 250, 0.92);
 
-  /* --- Алая киноварь (Ака / 赤 — печать Ханко, ворота Тории, энергия Ки, КИАЙ) --- */
-  --crimson-deep: #851313;
-  --crimson: #c51c1c;
-  --crimson-bright: #e62e2e;
-  --crimson-glow: rgba(230, 46, 46, 0.45);
-  --red: var(--crimson);
-  --red-light: var(--crimson-bright);
+  /* --- Типографика и чернила (Суми / 墨 — чистый уголь и графит) --- */
+  --text-primary: #121214;        /* Глубокий графитовый чёрный для заголовков */
+  --text-secondary: #4a4a52;      /* Благородный тёмно-серый для основного текста */
+  --text-muted: #787882;          /* Сдержанный серый для вспомогательных подписей */
+  --text-faint: #a2a2aa;          /* Светлый серый для неактивных меток */
+  --text-main: var(--text-primary);
+  --paper: var(--bg-canvas);
+  --paper-dark: var(--bg-subtle);
+  --washi: var(--text-primary);
+  --washi-dim: var(--text-secondary);
+  --washi-muted: var(--text-muted);
+
+  /* --- Акцентный красный (Японский киноварный лак / 漆) --- */
+  --accent-red: #b91c1c;          /* Сдержанный классический красный для ключевых действий */
+  --accent-red-hover: #991b1b;
+  --accent-red-subtle: #fef2f2;   /* Нежный пастельный фон для активных фильтров */
+  --accent-red-border: #fecaca;
+  --crimson: var(--accent-red);
+  --crimson-bright: #dc2626;
+  --crimson-glow: rgba(185, 28, 28, 0.15);
+  --red: var(--accent-red);
+  --red-light: #dc2626;
   --red-seal: #b91c1c;
 
-  /* --- Золото и латунь (Кин / 金 — мастерство, окантовка додзё, эмблема) --- */
-  --gold-dark: #8c6e2d;
-  --gold: #cba34e;
-  --gold-bright: #ecd07a;
-  --gold-glow: rgba(203, 163, 78, 0.35);
-  --gold-soft: #dfbe6c;
+  /* --- Сдержанный благородный металл (Латунь / 鍮) --- */
+  --gold: #8a6c25;                /* Сдержанная латунь для рангов без дешевого блеска */
+  --gold-soft: #a1823a;
+  --gold-bright: #685019;
+  --gold-dark: #523e11;
+  --gold-glow: rgba(138, 108, 37, 0.12);
 
-  /* --- Рисовая бумага (Васи / 和紙 — чистая типографика) --- */
-  --washi: #f8f6f0;
-  --washi-dim: #cfc8b8;
-  --washi-muted: #8e8879;
-  --text-main: var(--washi);
-  --text-muted: var(--washi-dim);
-  --paper: var(--washi);
-  --paper-dark: var(--washi-dim);
+  /* --- Тонкие архитектурные разделители --- */
+  --border: #e4e4dd;              /* Тонкая 1px линия разделителя */
+  --border-subtle: #eeeeea;       /* Очень легкая внутренняя граница */
+  --border-faint: #f4f4f0;
+  --border-focus: #121214;        /* Четкий контрастный фокус полей ввода */
 
-  /* --- Границы сочленений и ширмы (Сёдзи / 障子) --- */
-  --border: rgba(203, 163, 78, 0.28);
-  --border-subtle: rgba(203, 163, 78, 0.16);
-  --border-faint: rgba(255, 255, 255, 0.08);
-  --border-gold: rgba(203, 163, 78, 0.6);
-  --border-crimson: rgba(230, 46, 46, 0.55);
-
-  /* --- Пояса каратэ (Оби / 帯 — традиционная иерархия рангов) --- */
-  --belt-white: #f1f5f9;
-  --belt-white-text: #0f172a;
-  --belt-yellow: #eab308;
+  /* --- Функциональные пояса каратэ (Оби / 帯) --- */
+  --belt-white: #71717a;
+  --belt-yellow: #ca8a04;
   --belt-orange: #ea580c;
-  --belt-green: #15803d;
-  --belt-blue: #1d4ed8;
-  --belt-brown: #78350f;
-  --belt-black: #09090b;
+  --belt-green: #16a34a;
+  --belt-blue: #2563eb;
+  --belt-brown: #854d0e;
+  --belt-black: #18181b;
 
   /* --- Статусы --- */
-  --danger: #dc2626;
-  --success: #16a34a;
-  --warning: #d97706;
+  --danger: #b91c1c;
+  --success: #15803d;
+  --warning: #b45309;
 
-  /* --- Типографика каратэдо --- */
-  --font-display: 'Cinzel', 'Shippori Mincho', 'Noto Serif JP', serif;
+  /* --- Типографика --- */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Cinzel', 'Shippori Mincho', 'Playfair Display', Georgia, serif;
+  --font-display: var(--font-serif);
   --font-kanji: 'Shippori Mincho', 'Noto Serif JP', serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: var(--font-sans);
 
-  /* --- Радиусы и тени (сдержанные формы японской столярки) --- */
+  /* --- Формы и тени (Архитектурная чистота) --- */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
-  --radius-lg: 10px;
-  --shadow-dojo: 0 20px 45px -12px rgba(0, 0, 0, 0.9);
-  --shadow-card: 0 10px 28px -8px rgba(0, 0, 0, 0.75);
-  --shadow-glow-gold: 0 0 28px rgba(203, 163, 78, 0.25);
-  --shadow-glow-crimson: 0 0 28px rgba(230, 46, 46, 0.4);
+  --radius-lg: 8px;
+  --radius-pill: 9999px;
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-lift: 0 6px 20px rgba(0, 0, 0, 0.07);
+  --shadow-dojo: 0 8px 30px rgba(0, 0, 0, 0.08);
 
-  /* --- Слои --- */
+  /* --- Z-индексы --- */
   --z-header: 100;
   --z-drawer: 200;
   --z-modal: 300;

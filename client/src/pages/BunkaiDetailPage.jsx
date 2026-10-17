@@ -6,10 +6,14 @@ import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
-import { resolveMediaUrl } from '../utils/media';
 import '../three/avatarWidget.css';
 
-const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
+const DIFFICULTY_LABELS = {
+  beginner: 'Базовый уровень',
+  intermediate: 'Средний уровень',
+  advanced: 'Продвинутый уровень',
+  master: 'Мастерский уровень',
+};
 
 export default function BunkaiDetailPage() {
   const { id } = useParams();
@@ -19,6 +23,7 @@ export default function BunkaiDetailPage() {
   const [bunkaiSteps, setBunkaiSteps] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('application'); // 'application' | 'video' | 'comments'
 
   useEffect(() => {
     setLoading(true);
@@ -34,125 +39,152 @@ export default function BunkaiDetailPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <p className="loading">Загрузка…</p>;
-  if (error || !bunkai) return <p className="empty-state">{error}</p>;
+  if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
+  if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
 
   const isOwner = bunkai.Author_ID === user?.User_ID;
   const isStaff = role === 'admin' || role === 'moderator';
   const canEdit = isOwner || isStaff;
 
   async function onDelete() {
-    if (!confirm('Удалить этот бункай без возможности восстановления?')) return;
+    if (!confirm('Удалить этот бункай?')) return;
     await deleteBunkai(id);
     navigate('/bunkai');
   }
+
   async function onApprove() {
     setBunkai(await approveBunkai(id));
   }
+
   async function onReject() {
     setBunkai(await rejectBunkai(id));
   }
 
   return (
-    <div>
-      <div className="detail-header">
+    <div className="bunkai-detail container">
+      {/* 1. ШАПКА БУНКАЯ */}
+      <header className="bunkai-detail__header">
         <div>
-          <div className="card__meta" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-            <span className="hanko">分解</span>
+          <div className="bunkai-detail__meta">
+            <Link to="/bunkai" className="bunkai-detail__back-link">
+              ← Каталог бункаев
+            </Link>
+            <span className="bunkai-detail__sep">/</span>
+            {bunkai.Kata && (
+              <>
+                <Link to={`/kata/${bunkai.Kata_ID}`} className="bunkai-detail__kata-link">
+                  Ката: {bunkai.Kata.Title}
+                </Link>
+                <span className="bunkai-detail__sep">/</span>
+              </>
+            )}
+            <span className="bunkai-detail__difficulty">
+              {DIFFICULTY_LABELS[bunkai.Difficulty] || bunkai.Difficulty}
+            </span>
             <StatusBadge status={bunkai.Status} />
-            <span className="badge badge--gold">{DIFFICULTY_LABELS[bunkai.Difficulty] || bunkai.Difficulty}</span>
           </div>
-          <h1>{bunkai.Title}</h1>
-          <p style={{ color: 'var(--washi-dim)' }}>
-            Ката:{' '}
-            <Link to={`/kata/${bunkai.Kata_ID}`} style={{ color: 'var(--gold-bright)', fontWeight: 600 }}>
-              {bunkai.Kata?.Title}
-            </Link>{' '}
-            · Автор: <strong style={{ color: 'var(--washi)' }}>{bunkai.Author?.Display_Name || bunkai.Author?.Username}</strong>
+
+          <h1 className="bunkai-detail__title">{bunkai.Title}</h1>
+
+          <p className="bunkai-detail__author-line">
+            Разбор подготовил:{' '}
+            <strong>{bunkai.Author?.Display_Name || bunkai.Author?.Username || 'Сенсей Додзё'}</strong>
           </p>
         </div>
-        <div className="detail-actions">
-          {canEdit && (
-            <Link to={`/bunkai/${id}/edit`} className="btn btn-gold">
+
+        {canEdit && (
+          <div className="bunkai-detail__actions">
+            <Link to={`/bunkai/${id}/edit`} className="btn btn-subtle">
               Редактировать
             </Link>
-          )}
-          {canEdit && (
-            <button className="btn btn-danger" onClick={onDelete}>
+            {isStaff && bunkai.Status !== 'approved' && (
+              <button type="button" className="btn btn-primary" onClick={onApprove}>
+                Одобрить
+              </button>
+            )}
+            {isStaff && bunkai.Status !== 'rejected' && (
+              <button type="button" className="btn btn-subtle" onClick={onReject}>
+                Отклонить
+              </button>
+            )}
+            <button type="button" className="btn btn-danger" onClick={onDelete}>
               Удалить
             </button>
-          )}
-          {isStaff && bunkai.Status !== 'approved' && (
-            <button className="btn btn-primary" onClick={onApprove}>
-              Одобрить
-            </button>
-          )}
-          {isStaff && bunkai.Status !== 'rejected' && (
-            <button className="btn" onClick={onReject}>
-              Отклонить
-            </button>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </header>
 
-      {/* Интерактивная 3D арена боевого разбора (Бункай: Тори и Укэ) */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h3 style={{ marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>🥋</span>
-          <span>3D-Симуляция боевого применения (Тори, Укэ 1 и Укэ 2)</span>
-        </h3>
+      {/* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ (ТОРИ И УКЭ) */}
+      <section className="bunkai-detail__arena-wrap">
         <BunkaiMultiAvatarPlayer
           steps={bunkaiSteps}
-          defaultParticipantMode={bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'}
+          defaultParticipantMode={
+            bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
+          }
           height={540}
         />
-      </div>
+      </section>
 
-      <div className="detail-grid">
-        <div>
-          {bunkai.Video_URL && <VideoEmbed url={bunkai.Video_URL} />}
+      {/* 3. ПРОГРЕССИВНОЕ РАСКРЫТИЕ СМЫСЛА И ПРИМЕНЕНИЯ */}
+      <section className="bunkai-detail__content">
+        <div className="tabs">
+          <button
+            type="button"
+            className={activeTab === 'application' ? 'active' : ''}
+            onClick={() => setActiveTab('application')}
+          >
+            Тактический разбор (Оё-бункай)
+          </button>
+          {bunkai.Video_URL && (
+            <button
+              type="button"
+              className={activeTab === 'video' ? 'active' : ''}
+              onClick={() => setActiveTab('video')}
+            >
+              Видео демонстрации
+            </button>
+          )}
+          <button
+            type="button"
+            className={activeTab === 'comments' ? 'active' : ''}
+            onClick={() => setActiveTab('comments')}
+          >
+            Обсуждение
+          </button>
+        </div>
 
-          <div className="panel" style={{ marginTop: '1.2rem' }}>
-            <h3>Описание техники</h3>
-            <p style={{ whiteSpace: 'pre-wrap' }}>{bunkai.Description || 'Описание пока не добавлено.'}</p>
-          </div>
+        <div className="bunkai-detail__tab-panel">
+          {activeTab === 'application' && (
+            <div className="bunkai-notes">
+              {bunkai.Description && (
+                <div className="bunkai-notes__block">
+                  <h3>Общая концепция</h3>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{bunkai.Description}</p>
+                </div>
+              )}
 
-          {bunkai.Application && (
-            <div className="panel" style={{ marginTop: '1.2rem' }}>
-              <h3>Применение в реальном поединке (Оё-бункай)</h3>
-              <p style={{ whiteSpace: 'pre-wrap' }}>{bunkai.Application}</p>
+              {bunkai.Application && (
+                <div className="bunkai-notes__block">
+                  <h3>Применение в реальном поединке</h3>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{bunkai.Application}</p>
+                </div>
+              )}
             </div>
           )}
 
-          <Comments bunkaiId={Number(id)} />
-        </div>
+          {activeTab === 'video' && bunkai.Video_URL && (
+            <div className="bunkai-video-box">
+              <VideoEmbed url={bunkai.Video_URL} />
+            </div>
+          )}
 
-        <aside>
-          <div className="panel bunkai-kata-card-aside">
-            <h4 style={{ marginBottom: '0.8rem' }}>Связанное ката</h4>
-            {bunkai.Thumbnail_URL && (
-              <div
-                className="aside-kata-thumb"
-                style={{
-                  backgroundImage: `url("${resolveMediaUrl(bunkai.Thumbnail_URL)}")`,
-                  height: '140px',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  borderRadius: 'var(--radius-sm, 4px)',
-                  marginBottom: '0.8rem',
-                  border: '1px solid var(--border, rgba(197, 160, 89, 0.25))',
-                }}
-              />
-            )}
-            <p style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.8rem', color: 'var(--gold, #c5a059)' }}>
-              {bunkai.Kata?.Title}
-            </p>
-            <Link to={`/kata/${bunkai.Kata_ID}`} className="btn btn-gold" style={{ width: '100%', textAlign: 'center' }}>
-              Перейти к разбору ката →
-            </Link>
-          </div>
-        </aside>
-      </div>
+          {activeTab === 'comments' && (
+            <div>
+              <Comments bunkaiId={Number(id)} />
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

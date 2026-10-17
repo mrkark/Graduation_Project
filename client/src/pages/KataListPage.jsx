@@ -6,17 +6,10 @@ import StatusBadge from '../components/StatusBadge';
 import { resolveMediaUrl } from '../utils/media';
 
 const DIFFICULTY_CONFIG = {
-  beginner: { label: 'Начальный', belt: 'Белый / Желтый', badgeClass: 'belt-white', kanji: '初段' },
-  intermediate: { label: 'Средний', belt: 'Зеленый / Синий', badgeClass: 'belt-green', kanji: '中段' },
-  advanced: { label: 'Продвинутый', belt: 'Коричневый', badgeClass: 'belt-brown', kanji: '上段' },
-  master: { label: 'Мастер', belt: 'Черный пояс', badgeClass: 'belt-black', kanji: '奥伝' },
-};
-
-const DIFFICULTY_LABELS = {
-  beginner: 'Начальный (Кю 9-7)',
-  intermediate: 'Средний (Кю 6-4)',
-  advanced: 'Продвинутый (Кю 3-1)',
-  master: 'Мастер (Дан 1-5)',
+  beginner: { label: 'Начальный', belt: 'Белый / Жёлтый пояс', badgeClass: 'belt-badge--yellow' },
+  intermediate: { label: 'Средний', belt: 'Зелёный / Синий пояс', badgeClass: 'belt-badge--green' },
+  advanced: { label: 'Продвинутый', belt: 'Коричневый пояс', badgeClass: 'belt-badge--brown' },
+  master: { label: 'Мастерский', belt: 'Чёрный пояс', badgeClass: 'belt-badge--black' },
 };
 
 export default function KataListPage() {
@@ -58,11 +51,12 @@ export default function KataListPage() {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
 
   return (
-    <div>
+    <div className="container">
+      {/* 1. ЗАГОЛОВОК КАТАЛОГА */}
       <div className="page-header">
         <div>
-          <h1>Каталог ката</h1>
-          <p className="page-subtitle">26 канонических форм стиля Шотокан (松濤館流) и их 3D разбор</p>
+          <h1>Каталог Ката Сётокан</h1>
+          <p className="page-subtitle">26 традиционных форм каратедо: от базовых Хэйан до мастерских высших ката</p>
         </div>
         {isAdmin && (
           <Link to="/kata/create" className="btn btn-primary">
@@ -71,78 +65,70 @@ export default function KataListPage() {
         )}
       </div>
 
+      {/* 2. ПАНЕЛЬ ПОИСКА И СОРТИРОВКИ */}
       <div className="toolbar">
         <div className="field field--grow">
-          <label>Поиск по названию или кандзи</label>
-          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Хэйан Шодан, Бассай-дай…" />
+          <input
+            value={search}
+            onChange={(e) => updateParam('search', e.target.value)}
+            placeholder="Поиск ката по названию (Хэйан, Бассай-дай, Канку-дай)…"
+          />
         </div>
-        <div className="field">
-          <label>Ранг / Пояс</label>
-          <select value={difficulty} onChange={(e) => updateParam('difficulty', e.target.value)}>
-            <option value="">Все уровни</option>
-            {Object.entries(DIFFICULTY_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label>Сортировка</label>
+        <div className="field" style={{ flex: '0 0 200px' }}>
           <select value={sort} onChange={(e) => updateParam('sort', e.target.value)}>
             <option value="newest">Сначала новые</option>
             <option value="oldest">Сначала старые</option>
-            <option value="title">По названию</option>
+            <option value="title">По алфавиту</option>
           </select>
         </div>
       </div>
 
-      {/* Быстрые фильтры по поясам */}
+      {/* 3. ФИЛЬТРЫ РАНГОВ / ПОЯСОВ */}
       <div className="filter-chips">
         <button
           className={`filter-chip ${difficulty === '' ? 'active' : ''}`}
           onClick={() => updateParam('difficulty', '')}
         >
-          Все ({meta.total || 0})
+          Все ката ({meta.total || 0})
         </button>
         <button
           className={`filter-chip ${difficulty === 'beginner' ? 'active' : ''}`}
           onClick={() => updateParam('difficulty', difficulty === 'beginner' ? '' : 'beginner')}
         >
-          ⚪ Начальный (Белый/Желтый)
+          Базовые (Хэйан · 9–7 кю)
         </button>
         <button
           className={`filter-chip ${difficulty === 'intermediate' ? 'active' : ''}`}
           onClick={() => updateParam('difficulty', difficulty === 'intermediate' ? '' : 'intermediate')}
         >
-          🟢 Средний (Зеленый/Синий)
+          Средние (Тэкки · 6–4 кю)
         </button>
         <button
           className={`filter-chip ${difficulty === 'advanced' ? 'active' : ''}`}
           onClick={() => updateParam('difficulty', difficulty === 'advanced' ? '' : 'advanced')}
         >
-          🟤 Продвинутый (Коричневый)
+          Продвинутые (3–1 кю)
         </button>
         <button
           className={`filter-chip ${difficulty === 'master' ? 'active' : ''}`}
           onClick={() => updateParam('difficulty', difficulty === 'master' ? '' : 'master')}
         >
-          ⚫ Мастер (Черный пояс)
+          Мастерские (Дан)
         </button>
       </div>
 
+      {/* 4. СПИСОК КАРТОЧЕК КАТА */}
       {loading ? (
         <p className="loading">Загрузка каталога ката…</p>
       ) : items.length === 0 ? (
-        <p className="empty-state">Ката не найдены. Попробуйте сбросить фильтры.</p>
+        <p className="empty-state">Ката по заданным параметрам не найдены.</p>
       ) : (
         <div className="grid grid-cards">
           {items.map((kata) => {
             const conf = DIFFICULTY_CONFIG[kata.Difficulty] || {
               label: kata.Difficulty,
-              belt: 'Шотокан',
-              badgeClass: 'belt-white',
-              kanji: '型',
+              belt: 'Сётокан',
+              badgeClass: '',
             };
             return (
               <Link to={`/kata/${kata.Kata_ID}`} key={kata.Kata_ID} className="card">
@@ -153,9 +139,6 @@ export default function KataListPage() {
                   <span className={`card__belt-badge ${conf.badgeClass}`}>
                     {conf.belt}
                   </span>
-                  <span className="card__kanji-seal">
-                    {conf.kanji}
-                  </span>
                   {!kata.Thumbnail_URL && (
                     <div className="card__fallback">
                       <span className="card__kanji">型</span>
@@ -163,16 +146,22 @@ export default function KataListPage() {
                     </div>
                   )}
                 </div>
+
                 <div className="card__body">
                   <div className="card__meta">
                     <StatusBadge status={kata.Status} />
-                    {kata.Style && <span style={{ color: 'var(--gold)' }}>🥋 {kata.Style}</span>}
+                    {kata.Style && <span>{kata.Style}</span>}
                   </div>
-                  <div className="card__title">{kata.Title}</div>
-                  <p className="card__desc">{kata.Description || 'Каноническая форма карате Шотокан.'}</p>
+
+                  <h3 className="card__title">{kata.Title}</h3>
+
+                  <p className="card__desc">
+                    {kata.Description || 'Каноническая последовательность движений стиля Сётокан.'}
+                  </p>
+
                   <div className="card__meta card__meta--footer">
-                    <span style={{ color: 'var(--washi-dim)', fontSize: '0.78rem' }}>{conf.label}</span>
-                    <span className="card__view-action">3D разбор →</span>
+                    <span>{conf.label}</span>
+                    <span className="card__view-action">Изучить в 3D →</span>
                   </div>
                 </div>
               </Link>
@@ -181,12 +170,13 @@ export default function KataListPage() {
         </div>
       )}
 
+      {/* 5. ПАГИНАЦИЯ */}
       {totalPages > 1 && (
         <div className="pagination">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
-              className={`btn ${p === page ? 'btn-gold' : ''}`}
+              className={`btn ${p === page ? 'btn-primary' : ''}`}
               onClick={() => {
                 const next = new URLSearchParams(params);
                 next.set('page', String(p));

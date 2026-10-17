@@ -77,18 +77,30 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Карточка статуса в Додзё */}
-      <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.8rem', borderLeft: '4px solid var(--gold)' }}>
-        <div className="hanko hanko--lg" style={{ width: '56px', height: '56px', fontSize: '1.8rem' }}>
-          {roleInfo.kanji}
+      {/* Карточка статуса */}
+      <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.8rem' }}>
+        <div style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '50%',
+          background: 'var(--text-primary)',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: '700',
+          fontSize: '1.25rem',
+          flexShrink: 0
+        }}>
+          {(user?.Display_Name || user?.Username || 'K')[0].toUpperCase()}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            <h3 style={{ margin: 0, color: 'var(--washi)' }}>{user?.Display_Name || user?.Username}</h3>
-            <span className={`heian-belt-badge ${roleInfo.beltClass}`}>{roleInfo.belt}</span>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{user?.Display_Name || user?.Username}</h3>
+            <span className="belt-badge">{roleInfo.belt}</span>
           </div>
-          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--washi-dim)' }}>
-            Логин: <strong style={{ color: 'var(--gold)' }}>{user?.Username}</strong> · Статус: {roleInfo.label}
+          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Логин: <strong>{user?.Username}</strong> · Статус: {roleInfo.label}
           </p>
         </div>
       </div>

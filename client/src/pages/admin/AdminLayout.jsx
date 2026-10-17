@@ -9,12 +9,9 @@ export default function AdminLayout() {
   return (
     <div className="admin-wrapper">
       <div className="admin-page-header">
-        <div className="admin-page-header__left">
-          <span className="hanko hanko--lg">管理</span>
-          <div>
-            <h1>{isAdmin ? 'Палата администратора Додзё' : 'Палата модерации Додзё'}</h1>
-            <p>Управление реестром каратек, модерация боевых разборов ката и аудит системы</p>
-          </div>
+        <div>
+          <h1>{isAdmin ? 'Панель управления' : 'Панель модерации'}</h1>
+          <p>Управление пользователями, модерация ката и боевых разборов бункай</p>
         </div>
       </div>
 

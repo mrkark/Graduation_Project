@@ -40,12 +40,11 @@
   display: flex;
   align-items: flex-end;
   gap: 1.4rem;
-  background: linear-gradient(180deg, var(--bg-panel) 0%, #0e0e14 100%);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-top: 3px solid var(--gold);
   border-radius: var(--radius-sm);
   padding: 1.2rem 1.6rem;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-subtle);
   flex-wrap: wrap;
 }
 
@@ -68,9 +67,9 @@
 }
 
 .mode-btn {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-subtle);
-  color: var(--washi-dim);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
   padding: 0.55em 0.85em;
   font-size: 0.82rem;
   border-radius: var(--radius-sm);
@@ -80,15 +79,15 @@
 }
 
 .mode-btn:hover {
-  border-color: var(--gold);
-  color: var(--washi);
+  border-color: #c4c4bc;
+  color: var(--text-primary);
 }
 
 .mode-btn.active {
-  background: rgba(197, 160, 89, 0.15);
-  border-color: var(--gold);
-  color: var(--gold-bright);
-  font-weight: 600;
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: #ffffff;
+  font-weight: 500;
 }
 
 .btn-process {
@@ -99,11 +98,11 @@
 
 /* Шкала процесса AI */
 .processing-bar-wrap {
-  background: rgba(18, 15, 12, 0.95);
-  border: 1px solid var(--gold);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 1.2rem 1.6rem;
-  box-shadow: var(--shadow-glow-gold);
+  box-shadow: var(--shadow-subtle);
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
@@ -113,27 +112,27 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: var(--washi-muted);
+  color: var(--text-muted);
   flex-wrap: wrap;
   gap: 0.6rem;
 }
 
 .processing-steps span.done {
-  color: var(--gold-bright);
+  color: var(--accent-red);
   font-weight: 600;
 }
 
 .progress-track {
   width: 100%;
-  height: 8px;
-  background: #0a0907;
-  border-radius: 4px;
+  height: 6px;
+  background: var(--border-subtle);
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--crimson-bright), var(--gold-bright));
+  background: var(--text-primary);
   transition: width 0.4s ease;
 }
 

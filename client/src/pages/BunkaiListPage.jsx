@@ -5,13 +5,11 @@ import StatusBadge from '../components/StatusBadge';
 import { resolveMediaUrl } from '../utils/media';
 
 const DIFFICULTY_CONFIG = {
-  beginner: { label: 'Начальный', belt: 'Базовый', badgeClass: 'belt-white', kanji: '分解' },
-  intermediate: { label: 'Средний', belt: 'Средний', badgeClass: 'belt-green', kanji: '応用' },
-  advanced: { label: 'Продвинутый', belt: 'Продвинутый', badgeClass: 'belt-brown', kanji: '実戦' },
-  master: { label: 'Мастер', belt: 'Мастерский', badgeClass: 'belt-black', kanji: '奥伝' },
+  beginner: { label: 'Базовый', belt: 'Начальный' },
+  intermediate: { label: 'Средний', belt: 'Средний' },
+  advanced: { label: 'Продвинутый', belt: 'Продвинутый' },
+  master: { label: 'Мастерский', belt: 'Мастерский' },
 };
-
-const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
 
 export default function BunkaiListPage() {
   const [params, setParams] = useSearchParams();
@@ -49,24 +47,28 @@ export default function BunkaiListPage() {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
 
   return (
-    <div>
+    <div className="container">
+      {/* 1. ЗАГОЛОВОК СТРАНИЦЫ */}
       <div className="page-header">
         <div>
-          <h1>Каталог бункаев</h1>
-          <p className="page-subtitle">Боевой разбор и практическое применение форм (分解 · Оё-бункай)</p>
+          <h1>Каталог разборов бункай</h1>
+          <p className="page-subtitle">Практическое применение движений ката против противников (Оё-бункай)</p>
         </div>
-        <Link to="/bunkai/create" className="btn btn-primary">
-          + Добавить бункай
+        <Link to="/bunkai/new" className="btn btn-primary">
+          + Создать бункай в студии
         </Link>
       </div>
 
+      {/* 2. ПАНЕЛЬ ПОИСКА */}
       <div className="toolbar">
         <div className="field field--grow">
-          <label>Поиск по названию или технике</label>
-          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Разбор блока, защита от захвата…" />
+          <input
+            value={search}
+            onChange={(e) => updateParam('search', e.target.value)}
+            placeholder="Поиск по названию или технике (сюто-укэ, залом запястья, контратака)…"
+          />
         </div>
-        <div className="field">
-          <label>Сортировка</label>
+        <div className="field" style={{ flex: '0 0 200px' }}>
           <select value={sort} onChange={(e) => updateParam('sort', e.target.value)}>
             <option value="newest">Сначала новые</option>
             <option value="oldest">Сначала старые</option>
@@ -75,18 +77,17 @@ export default function BunkaiListPage() {
         </div>
       </div>
 
+      {/* 3. КАРТОЧКИ БУНКАЙ */}
       {loading ? (
         <p className="loading">Загрузка каталога бункаев…</p>
       ) : items.length === 0 ? (
-        <p className="empty-state">Бункаи не найдены.</p>
+        <p className="empty-state">Разборы бункай не найдены.</p>
       ) : (
         <div className="grid grid-cards">
           {items.map((b) => {
             const conf = DIFFICULTY_CONFIG[b.Difficulty] || {
               label: b.Difficulty,
               belt: 'Бункай',
-              badgeClass: 'belt-white',
-              kanji: '分解',
             };
             return (
               <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="card">
@@ -98,11 +99,8 @@ export default function BunkaiListPage() {
                       : undefined
                   }
                 >
-                  <span className={`card__belt-badge ${conf.badgeClass}`}>
+                  <span className="card__belt-badge">
                     {conf.belt}
-                  </span>
-                  <span className="card__kanji-seal">
-                    {conf.kanji}
                   </span>
                   {!b.Thumbnail_URL && (
                     <div className="card__fallback">
@@ -111,15 +109,21 @@ export default function BunkaiListPage() {
                     </div>
                   )}
                 </div>
+
                 <div className="card__body">
                   <div className="card__meta">
                     <StatusBadge status={b.Status} />
-                    {b.Kata && <span style={{ color: 'var(--gold)' }}>🥋 {b.Kata.Title}</span>}
+                    {b.Kata && <span>Ката: {b.Kata.Title}</span>}
                   </div>
-                  <div className="card__title">{b.Title}</div>
-                  <p className="card__desc">{b.Description || 'Боевой разбор канонического движения.'}</p>
+
+                  <h3 className="card__title">{b.Title}</h3>
+
+                  <p className="card__desc">
+                    {b.Description || 'Боевой разбор канонического движения против нападающего.'}
+                  </p>
+
                   <div className="card__meta card__meta--footer">
-                    <span style={{ color: 'var(--washi-dim)', fontSize: '0.78rem' }}>{conf.label}</span>
+                    <span>{conf.label}</span>
                     <span className="card__view-action">3D симуляция →</span>
                   </div>
                 </div>
@@ -129,12 +133,13 @@ export default function BunkaiListPage() {
         </div>
       )}
 
+      {/* 4. ПАГИНАЦИЯ */}
       {totalPages > 1 && (
         <div className="pagination">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
             <button
               key={p}
-              className={`btn ${p === page ? 'btn-gold' : ''}`}
+              className={`btn ${p === page ? 'btn-primary' : ''}`}
               onClick={() => {
                 const next = new URLSearchParams(params);
                 next.set('page', String(p));
