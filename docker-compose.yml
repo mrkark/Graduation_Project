@@ -1,19 +1,18 @@
-version: '3.9'
-
 services:
-  # 1. Контейнер базы данных (Microsoft SQL Server 2022)
+  # 1. Контейнер базы данных (Microsoft SQL Server 2025)
   mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: mcr.microsoft.com/mssql/server:2025-latest
     container_name: bunkai-explorer-mssql
     restart: unless-stopped
     environment:
       ACCEPT_EULA: 'Y'
-      MSSQL_SA_PASSWORD: 'ChangeMe#12345'
-      MSSQL_PID: 'Developer'
+      MSSQL_SA_PASSWORD: 'Mrkark9000!'
+      MSSQL_PID: 'developer'
     ports:
       - '1433:1433'
     volumes:
-      - mssql-data:/var/opt/mssql
+      - ${MSSQL_DATA_PATH:-D:/DockerServices/databases/mssql_data}:/var/opt/mssql/data
+      - ${MSSQL_BACKUP_PATH:-D:/DB_Backups/MSSQL}:/var/opt/mssql/backup
     healthcheck:
       test: ['CMD-SHELL', '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1" || exit 1']
       interval: 10s
@@ -39,8 +38,8 @@ services:
       DB_HOST: mssql
       DB_PORT: 1433
       DB_NAME: BunkaiExplorer
-      DB_USER: sa
-      DB_PASSWORD: 'ChangeMe#12345'
+      DB_USER: mrkark
+      DB_PASSWORD: mrkark9000
       DB_ENCRYPT: 'true'
       DB_TRUST_SERVER_CERT: 'true'
       JWT_ACCESS_SECRET: change_this_access_secret_in_production
@@ -71,9 +70,6 @@ services:
       - '5173:5173'
     networks:
       - bunkai-network
-
-volumes:
-  mssql-data:
 
 networks:
   bunkai-network:
