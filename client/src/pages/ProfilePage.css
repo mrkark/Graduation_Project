@@ -1,0 +1,217 @@
+/* =========================================================
+   PROFILEPAGE.CSS — Профиль каратэка (Dojo Student Pass)
+   ========================================================= */
+
+.profile-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  animation: dojoFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.profile-kicker {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* Карточка статуса ученика (Dojo Pass) */
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--gold-border);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius-sm);
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::after {
+  content: '武道';
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--font-kanji);
+  font-size: 5rem;
+  color: rgba(191, 161, 95, 0.04);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.profile-avatar-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #100f0d;
+  color: var(--gold-soft);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(191, 161, 95, 0.2);
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.4rem;
+}
+
+.profile-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.profile-meta {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.profile-meta strong {
+  color: var(--text-primary);
+}
+
+.profile-meta-sep {
+  color: var(--border);
+}
+
+/* Бейджи рангов и поясов */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0.75rem;
+  border-radius: var(--radius-xs);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rank-badge--black {
+  background: #080706;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  box-shadow: 0 0 8px rgba(191, 161, 95, 0.25);
+}
+
+.rank-badge--brown {
+  background: #2b1810;
+  color: #dfaa8b;
+  border: 1px solid #73432a;
+}
+
+.rank-badge--student {
+  background: #16241a;
+  color: #a3e6b5;
+  border: 1px solid #235332;
+}
+
+/* Панель формы профиля */
+.profile-form-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2rem 2.25rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-card);
+}
+
+.profile-form-panel h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  margin: 0 0 1.5rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.profile-form-panel h3::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 18px;
+  background: var(--gold);
+  border-radius: 1px;
+}
+
+.profile-danger-panel {
+  background: rgba(30, 15, 15, 0.45);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 2rem 2.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.profile-danger-title {
+  color: #ef4444;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.profile-danger-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .profile-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+  .profile-name-row {
+    justify-content: center;
+  }
+  .profile-meta {
+    justify-content: center;
+  }
+  .profile-form-panel,
+  .profile-danger-panel {
+    padding: 1.5rem;
+  }
+}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { deleteAccount } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+import './ProfilePage.css';
 
 export default function ProfilePage() {
   const { user, role, setUser, logout } = useAuthStore();
@@ -62,82 +63,87 @@ export default function ProfilePage() {
   }
 
   const roleLabels = {
-    admin: { label: 'Сенсей (Администратор Додзё)', kanji: '先生', belt: 'Черный пояс (5 Дан)', beltClass: 'belt-black' },
-    moderator: { label: 'Сэмпай (Модератор Додзё)', kanji: '先輩', belt: 'Коричневый пояс (1 Дан)', beltClass: 'belt-brown' },
-    user: { label: 'Каратэка (Ученик Додзё)', kanji: '空手家', belt: 'Практикующий Шотокан', beltClass: 'belt-green' },
+    admin: { label: 'Сенсей (Администратор Додзё)', kanji: '先生', belt: 'Черный пояс (5 Дан)', rankClass: 'rank-badge--black' },
+    moderator: { label: 'Сэмпай (Модератор Додзё)', kanji: '先輩', belt: 'Коричневый пояс (1 Дан)', rankClass: 'rank-badge--brown' },
+    user: { label: 'Каратэка (Ученик Додзё)', kanji: '空手家', belt: 'Практикующий Сётокан', rankClass: 'rank-badge--student' },
   };
   const roleInfo = roleLabels[role] || roleLabels.user;
 
+  const currentAvatar = form.avatarUrl || user?.Avatar_URL;
+
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div className="container profile-page">
       <div className="page-header">
         <div>
+          <span className="profile-kicker">道場門下生 · СТАТУС В ДОДЗЁ</span>
           <h1>Профиль каратэка</h1>
-          <p className="page-subtitle">Личные данные ученика и статус в Додзё Шотокан</p>
+          <p className="page-subtitle">Личные данные ученика, степень мастерства и управление аккаунтом</p>
         </div>
       </div>
 
-      {/* Карточка статуса */}
-      <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.8rem' }}>
-        <div style={{
-          width: '52px',
-          height: '52px',
-          borderRadius: '50%',
-          background: 'var(--text-primary)',
-          color: '#ffffff',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: '700',
-          fontSize: '1.25rem',
-          flexShrink: 0
-        }}>
-          {(user?.Display_Name || user?.Username || 'K')[0].toUpperCase()}
+      {/* Карточка статуса ученика (Dojo Pass) */}
+      <div className="profile-card">
+        <div className="profile-avatar-wrap">
+          {currentAvatar ? (
+            <img src={currentAvatar} alt={user?.Display_Name || 'Аватар'} className="profile-avatar-img" />
+          ) : (
+            <span>{(user?.Display_Name || user?.Username || 'K')[0].toUpperCase()}</span>
+          )}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
-            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>{user?.Display_Name || user?.Username}</h3>
-            <span className="belt-badge">{roleInfo.belt}</span>
+        <div className="profile-info">
+          <div className="profile-name-row">
+            <h2 className="profile-name">{user?.Display_Name || user?.Username}</h2>
+            <span className={`rank-badge ${roleInfo.rankClass}`}>
+              <span>{roleInfo.kanji}</span>
+              <span>{roleInfo.belt}</span>
+            </span>
           </div>
-          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Логин: <strong>{user?.Username}</strong> · Статус: {roleInfo.label}
+          <p className="profile-meta">
+            <span>Логин: <strong>{user?.Username}</strong></span>
+            <span className="profile-meta-sep">·</span>
+            <span>Статус: {roleInfo.label}</span>
           </p>
         </div>
       </div>
 
-      <form onSubmit={onSave} className="panel" style={{ marginBottom: '1.8rem' }}>
-        <div className="field">
-          <label>Отображаемое имя</label>
-          <input value={form.displayName} onChange={update('displayName')} />
-        </div>
-        <div className="field">
-          <label>О себе</label>
-          <textarea rows={4} value={form.bio} onChange={update('bio')} />
-        </div>
-        <div className="field">
-          <label>Ссылка на аватар</label>
-          <input value={form.avatarUrl} onChange={update('avatarUrl')} placeholder="https://…" />
-        </div>
-        {message && <p style={{ color: 'var(--success)', fontSize: '0.85rem' }}>{message}</p>}
-        {error && <p className="error-text">{error}</p>}
-        <button className="btn btn-primary" type="submit" disabled={saving}>
-          {saving ? 'Сохранение…' : 'Сохранить'}
-        </button>
-      </form>
+      {/* Форма редактирования профиля */}
+      <div className="profile-form-panel">
+        <h3>Личные сведения ученика</h3>
+        <form onSubmit={onSave}>
+          <div className="field">
+            <label>Отображаемое имя (Имя в Додзё)</label>
+            <input value={form.displayName} onChange={update('displayName')} placeholder="Например: Мастер Гитин" />
+          </div>
+          <div className="field">
+            <label>О себе (Опыт, клуб, направление)</label>
+            <textarea rows={4} value={form.bio} onChange={update('bio')} placeholder="Расскажите о своем опыте занятий каратэ..." />
+          </div>
+          <div className="field">
+            <label>Ссылка на аватар (URL изображения)</label>
+            <input value={form.avatarUrl} onChange={update('avatarUrl')} placeholder="https://..." />
+          </div>
+          {message && <p style={{ color: 'var(--success)', fontSize: '0.88rem', margin: '0.8rem 0' }}>✓ {message}</p>}
+          {error && <p className="error-text" style={{ margin: '0.8rem 0' }}>{error}</p>}
+          <button className="btn btn-primary" type="submit" disabled={saving}>
+            {saving ? 'Сохранение…' : 'Сохранить изменения'}
+          </button>
+        </form>
+      </div>
 
-      <div className="panel" style={{ borderColor: 'var(--danger)' }}>
-        <h3 style={{ color: 'var(--danger)' }}>Опасная зона</h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-          Удаление аккаунта необратимо. Все ваши материалы останутся отмечены как принадлежащие удалённому пользователю.
+      {/* Опасная зона */}
+      <div className="profile-danger-panel">
+        <h3 className="profile-danger-title">Опасная зона</h3>
+        <p className="profile-danger-desc">
+          Удаление аккаунта необратимо. Все созданные вами материалы останутся в архиве Додзё с пометкой удалённого автора.
         </p>
         <form onSubmit={onDelete}>
           <div className="field">
-            <label>Подтвердите паролем</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label style={{ color: '#ef4444' }}>Подтвердите удаление паролем</label>
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Текущий пароль" />
           </div>
-          {deleteError && <p className="error-text">{deleteError}</p>}
+          {deleteError && <p className="error-text" style={{ margin: '0.8rem 0' }}>{deleteError}</p>}
           <button className="btn btn-danger" type="submit" disabled={deleting}>
-            {deleting ? 'Удаление…' : 'Удалить аккаунт'}
+            {deleting ? 'Удаление аккаунта…' : 'Удалить аккаунт навсегда'}
           </button>
         </form>
       </div>

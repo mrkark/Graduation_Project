@@ -27,14 +27,6 @@ export default function HomePage() {
               Пространственная геометрия эмбусэн, механика стоек и прикладной бункай в трёхмерном пространстве.
             </p>
 
-            <div className="hero-dojo__telemetry">
-              <span>Канон: <strong>JKA</strong></span>
-              <span>·</span>
-              <span>Стойка: <strong>Дзэнкуцу-дати</strong></span>
-              <span>·</span>
-              <span>Концентрация: <strong>Кимэ (極め)</strong></span>
-            </div>
-
             <div className="hero-dojo__actions">
               <Link to="/kata" className="btn btn-primary hero-dojo__btn-main">
                 Войти в зал Ката (3D) →

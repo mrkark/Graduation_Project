@@ -1,0 +1,272 @@
+/* =========================================================
+   CHATPAGE.CSS — Связь Додзё (道場チャット)
+   ========================================================= */
+
+.chat-page-container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+  animation: dojoFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.chat-kicker {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+/* Двухколоночный макет чата */
+.chat-page {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 1.5rem;
+  height: 680px;
+}
+
+/* Боковая панель комнат */
+.chat-rooms {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  overflow-y: auto;
+  box-shadow: var(--shadow-card);
+}
+
+.chat-rooms__heading {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 0.85rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.chat-rooms__item {
+  text-align: left;
+  padding: 0.85rem 1.1rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-family: var(--font-sans);
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-rooms__item:hover {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.chat-rooms__item.active {
+  background: #1a1714;
+  color: var(--gold-soft);
+  font-weight: 600;
+  border: 1px solid var(--gold-border);
+  border-left: 3px solid var(--gold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Окно сообщений */
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  height: 680px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+/* Верхняя полоса статуса */
+.chat-window__status {
+  padding: 0.9rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(12, 11, 10, 0.6);
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.chat-window__status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #71717a;
+  transition: all 0.25s ease;
+}
+
+.chat-window__status-dot.online {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.chat-window__status-room-title {
+  margin-left: auto;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* Область сообщений */
+.chat-window__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: radial-gradient(circle at 50% 50%, rgba(20, 18, 16, 0.4) 0%, rgba(12, 11, 10, 0.85) 100%);
+}
+
+.chat-msg {
+  max-width: 78%;
+  align-self: flex-start;
+  padding: 0.85rem 1.2rem;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px 14px 14px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  position: relative;
+  transition: transform 0.15s ease;
+}
+
+.chat-msg.own {
+  align-self: flex-end;
+  background: rgba(191, 161, 95, 0.12);
+  border: 1px solid rgba(191, 161, 95, 0.32);
+  border-radius: 14px 4px 14px 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.chat-msg__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.chat-msg__author {
+  font-weight: 700;
+  color: var(--gold-soft);
+}
+
+.chat-msg.own .chat-msg__author {
+  color: var(--text-primary);
+}
+
+.chat-msg__time {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.chat-msg__text {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.chat-msg__delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  margin-left: auto;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+}
+
+.chat-msg__delete-btn:hover {
+  color: var(--danger);
+  opacity: 1;
+}
+
+/* Индикатор набора текста */
+.chat-window__typing {
+  min-height: 22px;
+  padding: 0 1.5rem 0.35rem;
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--gold);
+}
+
+/* Форма отправки сообщения */
+.chat-window__form {
+  display: flex;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: rgba(12, 11, 10, 0.75);
+}
+
+.chat-window__input {
+  flex: 1;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-primary) !important;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1.15rem;
+  font-size: 0.93rem;
+}
+
+.chat-window__input:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 1px var(--gold), 0 2px 10px rgba(191, 161, 95, 0.2) !important;
+}
+
+.chat-window__submit-btn {
+  padding: 0.75rem 1.6rem;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* Адаптивность для мобильных и планшетов */
+@media (max-width: 840px) {
+  .chat-page {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .chat-rooms {
+    max-height: 180px;
+  }
+  .chat-window {
+    height: 540px;
+  }
+  .chat-msg {
+    max-width: 88%;
+  }
+}
