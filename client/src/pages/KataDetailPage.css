@@ -1,5 +1,5 @@
 /* =========================================================
-   KATADETAILPAGE.CSS — Просторная 3D арена ката
+   KATADETAILPAGE.CSS — 3D Арена Ката (Shotokan Editorial)
    ========================================================= */
 
 .kata-study {
@@ -39,13 +39,24 @@
 }
 
 .kata-study__sep {
-  color: var(--border);
+  color: var(--vector-line);
+}
+
+.kata-study__belt-tag {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.kata-study__step-count {
+  color: var(--text-muted);
 }
 
 .kata-study__title {
   margin: 0;
   font-size: clamp(2rem, 3.5vw, 2.8rem);
-  font-weight: 500;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .kata-study__actions {
@@ -61,14 +72,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 1rem;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-lift);
 }
 
 .kata-study__canvas-container {
   width: 100%;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #09090b;
+  background: #07080a;
 }
 
 /* 3. КОМПАКТНЫЙ СТЕППЕР УПРАВЛЕНИЯ */
@@ -104,10 +115,10 @@
   align-items: center;
   gap: 0.6rem;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .kata-kiai-pill {
@@ -115,13 +126,13 @@
   color: var(--accent-red);
   border: 1px solid var(--accent-red-border);
   padding: 1px 6px;
-  border-radius: 3px;
+  border-radius: 2px;
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .kata-stepper__technique {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--text-primary);
@@ -161,7 +172,7 @@
   background: var(--bg-surface);
   color: var(--text-secondary);
   font-size: 0.78rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -172,16 +183,16 @@
 }
 
 .kata-dot-btn:hover {
-  background: var(--bg-subtle);
-  border-color: #c4c4bc;
+  background: var(--bg-hover);
+  border-color: var(--vector-line);
   color: var(--text-primary);
 }
 
 .kata-dot-btn.active {
   background: var(--text-primary);
   border-color: var(--text-primary);
-  color: #ffffff;
-  font-weight: 600;
+  color: var(--bg-canvas);
+  font-weight: 700;
 }
 
 .kata-dot-btn.kiai {
@@ -213,7 +224,7 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 2rem;
+  padding: 2.2rem;
   box-shadow: var(--shadow-subtle);
 }
 
@@ -267,4 +278,5 @@
 .kata-bunkai-item h4 {
   margin: 0 0 0.35rem;
   font-size: 1.15rem;
+  color: var(--text-primary);
 }

@@ -5,29 +5,37 @@ import './HomePage.css';
 export default function HomePage() {
   return (
     <div className="home">
-      {/* 1. ПЕРВЫЙ ЭКРАН: ОДИН ЦЕНТР ВНИМАНИЯ, СВОБОДНОЕ ПРОСТРАНСТВО */}
+      {/* 1. ПЕРВЫЙ ЭКРАН: АНАТОМИЯ МАСТЕРСТВА И ВЕКТОРЫ СИЛЫ */}
       <section className="hero container">
         <div className="hero__content">
           <span className="hero__kicker">
-            Сётокан Каратэдо · Трёхмерная биомеханика
+            松濤館流 · JKA Анатомия мастерства
           </span>
 
           <h1 className="hero__headline">
-            Искусство формы. <br />
-            Смысл каждого движения.
+            Анатомия формы. <br />
+            Биомеханика поединка.
           </h1>
 
           <p className="hero__description">
-            Интерактивная среда для глубокого освоения 26 канонических ката и расшифровки
-            боевого применения бункай через трёхмерное моделирование и пространственный анализ.
+            Интерактивный свод 26 канонических ката Сётокан. Траектории перемещений эмбусэн,
+            геометрия стоек и расшифровка прикладного бункай в трёхмерном пространстве.
           </p>
+
+          <div className="hero__telemetry">
+            <span>Стандарт: <strong>JKA</strong></span>
+            <span>·</span>
+            <span>Вектор: <strong>Сёмэн (0°)</strong></span>
+            <span>·</span>
+            <span>Фокус силы: <strong>Кимэ (Тюдан)</strong></span>
+          </div>
 
           <div className="hero__actions">
             <Link to="/kata" className="btn btn-primary hero__btn-main">
-              Исследовать каталог ката
+              Изучить 26 ката в 3D →
             </Link>
             <Link to="/bunkai" className="btn btn-subtle hero__btn-secondary">
-              Разборы бункай →
+              Боевая механика Бункай
             </Link>
           </div>
         </div>
@@ -36,24 +44,28 @@ export default function HomePage() {
           <div className="hero__image-frame">
             <img
               src={karateMasterRealistic}
-              alt="Мастер Сётокан Каратэ в Додзё"
+              alt="Мастер Сётокан Каратэ в момент Кимэ"
               className="hero__image"
               loading="eager"
             />
+            <div className="hero__image-badge">
+              <span className="hero__image-badge-title">極め · KIME (Фокус силы)</span>
+              <span className="hero__image-badge-sub">Стойка Дзэнкуцу-дати</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* 2. ТРИ ГРАНИ МАСТЕРСТВА (РЕДАКТОРСКАЯ КОМПОЗИЦИЯ С ТОНКИМИ ЛИНИЯМИ) */}
+      {/* 2. ТРИ СТОЛПА КАНОНИЧЕСКОЙ БИОМЕХАНИКИ */}
       <section className="pillars-section">
         <div className="container">
           <div className="pillars-grid">
             <div className="pillar-item">
               <span className="pillar-num">01</span>
-              <h2 className="pillar-title">Ката (型) · Форма</h2>
+              <h2 className="pillar-title">Эмбусэн (演武線) · Векторы</h2>
               <p className="pillar-text">
-                Каноническая последовательность шагов, заложенная мастерами прошлого.
-                Изучайте геометрию стоек, линию перемещений эмбусэн и точки концентрации силы кимэ в трёхмерном пространстве.
+                Пространственная геометрия шагов и поворотов. Изучайте ось баланса, углы скручивания
+                бёдер и траектории перемещения в интерактивном 3D-пространстве.
               </p>
               <Link to="/kata" className="pillar-link">
                 Каталог 26 форм →
@@ -62,13 +74,13 @@ export default function HomePage() {
 
             <div className="pillar-item">
               <span className="pillar-num">02</span>
-              <h2 className="pillar-title">Бункай (分解) · Смысл</h2>
+              <h2 className="pillar-title">Кимэ (極め) · Фокус</h2>
               <p className="pillar-text">
-                Расшифровка прикладного применения движений ката против реального противника.
-                Заломы суставов, выведение из равновесия кудзуси, уходы с линии атаки и опережающие удары.
+                Предельная концентрация взрывной силы в точке удара с мгновенной фиксацией суставов
+                и брюшного пресса (Тандэн). Точность важнее грубой силы.
               </p>
               <Link to="/bunkai" className="pillar-link">
-                Сценарии применения →
+                Сценарии бункай →
               </Link>
             </div>
 
@@ -76,8 +88,8 @@ export default function HomePage() {
               <span className="pillar-num">03</span>
               <h2 className="pillar-title">Ма-ай (間合い) · Дистанция</h2>
               <p className="pillar-text">
-                Чувство боевой дистанции и тайминг атаки. Подключайте камеру смартфона для
-                захвата движений через компьютерное зрение Aimokap и сравнивайте исполнение с эталоном.
+                Динамический контроль боевой дистанции между Тори и Укэ. Анализ дистанций
+                Тика-ма (ближняя), Иссоку-итто (шаг-удар) и То-ма (дальняя).
               </p>
               <Link to="/motion-lab" className="pillar-link">
                 Лаборатория Aimokap →
@@ -87,11 +99,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. КАТА ХЭЙАН: ФУНДАМЕНТ СПОКОЙСТВИЯ */}
+      {/* 3. КАТА ХЭЙАН: БАЗОВЫЙ КАНОН */}
       <section className="showcase-section container">
         <div className="showcase-header">
           <div>
-            <span className="section-kicker">Базовая школа</span>
+            <span className="section-kicker">Базовая школа Сётокан</span>
             <h2 className="showcase-title">Пять форм Хэйан (Мирный дух)</h2>
           </div>
           <Link to="/kata" className="showcase-all-link">
@@ -103,9 +115,9 @@ export default function HomePage() {
           <Link to="/kata/1" className="showcase-card">
             <div className="showcase-card__tag">9–7 Кю · Белый / Жёлтый</div>
             <h3 className="showcase-card__title">Хэйан Сёдан</h3>
-            <span className="showcase-card__jp">平安初段</span>
+            <span className="showcase-card__jp">平安初段 · 21 шаг</span>
             <p className="showcase-card__desc">
-              Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. 21 движение.
+              Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. Освоение оси эмбусэн.
             </p>
             <span className="showcase-card__action">Изучить в 3D →</span>
           </Link>
@@ -113,9 +125,9 @@ export default function HomePage() {
           <Link to="/kata/2" className="showcase-card">
             <div className="showcase-card__tag">6–5 Кю · Зелёный</div>
             <h3 className="showcase-card__title">Хэйан Нидан</h3>
-            <span className="showcase-card__jp">平安二段</span>
+            <span className="showcase-card__jp">平安二段 · 26 шагов</span>
             <p className="showcase-card__desc">
-              Удары ногами маэ-гэри и ёко-гэри, переход в заднюю защитную стойку кокуцу-дати. 26 движений.
+              Удары ногами маэ-гэри и ёко-гэри, переход в заднюю защитную стойку кокуцу-дати с блоком сюто-укэ.
             </p>
             <span className="showcase-card__action">Изучить в 3D →</span>
           </Link>
@@ -123,25 +135,25 @@ export default function HomePage() {
           <Link to="/kata/3" className="showcase-card">
             <div className="showcase-card__tag">4 Кю · Синий</div>
             <h3 className="showcase-card__title">Хэйан Сандан</h3>
-            <span className="showcase-card__jp">平安三段</span>
+            <span className="showcase-card__jp">平安三段 · 20 шагов</span>
             <p className="showcase-card__desc">
-              Освобождение от захватов, блок ути-укэ и переход в низкую прочную стойку киба-дати. 20 движений.
+              Освобождение от захватов, блок ути-укэ и переход в низкую прочную стойку киба-дати (всадник).
             </p>
             <span className="showcase-card__action">Изучить в 3D →</span>
           </Link>
         </div>
       </section>
 
-      {/* 4. БОЛЬШАЯ СТУДИЯ БУНКАЙ И ТРЁХМЕРНЫЙ АНАЛИЗ */}
+      {/* 4. МАСТЕРСКАЯ БОЕВОГО МОДЕЛИРОВАНИЯ (СТУДИЯ) */}
       <section className="studio-callout-section">
         <div className="container studio-callout__container">
           <div className="studio-callout__text">
-            <span className="section-kicker">Интерактивный конструктор</span>
+            <span className="section-kicker">Трёхмерная симуляция поединка</span>
             <h2 className="studio-callout__title">
               Студия боевого анализа Bunkai
             </h2>
             <p className="studio-callout__desc">
-              Создавайте собственные цепочки поединка, регулируйте углы атаки нападающего и
+              Конструируйте собственные цепочки поединка, регулируйте углы атаки нападающего и
               дистанцию Ма-ай в трёхмерной симуляции двух и трёх каратек в реальном времени.
             </p>
             <Link to="/bunkai/new" className="btn btn-primary">
@@ -151,11 +163,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5. ФИЛОСОФИЯ МАСТЕРА ФУНАКОСИ (СПОКОЙНОЕ ПРОСТРАНСТВО) */}
+      {/* 5. ФИЛОСОФСКОЕ НАСТАВЛЕНИЕ МАСТЕРА ФУНАКОСИ */}
       <section className="quote-section container">
         <blockquote className="quote-editorial">
           <p className="quote-text">
-            «Каратэ начинается и заканчивается с поклона. В каратэ нет первого нападения.»
+            «Каратэ начинается и заканчивается с поклона. В каратэ нет первого нападения (Каратэ ни сэнтэ наси).»
           </p>
           <cite className="quote-author">
             — Гитин Фунакоси, основатель стиля Сётокан (Нидзю Кун)

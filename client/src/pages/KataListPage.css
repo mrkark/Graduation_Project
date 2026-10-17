@@ -1,6 +1,5 @@
 /* =========================================================
-   KATALISTPAGE.CSS — Архитектурный атлас 26 Ката Сётокан
-   Принципиально новая композиция: Интерактивный фокус и ступени мастерства
+   KATALISTPAGE.CSS — Атлас 26 Ката Сётокан (Shotokan Editorial)
    ========================================================= */
 
 .kata-atlas {
@@ -10,7 +9,7 @@
   padding-bottom: 5rem;
 }
 
-/* --- 1. ШАПКА КАТАЛОГА --- */
+/* --- 1. ШАПКА АТЛАСА КАТА --- */
 .atlas-header {
   display: flex;
   justify-content: space-between;
@@ -24,8 +23,8 @@
 .atlas-header__eyebrow {
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent-red);
   margin-bottom: 0.5rem;
@@ -34,7 +33,7 @@
 .atlas-header__title {
   font-size: clamp(2.2rem, 3.8vw, 3.2rem);
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--text-primary);
@@ -44,7 +43,7 @@
   font-size: 1.05rem;
   color: var(--text-secondary);
   margin: 0.5rem 0 0;
-  max-width: 600px;
+  max-width: 620px;
 }
 
 .atlas-header__controls {
@@ -54,7 +53,7 @@
   flex-wrap: wrap;
 }
 
-/* Переключатель режимов просмотра */
+/* Переключатель режимов */
 .atlas-view-toggle {
   display: inline-flex;
   background: var(--bg-surface);
@@ -68,8 +67,8 @@
   background: transparent;
   padding: 0.45rem 1rem;
   font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-muted);
   border-radius: var(--radius-pill);
   cursor: pointer;
   transition: all 0.18s ease;
@@ -77,7 +76,7 @@
 
 .atlas-view-toggle__btn.active {
   background: var(--text-primary);
-  color: #ffffff;
+  color: var(--bg-canvas);
 }
 
 /* --- 2. ПАНЕЛЬ ПОИСКА И ФИЛЬТРОВ --- */
@@ -128,9 +127,10 @@
   grid-template-columns: 1.2fr 0.8fr;
   background: var(--bg-surface);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-red);
   border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
   transition: all 0.25s ease;
 }
 
@@ -162,7 +162,7 @@
 
 .atlas-spotlight__belt {
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.25rem 0.65rem;
@@ -174,14 +174,14 @@
 
 .atlas-spotlight__kanji-stamp {
   font-family: var(--font-kanji);
-  font-size: 1.1rem;
-  color: var(--text-muted);
+  font-size: 1.15rem;
+  color: var(--accent-red);
 }
 
 .atlas-spotlight__title {
   font-size: clamp(2rem, 3.2vw, 2.6rem);
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.15;
   margin: 0 0 1rem;
   color: var(--text-primary);
@@ -200,8 +200,8 @@
   gap: 2.5rem;
   padding: 1.25rem 0;
   margin-bottom: 2rem;
-  border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .atlas-spotlight__stat-item {
@@ -211,15 +211,15 @@
 
 .atlas-spotlight__stat-val {
   font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: 1.45rem;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
 .atlas-spotlight__stat-lbl {
   font-size: 0.76rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
@@ -232,7 +232,7 @@
 
 .atlas-spotlight__visual {
   position: relative;
-  background: var(--bg-subtle);
+  background: var(--bg-canvas);
   min-height: 320px;
   display: flex;
   align-items: center;
@@ -256,7 +256,7 @@
   display: block;
 }
 
-/* --- 4. ПАВИЛЬОНЫ СТУПЕНЕЙ МАСТЕРСТВА (СТУКТУРИРОВАННЫЙ КАТАЛОГ) --- */
+/* --- 4. ПАВИЛЬОНЫ СТУПЕНЕЙ МАСТЕРСТВА --- */
 .atlas-pavilion {
   display: flex;
   flex-direction: column;
@@ -274,7 +274,7 @@
 .atlas-pavilion__title {
   font-size: 1.35rem;
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
   color: var(--text-primary);
   display: flex;
@@ -293,7 +293,7 @@
   color: var(--text-muted);
 }
 
-/* Сетка архитектурных плашек форм */
+/* Сетка архитектурных элементов */
 .atlas-pavilion__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
@@ -315,14 +315,14 @@
 }
 
 .atlas-item:hover {
-  border-color: #c8c8be;
+  border-color: var(--vector-line);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lift);
 }
 
 .atlas-item.active {
   border-color: var(--accent-red);
-  background: #ffffff;
+  background: var(--bg-subtle);
   box-shadow: 0 0 0 1px var(--accent-red);
 }
 
@@ -336,14 +336,14 @@
 .atlas-item__num {
   font-family: var(--font-display);
   font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-weight: 700;
+  color: var(--accent-red);
 }
 
 .atlas-item__kanji {
   font-family: var(--font-kanji);
   font-size: 1rem;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .atlas-item__title {
@@ -387,7 +387,7 @@
   color: var(--accent-red);
 }
 
-/* --- 5. ТАБЛИЧНЫЙ СВОДНЫЙ РЕЕСТР (TABLE VIEW) --- */
+/* --- 5. ТАБЛИЧНЫЙ СВОДНЫЙ РЕЕСТР --- */
 .atlas-table-wrap {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -407,7 +407,7 @@
   background: var(--bg-subtle);
   border-bottom: 1px solid var(--border);
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -420,7 +420,7 @@
 }
 
 .atlas-table tr:hover td {
-  background: var(--bg-subtle);
+  background: var(--bg-hover);
 }
 
 .atlas-table tr:last-child td {

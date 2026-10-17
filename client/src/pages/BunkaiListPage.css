@@ -1,6 +1,5 @@
 /* =========================================================
-   BUNKAILISTPAGE.CSS — Каталог боевых ситуаций Бункай
-   Фокус: Взаимодействие Тори и Укэ, боевая дистанция Ма-ай
+   BUNKAILISTPAGE.CSS — Каталог боевых сценариев (Shotokan Editorial)
    ========================================================= */
 
 .bunkai-catalog {
@@ -24,8 +23,8 @@
 .bunkai-header__eyebrow {
   display: inline-block;
   font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--accent-red);
   margin-bottom: 0.5rem;
@@ -34,7 +33,7 @@
 .bunkai-header__title {
   font-size: clamp(2.2rem, 3.8vw, 3.2rem);
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.02em;
   margin: 0;
   color: var(--text-primary);
@@ -88,18 +87,18 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 2rem;
+  padding: 2.2rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   text-decoration: none;
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
   position: relative;
 }
 
 .bunkai-unit:hover {
-  border-color: #c4c4ba;
+  border-color: var(--vector-line);
   transform: translateY(-3px);
   box-shadow: var(--shadow-lift);
 }
@@ -115,11 +114,13 @@
 
 .bunkai-unit__roles {
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .bunkai-unit__role-arrow {
@@ -128,17 +129,18 @@
 
 .bunkai-unit__difficulty {
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   padding: 0.2rem 0.55rem;
   border-radius: var(--radius-xs);
   background: var(--bg-subtle);
   color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
 .bunkai-unit__title {
-  font-size: 1.35rem;
+  font-size: 1.4rem;
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--text-primary);
@@ -163,6 +165,7 @@
   color: var(--text-secondary);
   margin-bottom: 1.5rem;
   background: var(--bg-subtle);
+  border: 1px solid var(--border);
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-pill);
 }
