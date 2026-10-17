@@ -72,6 +72,7 @@ services:
     volumes:
       - ./client/src:/app/src
       - ./client/public:/app/public
+      - ./client/vite.config.js:/app/vite.config.js
     networks:
       - bunkai-network
 
