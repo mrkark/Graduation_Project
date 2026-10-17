@@ -120,7 +120,12 @@ export default function ChatPage() {
 
   return (
     <div>
-      <h1>Чат</h1>
+      <div className="page-header">
+        <div>
+          <h1>Связь Додзё (道場チャット)</h1>
+          <p className="page-subtitle">Общий зал бесед мастеров и личные переписки с соратниками</p>
+        </div>
+      </div>
       <div className="chat-page">
         <div className="chat-rooms">
           {rooms.map((room) => (

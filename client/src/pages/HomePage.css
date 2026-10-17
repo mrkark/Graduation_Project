@@ -405,6 +405,130 @@
   gap: 0.7rem;
 }
 
+/* --- СЕКЦИЯ КАТА ХЭЙАН --- */
+.featured-kata {
+  margin-top: 1rem;
+}
+
+.section-lead-text {
+  font-size: 0.96rem;
+  color: var(--washi-dim);
+  max-width: 78ch;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}
+
+.heian-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 1.3rem;
+}
+
+.heian-card {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(175deg, #181410 0%, #100e0b 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.heian-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--gold-bright);
+  box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.9), 0 0 18px rgba(197, 160, 89, 0.2);
+}
+
+.heian-card__thumb {
+  aspect-ratio: 16 / 9;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.heian-belt-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.belt-white { background: #e8e4de; color: #1c1814; }
+.belt-yellow { background: #e6b800; color: #1c1814; }
+.belt-green { background: #2d8a4e; color: #fff; }
+.belt-blue { background: #2563eb; color: #fff; }
+.belt-brown { background: #854d0e; color: #fff; }
+
+.heian-card__kanji-seal {
+  font-family: var(--font-kanji);
+  font-size: 0.85rem;
+  color: var(--gold-bright);
+  background: rgba(0, 0, 0, 0.65);
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+}
+
+.heian-card__body {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.heian-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.heian-card__title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--washi);
+  margin: 0;
+}
+
+.heian-card__steps {
+  font-size: 0.74rem;
+  color: var(--gold);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heian-card__focus {
+  font-size: 0.78rem;
+  color: var(--washi-dim);
+  line-height: 1.45;
+  margin: 0;
+  flex: 1;
+}
+
+.focus-label {
+  color: var(--washi-muted);
+}
+
+.heian-card__action {
+  font-size: 0.78rem;
+  color: var(--gold-bright);
+  font-weight: 600;
+  margin-top: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* --- СЕКЦИЯ ПРИНЦИПОВ НИДЗЮ КУН --- */
 .philosophy-section {
   position: relative;

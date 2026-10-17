@@ -173,6 +173,96 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* --- КАТА ХЭЙАН: ИНТЕРАКТИВНАЯ ВИТРИНА НАЧАЛЬНЫХ ФОРМ (平安五段) --- */}
+      <section className="featured-kata container">
+        <div className="section-title-wrap">
+          <span className="section-kanji-sub">平安の五形 · HEIAN KATA</span>
+          <h2 className="section-title">Канонические Формы «Хэйан» (Мирный Дух)</h2>
+          <div className="section-line" />
+        </div>
+
+        <p className="section-lead-text">
+          Пять фундаментальных ката стиля Шотокан, созданных мастером Итосу Анко для последовательного освоения геометрии стоек, блоков и ударов. Изучайте в интерактивном 3D-пространстве Додзё:
+        </p>
+
+        <div className="heian-grid">
+          {[
+            {
+              id: 1,
+              title: 'Хэйан Шодан',
+              kanji: '平安初段',
+              belt: 'Белый / Желтый пояс',
+              beltClass: 'belt-white',
+              steps: '21 шаг',
+              thumb: '/uploads/thumbnails/kata_heian_shodan.jpg',
+              focus: 'Гэдан-барай, Дзэнкуцу-дати, Ой-цуки',
+            },
+            {
+              id: 2,
+              title: 'Хэйан Нидан',
+              kanji: '平安二段',
+              belt: 'Желтый / Оранжевый пояс',
+              beltClass: 'belt-yellow',
+              steps: '26 шагов',
+              thumb: '/uploads/thumbnails/kata_heian_nidan.jpg',
+              focus: 'Кокуцу-дати, Шуто-укэ, Маэ-гэри',
+            },
+            {
+              id: 3,
+              title: 'Хэйан Сандан',
+              kanji: '平安三段',
+              belt: 'Зеленый пояс',
+              beltClass: 'belt-green',
+              steps: '20 шагов',
+              thumb: '/uploads/thumbnails/kata_heian_sandan.jpg',
+              focus: 'Киба-дати, Учи-укэ, Эмпи-учи',
+            },
+            {
+              id: 4,
+              title: 'Хэйан Ёндан',
+              kanji: '平安四段',
+              belt: 'Синий пояс',
+              beltClass: 'belt-blue',
+              steps: '27 шагов',
+              thumb: '/uploads/thumbnails/kata_heian_yondan.jpg',
+              focus: 'Моротэ-укэ, Какивакэ, Дзёдан-укэ',
+            },
+            {
+              id: 5,
+              title: 'Хэйан Годан',
+              kanji: '平安五段',
+              belt: 'Коричневый пояс',
+              beltClass: 'belt-brown',
+              steps: '23 шага',
+              thumb: '/uploads/thumbnails/kata_heian_godan.jpg',
+              focus: 'Тоби-коми (прыжок), Микадзуки-гэри',
+            },
+          ].map((item) => (
+            <Link to={`/kata/${item.id}`} key={item.id} className="heian-card">
+              <div
+                className="heian-card__thumb"
+                style={{ backgroundImage: `url("${item.thumb}")` }}
+              >
+                <span className={`heian-belt-badge ${item.beltClass}`}>{item.belt}</span>
+                <span className="heian-card__kanji-seal">{item.kanji}</span>
+              </div>
+              <div className="heian-card__body">
+                <div className="heian-card__header">
+                  <h4 className="heian-card__title">{item.title}</h4>
+                  <span className="heian-card__steps">{item.steps}</span>
+                </div>
+                <p className="heian-card__focus">
+                  <span className="focus-label">Ключевые техники:</span> {item.focus}
+                </p>
+                <span className="heian-card__action">
+                  Открыть 3D разбор →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* --- NIJU KUN / ФИЛОСОФИЯ МАСТЕРА --- */}
       <section className="philosophy-section container">
         <div className="philosophy-inner">

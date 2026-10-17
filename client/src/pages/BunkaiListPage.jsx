@@ -4,6 +4,13 @@ import { listBunkai } from '../api/bunkai';
 import StatusBadge from '../components/StatusBadge';
 import { resolveMediaUrl } from '../utils/media';
 
+const DIFFICULTY_CONFIG = {
+  beginner: { label: 'Начальный', belt: 'Базовый', badgeClass: 'belt-white', kanji: '分解' },
+  intermediate: { label: 'Средний', belt: 'Средний', badgeClass: 'belt-green', kanji: '応用' },
+  advanced: { label: 'Продвинутый', belt: 'Продвинутый', badgeClass: 'belt-brown', kanji: '実戦' },
+  master: { label: 'Мастер', belt: 'Мастерский', badgeClass: 'belt-black', kanji: '奥伝' },
+};
+
 const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
 
 export default function BunkaiListPage() {
@@ -44,7 +51,10 @@ export default function BunkaiListPage() {
   return (
     <div>
       <div className="page-header">
-        <h1>Каталог бункаев</h1>
+        <div>
+          <h1>Каталог бункаев</h1>
+          <p className="page-subtitle">Боевой разбор и практическое применение форм (分解 · Оё-бункай)</p>
+        </div>
         <Link to="/bunkai/create" className="btn btn-primary">
           + Добавить бункай
         </Link>
@@ -52,8 +62,8 @@ export default function BunkaiListPage() {
 
       <div className="toolbar">
         <div className="field field--grow">
-          <label>Поиск по названию</label>
-          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Разбор блока…" />
+          <label>Поиск по названию или технике</label>
+          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Разбор блока, защита от захвата…" />
         </div>
         <div className="field">
           <label>Сортировка</label>
@@ -66,42 +76,56 @@ export default function BunkaiListPage() {
       </div>
 
       {loading ? (
-        <p className="loading">Загрузка каталога…</p>
+        <p className="loading">Загрузка каталога бункаев…</p>
       ) : items.length === 0 ? (
-        <p className="empty-state">Ничего не найдено.</p>
+        <p className="empty-state">Бункаи не найдены.</p>
       ) : (
         <div className="grid grid-cards">
-          {items.map((b) => (
-            <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="card">
-              <div
-                className="card__thumb"
-                style={
-                  b.Thumbnail_URL
-                    ? { backgroundImage: `url("${resolveMediaUrl(b.Thumbnail_URL)}")` }
-                    : undefined
-                }
-              >
-                {!b.Thumbnail_URL && (
-                  <div className="card__fallback">
-                    <span className="card__kanji">分解</span>
-                    <span>Бункай</span>
+          {items.map((b) => {
+            const conf = DIFFICULTY_CONFIG[b.Difficulty] || {
+              label: b.Difficulty,
+              belt: 'Бункай',
+              badgeClass: 'belt-white',
+              kanji: '分解',
+            };
+            return (
+              <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="card">
+                <div
+                  className="card__thumb"
+                  style={
+                    b.Thumbnail_URL
+                      ? { backgroundImage: `url("${resolveMediaUrl(b.Thumbnail_URL)}")` }
+                      : undefined
+                  }
+                >
+                  <span className={`card__belt-badge ${conf.badgeClass}`}>
+                    {conf.belt}
+                  </span>
+                  <span className="card__kanji-seal">
+                    {conf.kanji}
+                  </span>
+                  {!b.Thumbnail_URL && (
+                    <div className="card__fallback">
+                      <span className="card__kanji">分解</span>
+                      <span>Бункай</span>
+                    </div>
+                  )}
+                </div>
+                <div className="card__body">
+                  <div className="card__meta">
+                    <StatusBadge status={b.Status} />
+                    {b.Kata && <span style={{ color: 'var(--gold)' }}>🥋 {b.Kata.Title}</span>}
                   </div>
-                )}
-              </div>
-              <div className="card__body">
-                <div className="card__meta">
-                  <StatusBadge status={b.Status} />
-                  {b.Kata && <span>{b.Kata.Title}</span>}
+                  <div className="card__title">{b.Title}</div>
+                  <p className="card__desc">{b.Description || 'Боевой разбор канонического движения.'}</p>
+                  <div className="card__meta card__meta--footer">
+                    <span style={{ color: 'var(--washi-dim)', fontSize: '0.78rem' }}>{conf.label}</span>
+                    <span className="card__view-action">3D симуляция →</span>
+                  </div>
                 </div>
-                <div className="card__title">{b.Title}</div>
-                <p className="card__desc">{b.Description || 'Описание пока не добавлено.'}</p>
-                <div className="card__meta">
-                  <span>{DIFFICULTY_LABELS[b.Difficulty] || b.Difficulty}</span>
-                  <span>{b.Author?.Display_Name || b.Author?.Username}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
 

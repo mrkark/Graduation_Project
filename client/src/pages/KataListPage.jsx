@@ -5,7 +5,19 @@ import { useAuthStore } from '../store/authStore';
 import StatusBadge from '../components/StatusBadge';
 import { resolveMediaUrl } from '../utils/media';
 
-const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
+const DIFFICULTY_CONFIG = {
+  beginner: { label: 'Начальный', belt: 'Белый / Желтый', badgeClass: 'belt-white', kanji: '初段' },
+  intermediate: { label: 'Средний', belt: 'Зеленый / Синий', badgeClass: 'belt-green', kanji: '中段' },
+  advanced: { label: 'Продвинутый', belt: 'Коричневый', badgeClass: 'belt-brown', kanji: '上段' },
+  master: { label: 'Мастер', belt: 'Черный пояс', badgeClass: 'belt-black', kanji: '奥伝' },
+};
+
+const DIFFICULTY_LABELS = {
+  beginner: 'Начальный (Кю 9-7)',
+  intermediate: 'Средний (Кю 6-4)',
+  advanced: 'Продвинутый (Кю 3-1)',
+  master: 'Мастер (Дан 1-5)',
+};
 
 export default function KataListPage() {
   const user = useAuthStore((s) => s.user);
@@ -50,7 +62,7 @@ export default function KataListPage() {
       <div className="page-header">
         <div>
           <h1>Каталог ката</h1>
-          <p className="page-subtitle">26 канонических форм стиля Шотокан (松濤館流) и их изучение</p>
+          <p className="page-subtitle">26 канонических форм стиля Шотокан (松濤館流) и их 3D разбор</p>
         </div>
         {isAdmin && (
           <Link to="/kata/create" className="btn btn-primary">
@@ -61,13 +73,13 @@ export default function KataListPage() {
 
       <div className="toolbar">
         <div className="field field--grow">
-          <label>Поиск по названию</label>
-          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Хэйан Шодан…" />
+          <label>Поиск по названию или кандзи</label>
+          <input value={search} onChange={(e) => updateParam('search', e.target.value)} placeholder="Хэйан Шодан, Бассай-дай…" />
         </div>
         <div className="field">
-          <label>Сложность</label>
+          <label>Ранг / Пояс</label>
           <select value={difficulty} onChange={(e) => updateParam('difficulty', e.target.value)}>
-            <option value="">Любая</option>
+            <option value="">Все уровни</option>
             {Object.entries(DIFFICULTY_LABELS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}
@@ -85,39 +97,87 @@ export default function KataListPage() {
         </div>
       </div>
 
+      {/* Быстрые фильтры по поясам */}
+      <div className="filter-chips">
+        <button
+          className={`filter-chip ${difficulty === '' ? 'active' : ''}`}
+          onClick={() => updateParam('difficulty', '')}
+        >
+          Все ({meta.total || 0})
+        </button>
+        <button
+          className={`filter-chip ${difficulty === 'beginner' ? 'active' : ''}`}
+          onClick={() => updateParam('difficulty', difficulty === 'beginner' ? '' : 'beginner')}
+        >
+          ⚪ Начальный (Белый/Желтый)
+        </button>
+        <button
+          className={`filter-chip ${difficulty === 'intermediate' ? 'active' : ''}`}
+          onClick={() => updateParam('difficulty', difficulty === 'intermediate' ? '' : 'intermediate')}
+        >
+          🟢 Средний (Зеленый/Синий)
+        </button>
+        <button
+          className={`filter-chip ${difficulty === 'advanced' ? 'active' : ''}`}
+          onClick={() => updateParam('difficulty', difficulty === 'advanced' ? '' : 'advanced')}
+        >
+          🟤 Продвинутый (Коричневый)
+        </button>
+        <button
+          className={`filter-chip ${difficulty === 'master' ? 'active' : ''}`}
+          onClick={() => updateParam('difficulty', difficulty === 'master' ? '' : 'master')}
+        >
+          ⚫ Мастер (Черный пояс)
+        </button>
+      </div>
+
       {loading ? (
-        <p className="loading">Загрузка каталога…</p>
+        <p className="loading">Загрузка каталога ката…</p>
       ) : items.length === 0 ? (
-        <p className="empty-state">Ничего не найдено. Попробуйте изменить параметры поиска.</p>
+        <p className="empty-state">Ката не найдены. Попробуйте сбросить фильтры.</p>
       ) : (
         <div className="grid grid-cards">
-          {items.map((kata) => (
-            <Link to={`/kata/${kata.Kata_ID}`} key={kata.Kata_ID} className="card">
-              <div
-                className="card__thumb"
-                style={kata.Thumbnail_URL ? { backgroundImage: `url("${resolveMediaUrl(kata.Thumbnail_URL)}")` } : undefined}
-              >
-                {!kata.Thumbnail_URL && (
-                  <div className="card__fallback">
-                    <span className="card__kanji">型</span>
-                    <span>Ката</span>
+          {items.map((kata) => {
+            const conf = DIFFICULTY_CONFIG[kata.Difficulty] || {
+              label: kata.Difficulty,
+              belt: 'Шотокан',
+              badgeClass: 'belt-white',
+              kanji: '型',
+            };
+            return (
+              <Link to={`/kata/${kata.Kata_ID}`} key={kata.Kata_ID} className="card">
+                <div
+                  className="card__thumb"
+                  style={kata.Thumbnail_URL ? { backgroundImage: `url("${resolveMediaUrl(kata.Thumbnail_URL)}")` } : undefined}
+                >
+                  <span className={`card__belt-badge ${conf.badgeClass}`}>
+                    {conf.belt}
+                  </span>
+                  <span className="card__kanji-seal">
+                    {conf.kanji}
+                  </span>
+                  {!kata.Thumbnail_URL && (
+                    <div className="card__fallback">
+                      <span className="card__kanji">型</span>
+                      <span>Ката</span>
+                    </div>
+                  )}
+                </div>
+                <div className="card__body">
+                  <div className="card__meta">
+                    <StatusBadge status={kata.Status} />
+                    {kata.Style && <span style={{ color: 'var(--gold)' }}>🥋 {kata.Style}</span>}
                   </div>
-                )}
-              </div>
-              <div className="card__body">
-                <div className="card__meta">
-                  <StatusBadge status={kata.Status} />
-                  {kata.Style && <span>{kata.Style}</span>}
+                  <div className="card__title">{kata.Title}</div>
+                  <p className="card__desc">{kata.Description || 'Каноническая форма карате Шотокан.'}</p>
+                  <div className="card__meta card__meta--footer">
+                    <span style={{ color: 'var(--washi-dim)', fontSize: '0.78rem' }}>{conf.label}</span>
+                    <span className="card__view-action">3D разбор →</span>
+                  </div>
                 </div>
-                <div className="card__title">{kata.Title}</div>
-                <p className="card__desc">{kata.Description || 'Описание пока не добавлено.'}</p>
-                <div className="card__meta">
-                  <span>{DIFFICULTY_LABELS[kata.Difficulty] || kata.Difficulty}</span>
-                  <span>{kata.Author?.Display_Name || kata.Author?.Username}</span>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
 

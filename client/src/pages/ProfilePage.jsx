@@ -61,14 +61,39 @@ export default function ProfilePage() {
     }
   }
 
-  return (
-    <div style={{ maxWidth: 640 }}>
-      <h1>Профиль</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-        {user?.Username} · роль: {role}
-      </p>
+  const roleLabels = {
+    admin: { label: 'Сенсей (Администратор Додзё)', kanji: '先生', belt: 'Черный пояс (5 Дан)', beltClass: 'belt-black' },
+    moderator: { label: 'Сэмпай (Модератор Додзё)', kanji: '先輩', belt: 'Коричневый пояс (1 Дан)', beltClass: 'belt-brown' },
+    user: { label: 'Каратэка (Ученик Додзё)', kanji: '空手家', belt: 'Практикующий Шотокан', beltClass: 'belt-green' },
+  };
+  const roleInfo = roleLabels[role] || roleLabels.user;
 
-      <form onSubmit={onSave} className="panel" style={{ marginBottom: '1.5rem' }}>
+  return (
+    <div style={{ maxWidth: 680 }}>
+      <div className="page-header">
+        <div>
+          <h1>Профиль каратэка</h1>
+          <p className="page-subtitle">Личные данные ученика и статус в Додзё Шотокан</p>
+        </div>
+      </div>
+
+      {/* Карточка статуса в Додзё */}
+      <div className="panel" style={{ display: 'flex', alignItems: 'center', gap: '1.2rem', marginBottom: '1.8rem', borderLeft: '4px solid var(--gold)' }}>
+        <div className="hanko hanko--lg" style={{ width: '56px', height: '56px', fontSize: '1.8rem' }}>
+          {roleInfo.kanji}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '0.25rem' }}>
+            <h3 style={{ margin: 0, color: 'var(--washi)' }}>{user?.Display_Name || user?.Username}</h3>
+            <span className={`heian-belt-badge ${roleInfo.beltClass}`}>{roleInfo.belt}</span>
+          </div>
+          <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--washi-dim)' }}>
+            Логин: <strong style={{ color: 'var(--gold)' }}>{user?.Username}</strong> · Статус: {roleInfo.label}
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={onSave} className="panel" style={{ marginBottom: '1.8rem' }}>
         <div className="field">
           <label>Отображаемое имя</label>
           <input value={form.displayName} onChange={update('displayName')} />

@@ -70,7 +70,12 @@ export default function FriendsPage() {
 
   return (
     <div>
-      <h1>Друзья</h1>
+      <div className="page-header">
+        <div>
+          <h1>Соратники Додзё (仲間 · Накама)</h1>
+          <p className="page-subtitle">Взаимные тренировки, обмен опытом и личные сообщения</p>
+        </div>
+      </div>
 
       <div className="tabs">
         {TABS.map((t) => (
