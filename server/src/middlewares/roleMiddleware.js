@@ -31,7 +31,8 @@ function requireAnyRole(...roles) {
   };
 }
 
-// Готовый шорткат для админских маршрутов
+// Готовые шорткаты для администраторов и модераторов
 const adminMiddleware = requireRole('admin');
+const moderatorMiddleware = requireAnyRole('admin', 'moderator');
 
-module.exports = { requireRole, requireAnyRole, adminMiddleware };
+module.exports = { requireRole, requireAnyRole, adminMiddleware, moderatorMiddleware };

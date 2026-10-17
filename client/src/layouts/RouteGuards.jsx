@@ -48,3 +48,11 @@ export function RequireAdmin() {
   }
   return <Outlet />;
 }
+
+export function RequireAdminOrModerator() {
+  const role = useAuthStore((s) => s.role);
+  if (role !== 'admin' && role !== 'moderator') {
+    return <Navigate to="/" replace />;
+  }
+  return <Outlet />;
+}

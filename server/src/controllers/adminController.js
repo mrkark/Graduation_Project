@@ -77,8 +77,14 @@ async function changeRole(req, res, next) {
 // DELETE /api/users/:id
 async function deleteUser(req, res, next) {
   try {
+    if (req.userRole === 'moderator') {
+      const targetUser = await adminRepo.getUser(req.params.id);
+      if (targetUser && targetUser.Role && targetUser.Role.Role_Name === 'admin') {
+        return fail(res, 403, 'Модератор не может удалить администратора', 'CANNOT_DELETE_ADMIN');
+      }
+    }
     await adminRepo.deleteUser(req.params.id, req.user.User_ID);
-    await logActivity({ userId: req.user.User_ID, action: 'admin_delete_user', entityType: 'User', entityId: Number(req.params.id), ip: req.ip });
+    await logActivity({ userId: req.user.User_ID, action: 'delete_user', entityType: 'User', entityId: Number(req.params.id), ip: req.ip });
     return ok(res, { message: 'Пользователь удалён' });
   } catch (err) {
     return handleError(err, next, res);

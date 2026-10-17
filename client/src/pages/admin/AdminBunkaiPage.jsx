@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { listBunkai, approveBunkai, rejectBunkai } from '../../api/bunkai';
+import { listBunkai, approveBunkai, rejectBunkai, deleteBunkai } from '../../api/bunkai';
 import StatusBadge from '../../components/StatusBadge';
 
 export default function AdminBunkaiPage() {
@@ -26,6 +26,11 @@ export default function AdminBunkaiPage() {
   }
   async function onReject(id) {
     await rejectBunkai(id);
+    load();
+  }
+  async function onDelete(id, title) {
+    if (!confirm(`Удалить бункай «${title}» без возможности восстановления?`)) return;
+    await deleteBunkai(id);
     load();
   }
 
@@ -70,8 +75,11 @@ export default function AdminBunkaiPage() {
                     <button className="btn btn-primary" onClick={() => onApprove(b.Bunkai_ID)}>
                       Одобрить
                     </button>
-                    <button className="btn btn-danger" onClick={() => onReject(b.Bunkai_ID)}>
+                    <button className="btn" onClick={() => onReject(b.Bunkai_ID)}>
                       Отклонить
+                    </button>
+                    <button className="btn btn-danger" onClick={() => onDelete(b.Bunkai_ID, b.Title)} title="Удалить бункай">
+                      Удалить
                     </button>
                   </div>
                 </td>

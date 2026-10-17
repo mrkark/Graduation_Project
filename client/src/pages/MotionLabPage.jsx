@@ -4,6 +4,7 @@ import { OrbitControls, ContactShadows } from '@react-three/drei';
 import KarateMasterModel from '../three/KarateMasterModel';
 import { SHOTOKAN_STANCES } from '../three/KaratekaAvatar';
 import TraditionalDojo from '../three/TraditionalDojo';
+import MocapStudio from '../components/mocap/MocapStudio';
 import './MotionLabPage.css';
 
 // Расширенный словарь канонических техник Шотокан
@@ -411,6 +412,7 @@ const STANCES_DECK = [
 ];
 
 export default function MotionLabPage() {
+  const [activeTab, setActiveTab] = useState('mocap'); // 'mocap' | 'dojo'
   const [mode, setMode] = useState('bunkai-2'); // 'kata' | 'bunkai-2' | 'bunkai-3'
   const [masterStance, setMasterStance] = useState('ready');
   const [activeClip, setActiveClip] = useState(null);
@@ -495,8 +497,34 @@ export default function MotionLabPage() {
         </div>
       </div>
 
-      {/* Верхняя панель конфигурации поединка и камеры */}
-      <div className="motion-lab__config-panel">
+      {/* Главные вкладки модуля: Mocap Studio vs 3D Додзё Ката */}
+      <div style={{ display: 'flex', gap: '0.85rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.85rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className={`btn ${activeTab === 'mocap' ? 'btn-primary' : ''}`}
+          onClick={() => setActiveTab('mocap')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '1rem', fontWeight: 800 }}
+        >
+          <span>📹</span>
+          <span>AI Захват движений с камеры (Mocap Studio)</span>
+        </button>
+        <button
+          type="button"
+          className={`btn ${activeTab === 'dojo' ? 'btn-gold' : ''}`}
+          onClick={() => setActiveTab('dojo')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '1rem', fontWeight: 800 }}
+        >
+          <span>🥋</span>
+          <span>3D Додзё Ката & Техники (Библиотека 87 приёмов)</span>
+        </button>
+      </div>
+
+      {activeTab === 'mocap' ? (
+        <MocapStudio />
+      ) : (
+        <>
+          {/* Верхняя панель конфигурации поединка и камеры */}
+          <div className="motion-lab__config-panel">
         {/* Формат демонстрации */}
         <div className="config-group">
           <label>Формат демонстрации в Додзё</label>
@@ -856,6 +884,8 @@ export default function MotionLabPage() {
           </div>
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }

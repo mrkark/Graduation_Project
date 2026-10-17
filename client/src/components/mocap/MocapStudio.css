@@ -1,0 +1,374 @@
+/* ========================================================
+   AI Karate Motion Capture Studio — Стили веб-приложения
+   ======================================================== */
+
+.mocap-studio {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.mocap-studio__topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(26, 29, 36, 0.95), rgba(18, 20, 26, 0.95));
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.mocap-studio__branding {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.mocap-studio__seal {
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle, #b91c1c 30%, #7f1d1d 90%);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff8f0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(185, 28, 28, 0.5);
+}
+
+.mocap-studio__title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f3f4f6;
+  margin: 0;
+  letter-spacing: 0.04em;
+}
+
+.mocap-studio__subtitle {
+  font-size: 0.82rem;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.mocap-studio__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.mocap-studio__source-select {
+  background: #111318;
+  color: #e5e7eb;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  outline: none;
+}
+.mocap-studio__source-select:focus {
+  border-color: #d4af37;
+}
+
+.mocap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.mocap-btn--primary {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+.mocap-btn--primary:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+}
+
+.mocap-btn--record {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+  animation: pulse-border 2s infinite;
+}
+.mocap-btn--record:hover {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+}
+
+.mocap-btn--stop {
+  background: #374151;
+  color: #f3f4f6;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.mocap-btn--stop:hover {
+  background: #4b5563;
+}
+
+.mocap-btn--gold {
+  background: linear-gradient(135deg, #d4af37, #b8860b);
+  color: #111827;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
+}
+.mocap-btn--gold:hover {
+  background: linear-gradient(135deg, #e5c158, #c59b27);
+  transform: translateY(-1px);
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Двухоконная компоновка: Камера захвата + 3D Аватар */
+.mocap-studio__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+@media (max-width: 1024px) {
+  .mocap-studio__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mocap-card {
+  background: #15181f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.mocap-card__header {
+  padding: 0.75rem 1rem;
+  background: #1c202a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mocap-card__title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mocap-viewport {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #0a0c10;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mocap-video-element {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* Зеркальный режим для удобства пользователя */
+}
+
+.mocap-canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Пульсирующий индикатор записи */
+.mocap-rec-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  background: rgba(220, 38, 38, 0.9);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.6);
+  z-index: 10;
+  letter-spacing: 0.05em;
+}
+
+.mocap-rec-dot {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border-radius: 50%;
+  animation: blink 1s infinite alternate;
+}
+@keyframes blink {
+  from { opacity: 0.2; }
+  to { opacity: 1; }
+}
+
+/* Сенсей HUD оверлей: оценка техники */
+.mocap-sensei-hud {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  background: rgba(15, 18, 25, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mocap-sensei-stance {
+  display: flex;
+  flex-direction: column;
+}
+
+.mocap-sensei-stance__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mocap-sensei-stance__jp {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.mocap-sensei-metrics {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.mocap-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mocap-metric__label {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.mocap-metric__val {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #d4af37;
+}
+
+.mocap-score-badge {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #10b981;
+  color: #10b981;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+/* Вспомогательный экран ожидания/отключения камеры */
+.mocap-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+  gap: 1rem;
+}
+
+.mocap-placeholder__icon {
+  font-size: 3.5rem;
+}
+
+/* Таймлайн воспроизведения записанного захвата */
+.mocap-timeline {
+  background: #181b22;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mocap-timeline__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.mocap-timeline__playback {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mocap-timeline__slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.mocap-timeline__slider {
+  flex: 1;
+  height: 6px;
+  accent-color: #d4af37;
+  cursor: pointer;
+}
+
+.mocap-timeline__counter {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #f3f4f6;
+  min-width: 100px;
+  text-align: right;
+}

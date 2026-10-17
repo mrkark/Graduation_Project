@@ -7,13 +7,19 @@
 -- =========================================================
 
 -- Роли
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles)
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE Role_Name = N'user')
 BEGIN
     INSERT INTO dbo.Roles (Role_Name, Description)
     VALUES
-        (N'guest', N'Неавторизованный посетитель'),
-        (N'user',  N'Обычный зарегистрированный пользователь'),
-        (N'admin', N'Администратор системы');
+        (N'guest',     N'Неавторизованный посетитель'),
+        (N'user',      N'Обычный зарегистрированный пользователь'),
+        (N'moderator', N'Модератор (просмотр и удаление пользователей и бункаев)'),
+        (N'admin',     N'Администратор системы');
+END
+ELSE IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE Role_Name = N'moderator')
+BEGIN
+    INSERT INTO dbo.Roles (Role_Name, Description)
+    VALUES (N'moderator', N'Модератор (просмотр и удаление пользователей и бункаев)');
 END
 GO
 
@@ -27,6 +33,20 @@ BEGIN
         N'admin@bunkai-explorer.local',
         N'{{ADMIN_PASSWORD_HASH}}',
         N'Администратор'
+    );
+END
+GO
+
+-- Демонстрационный модератор
+IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username = N'moderator')
+BEGIN
+    INSERT INTO dbo.Users (Role_ID, Username, Email, Password_Hash, Display_Name)
+    VALUES (
+        (SELECT Role_ID FROM dbo.Roles WHERE Role_Name = N'moderator'),
+        N'moderator',
+        N'moderator@bunkai-explorer.local',
+        N'{{MODERATOR_PASSWORD_HASH}}',
+        N'Модератор Додзё'
     );
 END
 GO

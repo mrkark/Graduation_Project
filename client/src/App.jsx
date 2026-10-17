@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { AuthGate, RequireAuth, RedirectIfAuthenticated, RequireAdmin } from './layouts/RouteGuards';
+import { AuthGate, RequireAuth, RedirectIfAuthenticated, RequireAdmin, RequireAdminOrModerator } from './layouts/RouteGuards';
 import MainLayout from './layouts/MainLayout';
 
 import RegisterPage from './pages/RegisterPage';
@@ -98,15 +98,43 @@ export default function App() {
             <Route path="/motion-lab" element={<MotionLabPage />} />
             <Route path="/aimocap" element={<MotionLabPage />} />
 
-            <Route element={<RequireAdmin />}>
+            <Route element={<RequireAdminOrModerator />}>
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="users" element={<AdminUsersPage />} />
-                <Route path="kata" element={<AdminKataPage />} />
                 <Route path="bunkai" element={<AdminBunkaiPage />} />
-                <Route path="logs" element={<AdminLogsPage />} />
-                <Route path="animations" element={<AdminAnimationsPage />} />
-                <Route path="backups" element={<AdminBackupsPage />} />
+                <Route
+                  path="kata"
+                  element={
+                    <RequireAdmin>
+                      <AdminKataPage />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="logs"
+                  element={
+                    <RequireAdmin>
+                      <AdminLogsPage />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="animations"
+                  element={
+                    <RequireAdmin>
+                      <AdminAnimationsPage />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="backups"
+                  element={
+                    <RequireAdmin>
+                      <AdminBackupsPage />
+                    </RequireAdmin>
+                  }
+                />
               </Route>
             </Route>
 

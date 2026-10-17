@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { listUsers, blockUser, unblockUser, changeUserRole, deleteUser } from '../../api/admin';
+import { useAuthStore } from '../../store/authStore';
 
 export default function AdminUsersPage() {
+  const { role, user: currentUser } = useAuthStore();
+  const isAdmin = role === 'admin';
   const [search, setSearch] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +33,10 @@ export default function AdminUsersPage() {
     load();
   }
   async function onDelete(u) {
+    if (u.Role?.Role_Name === 'admin' && !isAdmin) {
+      alert('Модератор не может удалить учетную запись администратора.');
+      return;
+    }
     if (!confirm(`Удалить пользователя ${u.Username} без возможности восстановления?`)) return;
     await deleteUser(u.User_ID);
     load();
@@ -56,28 +63,44 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => (
-              <tr key={u.User_ID}>
-                <td>{u.Username}</td>
-                <td>{u.Email}</td>
-                <td>{u.Role?.Role_Name}</td>
-                <td>{u.Is_Blocked ? 'Заблокирован' : 'Активен'}</td>
-                <td>{new Date(u.Created_At).toLocaleDateString('ru-RU')}</td>
-                <td>
-                  <div className="row-actions">
-                    <button className="btn" onClick={() => onBlock(u)}>
-                      {u.Is_Blocked ? 'Разблокировать' : 'Заблокировать'}
-                    </button>
-                    <button className="btn btn-gold" onClick={() => onRole(u)}>
-                      {u.Role?.Role_Name === 'admin' ? 'Снять админа' : 'Сделать админом'}
-                    </button>
-                    <button className="btn btn-danger" onClick={() => onDelete(u)}>
-                      Удалить
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {users.map((u) => {
+              const isTargetAdmin = u.Role?.Role_Name === 'admin';
+              const isSelf = u.User_ID === currentUser?.User_ID;
+              const canDelete = !isSelf && (isAdmin || !isTargetAdmin);
+
+              return (
+                <tr key={u.User_ID}>
+                  <td>{u.Username}</td>
+                  <td>{u.Email}</td>
+                  <td>
+                    <span className={`badge ${isTargetAdmin ? 'badge--gold' : u.Role?.Role_Name === 'moderator' ? 'badge--info' : ''}`}>
+                      {u.Role?.Role_Name}
+                    </span>
+                  </td>
+                  <td>{u.Is_Blocked ? 'Заблокирован' : 'Активен'}</td>
+                  <td>{new Date(u.Created_At).toLocaleDateString('ru-RU')}</td>
+                  <td>
+                    <div className="row-actions">
+                      {isAdmin && (
+                        <>
+                          <button className="btn" onClick={() => onBlock(u)}>
+                            {u.Is_Blocked ? 'Разблокировать' : 'Заблокировать'}
+                          </button>
+                          <button className="btn btn-gold" onClick={() => onRole(u)}>
+                            {u.Role?.Role_Name === 'admin' ? 'Снять админа' : 'Сделать админом'}
+                          </button>
+                        </>
+                      )}
+                      {canDelete && (
+                        <button className="btn btn-danger" onClick={() => onDelete(u)} title="Удалить пользователя">
+                          Удалить
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

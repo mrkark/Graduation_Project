@@ -17,6 +17,7 @@ const TEMPLATE_PATH = path.resolve(__dirname, '../../database/seed.template.sql'
 const OUTPUT_PATH = path.resolve(__dirname, '../../database/seed.sql');
 
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin#12345';
+const MODERATOR_PASSWORD = process.env.SEED_MODERATOR_PASSWORD || 'Moderator#12345';
 const DEMO_PASSWORD = process.env.SEED_DEMO_PASSWORD || 'Demo#12345';
 
 function escapeSqlString(str) {
@@ -30,10 +31,12 @@ async function main() {
   }
 
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const moderatorHash = await bcrypt.hash(MODERATOR_PASSWORD, 12);
   const demoHash = await bcrypt.hash(DEMO_PASSWORD, 12);
 
   let sql = fs.readFileSync(TEMPLATE_PATH, 'utf8');
   sql = sql.replace('{{ADMIN_PASSWORD_HASH}}', escapeSqlString(adminHash));
+  sql = sql.replace('{{MODERATOR_PASSWORD_HASH}}', escapeSqlString(moderatorHash));
   sql = sql.replace('{{DEMO_PASSWORD_HASH}}', escapeSqlString(demoHash));
 
   fs.writeFileSync(OUTPUT_PATH, sql, 'utf8');
@@ -42,6 +45,7 @@ async function main() {
   console.log('');
   console.log('Учётные данные для входа после применения seed.sql:');
   console.log(`  Администратор — логин: admin       пароль: ${ADMIN_PASSWORD}`);
+  console.log(`  Модератор     — логин: moderator   пароль: ${MODERATOR_PASSWORD}`);
   console.log(`  Пользователь  — логин: demo_user   пароль: ${DEMO_PASSWORD}`);
   console.log('');
   console.log('⚠ Смените эти пароли сразу после первого входа в продакшн-среде.');

@@ -51,10 +51,10 @@ export default function MainLayout() {
               <span className="site-nav__icon">友</span>
               <span>Друзья</span>
             </NavLink>
-            {role === 'admin' && (
+            {(role === 'admin' || role === 'moderator') && (
               <NavLink to="/admin" className="site-nav__link site-nav__link--admin">
                 <span className="site-nav__icon">役</span>
-                <span>Админ</span>
+                <span>{role === 'admin' ? 'Админ' : 'Модерация'}</span>
               </NavLink>
             )}
           </nav>
@@ -69,7 +69,11 @@ export default function MainLayout() {
                   {user?.Display_Name || user?.Username}
                 </span>
                 <span className="site-user__role">
-                  {role === 'admin' ? 'Инструктор (Sensei)' : 'Ученик (Deshi)'}
+                  {role === 'admin'
+                    ? 'Инструктор (Sensei)'
+                    : role === 'moderator'
+                    ? 'Модератор (Senpai)'
+                    : 'Ученик (Deshi)'}
                 </span>
               </div>
             </Link>

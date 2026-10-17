@@ -1,7 +1,7 @@
 const express = require('express');
 const bunkaiController = require('../controllers/bunkaiController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const { adminMiddleware } = require('../middlewares/roleMiddleware');
+const { moderatorMiddleware } = require('../middlewares/roleMiddleware');
 const validateRequest = require('../middlewares/validateRequest');
 const {
   createBunkaiValidator,
@@ -23,7 +23,7 @@ router.delete('/:id', idParamValidator, validateRequest, bunkaiController.remove
 router.get('/:id/steps', idParamValidator, validateRequest, bunkaiController.getSteps);
 router.put('/:id/steps', idParamValidator, validateRequest, bunkaiController.saveSteps);
 
-router.post('/:id/approve', idParamValidator, validateRequest, adminMiddleware, bunkaiController.approve);
-router.post('/:id/reject', idParamValidator, validateRequest, adminMiddleware, bunkaiController.reject);
+router.post('/:id/approve', idParamValidator, validateRequest, moderatorMiddleware, bunkaiController.approve);
+router.post('/:id/reject', idParamValidator, validateRequest, moderatorMiddleware, bunkaiController.reject);
 
 module.exports = router;

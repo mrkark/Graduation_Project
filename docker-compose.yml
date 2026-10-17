@@ -1,9 +1,11 @@
 version: '3.9'
 
 services:
+  # 1. Контейнер базы данных (Microsoft SQL Server 2022)
   mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: bunkai-explorer-mssql
+    restart: unless-stopped
     environment:
       ACCEPT_EULA: 'Y'
       MSSQL_SA_PASSWORD: 'ChangeMe#12345'
@@ -17,10 +19,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    networks:
+      - bunkai-network
 
+  # 2. Контейнер бэкенда (Node.js Express + WebSocket API)
   server:
-    build: ./server
+    build:
+      context: ./server
+      dockerfile: Dockerfile
     container_name: bunkai-explorer-server
+    restart: unless-stopped
     depends_on:
       mssql:
         condition: service_healthy
@@ -37,14 +45,23 @@ services:
       DB_TRUST_SERVER_CERT: 'true'
       JWT_ACCESS_SECRET: change_this_access_secret_in_production
       JWT_REFRESH_SECRET: change_this_refresh_secret_in_production
+      SEED_ADMIN_PASSWORD: 'Admin#12345'
+      SEED_MODERATOR_PASSWORD: 'Moderator#12345'
+      SEED_DEMO_PASSWORD: 'Demo#12345'
     ports:
       - '5000:5000'
     volumes:
       - ./uploads:/app/uploads
+    networks:
+      - bunkai-network
 
+  # 3. Контейнер фронтенда (React 18 + Three.js + Mocap Studio + Vite)
   client:
-    build: ./client
+    build:
+      context: ./client
+      dockerfile: Dockerfile
     container_name: bunkai-explorer-client
+    restart: unless-stopped
     depends_on:
       - server
     environment:
@@ -52,6 +69,12 @@ services:
       VITE_SOCKET_URL: http://localhost:5000
     ports:
       - '5173:5173'
+    networks:
+      - bunkai-network
 
 volumes:
   mssql-data:
+
+networks:
+  bunkai-network:
+    driver: bridge

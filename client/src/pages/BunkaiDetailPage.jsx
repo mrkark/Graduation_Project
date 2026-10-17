@@ -37,7 +37,7 @@ export default function BunkaiDetailPage() {
   if (error || !bunkai) return <p className="empty-state">{error}</p>;
 
   const isOwner = bunkai.Author_ID === user?.User_ID;
-  const isStaff = role === 'admin';
+  const isStaff = role === 'admin' || role === 'moderator';
   const canEdit = isOwner || isStaff;
 
   async function onDelete() {

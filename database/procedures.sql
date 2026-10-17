@@ -607,7 +607,7 @@ BEGIN
     IF @authorId IS NULL
         THROW 50000, N'ERR|404|BUNKAI_NOT_FOUND|Бункай не найден', 1;
 
-    IF @authorId <> @UserId AND @UserRole <> N'admin'
+    IF @authorId <> @UserId AND @UserRole NOT IN (N'admin', N'moderator')
         THROW 50000, N'ERR|403|FORBIDDEN|Недостаточно прав', 1;
 
     DELETE FROM dbo.Bunkai WHERE Bunkai_ID = @BunkaiId;
@@ -1177,7 +1177,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    IF @RoleName NOT IN (N'user', N'admin')
+    IF @RoleName NOT IN (N'user', N'admin', N'moderator')
         THROW 50000, N'ERR|400|VALIDATION_ERROR|Недопустимая роль', 1;
 
     IF @UserId = @ActorUserId
@@ -1206,6 +1206,22 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE User_ID = @UserId)
         THROW 50000, N'ERR|404|USER_NOT_FOUND|Пользователь не найден', 1;
+
+    DECLARE @actorRole NVARCHAR(50);
+    DECLARE @targetRole NVARCHAR(50);
+
+    SELECT @actorRole = r.Role_Name
+    FROM dbo.Users u
+    JOIN dbo.Roles r ON u.Role_ID = r.Role_ID
+    WHERE u.User_ID = @ActorUserId;
+
+    SELECT @targetRole = r.Role_Name
+    FROM dbo.Users u
+    JOIN dbo.Roles r ON u.Role_ID = r.Role_ID
+    WHERE u.User_ID = @UserId;
+
+    IF @actorRole = N'moderator' AND @targetRole = N'admin'
+        THROW 50000, N'ERR|403|FORBIDDEN|Модератор не имеет прав на удаление администратора', 1;
 
     BEGIN TRY
         DELETE FROM dbo.Users WHERE User_ID = @UserId;
