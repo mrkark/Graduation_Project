@@ -1,550 +1,808 @@
-import { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
-import KarateMasterModel from '../../three/KarateMasterModel';
+import io from 'socket.io-client';
 import TraditionalDojo from '../../three/TraditionalDojo';
+import MocapPuppetAvatar from '../../three/MocapPuppetAvatar';
+import {
+  loadMediaPipePose,
+  analyzeKarateBiomechanics,
+  mapPoseToAvatarBones,
+  drawNeonKarateSkeleton,
+} from '../../utils/mocapPoseTracker';
 import './MocapStudio.css';
 
-// Коэффициенты суставов для расчета углов
-function calculateJointAngle(p1, p2, p3) {
-  if (!p1 || !p2 || !p3) return 180;
-  const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
-  const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
-  const dot = v1.x * v2.x + v1.y * v2.y;
-  const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y) || 1e-4;
-  const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y) || 1e-4;
-  const cosine = Math.max(-1, Math.min(1, dot / (mag1 * mag2)));
-  return Math.round((Math.acos(cosine) * 180) / Math.PI);
+function getSocketUrl() {
+  const envUrl = import.meta.env.VITE_SOCKET_URL;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+  }
+  return envUrl || 'http://localhost:5000';
 }
 
+const SOCKET_URL = getSocketUrl();
+
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ],
+};
+
 export default function MocapStudio() {
-  const [sourceMode, setSourceMode] = useState('browser_camera'); // 'browser_camera' | 'phone_server_cam1' | 'demo'
+  // Режим источника: 'phone' (смартфон по WebRTC) | 'webcam' (камера ПК)
+  const [sourceMode, setSourceMode] = useState('phone');
+  const [availableDevices, setAvailableDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+
+  // Состояние WebRTC и подключения смартфона
+  const [roomId] = useState(() => 'DOJO-' + Math.floor(1000 + Math.random() * 9000));
+  const [phoneConnected, setPhoneConnected] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Настройка сетевого IP для QR-кода телефона (авто-определение локальной сети)
+  const defaultNetworkHost = typeof window !== 'undefined'
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.6' : window.location.hostname)
+    : 'localhost';
+  const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
+  const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
+
+  // Состояние захвата движений и биомеханики
+  const [isPoseModelLoading, setIsPoseModelLoading] = useState(true);
+  const [bodyDetected, setBodyDetected] = useState(false);
+  const [karateMetrics, setKarateMetrics] = useState({
+    stanceName: 'Ожидание стойки...',
+    stanceJp: '構え · Kamae',
+    detectedStance: 'ready',
+    kneeAngleL: 180,
+    kneeAngleR: 180,
+    elbowAngleL: 180,
+    elbowAngleR: 180,
+    hikiteScore: 0,
+    overallScore: 0,
+    detectedAction: 'ready',
+    actionTitle: 'Ожидание человека в кадре',
+  });
+
+  // Повороты костей для 3D-аватара (Puppet Rig)
+  const [boneRotations, setBoneRotations] = useState(null);
+
+  // Запись сессии MoCap
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordedFrames, setRecordedFrames] = useState([]);
   const [playbackIndex, setPlaybackIndex] = useState(0);
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(false);
-  const [phoneServerOnline, setPhoneServerOnline] = useState(false);
 
-  // Живая биомеханика карате
-  const [karateMetrics, setKarateMetrics] = useState({
-    stanceName: 'Йой-дати (Yoi-dachi)',
-    stanceJp: '結び立ち · Готовность',
-    kneeAngleL: 172,
-    kneeAngleR: 170,
-    elbowAngleL: 85,
-    elbowAngleR: 88,
-    hikiteScore: 92,
-    overallScore: 94,
-    detectedAction: 'yoi',
-  });
-
+  // Ссылки на элементы
   const videoRef = useRef(null);
+  const phoneVideoRef = useRef(null);
   const canvasRef = useRef(null);
-  const streamRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const phoneStreamRef = useRef(null);
+  const socketRef = useRef(null);
+  const peerRef = useRef(null);
+  const poseInstanceRef = useRef(null);
   const animFrameIdRef = useRef(null);
-  const recordIntervalRef = useRef(null);
+  const recordTimerRef = useRef(null);
 
-  // Проверка доступности Phone Stream Server (port 8088)
+  // 1. Инициализация библиотеки MediaPipe Pose
   useEffect(() => {
     let active = true;
-    const checkServer = async () => {
-      try {
-        const res = await fetch('http://localhost:8088/api/status', { mode: 'cors' });
-        if (res.ok && active) {
-          setPhoneServerOnline(true);
-        } else if (active) {
-          setPhoneServerOnline(false);
+    setIsPoseModelLoading(true);
+    loadMediaPipePose()
+      .then((pose) => {
+        if (!active) return;
+        poseInstanceRef.current = pose;
+        pose.onResults(onPoseResults);
+        setIsPoseModelLoading(false);
+      })
+      .catch((err) => {
+        console.error('Ошибка MediaPipe Pose:', err);
+        if (active) {
+          setIsPoseModelLoading(false);
+          setCameraError('Не удалось инициализировать модель захвата движений');
         }
-      } catch {
-        if (active) setPhoneServerOnline(false);
-      }
-    };
-    checkServer();
-    const interval = setInterval(checkServer, 5000);
+      });
+
     return () => {
       active = false;
-      clearInterval(interval);
     };
   }, []);
 
-  // Запуск камеры браузера
-  async function startBrowserCamera() {
-    try {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+  // 2. Обработка результатов компьютерного зрения MediaPipe
+  const onPoseResults = useCallback((results) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    if (results.poseLandmarks && results.poseLandmarks.length >= 33) {
+      setBodyDetected(true);
+      const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
+      setKarateMetrics(metrics);
+
+      // Отрисовываем неоновый скелет и бейджи углов
+      drawNeonKarateSkeleton(ctx, results.poseLandmarks, w, h, metrics);
+
+      // Вычисляем повороты костей и передаем в 3D аватар
+      const mappedBones = mapPoseToAvatarBones(results.poseLandmarks, results.poseWorldLandmarks);
+      if (mappedBones) {
+        setBoneRotations(mappedBones.bones);
       }
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
+
+      // Сохраняем кадр, если включена запись
+      if (isRecording) {
+        setRecordedFrames((prev) => [
+          ...prev,
+          {
+            timestamp: Date.now(),
+            landmarks: results.poseLandmarks,
+            metrics,
+            bones: mappedBones?.bones || null,
+          },
+        ]);
+      }
+    } else {
+      setBodyDetected(false);
+      setBoneRotations(null);
+    }
+  }, [isRecording]);
+
+  // 3. Получение списка доступных веб-камер компьютера
+  const updateDeviceList = useCallback(async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === 'videoinput');
+      setAvailableDevices(videoInputs);
+      if (videoInputs.length > 0 && !selectedDeviceId) {
+        setSelectedDeviceId(videoInputs[0].deviceId);
+      }
+    } catch (e) {
+      console.warn('Не удалось получить список камер:', e);
+    }
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    updateDeviceList();
+  }, [updateDeviceList]);
+
+  // 4. Запуск камеры компьютера
+  const startWebcam = useCallback(async () => {
+    try {
+      setCameraError(null);
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+
+      const constraints = {
+        video: selectedDeviceId
+          ? { deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+          : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
         audio: false,
-      });
-      streamRef.current = stream;
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      localStreamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+          setCameraActive(true);
+        };
       }
-      setCameraActive(true);
     } catch (err) {
-      console.warn('Не удалось получить доступ к веб-камере:', err);
-      alert('Не удалось запустить веб-камеру. Убедитесь, что вы предоставили доступ в браузере.');
+      console.error('Ошибка доступа к веб-камере:', err);
+      setCameraActive(false);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setCameraError('Доступ к камере заблокирован. Разрешите использование камеры в настройках браузера.');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        setCameraError('Камера не обнаружена. Подключите веб-камеру или используйте смартфон.');
+      } else {
+        setCameraError(`Не удалось запустить камеру: ${err.message || 'Ошибка устройства'}`);
+      }
     }
-  }
+  }, [selectedDeviceId]);
 
-  function stopCamera() {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+  // 5. Остановка локальной камеры
+  const stopWebcam = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((t) => t.stop());
+      localStreamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
-    if (animFrameIdRef.current) {
-      cancelAnimationFrame(animFrameIdRef.current);
-    }
-  }
+    setBodyDetected(false);
+    setBoneRotations(null);
+  }, []);
 
-  // Запуск / переключение источника
+  // 6. Подключение WebRTC сигналинга для смартфона
   useEffect(() => {
-    if (sourceMode === 'browser_camera') {
-      startBrowserCamera();
-    } else {
-      stopCamera();
-      setCameraActive(true);
-    }
-    return () => stopCamera();
-  }, [sourceMode]);
+    if (sourceMode !== 'phone') return;
 
-  // Цикл анализа и отрисовки скелета и метрик
+    const socket = io(`${SOCKET_URL}/mocap`, {
+      transports: ['websocket', 'polling'],
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('mocap:join-room', { roomId, role: 'host' });
+    });
+
+    // Когда смартфон зашел в комнату
+    socket.on('mocap:peer-joined', () => {
+      initiateHostWebRTC();
+    });
+
+    // Обработка входящего Offer от смартфона
+    socket.on('mocap:offer', async ({ sdp, senderId }) => {
+      try {
+        const peer = getOrCreateHostPeer();
+        await peer.setRemoteDescription(new RTCSessionDescription(sdp));
+        const answer = await peer.createAnswer();
+        await peer.setLocalDescription(answer);
+        socket.emit('mocap:answer', { roomId, sdp: answer, targetId: senderId });
+      } catch (err) {
+        console.error('Ошибка обработки Offer со смартфона:', err);
+      }
+    });
+
+    // Ответ Answer от смартфона
+    socket.on('mocap:answer', async ({ sdp }) => {
+      try {
+        if (peerRef.current) {
+          await peerRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
+        }
+      } catch (err) {
+        console.error('Ошибка установки Answer:', err);
+      }
+    });
+
+    // ICE кандидаты
+    socket.on('mocap:candidate', async ({ candidate }) => {
+      try {
+        if (peerRef.current && candidate) {
+          await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        }
+      } catch (err) {
+        console.error('Ошибка добавления ICE кандидата:', err);
+      }
+    });
+
+    // Обработка удаленной команды записи со смартфона
+    socket.on('mocap:record-command', ({ action }) => {
+      if (action === 'start') {
+        setIsRecording(true);
+      } else if (action === 'stop') {
+        setIsRecording(false);
+      } else if (action === 'toggle') {
+        setIsRecording((prev) => !prev);
+      }
+    });
+
+    socket.on('mocap:peer-left', () => {
+      setPhoneConnected(false);
+      setCameraActive(false);
+      if (phoneStreamRef.current) {
+        phoneStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
+    });
+
+    function getOrCreateHostPeer() {
+      if (peerRef.current && peerRef.current.connectionState !== 'closed') {
+        return peerRef.current;
+      }
+      const peer = new RTCPeerConnection(ICE_SERVERS);
+      peerRef.current = peer;
+
+      peer.ontrack = (event) => {
+        const stream = event.streams[0];
+        phoneStreamRef.current = stream;
+        if (phoneVideoRef.current) {
+          phoneVideoRef.current.srcObject = stream;
+          phoneVideoRef.current.onloadedmetadata = () => {
+            phoneVideoRef.current.play();
+            setCameraActive(true);
+            setPhoneConnected(true);
+          };
+        }
+      };
+
+      peer.onicecandidate = (e) => {
+        if (e.candidate && socketRef.current) {
+          socketRef.current.emit('mocap:candidate', { roomId, candidate: e.candidate });
+        }
+      };
+
+      peer.onconnectionstatechange = () => {
+        if (peer.connectionState === 'connected') {
+          setPhoneConnected(true);
+          setCameraActive(true);
+        } else if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
+          setPhoneConnected(false);
+        }
+      };
+
+      return peer;
+    }
+
+    function initiateHostWebRTC() {
+      const peer = getOrCreateHostPeer();
+      peer
+        .createOffer({ offerToReceiveVideo: true, offerToReceiveAudio: false })
+        .then((offer) => peer.setLocalDescription(offer))
+        .then(() => {
+          socket.emit('mocap:offer', { roomId, sdp: peer.localDescription });
+        })
+        .catch((e) => console.error('Ошибка создания хост-оффера:', e));
+    }
+
+    return () => {
+      socket.disconnect();
+      if (peerRef.current) {
+        peerRef.current.close();
+      }
+    };
+  }, [sourceMode, roomId]);
+
+  // Переключение режима источника
+  useEffect(() => {
+    if (sourceMode === 'webcam') {
+      startWebcam();
+    } else {
+      stopWebcam();
+    }
+  }, [sourceMode, startWebcam, stopWebcam]);
+
+  // 7. Основной цикл передачи кадров активного видеопотока в MediaPipe Pose
   useEffect(() => {
     if (!cameraActive) return;
 
-    let phase = 0;
-    const renderLoop = () => {
-      phase += 0.05;
-      const canvas = canvasRef.current;
-      if (!canvas) {
-        animFrameIdRef.current = requestAnimationFrame(renderLoop);
-        return;
-      }
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width;
-      const h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
+    let isProcessing = false;
 
-      // Генерируем или рассчитываем канонические точки скелета карате
-      // Векторы для Шотокан стоек: плечи, локти, кулаки, таз, колени, стопы
-      const cx = w * 0.5;
-      const cy = h * 0.48;
-      const scale = h * 0.40;
+    const frameLoop = async () => {
+      const video = sourceMode === 'phone' ? phoneVideoRef.current : videoRef.current;
+      const pose = poseInstanceRef.current;
 
-      // Моделирование динамики выполнения техник
-      const stanceCycle = Math.sin(phase * 0.4);
-      let detectedStance = 'Дзэнкуцу-дати (Zenkutsu-dachi)';
-      let detectedJp = '前屈立ち · Атакующая стойка';
-      let kneeL = Math.round(95 + 10 * Math.sin(phase));
-      let kneeR = Math.round(168 + 5 * Math.cos(phase));
-      let elbowL = Math.round(162 + 8 * Math.sin(phase * 1.5));
-      let elbowR = Math.round(82 + 6 * Math.cos(phase * 1.5));
-      let action = 'oi_zuki';
-
-      if (stanceCycle > 0.4) {
-        detectedStance = 'Киба-дати (Kiba-dachi)';
-        detectedJp = '騎馬立ち · Стойка всадника';
-        kneeL = 112;
-        kneeR = 114;
-        elbowL = 90;
-        elbowR = 90;
-        action = 'kiba_dachi';
-      } else if (stanceCycle < -0.4) {
-        detectedStance = 'Кокуцу-дати (Kokutsu-dachi)';
-        detectedJp = '後屈立ち · Защитная стойка';
-        kneeL = 160;
-        kneeR = 105;
-        elbowL = 110;
-        elbowR = 85;
-        action = 'kokutsu_dachi';
+      if (video && video.readyState >= 2 && pose && !isProcessing) {
+        try {
+          isProcessing = true;
+          await pose.send({ image: video });
+        } catch (e) {
+          // Кадр пропущен
+        } finally {
+          isProcessing = false;
+        }
       }
 
-      setKarateMetrics({
-        stanceName: detectedStance,
-        stanceJp: detectedJp,
-        kneeAngleL: kneeL,
-        kneeAngleR: kneeR,
-        elbowAngleL: elbowL,
-        elbowAngleR: elbowR,
-        hikiteScore: 95,
-        overallScore: Math.min(99, Math.round(91 + 5 * Math.abs(Math.cos(phase)))),
-        detectedAction: action,
-      });
-
-      // Координаты суставов скелета
-      const head = { x: cx, y: cy - scale * 0.65 };
-      const neck = { x: cx, y: cy - scale * 0.48 };
-      const lShoulder = { x: cx - scale * 0.28, y: cy - scale * 0.45 };
-      const rShoulder = { x: cx + scale * 0.28, y: cy - scale * 0.45 };
-      const lElbow = { x: cx - scale * 0.42, y: cy - scale * 0.20 + 8 * Math.sin(phase) };
-      const rElbow = { x: cx + scale * 0.35, y: cy - scale * 0.28 };
-      const lWrist = { x: cx - scale * 0.52, y: cy + (action === 'oi_zuki' ? -scale * 0.35 : scale * 0.05) };
-      const rWrist = { x: cx + scale * 0.25, y: cy - scale * 0.15 }; // Хикитэ у бедра
-
-      const lHip = { x: cx - scale * 0.18, y: cy + scale * 0.1 };
-      const rHip = { x: cx + scale * 0.18, y: cy + scale * 0.1 };
-      const lKnee = { x: cx - scale * 0.32, y: cy + scale * 0.45 + (action === 'kiba_dachi' ? 15 : 0) };
-      const rKnee = { x: cx + scale * 0.32, y: cy + scale * 0.48 };
-      const lAnkle = { x: cx - scale * 0.38, y: cy + scale * 0.85 };
-      const rAnkle = { x: cx + scale * 0.42, y: cy + scale * 0.85 };
-
-      // Отрисовка неонового скелета
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      const drawBone = (p1, p2, color) => {
-        ctx.strokeStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-      };
-
-      const drawJoint = (p, color = '#ffffff') => {
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      };
-
-      // Торс
-      drawBone(lShoulder, rShoulder, '#38bdf8');
-      drawBone(lShoulder, lHip, '#38bdf8');
-      drawBone(rShoulder, rHip, '#38bdf8');
-      drawBone(lHip, rHip, '#38bdf8');
-      drawBone(neck, head, '#f3f4f6');
-
-      // Руки (Ударная и Хикитэ)
-      drawBone(lShoulder, lElbow, '#10b981');
-      drawBone(lElbow, lWrist, '#10b981');
-      drawBone(rShoulder, rElbow, '#f59e0b');
-      drawBone(rElbow, rWrist, '#f59e0b');
-
-      // Ноги (Стойка)
-      drawBone(lHip, lKnee, '#a855f7');
-      drawBone(lKnee, lAnkle, '#a855f7');
-      drawBone(rHip, rKnee, '#ec4899');
-      drawBone(rKnee, rAnkle, '#ec4899');
-
-      // Суставы
-      [head, neck, lShoulder, rShoulder, lElbow, rElbow, lWrist, rWrist, lHip, rHip, lKnee, rKnee, lAnkle, rAnkle].forEach(
-        (pt) => drawJoint(pt)
-      );
-
-      // Бейдж угла переднего колена
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.85)';
-      ctx.fillRect(lKnee.x + 10, lKnee.y - 12, 60, 22);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`${kneeL}°`, lKnee.x + 16, lKnee.y + 4);
-
-      // Бейдж хикитэ (отвод руки к ребрам)
-      ctx.fillStyle = 'rgba(245, 158, 11, 0.85)';
-      ctx.fillRect(rWrist.x - 70, rWrist.y - 12, 65, 22);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('ХИKITЭ', rWrist.x - 64, rWrist.y + 4);
-
-      // Запись текущего кадра
-      if (isRecording) {
-        setRecordedFrames((prev) => [
-          ...prev,
-          {
-            time: (prev.length * 0.033).toFixed(3),
-            stance: detectedStance,
-            kneeL,
-            kneeR,
-            elbowL,
-            elbowR,
-            action,
-            score: karateMetrics.overallScore,
-          },
-        ]);
-      }
-
-      animFrameIdRef.current = requestAnimationFrame(renderLoop);
+      animFrameIdRef.current = requestAnimationFrame(frameLoop);
     };
 
-    animFrameIdRef.current = requestAnimationFrame(renderLoop);
+    animFrameIdRef.current = requestAnimationFrame(frameLoop);
+
     return () => {
-      if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
+      if (animFrameIdRef.current) {
+        cancelAnimationFrame(animFrameIdRef.current);
+      }
     };
-  }, [cameraActive, isRecording, karateMetrics.overallScore]);
+  }, [cameraActive, sourceMode]);
 
-  // Запись сессии захвата движений
-  function toggleRecording() {
-    if (!isRecording) {
-      setRecordedFrames([]);
-      setIsRecording(true);
+  // 8. Таймер записи MoCap
+  useEffect(() => {
+    if (isRecording) {
       setRecordSeconds(0);
-      recordIntervalRef.current = setInterval(() => {
+      setRecordedFrames([]);
+      recordTimerRef.current = setInterval(() => {
         setRecordSeconds((s) => s + 1);
       }, 1000);
     } else {
-      setIsRecording(false);
-      if (recordIntervalRef.current) clearInterval(recordIntervalRef.current);
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
     }
-  }
+    return () => {
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    };
+  }, [isRecording]);
 
-  // Скачивание захваченного движения в формате JSON
-  function exportMocapJson() {
+  // Синхронизация состояния записи со смартфоном в реальном времени
+  useEffect(() => {
+    if (socketRef.current && sourceMode === 'phone') {
+      socketRef.current.emit('mocap:recording-state', {
+        roomId,
+        isRecording,
+        duration: recordSeconds,
+        frameCount: recordedFrames.length,
+      });
+    }
+  }, [roomId, isRecording, recordSeconds, recordedFrames.length, sourceMode]);
+
+  // Экспорт анимации в JSON
+  const exportMocapJson = () => {
     if (recordedFrames.length === 0) {
       alert('Нет записанных кадров для экспорта.');
       return;
     }
-    const mocapData = {
-      format: 'bunkai_karate_mocap_v2',
-      date: new Date().toISOString(),
-      frameCount: recordedFrames.length,
-      fps: 30,
-      technique: karateMetrics.detectedAction,
-      stance: karateMetrics.stanceName,
-      frames: recordedFrames,
-    };
-    const blob = new Blob([JSON.stringify(mocapData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `karate_mocap_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(recordedFrames, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', `bunkai_mocap_${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const phoneConnectUrl = typeof window !== 'undefined'
+    ? `${window.location.protocol}//${networkHost}:${networkPort}/phone-camera?room=${roomId}`
+    : `http://localhost:5173/phone-camera?room=${roomId}`;
+
+  const copyPhoneUrl = () => {
+    navigator.clipboard.writeText(phoneConnectUrl).then(() => {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
+  };
 
   return (
     <div className="mocap-studio">
-      {/* Верхняя панель управления захватом */}
-      <div className="mocap-studio__topbar">
-        <div className="mocap-studio__branding">
-          <div className="mocap-studio__seal">捕</div>
+      {/* ВЕРХНЯЯ ПАНЕЛЬ СТОЛПА AIMOKAP */}
+      <header className="mocap-header">
+        <div className="mocap-title-group">
+          <div className="mocap-kanji-stamp">捕</div>
           <div>
-            <h2 className="mocap-studio__title">AI KARATE MOTION CAPTURE STUDIO</h2>
-            <div className="mocap-studio__subtitle">
-              Беспроводной и веб-захват движений с камер смартфонов и веб-камеры с биомеханическим анализом Шотокан
-            </div>
+            <h2 className="mocap-title">AI MoCap Додзё (Aimokap)</h2>
+            <p className="mocap-subtitle">
+              Захват движений в реальном времени · Компьютерное зрение MediaPipe · 3D-Зеркало мастера
+            </p>
           </div>
         </div>
 
-        <div className="mocap-studio__controls">
-          {/* Селектор источников */}
-          <select
-            className="mocap-studio__source-select"
-            value={sourceMode}
-            onChange={(e) => setSourceMode(e.target.value)}
-          >
-            <option value="browser_camera">📹 Веб-камера браузера / USB-камера</option>
-            <option value="phone_server_cam1">
-              📱 Смартфон (Камера 1: Фронт {phoneServerOnline ? '🟢 Онлайн' : '⚪ Порт 8088'})
-            </option>
-            <option value="demo">🥋 Тестовая демонстрация движений</option>
-          </select>
-
-          {/* Кнопка записи */}
+        {/* Выбор источника видео */}
+        <div className="mocap-source-switcher">
           <button
             type="button"
-            className={`mocap-btn ${isRecording ? 'mocap-btn--stop' : 'mocap-btn--record'}`}
-            onClick={toggleRecording}
+            className={`source-tab-btn ${sourceMode === 'webcam' ? 'active' : ''}`}
+            onClick={() => setSourceMode('webcam')}
           >
-            <span>{isRecording ? '⏹' : '🎬'}</span>
-            <span>{isRecording ? `СТОП (${recordSeconds}с)` : 'ЗАПИСАТЬ ДВИЖЕНИЕ'}</span>
+            💻 Веб-камера ПК
           </button>
+          <button
+            type="button"
+            className={`source-tab-btn ${sourceMode === 'phone' ? 'active' : ''}`}
+            onClick={() => {
+              setSourceMode('phone');
+              setShowQrModal(true);
+            }}
+          >
+            📱 Камера смартфона {phoneConnected && '🟢'}
+          </button>
+        </div>
+      </header>
 
-          {/* Кнопка экспорта */}
-          {recordedFrames.length > 0 && !isRecording && (
-            <button type="button" className="mocap-btn mocap-btn--gold" onClick={exportMocapJson}>
-              <span>💾</span>
-              <span>Скачать Mocap JSON ({recordedFrames.length} кадров)</span>
+      {/* ПАНЕЛЬ ПРЕДУПРЕЖДЕНИЙ И СТАТУСОВ */}
+      {cameraError && (
+        <div className="mocap-alert mocap-alert--error">
+          <span>⚠️ {cameraError}</span>
+          {sourceMode === 'webcam' && (
+            <button type="button" className="btn btn-sm btn-gold" onClick={startWebcam}>
+              Повторить попытку
             </button>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Двухоконная компоновка: Камера захвата + 3D Аватар в Додзё */}
-      <div className="mocap-studio__grid">
-        {/* Окно 1: Видеопоток камеры с неоновым скелетом и Сенсей HUD */}
-        <div className="mocap-card">
-          <div className="mocap-card__header">
-            <div className="mocap-card__title">
-              <span>📹</span>
-              <span>
-                {sourceMode === 'browser_camera'
-                  ? 'Камера захвата (Live Stream)'
-                  : 'Поток со смартфона (Камера 1)'}
-              </span>
+      {isPoseModelLoading && (
+        <div className="mocap-alert mocap-alert--info">
+          <span>⌛ Инициализация нейросети MediaPipe Pose... Пожалуйста, подождите.</span>
+        </div>
+      )}
+
+      {/* РАБОЧАЯ ОБЛАСТЬ: 3D СЦЕНА + ОКНО КАМЕРЫ С НЕОНОВЫМ СКЕЛЕТОМ */}
+      <div className="mocap-workspace">
+        {/* ГЛАВНАЯ ОБЛАСТЬ: 3D ДОДЗЁ С КИНЕМАТИЧЕСКИМ АВАТАРОМ */}
+        <div className="mocap-3d-stage">
+          <Canvas
+            shadows
+            camera={{ position: [0, 1.3, 3.2], fov: 42 }}
+            style={{ width: '100%', height: '100%', background: '#0a0807' }}
+          >
+            <ambientLight intensity={0.7} />
+            <directionalLight
+              position={[4, 7, 5]}
+              intensity={1.2}
+              castShadow
+              shadow-mapSize={[1024, 1024]}
+            />
+            <pointLight position={[-3, 2, -2]} intensity={0.4} color="#e8c57b" />
+
+            <Suspense fallback={null}>
+              <TraditionalDojo />
+              <MocapPuppetAvatar
+                boneRotations={boneRotations}
+                detectedStance={karateMetrics.detectedStance}
+                position={[0, 0, 0]}
+                rotation={[0, 0, 0]}
+              />
+              <ContactShadows opacity={0.7} scale={6} blur={1.5} far={4} color="#000000" />
+            </Suspense>
+
+            <OrbitControls
+              makeDefault
+              minDistance={1.2}
+              maxDistance={7}
+              maxPolarAngle={Math.PI / 2 - 0.05}
+              target={[0, 0.9, 0]}
+            />
+          </Canvas>
+
+          {/* HUD СЕНСЕЯ В 3D СЦЕНЕ */}
+          <div className="mocap-hud-overlay">
+            <div className="hud-badge-group">
+              <div className="hud-badge stance">
+                <span className="hud-badge__jp">{karateMetrics.stanceJp}</span>
+                <strong className="hud-badge__val">{karateMetrics.stanceName}</strong>
+              </div>
+
+              <div className="hud-badge action">
+                <span className="hud-badge__jp">技 · Техника</span>
+                <strong className="hud-badge__val">{karateMetrics.actionTitle}</strong>
+              </div>
             </div>
-            <div style={{ fontSize: '0.82rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }}></span>
-              <span>30 FPS | Полнотелый трекинг</span>
+
+            <div className="hud-score-card">
+              <span className="hud-score-label">SENSEI SCORE</span>
+              <span className="hud-score-num">{bodyDetected ? `${karateMetrics.overallScore}%` : '—'}</span>
+              <div className="hud-score-bar">
+                <div
+                  className="hud-score-fill"
+                  style={{ width: `${bodyDetected ? karateMetrics.overallScore : 0}%` }}
+                />
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="mocap-viewport">
-            {sourceMode === 'browser_camera' ? (
-              <video ref={videoRef} className="mocap-video-element" playsInline muted autoPlay />
-            ) : sourceMode === 'phone_server_cam1' ? (
-              <img
-                src="http://localhost:8088/cam1"
-                alt="Smartphone Camera 1"
-                className="mocap-video-element"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="mocap-placeholder">
-                <span className="mocap-placeholder__icon">🥋</span>
-                <div>
-                  <strong>Демонстрационный режим симулятора</strong>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-                    Синтез биомеханических углов стоек карате Шотокан в реальном времени
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Оверлей скелета поверх видео */}
-            <canvas ref={canvasRef} className="mocap-canvas-overlay" width={640} height={480} />
-
-            {/* Индикатор записи */}
-            {isRecording && (
-              <div className="mocap-rec-badge">
-                <div className="mocap-rec-dot"></div>
+        {/* ПРАВАЯ/ВСПЛЫВАЮЩАЯ ПАНЕЛЬ ВИДЕОПОТОКА С КАМЕРЫ */}
+        <aside className="mocap-cam-sidebar">
+          <div className="viewfinder-card">
+            <div className="viewfinder-header">
+              <div className="viewfinder-title">
+                <span className={`status-dot ${cameraActive ? (bodyDetected ? 'online' : 'standby') : 'offline'}`} />
                 <span>
-                  REC {String(Math.floor(recordSeconds / 60)).padStart(2, '0')}:
-                  {String(recordSeconds % 60).padStart(2, '0')} ({recordedFrames.length} к.)
+                  {sourceMode === 'webcam'
+                    ? 'Веб-камера компьютера'
+                    : phoneConnected
+                    ? 'Трансляция со смартфона'
+                    : 'Ожидание смартфона...'}
                 </span>
               </div>
+
+              {sourceMode === 'phone' && (
+                <button
+                  type="button"
+                  className="btn btn-sm btn-gold"
+                  onClick={() => setShowQrModal(true)}
+                >
+                  QR-код
+                </button>
+              )}
+            </div>
+
+            {/* Элементы видеопотока и наложения холста */}
+            <div className="viewfinder-media">
+              {/* Локальное видео */}
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className={`viewfinder-video ${sourceMode === 'webcam' ? 'active' : 'hidden'}`}
+              />
+
+              {/* Видео со смартфона */}
+              <video
+                ref={phoneVideoRef}
+                playsInline
+                autoPlay
+                className={`viewfinder-video ${sourceMode === 'phone' ? 'active' : 'hidden'}`}
+              />
+
+              {/* Холст с неоновым скелетом каратэ */}
+              <canvas
+                ref={canvasRef}
+                width={640}
+                height={480}
+                className="viewfinder-canvas"
+              />
+
+              {!cameraActive && (
+                <div className="viewfinder-placeholder">
+                  {sourceMode === 'webcam' ? (
+                    <div>
+                      <span className="placeholder-icon">📹</span>
+                      <p>Камера не запущена</p>
+                      <button type="button" className="btn btn-primary" onClick={startWebcam}>
+                        Включить камеру
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="placeholder-icon">📱</span>
+                      <p>Подключите смартфон для захвата</p>
+                      <button type="button" className="btn btn-gold" onClick={() => setShowQrModal(true)}>
+                        Открыть QR-код
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Селектор устройств для веб-камеры */}
+            {sourceMode === 'webcam' && availableDevices.length > 1 && (
+              <div className="device-select-wrap">
+                <label>Выбор камеры:</label>
+                <select
+                  value={selectedDeviceId}
+                  onChange={(e) => setSelectedDeviceId(e.target.value)}
+                >
+                  {availableDevices.map((d, i) => (
+                    <option key={d.deviceId || i} value={d.deviceId}>
+                      {d.label || `Камера #${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
 
-            {/* Сенсей HUD: Распознанная стойка, углы коленей/локтей и оценка */}
-            <div className="mocap-sensei-hud">
-              <div className="mocap-sensei-stance">
-                <div className="mocap-sensei-stance__title">
-                  <span>🥋</span>
-                  <span>{karateMetrics.stanceName}</span>
-                </div>
-                <div className="mocap-sensei-stance__jp">{karateMetrics.stanceJp}</div>
+            {/* Телеметрия углов суставов в реальном времени */}
+            <div className="mocap-angles-grid">
+              <div className="angle-card">
+                <span className="angle-card__label">Левое колено</span>
+                <span className="angle-card__value">{bodyDetected ? `${karateMetrics.kneeAngleL}°` : '—'}</span>
               </div>
+              <div className="angle-card">
+                <span className="angle-card__label">Правое колено</span>
+                <span className="angle-card__value">{bodyDetected ? `${karateMetrics.kneeAngleR}°` : '—'}</span>
+              </div>
+              <div className="angle-card">
+                <span className="angle-card__label">Левый локоть</span>
+                <span className="angle-card__value">{bodyDetected ? `${karateMetrics.elbowAngleL}°` : '—'}</span>
+              </div>
+              <div className="angle-card">
+                <span className="angle-card__label">Правый локоть</span>
+                <span className="angle-card__value">{bodyDetected ? `${karateMetrics.elbowAngleR}°` : '—'}</span>
+              </div>
+            </div>
 
-              <div className="mocap-sensei-metrics">
-                <div className="mocap-metric">
-                  <span className="mocap-metric__label">Переднее колено</span>
-                  <span className="mocap-metric__val">{karateMetrics.kneeAngleL}°</span>
-                </div>
-                <div className="mocap-metric">
-                  <span className="mocap-metric__label">Ударный локоть</span>
-                  <span className="mocap-metric__val">{karateMetrics.elbowAngleL}°</span>
-                </div>
-                <div className="mocap-metric">
-                  <span className="mocap-metric__label">Хикитэ</span>
-                  <span className="mocap-metric__val" style={{ color: '#10b981' }}>
-                    {karateMetrics.hikiteScore}%
+            {/* Кнопки управления записью MoCap */}
+            <div className="mocap-recorder-box">
+              <div className="recorder-status">
+                {isRecording ? (
+                  <span className="rec-active">
+                    <span className="rec-dot" /> Запись: {recordSeconds} сек ({recordedFrames.length} кадров)
                   </span>
-                </div>
+                ) : (
+                  <span className="rec-idle">
+                    {recordedFrames.length > 0
+                      ? `Записано: ${recordedFrames.length} кадров`
+                      : 'Готов к записи движений'}
+                  </span>
+                )}
               </div>
 
-              <div className="mocap-score-badge">Оценка Сенсея: {karateMetrics.overallScore}%</div>
+              <div className="recorder-actions">
+                {!isRecording ? (
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={() => setIsRecording(true)}
+                    disabled={!bodyDetected}
+                  >
+                    ⏺ Начать запись MoCap
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => setIsRecording(false)}
+                  >
+                    ⏹ Завершить запись
+                  </button>
+                )}
+
+                {recordedFrames.length > 0 && !isRecording && (
+                  <button type="button" className="btn btn-gold" onClick={exportMocapJson}>
+                    💾 Скачать JSON
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Окно 2: 3D Аватар каратиста в Додзё (Live 3D Mirror) */}
-        <div className="mocap-card">
-          <div className="mocap-card__header">
-            <div className="mocap-card__title">
-              <span>🥋</span>
-              <span>3D Аватар в Додзё (Живое зеркало захвата)</span>
-            </div>
-            <div style={{ fontSize: '0.82rem', color: '#d4af37' }}>
-              Синхронизация позы: <strong>{karateMetrics.detectedAction.toUpperCase()}</strong>
-            </div>
-          </div>
-
-          <div className="mocap-viewport">
-            <Canvas shadows camera={{ position: [1.6, 1.25, 2.4], fov: 44 }}>
-              <color attach="background" args={['#140f0c']} />
-              <ambientLight intensity={0.55} color="#fff4e8" />
-              <directionalLight position={[0.5, 8.5, 1.2]} intensity={0.8} color="#fffcf5" castShadow />
-              <hemisphereLight skyColor="#fff0e0" groundColor="#5c4432" intensity={0.35} />
-
-              <TraditionalDojo />
-
-              <Suspense fallback={null}>
-                <group position={[0, 0, 0]}>
-                  <KarateMasterModel
-                    role="tori"
-                    stance={karateMetrics.detectedAction}
-                    speed={1.0}
-                    activeClip={null}
-                  />
-                </group>
-              </Suspense>
-
-              <ContactShadows position={[0, 0.003, 0]} opacity={0.75} scale={8} blur={2.0} far={2.2} />
-              <OrbitControls minDistance={1.3} maxDistance={6.0} target={[0, 0.95, 0]} />
-            </Canvas>
-          </div>
-        </div>
+        </aside>
       </div>
 
-      {/* Таймлайн воспроизведения записанной сессии */}
-      {recordedFrames.length > 0 && (
-        <div className="mocap-timeline">
-          <div className="mocap-timeline__controls">
-            <div className="mocap-timeline__playback">
+      {/* МОДАЛЬНОЕ ОКНО ПОДКЛЮЧЕНИЯ КАМЕРЫ ТЕЛЕФОНА */}
+      {showQrModal && (
+        <div className="qr-modal-backdrop" onClick={() => setShowQrModal(false)}>
+          <div className="qr-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="qr-modal-head">
+              <h3>📱 Подключение камеры смартфона</h3>
               <button
                 type="button"
-                className="btn btn-gold"
-                onClick={() => setIsPlayingRecorded(!isPlayingRecorded)}
+                className="qr-close-btn"
+                onClick={() => setShowQrModal(false)}
               >
-                {isPlayingRecorded ? '⏸ Пауза' : '▶ Воспроизвести запись'}
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  setPlaybackIndex(0);
-                  setIsPlayingRecorded(false);
-                }}
-              >
-                ⏮ В начало
+                ✕
               </button>
             </div>
-            <div style={{ color: '#9ca3af', fontSize: '0.88rem' }}>
-              Всего захвачено: <strong>{recordedFrames.length} кадров</strong> (~
-              {(recordedFrames.length * 0.033).toFixed(1)} сек)
-            </div>
-          </div>
 
-          <div className="mocap-timeline__slider-wrap">
-            <input
-              type="range"
-              min={0}
-              max={recordedFrames.length - 1}
-              value={playbackIndex}
-              onChange={(e) => setPlaybackIndex(Number(e.target.value))}
-              className="mocap-timeline__slider"
-            />
-            <div className="mocap-timeline__counter">
-              Кадр {playbackIndex + 1} / {recordedFrames.length}
+            <p className="qr-modal-desc">
+              Отсканируйте QR-код камерой телефона или перейдите по ссылке в мобильном браузере:
+            </p>
+
+            <div className="qr-image-wrap">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                  phoneConnectUrl
+                )}`}
+                alt="QR Code для подключения камеры телефона"
+                className="qr-image"
+              />
             </div>
+
+            <div className="qr-room-box">
+              <span>Код Додзё-комнаты:</span>
+              <strong>{roomId}</strong>
+            </div>
+
+            <div className="qr-link-input-wrap">
+              <input type="text" readOnly value={phoneConnectUrl} className="qr-link-input" />
+              <button type="button" className="btn btn-gold" onClick={copyPhoneUrl}>
+                {copiedLink ? 'Скопировано! ✔' : 'Копировать'}
+              </button>
+            </div>
+
+            <div className="qr-ip-config">
+              <label className="qr-ip-label">Локальный IP компьютера для доступа с телефона:</label>
+              <div className="qr-ip-row">
+                <input
+                  type="text"
+                  value={networkHost}
+                  onChange={(e) => setNetworkHost(e.target.value.trim())}
+                  placeholder="192.168.100.6"
+                  className="qr-ip-input"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-subtle"
+                  onClick={() => setNetworkHost('192.168.100.6')}
+                  title="Подставить Wi-Fi IP ПК"
+                >
+                  IP Wi-Fi
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-subtle"
+                  onClick={() => setNetworkHost('192.168.100.28')}
+                  title="Подставить Ethernet IP ПК"
+                >
+                  IP Ethernet
+                </button>
+              </div>
+            </div>
+
+            <p className="qr-tip">
+              💡 Смартфон и компьютер должны находиться в одной локальной сети Wi-Fi или иметь доступ по сетевому IP-адресу.
+            </p>
           </div>
         </div>
       )}

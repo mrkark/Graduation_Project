@@ -52,21 +52,51 @@ const CLIP_FILES = {
 };
 
 export const ACTION_ALIASES = {
+  // Удары руками (Цуки и Учи)
   choku_zuki: 'chudan_zuki_right',
   oi_zuki: 'oi_zuki_right',
   gyaku_zuki: 'gyaku_zuki_right',
   jodan_zuki: 'jodan_zuki_right',
   chudan_zuki: 'chudan_zuki_right',
+  kizami_zuki: 'jodan_zuki_right',
+  ren_zuki: 'tech_gyaku_zuki_right',
+  sanbon_zuki: 'tech_oi_zuki_right',
+  uraken_uchi: 'tech_uraken_right',
+  tetsui_uchi: 'tech_tettsui_right',
+  empi_uchi: 'tech_mae_empi_right',
+  shuto_uchi: 'tech_shuto_uchi_right',
+  morote_zuki: 'tech_morote_zuki_right',
+  hook: 'tech_kagi_zuki_right',
+
+  // Защитные блоки (Укэ)
   gedan_barai: 'gedan_barai_left',
   age_uke: 'age_uke_left',
-  mae_geri: 'mae_geri_right',
+  soto_uke: 'soto_uke_left',
+  uchi_uke: 'tech_uchi_uke_left',
+  shuto_uke: 'tech_shuto_uke_left',
+  manji_uke: 'tech_manji_uke_left',
+
+  // Удары ногами (Гэри)
+  mae_geri: 'kick_mae_geri_right',
+  yoko_geri: 'kick_yoko_kekomi_right',
+  mawashi_geri: 'kick_mawashi_right',
+  ushiro_geri: 'kick_ushiro_right',
+  kick: 'kick_mae_geri_right',
+
+  // Шаги и перемещения
   step: 'step_forward',
+
+  // Стойки (Дати)
   ready: 'idle_shizentai',
   shizentai: 'idle_shizentai',
   zenkutsu: 'zenkutsu_dachi_left',
   kokutsu: 'kokutsu_dachi_left',
   heiko: 'heiko_dachi',
   fudo: 'fudo_dachi',
+  kiba: 'kiba_dachi',
+  moto: 'stance_moto_right',
+
+  // Мастер-ката
   heian_shodan: 'heian_shodan_preview',
 };
 
@@ -91,6 +121,8 @@ function getStanceClipName(stanceName) {
       return globalClipCache.has('zenkutsu_dachi_left') ? 'zenkutsu_dachi_left' : 'stance_zenkutsu';
     case 'kokutsu':
       return globalClipCache.has('kokutsu_dachi_left') ? 'kokutsu_dachi_left' : 'stance_kokutsu';
+    case 'moto':
+      return globalClipCache.has('stance_moto_right') ? 'stance_moto_right' : (globalClipCache.has('stance_moto_left') ? 'stance_moto_left' : 'stance_ready');
     case 'heiko':
       return globalClipCache.has('heiko_dachi') ? 'heiko_dachi' : 'stance_ready';
     case 'fudo':
@@ -153,8 +185,25 @@ export async function ensureKataClipLoaded(kataSlug) {
       },
       undefined,
       (err) => {
-        console.warn(`[KaratekaLowpolyModel] Не удалось загрузить мастер-клип ката /models/katas/kata_${kataSlug}.glb:`, err);
-        resolve(null);
+        const animOnlyUrl = `/models/katas/anim_only/anim_only_kata_${kataSlug}.glb`;
+        gltfLoader.load(
+          animOnlyUrl,
+          (gltf2) => {
+            if (gltf2.animations && gltf2.animations.length > 0) {
+              const clip = gltf2.animations[0];
+              globalClipCache.set(kataSlug, clip);
+              globalClipCache.set(clip.name, clip);
+              resolve(clip);
+            } else {
+              resolve(null);
+            }
+          },
+          undefined,
+          (err2) => {
+            console.warn(`[KaratekaLowpolyModel] Не удалось загрузить мастер-клип ката /models/katas/kata_${kataSlug}.glb:`, err, err2);
+            resolve(null);
+          }
+        );
       }
     );
   });
@@ -256,24 +305,29 @@ export default function KaratekaLowpolyModel({
   stance = 'ready',
   angles = null,
   activeClip = null,
+  stepClip = null,
+  blendDuration = 0.25,
   speed = 1.0,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   kataMode = false,
+  kataExecutionMode = 'composed',
   kataClipName = 'heian_shodan',
   kataTimeRange = null,
   kataScrubProgress = null,
   isPlaying = true,
   isLooping = false,
   replayTrigger = 0,
+  currentStep = null,
+  prevStep = null,
   onStepEnd = null,
   onTimeUpdate = null,
   onRootMove = null,
 }) {
   const groupRef = useRef();
 
-  // Загружаем оптимизированную GLB-модель karateka_lowpoly из Blender вместе со всеми 87 встроенными Actions
-  const { scene, animations } = useGLTF('/models/karateka_lowpoly.glb');
+  // Загружаем полную библиотеку техник каратэ Шотокан v4 (213 клипов) вместе с мешем мастера
+  const { scene, animations } = useGLTF('/models/karateka_techniques_v4.glb');
 
   // Клонируем персонажа со скелетом через SkeletonUtils для независимой анимации Tori и Uke
   // ВАЖНО: нельзя трогать clone.position или clone.scale после клонирования SkinnedMesh —
@@ -375,6 +429,7 @@ export default function KaratekaLowpolyModel({
   const [kataLoadedClip, setKataLoadedClip] = useState(null);
   const currentActionRef = useRef(null);
   const activeClipRef = useRef(null);
+  const prevReplayTriggerRef = useRef(replayTrigger);
 
   // Динамическая загрузка GLB мастер-анимации ката при выборе любого из 26 ката Shotokan
   useEffect(() => {
@@ -496,32 +551,64 @@ export default function KaratekaLowpolyModel({
     };
   }, [kataMode, activeClip, clipsLoaded, mixer, stance, speed, getFilteredClip]);
 
-  // Режим Ката (Kata Mode): пошаговый разбор (нарезка subclip из heian_shodan) или непрерывный прогон всей формы
+  // Режим Ката (Kata Mode): Клиповая композиция шагов либо MoCap мастер-прогон
   useEffect(() => {
     if (!kataMode || !clipsLoaded || !mixer) return;
 
-    const sourceName = kataClipName || 'heian_shodan';
-    const rawSource =
-      kataLoadedClip ||
-      resolveClip(sourceName) ||
-      globalClipCache.get(sourceName) ||
-      globalClipCache.get(`${sourceName}_preview`) ||
-      globalClipCache.get('heian_shodan_preview') ||
-      globalClipCache.get('heian_shodan');
-
-    if (!rawSource) return;
-
     let targetClip = null;
-    if (kataTimeRange && Array.isArray(kataTimeRange) && kataTimeRange.length === 2) {
-      const [startTime, endTime] = kataTimeRange;
-      targetClip = getSubclipForRange(rawSource, sourceName, startTime, endTime, 60);
+    const isFullMode = kataExecutionMode === 'full' || (!stepClip && kataExecutionMode !== 'composed');
+
+    if (isFullMode) {
+      // Вариант 1: Полный мастер-клип ката (heian_shodan_preview для Heian Shodan или /models/katas/kata_${kataSlug}.glb)
+      const sourceName = kataClipName || 'heian_shodan';
+      const rawSource =
+        kataLoadedClip ||
+        resolveClip(sourceName) ||
+        globalClipCache.get(sourceName) ||
+        globalClipCache.get(`${sourceName}_preview`) ||
+        globalClipCache.get('heian_shodan_preview') ||
+        globalClipCache.get('heian_shodan');
+
+      if (rawSource) {
+        if (kataTimeRange && Array.isArray(kataTimeRange) && kataTimeRange.length === 2) {
+          const [startTime, endTime] = kataTimeRange;
+          targetClip = getSubclipForRange(rawSource, sourceName, startTime, endTime, 60);
+        } else {
+          targetClip = rawSource;
+        }
+      }
     } else {
-      targetClip = rawSource;
+      // Вариант 2: Клиповая композиция отдельного шага ката (библиотека переиспользуемых клипов v4)
+      const clipName = stepClip || activeClip;
+      const rawClip = resolveClip(clipName) || globalClipCache.get(clipName);
+      if (rawClip) {
+        targetClip = rawClip;
+      } else {
+        // Fallback на стойку шага
+        const stanceClipName = getStanceClipName(stance);
+        targetClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
+      }
     }
 
     if (!targetClip) return;
     const clip = getFilteredClip(targetClip);
     if (!clip || clip.tracks.length === 0) return;
+
+    const isReplayRequested = prevReplayTriggerRef.current !== replayTrigger;
+    prevReplayTriggerRef.current = replayTrigger;
+
+    // Защита от прерывания: если полный мастер-клип уже воспроизводится (или на паузе),
+    // не сбрасываем его при смене активного шага таймлайна, если пользователь явно не нажал повтор!
+    if (
+      isFullMode &&
+      !isReplayRequested &&
+      currentActionRef.current &&
+      currentActionRef.current.getClip() === clip
+    ) {
+      currentActionRef.current.timeScale = speed;
+      currentActionRef.current.paused = !isPlaying;
+      return;
+    }
 
     const action = mixer.clipAction(clip);
     action.reset();
@@ -530,7 +617,14 @@ export default function KaratekaLowpolyModel({
     action.clampWhenFinished = true;
 
     if (currentActionRef.current && currentActionRef.current !== action) {
-      action.crossFadeFrom(currentActionRef.current, 0.15, true);
+      const prevAction = currentActionRef.current;
+      // Замораживаем предыдущую технику в ее завершенной точке (Киме/Дзансин),
+      // чтобы она не продолжала двигаться и "доделывать" удар в начале нового шага!
+      prevAction.paused = true;
+      if (prevAction.time < prevAction.getClip().duration) {
+        prevAction.time = prevAction.getClip().duration;
+      }
+      action.crossFadeFrom(prevAction, Math.min(blendDuration || 0.14, 0.14), false);
     }
 
     if (isPlaying) {
@@ -555,6 +649,11 @@ export default function KaratekaLowpolyModel({
     };
   }, [
     kataMode,
+    kataExecutionMode,
+    stepClip,
+    activeClip,
+    blendDuration,
+    stance,
     kataClipName,
     kataLoadedClip,
     kataTimeRange ? `${kataTimeRange[0]}_${kataTimeRange[1]}` : null,
@@ -563,6 +662,7 @@ export default function KaratekaLowpolyModel({
     mixer,
     getFilteredClip,
     replayTrigger,
+    speed,
   ]);
 
   // Пауза / воспроизведение в kataMode
@@ -591,12 +691,76 @@ export default function KaratekaLowpolyModel({
     }
   }, [speed]);
 
+  const hipsBoneRef = useRef(null);
+  useEffect(() => {
+    if (clonedModel) {
+      hipsBoneRef.current = clonedModel.getObjectByName('Hips') || clonedModel.getObjectByName('Root');
+    }
+  }, [clonedModel]);
+
   // Анимационный тик
   useFrame((_, delta) => {
     if (mixer) {
       mixer.update(delta);
-      if (kataMode && onTimeUpdate && currentActionRef.current) {
-        onTimeUpdate(currentActionRef.current.time, currentActionRef.current.getClip().duration);
+      if (currentActionRef.current) {
+        let avatarWorldPos = null;
+        if (hipsBoneRef.current) {
+          const v = new THREE.Vector3();
+          hipsBoneRef.current.getWorldPosition(v);
+          avatarWorldPos = [v.x, v.y, v.z];
+        }
+        if (kataMode && onTimeUpdate) {
+          onTimeUpdate(currentActionRef.current.time, currentActionRef.current.getClip().duration, avatarWorldPos);
+        }
+        if (onRootMove && avatarWorldPos) {
+          onRootMove(avatarWorldPos);
+        }
+
+        // --- ПЛАВНАЯ АНИМАЦИЯ ПОВОРОТА ЧЕРЕЗ СПИНУ И СМЕНЫ НАПРАВЛЕНИЯ ЭМБУСЭН ---
+        if (groupRef.current && kataMode) {
+          const clipDuration = currentActionRef.current.getClip().duration || 1.0;
+          const animTime = currentActionRef.current.time;
+          const progress = Math.max(0, Math.min(1, animTime / clipDuration));
+
+          const isStep18 = currentStep?.moveNumber === 18 || (kataClipName === 'heian_shodan' && currentStep?.moveNumber === 18);
+
+          if (isStep18) {
+            // Для Шага 18 Heian Shodan: поворот через спину лицом к камере (Север 0°):
+            // После шага 17 (3-й ой-цуки с КИАЙ) мастер стоит спиной к камере (180° / π рад).
+            // Персонаж разворачивается через спину (по дуге 180° -> 270° -> 360° / 0°),
+            // завершая блок сюто-укэ в стойке кокуцу-дати строго лицом к камере (0° / 0 рад).
+            if (kataExecutionMode === 'mocap') {
+              // В MoCap-записи мастер завершает поворот под углом 48°.
+              // Плавно компенсируем поворот группы так, чтобы аватар оказался строго лицом к камере (0°)!
+              const turnT = Math.min(1, Math.max(0, (progress - 0.15) / 0.70));
+              const ease = turnT * turnT * (3 - 2 * turnT);
+              const compYawRad = - (48 * Math.PI / 180) * ease;
+              groupRef.current.rotation.y = compYawRad;
+            } else {
+              // В режиме Клипов v4 (composed): плавно интерполируем поворот через спину от 180° (π) до 360° (2π / 0 rad)
+              const turnT = Math.min(1, Math.max(0, progress / 0.70));
+              const ease = turnT * turnT * (3 - 2 * turnT);
+              const currentAngleRad = Math.PI + Math.PI * ease;
+              groupRef.current.rotation.y = currentAngleRad;
+            }
+          } else if (kataExecutionMode === 'composed' && currentStep) {
+            const targetYaw = rotation[1];
+            const startYaw = prevStep ? prevStep.rotation[1] : (currentStep.stateIn ? (currentStep.stateIn.facingDeg * Math.PI / 180) : targetYaw);
+            let diff = targetYaw - startYaw;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+
+            if (Math.abs(diff) > 0.01) {
+              const turnT = Math.min(1, Math.max(0, progress / 0.65));
+              const ease = turnT * turnT * (3 - 2 * turnT);
+              groupRef.current.rotation.y = startYaw + diff * ease;
+            } else {
+              groupRef.current.rotation.y = targetYaw;
+            }
+          } else {
+            groupRef.current.rotation.y = rotation[1];
+          }
+        }
       }
     }
   });
@@ -615,4 +779,5 @@ export default function KaratekaLowpolyModel({
   );
 }
 
+useGLTF.preload('/models/karateka_techniques_v4.glb');
 useGLTF.preload('/models/karateka_lowpoly.glb');

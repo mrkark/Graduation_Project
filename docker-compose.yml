@@ -51,6 +51,7 @@ services:
       - '5000:5000'
     volumes:
       - ./uploads:/app/uploads
+      - ./server/src:/app/src
     networks:
       - bunkai-network
 
@@ -68,6 +69,9 @@ services:
       VITE_SOCKET_URL: http://localhost:5000
     ports:
       - '5173:5173'
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
     networks:
       - bunkai-network
 

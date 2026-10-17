@@ -1,222 +1,322 @@
 {
-  "kata": "heian_shodan",
-  "confidence": "high",
-  "duration": 29.63,
-  "movesCount": 21,
-  "events": [
-    {
-      "moveNumber": 1,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 1.2,
-      "endTime": 2.46,
-      "kiai": false
-    },
-    {
-      "moveNumber": 2,
-      "technique": [
-        "R:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 2.46,
-      "endTime": 3.56,
-      "kiai": false
-    },
-    {
-      "moveNumber": 3,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 3.56,
-      "endTime": 4.97,
-      "kiai": false
-    },
-    {
-      "moveNumber": 4,
-      "technique": [
-        "R:tettsui"
-      ],
-      "form": "moto",
-      "startTime": 4.97,
-      "endTime": 6.21,
-      "kiai": false
-    },
-    {
-      "moveNumber": 5,
-      "technique": [
-        "L:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 6.21,
-      "endTime": 7.31,
-      "kiai": false
-    },
-    {
-      "moveNumber": 6,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 7.31,
-      "endTime": 8.62,
-      "kiai": false
-    },
-    {
-      "moveNumber": 7,
-      "technique": [
-        "R:age_uke"
-      ],
-      "form": "zenkutsu",
-      "startTime": 8.62,
-      "endTime": 9.8,
-      "kiai": false
-    },
-    {
-      "moveNumber": 8,
-      "technique": [
-        "L:age_uke"
-      ],
-      "form": "zenkutsu",
-      "startTime": 9.8,
-      "endTime": 10.98,
-      "kiai": false
-    },
-    {
-      "moveNumber": 9,
-      "technique": [
-        "R:age_uke"
-      ],
-      "form": "zenkutsu",
-      "startTime": 10.98,
-      "endTime": 12.16,
-      "kiai": true
-    },
-    {
-      "moveNumber": 10,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 12.16,
-      "endTime": 13.72,
-      "kiai": false
-    },
-    {
-      "moveNumber": 11,
-      "technique": [
-        "R:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 13.72,
-      "endTime": 14.82,
-      "kiai": false
-    },
-    {
-      "moveNumber": 12,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 14.82,
-      "endTime": 16.23,
-      "kiai": false
-    },
-    {
-      "moveNumber": 13,
-      "technique": [
-        "L:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 16.23,
-      "endTime": 17.33,
-      "kiai": false
-    },
-    {
-      "moveNumber": 14,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 17.33,
-      "endTime": 18.64,
-      "kiai": false
-    },
-    {
-      "moveNumber": 15,
-      "technique": [
-        "R:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 18.64,
-      "endTime": 19.74,
-      "kiai": false
-    },
-    {
-      "moveNumber": 16,
-      "technique": [
-        "L:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 19.74,
-      "endTime": 20.84,
-      "kiai": false
-    },
-    {
-      "moveNumber": 17,
-      "technique": [
-        "R:oi_zuki"
-      ],
-      "form": "zenkutsu",
-      "startTime": 20.84,
-      "endTime": 21.94,
-      "kiai": true
-    },
-    {
-      "moveNumber": 18,
-      "technique": [
-        "L:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 21.94,
-      "endTime": 23.55,
-      "kiai": false
-    },
-    {
-      "moveNumber": 19,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 23.55,
-      "endTime": 24.86,
-      "kiai": false
-    },
-    {
-      "moveNumber": 20,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 24.86,
-      "endTime": 26.42,
-      "kiai": false
-    },
-    {
-      "moveNumber": 21,
-      "technique": [
-        "L:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 26.42,
-      "endTime": 27.73,
-      "kiai": false
-    }
-  ],
-  "kiaiMoves": [
-    9,
-    17
-  ]
+ "kata": "heian_shodan",
+ "confidence": "high",
+ "start": "heisoku",
+ "steps": [
+  {
+   "n": 1,
+   "S": "S_step_heisokuL_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 90,
+   "note": ""
+  },
+  {
+   "n": 2,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 90,
+   "note": ""
+  },
+  {
+   "n": 3,
+   "S": "S_step_zenkutsuR_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": "R_m180",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -90,
+   "note": ""
+  },
+  {
+   "n": 4,
+   "S": "S_step_zenkutsuR_motoR_L",
+   "T": "T_R-tettsui",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "moto",
+   "techniques": [
+    "R:tettsui"
+   ],
+   "part": "move",
+   "facingDeg": -90,
+   "note": "Стойка Мото-дати: длина стойки ровно половина длины дзэнкуцу-дати (шаг 0.45 м вместо 0.90 м)"
+  },
+  {
+   "n": 5,
+   "S": "S_step_motoR_zenkutsuL_R",
+   "T": "T_L-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -90,
+   "note": ""
+  },
+  {
+   "n": 6,
+   "S": "S_step_zenkutsuL_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0,
+   "note": ""
+  },
+  {
+   "n": 7,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-age_uke",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0,
+   "note": ""
+  },
+  {
+   "n": 8,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-age_uke",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:age_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0,
+   "note": ""
+  },
+  {
+   "n": 9,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-age_uke",
+   "R": null,
+   "scale": 1,
+   "kiai": true,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0,
+   "note": ""
+  },
+  {
+   "n": 10,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p270",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -90,
+   "note": ""
+  },
+  {
+   "n": 11,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -90,
+   "note": ""
+  },
+  {
+   "n": 12,
+   "S": "S_step_zenkutsuR_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": "R_m180",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 90,
+   "note": ""
+  },
+  {
+   "n": 13,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 90,
+   "note": ""
+  },
+  {
+   "n": 14,
+   "S": "S_step_zenkutsuL_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -180,
+   "note": ""
+  },
+  {
+   "n": 15,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180,
+   "note": ""
+  },
+  {
+   "n": 16,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180,
+   "note": ""
+  },
+  {
+   "n": 17,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-oi_zuki",
+   "R": null,
+   "scale": 1,
+   "kiai": true,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:oi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180,
+   "note": ""
+  },
+  {
+   "n": 18,
+   "S": "S_turn_zenkutsuR_kokutsuL_R",
+   "T": "T_L-shuto_uke",
+   "R": "R_p180",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "L:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0,
+   "note": "Поворот через спину лицом к камере (Север 0°) в стойку Кокуцу-дати (Сюто-укэ)"
+  },
+  {
+   "n": 19,
+   "S": "S_step_kokutsuL_kokutsuR_L",
+   "T": "T_R-shuto_uke",
+   "R": "R_m45",
+   "scale": 1.087,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": -45,
+   "note": "Шаг под 45° в стойку Кокуцу-дати (Сюто-укэ)"
+  },
+  {
+   "n": 20,
+   "S": "S_step_kokutsuR_kokutsuR_L",
+   "T": "T_R-shuto_uke",
+   "R": "R_p135",
+   "scale": 1.087,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 90,
+   "note": "Разворот через спину в стойку Кокуцу-дати (Сюто-укэ)"
+  },
+  {
+   "n": 21,
+   "S": "S_step_kokutsuR_kokutsuL_R",
+   "T": "T_L-shuto_uke",
+   "R": "R_m45",
+   "scale": 1.087,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "L:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 45,
+   "note": "Шаг под 45° в стойку Кокуцу-дати (Сюто-укэ)"
+  }
+ ]
 }

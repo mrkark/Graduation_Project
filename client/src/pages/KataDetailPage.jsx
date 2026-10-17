@@ -7,10 +7,14 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import KataSequencer, { resolveKataSlug } from '../three/KataSequencer';
 import { resolveMediaUrl } from '../utils/media';
-import '../three/avatarWidget.css';
 import './KataDetailPage.css';
 
-const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
+const DIFFICULTY_LABELS = {
+  beginner: 'Начальный уровень (Сёдан)',
+  intermediate: 'Средний уровень (Тюдан)',
+  advanced: 'Продвинутый уровень (Дзёдан)',
+  master: 'Мастерский уровень (Мэнкё)',
+};
 
 export default function KataDetailPage() {
   const { id } = useParams();
@@ -21,6 +25,7 @@ export default function KataDetailPage() {
   const [activeStepIdx, setActiveStepIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('breakdown'); // 'breakdown' | 'video' | 'bunkai' | 'comments'
 
   useEffect(() => {
     setLoading(true);
@@ -47,33 +52,73 @@ export default function KataDetailPage() {
   const effectiveSteps = useMemo(() => {
     if (!kata) return [];
     const dbSteps = kata.Steps || [];
-    const events = kataJsonData?.events || [];
-    if (events.length === 0 || events.length <= dbSteps.length) return dbSteps;
+    const jsonSteps = kataJsonData?.steps || kataJsonData?.events || [];
+    if (jsonSteps.length === 0) return dbSteps;
 
-    return events.map((ev, idx) => {
+    return jsonSteps.map((ev, idx) => {
       const existing = dbSteps[idx];
+      const moveNum = ev.n || ev.moveNumber || idx + 1;
+      const facingStr =
+        ev.facingDeg !== undefined
+          ? ev.facingDeg === 0
+            ? 'Лицом к залу (Север 0°)'
+            : `Направление: ${ev.facingDeg}°`
+          : ev.facing
+          ? `Направление: ${ev.facing}`
+          : 'Линия эмбусэн';
+
+      let techniqueName = Array.isArray(ev.techniques)
+        ? ev.techniques.join(', ')
+        : ev.technique || (existing?.Technique || (ev.stance ? `Стойка ${ev.stance}` : 'Каноническая техника'));
+
+      if (moveNum === 4 || ev.T?.includes('tettsui')) {
+        techniqueName = 'Тэцуи-ути (Стойка Мото-дати — половина длины дзэнкуцу-дати)';
+      } else if (moveNum === 18 || (kataSlug === 'heian_shodan' && ev.T?.includes('shuto_uke') && ev.facingDeg === 0)) {
+        techniqueName = 'Сюто-укэ (поворот через спину лицом к камере)';
+      }
+
       if (existing) {
         return {
+          ...ev,
           ...existing,
-          Duration: existing.Duration || (ev.endTime - ev.startTime),
-          kiai: ev.kiai || existing.Title?.includes('КИАЙ'),
+          T: ev.T || existing.T,
+          S: ev.S || existing.S,
+          scale: ev.scale || existing.scale || 1.0,
+          Duration: existing.Duration || (ev.endTime && ev.startTime ? ev.endTime - ev.startTime : 2),
+          kiai: Boolean(ev.kiai || existing.Title?.includes('КИАЙ')),
+          facingDeg: moveNum === 18 && kataSlug === 'heian_shodan' ? 0 : ev.facingDeg !== undefined ? ev.facingDeg : existing.facingDeg,
+          R: ev.R || existing.R,
+          stance: ev.stance || ev.form || existing.stance,
+          Direction:
+            moveNum === 18 && kataSlug === 'heian_shodan'
+              ? 'Поворот через спину лицом к камере (Север 0°)'
+              : existing.Direction || facingStr.trim(),
+          Title: existing.Title || `Шаг ${moveNum}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
+          Technique: existing.Technique || techniqueName,
         };
       }
-      const techniqueName = (ev.technique && ev.technique.length > 0)
-        ? ev.technique.join(', ')
-        : (ev.form ? `Стойка ${ev.form}` : 'Каноническая техника');
+
       return {
-        Step_ID: `canonical_${ev.moveNumber}`,
-        Step_Number: ev.moveNumber,
-        Title: `Шаг ${ev.moveNumber}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
+        ...ev,
+        Step_ID: `canonical_${moveNum}`,
+        Step_Number: moveNum,
+        Title: `Шаг ${moveNum}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
         Technique: techniqueName,
-        Direction: ev.form ? `Стойка: ${ev.form}` : 'Линия эмбусэн',
-        Description: `Каноническое движение #${ev.moveNumber} ката ${kata.Title}. Позиция: ${ev.form || 'базовая'}.${ev.kiai ? ' Боевой выкрик КИАЙ!' : ''}`,
-        Duration: ev.endTime - ev.startTime,
-        kiai: ev.kiai,
+        Direction: facingStr.trim(),
+        Description:
+          moveNum === 4
+            ? `Каноническое движение #4 ката ${kata.Title}. Стойка Мото-дати (ровно половина длины дзэнкуцу-дати, шаг 0.45 м). Удар молотом кулака Тэцуи-ути.`
+            : moveNum === 18
+            ? `Каноническое движение #18 ката ${kata.Title}. Поворот через спину лицом к камере (Север 0°), блок ребром ладони сюто-укэ в стойке кокуцу-дати.`
+            : `Каноническое движение #${moveNum} ката ${kata.Title}. Позиция: ${ev.stance || ev.form || 'базовая'}.${facingStr}.${ev.kiai ? ' Боевой выкрик КИАЙ!' : ''}`,
+        Duration: ev.endTime && ev.startTime ? ev.endTime - ev.startTime : 2,
+        kiai: Boolean(ev.kiai),
+        facingDeg: ev.facingDeg,
+        R: ev.R,
+        stance: ev.stance || ev.form,
       };
     });
-  }, [kata, kataJsonData]);
+  }, [kata, kataJsonData, kataSlug]);
 
   const stepsCount = effectiveSteps.length;
 
@@ -85,7 +130,7 @@ export default function KataDetailPage() {
     setActiveStepIdx((prev) => Math.min(stepsCount - 1, prev + 1));
   }, [stepsCount]);
 
-  // Управление стрелками клавиатуры
+  // Навигация стрелками клавиатуры
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -99,35 +144,14 @@ export default function KataDetailPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToPrevStep, goToNextStep]);
 
-  if (loading) return <p className="loading">Загрузка…</p>;
-  if (error || !kata) return <p className="empty-state">{error}</p>;
+  if (loading) return <div className="kata-detail-loading"><span className="loading-kanji">型</span><p>Загрузка канона ката…</p></div>;
+  if (error || !kata) return <div className="empty-state">⚠️ {error}</div>;
 
   const activeStep = effectiveSteps[activeStepIdx] || effectiveSteps[0];
+  const isKiai = activeStep && (activeStep.Title?.includes('КИАЙ') || activeStep.kiai);
 
-  function getStanceFromStep(step) {
-    if (!step) return 'ready';
-    const text = `${step.Technique || ''} ${step.Title || ''} ${step.Description || ''}`.toLowerCase();
-    if (text.includes('гэдан') || text.includes('gedan')) return 'gedan_barai';
-    if (text.includes('агэ') || text.includes('age-uke')) return 'age_uke';
-    if (text.includes('сюто') || text.includes('shuto') || text.includes('кокуцу')) return 'kokutsu';
-    if (text.includes('киба') || text.includes('kiba') || text.includes('тэкки')) return 'kiba';
-    if (text.includes('фудо') || text.includes('fudo') || text.includes('сочин')) return 'fudo';
-    if (text.includes('журавл') || text.includes('цуруаси') || text.includes('gankaku')) return 'tsuruashi';
-    if (text.includes('цуки') || text.includes('дзэнкуцу') || text.includes('zenkutsu')) return 'zenkutsu';
-    return 'zenkutsu';
-  }
-
-  const activeStance = getStanceFromStep(activeStep);
-  const isKiai = activeStep && (activeStep.Title?.includes('КИАЙ') || activeStep.Technique?.includes('КИАЙ') || activeStep.Description?.includes('КИАЙ'));
-
-  const stepImageUrl = activeStep?.Image_URL
-    ? resolveMediaUrl(activeStep.Image_URL)
-    : kata.Thumbnail_URL
-      ? resolveMediaUrl(kata.Thumbnail_URL)
-      : '/images/kata/sensei-preview.jpg';
-
-  const isStaff = role === 'admin';
-  const canEdit = isStaff;
+  const isStaff = role === 'admin' || role === 'moderator';
+  const canEdit = role === 'admin';
 
   async function onDelete() {
     if (!confirm('Удалить это ката без возможности восстановления?')) return;
@@ -143,215 +167,320 @@ export default function KataDetailPage() {
   }
 
   return (
-    <div>
-      {/* Главный заголовок Ката */}
-      <div className="detail-header">
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          {kata.Thumbnail_URL && (
-            <div
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: 12,
-                backgroundImage: `url("${resolveMediaUrl(kata.Thumbnail_URL)}")`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                border: '1.5px solid var(--color-gold)',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                flexShrink: 0,
-              }}
-            />
-          )}
-          <div>
-            <div className="card__meta" style={{ marginBottom: '0.4rem' }}>
-              <StatusBadge status={kata.Status} />
-              <span>{DIFFICULTY_LABELS[kata.Difficulty] || kata.Difficulty}</span>
-              {kata.Style && <span>· {kata.Style}</span>}
+    <div className="kata-detail-page">
+      {/* --- ШАПКА КАТА: ДОДЗЁ БАННЕР --- */}
+      <section className="kata-banner">
+        <div className="kata-banner__inner">
+          <div className="kata-banner__seal">
+            <span className="hanko hanko--lg">型</span>
+          </div>
+
+          <div className="kata-banner__content">
+            <div className="kata-banner__breadcrumbs">
+              <Link to="/kata" className="breadcrumb-link">Каталог ката</Link>
+              <span className="breadcrumb-sep">/</span>
+              <span className="breadcrumb-curr">{kata.Title}</span>
             </div>
-            <h1 style={{ margin: '0 0 0.4rem' }}>{kata.Title}</h1>
-            <p style={{ color: 'var(--text-muted)', margin: 0 }}>
-              Автор: {kata.Author?.Display_Name || kata.Author?.Username}
-            </p>
-          </div>
-        </div>
-        <div className="detail-actions">
-          {canEdit && (
-            <Link to={`/kata/${id}/edit`} className="btn btn-gold">
-              Редактировать
-            </Link>
-          )}
-          {canEdit && (
-            <button className="btn btn-danger" onClick={onDelete}>
-              Удалить
-            </button>
-          )}
-          {isStaff && kata.Status !== 'approved' && (
-            <button className="btn btn-primary" onClick={onApprove}>
-              Одобрить
-            </button>
-          )}
-          {isStaff && kata.Status !== 'rejected' && (
-            <button className="btn" onClick={onReject}>
-              Отклонить
-            </button>
-          )}
-        </div>
-      </div>
 
-      <div className="detail-grid">
-        <div>
-          {kata.Video_URL && <VideoEmbed url={kata.Video_URL} />}
+            <div className="kata-banner__title-row">
+              <h1 className="kata-banner__title">{kata.Title}</h1>
+              <StatusBadge status={kata.Status} />
+            </div>
 
-          <div className="panel" style={{ marginTop: '1.2rem' }}>
-            <h3>Описание</h3>
-            <p style={{ whiteSpace: 'pre-wrap', color: 'var(--text-main)' }}>
-              {kata.Description || 'Описание пока не добавлено.'}
-            </p>
+            <div className="kata-banner__meta-row">
+              <span className="meta-tag meta-tag--style">
+                <span className="meta-tag__kanji">流</span>
+                <span>{kata.Style || 'Шотокан (松濤館流)'}</span>
+              </span>
+
+              <span className="meta-tag meta-tag--diff">
+                <span className="meta-tag__kanji">段</span>
+                <span>{DIFFICULTY_LABELS[kata.Difficulty] || kata.Difficulty}</span>
+              </span>
+
+              <span className="meta-tag meta-tag--steps">
+                <span className="meta-tag__kanji">歩</span>
+                <span>{stepsCount} канонических движений</span>
+              </span>
+
+              <span className="meta-tag meta-tag--author">
+                Автор: {kata.Author?.Display_Name || kata.Author?.Username}
+              </span>
+            </div>
           </div>
 
-          {/* ПОШАГОВАЯ ИНСТРУКЦИЯ С ФОКУСОМ НА 1 ШАГЕ И БОЛЬШИМ ОКНОМ */}
-          {stepsCount > 0 && activeStep && (
-            <div className="kata-step-viewer">
-              <div className="kata-step-header">
-                <div className="kata-step-title-group">
-                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>🥋</span>
-                    <span>Пошаговый канон</span>
-                  </h3>
-                  <span className="kata-step-num-badge">
-                    Шаг {activeStep.Step_Number} из {stepsCount}
+          {/* Действия администратора / модератора */}
+          {isStaff && (
+            <div className="kata-banner__actions">
+              {canEdit && (
+                <Link to={`/kata/${id}/edit`} className="btn btn-gold btn-sm">
+                  Редактировать
+                </Link>
+              )}
+              {canEdit && (
+                <button type="button" className="btn btn-danger btn-sm" onClick={onDelete}>
+                  Удалить
+                </button>
+              )}
+              {kata.Status !== 'approved' && (
+                <button type="button" className="btn btn-primary btn-sm" onClick={onApprove}>
+                  Одобрить
+                </button>
+              )}
+              {kata.Status !== 'rejected' && (
+                <button type="button" className="btn btn-sm" onClick={onReject}>
+                  Отклонить
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* --- ГЛАВНАЯ РАБОЧАЯ ОБЛАСТЬ: 3D СЕКВЕНСЕР КАТА НА ПОЛНУЮ ШИРИНУ --- */}
+      <section className="kata-stage-section">
+        <div className="kata-stage-header">
+          <div className="stage-title-wrap">
+            <span className="stage-kanji">道場検定</span>
+            <h2 className="stage-title">Интерактивный 3D-Анализ Формы</h2>
+          </div>
+
+          <div className="stage-indicator-wrap">
+            <span className="stage-step-pill">
+              Шаг <strong>{activeStep ? activeStep.Step_Number : 1}</strong> из {stepsCount}
+            </span>
+            {isKiai && <span className="kiai-badge">💥 КИАЙ!</span>}
+          </div>
+        </div>
+
+        {/* 3D Dojo Canvas */}
+        <div className="kata-stage-viewport">
+          <KataSequencer
+            kataTitle={kata.Title}
+            steps={effectiveSteps}
+            height={600}
+            activeStepIndex={activeStepIdx}
+            onStepChange={setActiveStepIdx}
+          />
+        </div>
+      </section>
+
+      {/* --- ПАНЕЛЬ ПОШАГОВОГО СКРАББЕРА И НАВИГАЦИИ ПО ТАТАМИ --- */}
+      <section className="kata-scrubber-section">
+        <div className="scrubber-bar">
+          <button
+            type="button"
+            className="btn btn-scrubber-nav"
+            onClick={goToPrevStep}
+            disabled={activeStepIdx === 0}
+          >
+            ← Пред. шаг
+          </button>
+
+          {/* Лента всех канонических шагов */}
+          <div className="scrubber-track">
+            {effectiveSteps.map((step, idx) => {
+              const stepKiai = step.Title?.includes('КИАЙ') || step.Technique?.includes('КИАЙ') || step.kiai;
+              const isActive = idx === activeStepIdx;
+              return (
+                <button
+                  key={step.Step_ID || idx}
+                  type="button"
+                  className={`scrubber-step-btn ${isActive ? 'active' : ''} ${stepKiai ? 'kiai' : ''}`}
+                  onClick={() => setActiveStepIdx(idx)}
+                  title={`Шаг ${step.Step_Number}: ${step.Title}`}
+                >
+                  <span className="step-num">{step.Step_Number}</span>
+                  {stepKiai && <span className="kiai-mini-dot" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-scrubber-nav btn-gold"
+            onClick={goToNextStep}
+            disabled={activeStepIdx === stepsCount - 1}
+          >
+            {activeStepIdx === stepsCount - 1 ? 'Форма завершена ✔' : 'След. шаг →'}
+          </button>
+        </div>
+
+        <div className="scrubber-hint">
+          <span>💡 Клавиши <strong>←</strong> и <strong>→</strong> на клавиатуре для мгновенного перехода между шагами формы</span>
+        </div>
+      </section>
+
+      {/* --- ДЕТАЛЬНЫЙ РАЗБОР ТЕКУЩЕГО ШАГА И ДОПОЛНИТЕЛЬНЫЕ РАЗДЕЛЫ --- */}
+      <section className="kata-workspace-grid">
+        {/* Левая колонка: Карта текущего шага и техники */}
+        <div className="kata-workspace-main">
+          {activeStep && (
+            <div className="step-master-card">
+              <div className="step-master-card__header">
+                <div>
+                  <span className="step-master-card__tag">
+                    Каноническое движение #{activeStep.Step_Number}
                   </span>
+                  <h3 className="step-master-card__title">
+                    {activeStep.Technique || activeStep.Title}
+                  </h3>
                 </div>
 
-                <span className="kata-step-view-btn active" style={{ cursor: 'default' }}>
-                  🥋 3D Додзё Инспектор
-                </span>
-              </div>
-
-              {/* ИНТЕРАКТИВНЫЙ 3D СЕКВЕНСЕР КАТА */}
-              <div style={{ marginBottom: '1.4rem' }}>
-                <KataSequencer
-                  kataTitle={kata.Title}
-                  steps={effectiveSteps}
-                  height={500}
-                  activeStepIndex={activeStepIdx}
-                  onStepChange={setActiveStepIdx}
-                />
-              </div>
-
-              {/* ДЕТАЛЬНОЕ ОПИСАНИЕ И ИНСТРУКЦИЯ ТЕКУЩЕГО ШАГА */}
-              <div className="kata-step-details-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-                    Каноническая техника: <span style={{ color: '#fff' }}>{activeStep.Technique || 'Базовая позиция'}</span>
+                {isKiai && (
+                  <div className="step-kiai-callout">
+                    <span className="kiai-kanji">気合</span>
+                    <span>Боевой выкрик КИАЙ</span>
                   </div>
-                  {activeStep.Direction && (
-                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-                      Линия перемещения: <strong style={{ color: 'var(--color-washi)' }}>{activeStep.Direction}</strong>
-                    </div>
-                  )}
-                </div>
-                {activeStep.Description && (
-                  <p className="kata-step-desc-text">{activeStep.Description}</p>
                 )}
               </div>
 
-              {/* НАВИГАЦИЯ ПО ШАГАМ (ТОЛЬКО 1 ШАГ + ПЕРЕКЛЮЧАТЕЛЬ) */}
-              <div className="kata-step-nav-bar">
-                <button
-                  className="kata-step-nav-btn"
-                  onClick={goToPrevStep}
-                  disabled={activeStepIdx === 0}
-                >
-                  ← Предыдущий шаг
-                </button>
-
-                {/* Лента номеров всех шагов для быстрого перехода */}
-                <div className="kata-step-scrubber">
-                  {effectiveSteps.map((step, idx) => {
-                    const stepKiai = step.Title?.includes('КИАЙ') || step.Technique?.includes('КИАЙ') || step.Description?.includes('КИАЙ') || step.kiai;
-                    return (
-                      <button
-                        key={step.Step_ID || idx}
-                        className={`kata-step-scrubber-dot ${idx === activeStepIdx ? 'active' : ''} ${stepKiai ? 'is-kiai' : ''}`}
-                        onClick={() => setActiveStepIdx(idx)}
-                        title={`Шаг ${step.Step_Number}: ${step.Title}`}
-                      >
-                        {step.Step_Number}
-                      </button>
-                    );
-                  })}
+              <div className="step-master-card__grid">
+                <div className="step-param-cell">
+                  <span className="step-param-cell__label">Стойка (Дати)</span>
+                  <strong className="step-param-cell__val">
+                    🥋 {activeStep.stance || (activeStep.Step_Number === 4 ? 'Мото-дати (половина длины)' : 'Дзэнкуцу-дати')}
+                  </strong>
                 </div>
 
-                <button
-                  className={`kata-step-nav-btn ${activeStepIdx < stepsCount - 1 ? 'primary' : ''}`}
-                  onClick={goToNextStep}
-                  disabled={activeStepIdx === stepsCount - 1}
-                >
-                  {activeStepIdx === stepsCount - 1 ? 'Форма завершена ✔' : 'Следующий шаг →'}
-                </button>
+                <div className="step-param-cell">
+                  <span className="step-param-cell__label">Направление взгляда и шага (Эмбусэн)</span>
+                  <strong className="step-param-cell__val">
+                    🧭 {activeStep.Direction || 'Линия канона'}
+                  </strong>
+                </div>
+
+                <div className="step-param-cell">
+                  <span className="step-param-cell__label">Длительность фазы</span>
+                  <strong className="step-param-cell__val">
+                    ⏱️ {activeStep.Duration ? `${activeStep.Duration} сек` : '1.5 сек'}
+                  </strong>
+                </div>
+
+                <div className="step-param-cell">
+                  <span className="step-param-cell__label">Фокус удара (Кимэ)</span>
+                  <strong className="step-param-cell__val">
+                    🎯 Чудан / Дзёдан
+                  </strong>
+                </div>
               </div>
 
-              <div className="kata-step-keyboard-hint">
-                💡 Подсказка: используйте клавиши <strong>←</strong> и <strong>→</strong> на клавиатуре для перехода между шагами
-              </div>
-            </div>
-          )}
-
-          {kata.RelatedBunkai?.length > 0 && (
-            <div style={{ marginTop: '1.8rem' }}>
-              <h3>Связанные бункаи (Боевые применения)</h3>
-              <div className="grid grid-cards" style={{ marginTop: '0.8rem' }}>
-                {kata.RelatedBunkai.map((b) => (
-                  <Link key={b.Bunkai_ID} to={`/bunkai/${b.Bunkai_ID}`} className="card">
-                    <div className="card__body">
-                      <div className="card__title">{b.Title}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--color-gold)', marginTop: 4 }}>
-                        Смотреть 3D-разбор поединка →
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <Comments kataId={Number(id)} />
-        </div>
-
-        <aside>
-          <div style={{ position: 'sticky', top: 20 }}>
-            <div className="panel" style={{ padding: '1.1rem' }}>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-gold)' }}>
-                Каноническая стойка шага
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-washi)', marginTop: 4 }}>
-                🥋 {activeStep?.Technique || 'Дзэнкуцу-дати'}
-              </div>
-              {activeStep?.Description && (
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 8, lineHeight: 1.45 }}>
-                  {activeStep.Description}
-                </p>
+              {activeStep.Description && (
+                <div className="step-master-card__desc">
+                  <h4>Биомеханика и наставление:</h4>
+                  <p>{activeStep.Description}</p>
+                </div>
               )}
             </div>
+          )}
 
-            {/* Компас направления эмбусэн */}
-            {activeStep?.Direction && (
-              <div className="panel" style={{ marginTop: '1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-gold)' }}>
-                  Линия движения (Эмбусэн)
+          {/* Вкладки: Описание, Видео, Бункаи, Комментарии */}
+          <div className="kata-content-tabs">
+            <div className="tabs-header">
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'breakdown' ? 'active' : ''}`}
+                onClick={() => setActiveTab('breakdown')}
+              >
+                📜 Описание формы
+              </button>
+              {kata.Video_URL && (
+                <button
+                  type="button"
+                  className={`tab-btn ${activeTab === 'video' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('video')}
+                >
+                  🎥 Эталонное видео сенсея
+                </button>
+              )}
+              {kata.RelatedBunkai?.length > 0 && (
+                <button
+                  type="button"
+                  className={`tab-btn ${activeTab === 'bunkai' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('bunkai')}
+                >
+                  ⚔️ Боевые применения ({kata.RelatedBunkai.length})
+                </button>
+              )}
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'comments' ? 'active' : ''}`}
+                onClick={() => setActiveTab('comments')}
+              >
+                💬 Обсуждение в додзё
+              </button>
+            </div>
+
+            <div className="tab-pane">
+              {activeTab === 'breakdown' && (
+                <div className="panel dojo-panel">
+                  <h3 className="panel-title">Суть и философия ката</h3>
+                  <p className="panel-text">{kata.Description || 'Описание канона пока не добавлено.'}</p>
                 </div>
-                <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-washi)', marginTop: 4 }}>
-                  🧭 {activeStep.Direction}
+              )}
+
+              {activeTab === 'video' && kata.Video_URL && (
+                <div className="panel dojo-panel">
+                  <h3 className="panel-title">Видеозапись канонического исполнения</h3>
+                  <div className="video-wrap">
+                    <VideoEmbed url={kata.Video_URL} />
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                  Шаг {activeStep.Step_Number} из {stepsCount}: {activeStep.Title}
+              )}
+
+              {activeTab === 'bunkai' && kata.RelatedBunkai?.length > 0 && (
+                <div className="bunkai-preview-grid">
+                  {kata.RelatedBunkai.map((b) => (
+                    <Link key={b.Bunkai_ID} to={`/bunkai/${b.Bunkai_ID}`} className="bunkai-mini-card">
+                      <div className="bunkai-mini-card__seal">解</div>
+                      <div className="bunkai-mini-card__body">
+                        <h4>{b.Title}</h4>
+                        <span className="bunkai-mini-card__link">Открыть 3D-поединок Тори и Укэ →</span>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </div>
-            )}
+              )}
+
+              {activeTab === 'comments' && (
+                <Comments kataId={Number(id)} />
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Правая колонка: Канонический список всех движений */}
+        <aside className="kata-workspace-aside">
+          <div className="steps-ledger-card">
+            <div className="steps-ledger-header">
+              <span className="ledger-kanji">歩順</span>
+              <h3>Список 21 шага формы</h3>
+            </div>
+
+            <div className="steps-ledger-list">
+              {effectiveSteps.map((step, idx) => {
+                const isActive = idx === activeStepIdx;
+                const isStepKiai = step.Title?.includes('КИАЙ') || step.kiai;
+                return (
+                  <div
+                    key={step.Step_ID || idx}
+                    className={`steps-ledger-item ${isActive ? 'active' : ''}`}
+                    onClick={() => setActiveStepIdx(idx)}
+                  >
+                    <span className="ledger-item__num">{step.Step_Number}</span>
+                    <div className="ledger-item__body">
+                      <span className="ledger-item__tech">{step.Technique || step.Title}</span>
+                      <span className="ledger-item__dir">{step.Direction || 'Эмбусэн'}</span>
+                    </div>
+                    {isStepKiai && <span className="ledger-kiai-tag">КИАЙ</span>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </aside>
-      </div>
+      </section>
     </div>
   );
 }

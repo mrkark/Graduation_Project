@@ -32,7 +32,11 @@ app.use(cookieParser());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Статика загруженных файлов (аватары/видео/превью) — раздел 16 ТЗ
-app.use('/uploads', express.static(path.join(__dirname, '..', '..', 'uploads')));
+const fs = require('fs');
+const uploadsPath = fs.existsSync(path.join(__dirname, '..', 'uploads'))
+  ? path.join(__dirname, '..', 'uploads')
+  : path.join(__dirname, '..', '..', 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok' } }));
 

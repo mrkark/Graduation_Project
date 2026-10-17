@@ -97,7 +97,12 @@ export default function KataListPage() {
                 className="card__thumb"
                 style={kata.Thumbnail_URL ? { backgroundImage: `url("${resolveMediaUrl(kata.Thumbnail_URL)}")` } : undefined}
               >
-                {!kata.Thumbnail_URL && '型 Ката'}
+                {!kata.Thumbnail_URL && (
+                  <div className="card__fallback">
+                    <span className="card__kanji">型</span>
+                    <span>Ката</span>
+                  </div>
+                )}
               </div>
               <div className="card__body">
                 <div className="card__meta">

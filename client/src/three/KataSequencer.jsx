@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
 import KaratekaLowpolyModel from './KaratekaLowpolyModel';
 import TraditionalDojo from './TraditionalDojo';
 import { animationRegistry } from './animationRegistry';
@@ -18,104 +19,83 @@ import { animationRegistry } from './animationRegistry';
  * - Скраббинг времени, замедление (0.25x, 0.5x, 1x, 1.5x), повтор и зацикливание шагов.
  */
 
-const ALL_KATA_SLUGS = [
-  'heian_shodan', 'heian_nidan', 'heian_sandan', 'heian_yondan', 'heian_godan',
-  'tekki_shodan', 'tekki_nidan', 'tekki_sandan',
-  'bassai_dai', 'bassai_sho', 'kanku_dai', 'kanku_sho',
-  'jion', 'jiin', 'jitte', 'empi', 'hangetsu', 'gankaku',
-  'sochin', 'nijushiho', 'meikyo', 'unsu', 'wankan',
-  'gojushiho_dai', 'gojushiho_sho', 'chinte'
-];
+import {
+  ALL_KATA_SLUGS,
+  resolveKataSlug,
+  CANONICAL_EMBUSEN,
+  HEIAN_SHODAN_CANONICAL_EVENTS,
+  normalizeAngleDeg,
+  parseStepOrientation,
+  computeTrajectory,
+} from './kataMotionUtils';
 
-export function resolveKataSlug(title = '') {
-  const t = title.toLowerCase().trim();
-  if (ALL_KATA_SLUGS.includes(t)) return t;
-  if (t.includes('шодан') || t.includes('shodan')) {
-    if (t.includes('тэкки') || t.includes('tekki')) return 'tekki_shodan';
-    return 'heian_shodan';
-  }
-  if (t.includes('нидан') || t.includes('nidan')) {
-    if (t.includes('тэкки') || t.includes('tekki')) return 'tekki_nidan';
-    return 'heian_nidan';
-  }
-  if (t.includes('сандан') || t.includes('sandan')) {
-    if (t.includes('тэкки') || t.includes('tekki')) return 'tekki_sandan';
-    return 'heian_sandan';
-  }
-  if (t.includes('ёндан') || t.includes('yondan')) return 'heian_yondan';
-  if (t.includes('годан') || t.includes('godan')) return 'heian_godan';
-  if (t.includes('бассай дай') || t.includes('bassai dai') || t.includes('bassai_dai')) return 'bassai_dai';
-  if (t.includes('бассай шо') || t.includes('bassai sho') || t.includes('bassai_sho')) return 'bassai_sho';
-  if (t.includes('канку дай') || t.includes('kanku dai') || t.includes('kanku_dai')) return 'kanku_dai';
-  if (t.includes('канку шо') || t.includes('kanku sho') || t.includes('kanku_sho')) return 'kanku_sho';
-  if (t.includes('дзиин') || t.includes("дзи'ин") || t.includes('jiin') || t.includes("ji'in")) return 'jiin';
-  if (t.includes('дзион') || t.includes('jion')) return 'jion';
-  if (t.includes('джиттэ') || t.includes('jitte')) return 'jitte';
-  if (t.includes('эмпи') || t.includes('empi')) return 'empi';
-  if (t.includes('хангэцу') || t.includes('hangetsu')) return 'hangetsu';
-  if (t.includes('ганкаку') || t.includes('gankaku')) return 'gankaku';
-  if (t.includes('сочин') || t.includes('sochin')) return 'sochin';
-  if (t.includes('нидзюсихо') || t.includes('nijushiho')) return 'nijushiho';
-  if (t.includes('мэйкё') || t.includes('meikyo')) return 'meikyo';
-  if (t.includes('унсу') || t.includes('unsu')) return 'unsu';
-  if (t.includes('ванкан') || t.includes('wankan')) return 'wankan';
-  if (t.includes('годзюсихо дай') || t.includes('gojushiho dai') || t.includes('gojushiho_dai')) return 'gojushiho_dai';
-  if (t.includes('годзюсихо шо') || t.includes('gojushiho sho') || t.includes('gojushiho_sho')) return 'gojushiho_sho';
-  if (t.includes('чинтэ') || t.includes('chinte')) return 'chinte';
-  return 'heian_shodan';
-}
+import {
+  compileKataScenario,
+  resolveComposedClip,
+  TECHNIQUE_REGISTRY,
+} from './kataCompositionEngine';
 
-// Канонические координаты эмбусэна Heian Shodan (извлеченные из Root Motion анимации)
-const CANONICAL_EMBUSEN = {
-  heian_shodan: [
-    [0.23, 0.02, -0.06],    // 1: Поворот 90° влево — Гэдан-барай
-    [1.13, 0.02, -0.06],    // 2: Шаг вперед — Ой-цуки
-    [0.33, 0.02, -0.34],    // 3: Разворот 180° вправо — Гэдан-барай
-    [0.51, 0.02, -0.34],    // 4: Подтягивание ноги (Мото-дати) — Тэтцуи-учи
-    [-0.12, 0.02, -0.34],   // 5: Шаг вперед — Ой-цуки
-    [0.42, 0.02, -0.08],    // 6: Поворот влево 90° на ось эмбусэн — Гэдан-барай
-    [0.42, 0.02, 0.82],     // 7: Шаг вперед — 1-й Агэ-укэ
-    [0.42, 0.02, 1.72],     // 8: Шаг вперед — 2-й Агэ-укэ
-    [0.42, 0.02, 2.62],     // 9: Шаг вперед — 3-й Агэ-укэ [КИАЙ]
-    [-0.12, 0.02, 3.26],    // 10: Разворот через спину 270° влево — Гэдан-барай
-    [-1.02, 0.02, 3.26],    // 11: Шаг вперед — Ой-цуки
-    [-0.22, 0.02, 3.54],    // 12: Разворот 180° вправо — Гэдан-барай
-    [0.68, 0.02, 3.54],     // 13: Шаг вперед — Ой-цуки
-    [0.14, 0.02, 3.28],     // 14: Поворот влево 90° на центральную ось — Гэдан-барай
-    [0.14, 0.02, 2.38],     // 15: Шаг вперед — 1-й Ой-цуки
-    [0.14, 0.02, 1.48],     // 16: Шаг вперед — 2-й Ой-цуки
-    [0.14, 0.02, 0.58],     // 17: Шаг вперед — 3-й Ой-цуки [КИАЙ]
-    [0.47, 0.02, -0.04],    // 18: Разворот через спину 90° — Сюто-укэ в Кокуцу-дати
-    [1.07, 0.02, 0.09],     // 19: Шаг 45° — Сюто-укэ
-    [0.83, 0.02, -0.25],    // 20: Разворот через спину 135° — Сюто-укэ
-    [0.23, 0.02, -0.12],    // 21: Шаг 45° — Финальный Сюто-укэ
-  ],
+export {
+  ALL_KATA_SLUGS,
+  resolveKataSlug,
+  CANONICAL_EMBUSEN,
+  HEIAN_SHODAN_CANONICAL_EVENTS,
+  normalizeAngleDeg,
+  parseStepOrientation,
+  computeTrajectory,
+  compileKataScenario,
+  resolveComposedClip,
+  TECHNIQUE_REGISTRY,
 };
 
-// Канонические временные интервалы всех 21 шагов из мастер-анимации Heian Shodan (60 FPS)
-const HEIAN_SHODAN_CANONICAL_EVENTS = [
-  { moveNumber: 1, startTime: 1.20, endTime: 2.46, form: 'zenkutsu' },
-  { moveNumber: 2, startTime: 2.46, endTime: 3.56, form: 'zenkutsu' },
-  { moveNumber: 3, startTime: 3.56, endTime: 4.97, form: 'zenkutsu' },
-  { moveNumber: 4, startTime: 4.97, endTime: 6.21, form: 'moto' },
-  { moveNumber: 5, startTime: 6.21, endTime: 7.31, form: 'zenkutsu' },
-  { moveNumber: 6, startTime: 7.31, endTime: 8.62, form: 'zenkutsu' },
-  { moveNumber: 7, startTime: 8.62, endTime: 9.80, form: 'zenkutsu' },
-  { moveNumber: 8, startTime: 9.80, endTime: 10.98, form: 'zenkutsu' },
-  { moveNumber: 9, startTime: 10.98, endTime: 12.16, form: 'zenkutsu', kiai: true },
-  { moveNumber: 10, startTime: 12.16, endTime: 13.72, form: 'zenkutsu' },
-  { moveNumber: 11, startTime: 13.72, endTime: 14.82, form: 'zenkutsu' },
-  { moveNumber: 12, startTime: 14.82, endTime: 16.23, form: 'zenkutsu' },
-  { moveNumber: 13, startTime: 16.23, endTime: 17.33, form: 'zenkutsu' },
-  { moveNumber: 14, startTime: 17.33, endTime: 18.64, form: 'zenkutsu' },
-  { moveNumber: 15, startTime: 18.64, endTime: 19.74, form: 'zenkutsu' },
-  { moveNumber: 16, startTime: 19.74, endTime: 20.84, form: 'zenkutsu' },
-  { moveNumber: 17, startTime: 20.84, endTime: 21.94, form: 'zenkutsu', kiai: true },
-  { moveNumber: 18, startTime: 21.94, endTime: 23.55, form: 'kokutsu' },
-  { moveNumber: 19, startTime: 23.55, endTime: 24.86, form: 'kokutsu' },
-  { moveNumber: 20, startTime: 24.86, endTime: 26.42, form: 'kokutsu' },
-  { moveNumber: 21, startTime: 26.42, endTime: 27.73, form: 'kokutsu' },
-];
+/**
+ * Интерактивная 3D-траектория эмбусэна на татами:
+ * - Золотая каноническая линия между точками шагов
+ * - Маркеры шагов с подсветкой текущего положения и точек КИАЙ
+ * - Поддержка клика по маркеру для перехода к нужному шагу
+ */
+function EmbusenTrajectory({ points = [], currentIdx = 0, onSelectStep = null, events = [] }) {
+  const linePoints = useMemo(() => {
+    if (!points || points.length === 0) return [];
+    return points.map((p) => new THREE.Vector3(p[0], 0.02, p[2]));
+  }, [points]);
+
+  const lineGeometry = useMemo(() => {
+    if (linePoints.length < 2) return null;
+    return new THREE.BufferGeometry().setFromPoints(linePoints);
+  }, [linePoints]);
+
+  return (
+    <group>
+      {lineGeometry && (
+        <line geometry={lineGeometry}>
+          <lineBasicMaterial color="#c5a059" opacity={0.65} transparent linewidth={2} />
+        </line>
+      )}
+      {points.map((p, idx) => {
+        const isCurrent = idx === currentIdx;
+        const isKiai = Boolean(events[idx]?.kiai);
+        const markerColor = isCurrent ? '#ffd700' : (isKiai ? '#ef4444' : '#c5a059');
+        const markerRadius = isCurrent ? 0.08 : 0.045;
+
+        return (
+          <mesh
+            key={idx}
+            position={[p[0], 0.025, p[2]]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onSelectStep) onSelectStep(idx);
+            }}
+          >
+            <circleGeometry args={[markerRadius, 16]} />
+            <meshBasicMaterial color={markerColor} opacity={isCurrent ? 0.95 : 0.6} transparent />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
 
 /**
  * Плавный кинематографический риг камеры:
@@ -124,16 +104,24 @@ const HEIAN_SHODAN_CANONICAL_EVENTS = [
  * синхронно перемещая фокус и позицию, благодаря чему угол поворота и зум пользователя сохраняются.
  * В статическом режиме камера полностью неподвижна, позволяя изучать форму из одной точки.
  */
-function SmoothCameraRig({ targetPosition, follow, hasStarted, controlsRef }) {
+function SmoothCameraRig({ targetPosition, avatarRealPosRef, isFullMode, follow, hasStarted, controlsRef }) {
   useFrame((state, delta) => {
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
     if (!hasStarted) return;
 
-    if (follow && targetPosition) {
-      const tx = targetPosition[0];
-      const tz = targetPosition[2];
+    if (follow) {
+      // В режиме полной демонстрации камера плавно следует за ТОЧНЫМ физическим положением аватара
+      // (Hips/Root в мировом пространстве Three.js), благодаря чему камера никогда не опережает мастера!
+      const currentPos = (isFullMode && avatarRealPosRef?.current)
+        ? avatarRealPosRef.current
+        : targetPosition;
+
+      if (!currentPos) return;
+
+      const tx = currentPos[0];
+      const tz = currentPos[2];
       const ty = 0.95;
 
       const factor = 1.0 - Math.exp(-3.5 * Math.min(delta, 0.1));
@@ -172,6 +160,8 @@ export default function KataSequencer({
   const [cameraFollow, setCameraFollow] = useState(true);
   const [warningMessage, setWarningMessage] = useState(null);
   const [playbackMode, setPlaybackMode] = useState('steps'); // 'steps' | 'full'
+  const kataSlug = useMemo(() => resolveKataSlug(kataTitle), [kataTitle]);
+  const [executionMethod, setExecutionMethod] = useState('composed'); // 'composed' | 'mocap'
   const [kataJsonData, setKataJsonData] = useState(null);
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -179,8 +169,7 @@ export default function KataSequencer({
   const [scrubProgress, setScrubProgress] = useState(null);
 
   const controlsRef = useRef();
-
-  const kataSlug = useMemo(() => resolveKataSlug(kataTitle), [kataTitle]);
+  const avatarRealPosRef = useRef([0, 0, 0]);
 
   // Загружаем канонические метаданные ката из /kata_data/*.json
   useEffect(() => {
@@ -194,95 +183,50 @@ export default function KataSequencer({
       .catch(() => {});
   }, [kataSlug]);
 
-  // Синхронизация внешнего индекса шага
+  // Синхронизация внешнего индекса шага: немедленный перезапуск одиночного действия
   useEffect(() => {
     if (activeStepIndex !== undefined && activeStepIndex !== currentIdx) {
       setCurrentIdx(activeStepIndex);
       setHasStarted(true);
       setIsPlaying(true);
+      setReplayTrigger((prev) => prev + 1);
     }
   }, [activeStepIndex]);
 
-  // Вычисление траектории эмбусэна (реальные координаты Root Motion либо эвристика)
-  const { stepPositions, embusenPoints } = useMemo(() => {
-    if (CANONICAL_EMBUSEN[kataSlug]) {
-      const pts = CANONICAL_EMBUSEN[kataSlug];
-      const positions = pts.map((p) => ({
-        position: [p[0], 0, p[2]],
-        rotation: [0, 0, 0],
-      }));
-      return { stepPositions: positions, embusenPoints: pts };
-    }
+  const rawJsonSteps = kataJsonData?.steps || kataJsonData?.events || [];
 
-    let curX = 0;
-    let curZ = 0;
-    let curAngleDeg = 0;
-    const positions = [];
-    const points = [[0, 0.02, 0]];
+  // Единая компиляция сценария ката через kataCompositionEngine
+  const composedScenario = useMemo(() => {
+    const rawSteps = (steps && steps.length > 0) ? steps : rawJsonSteps;
+    return compileKataScenario(rawSteps, kataSlug);
+  }, [steps, rawJsonSteps, kataSlug]);
 
-    steps.forEach((s) => {
-      const dx = s.Root_Displacement_X || 0;
-      const dz = s.Root_Displacement_Z || 0;
-      const dYaw = s.Root_Rotation_Yaw || 0;
-
-      let stepDx = dx;
-      let stepDz = dz;
-      let stepYaw = dYaw;
-
-      if (dx === 0 && dz === 0) {
-        const dir = (s.Direction || '').toLowerCase();
-        if (dir.includes('влево') || dir.includes('left') || dir.includes('90°')) {
-          stepDx = -0.85;
-          stepYaw = 90;
-        } else if (dir.includes('вправо') || dir.includes('right')) {
-          stepDx = 0.85;
-          stepYaw = -90;
-        } else if (dir.includes('вперед') || dir.includes('forward')) {
-          stepDz = 0.85;
-          stepYaw = 0;
-        } else if (dir.includes('назад') || dir.includes('backward') || dir.includes('180°')) {
-          stepDz = -0.85;
-          stepYaw = 180;
-        }
-      }
-
-      curX += stepDx;
-      curZ += stepDz;
-      curAngleDeg += stepYaw;
-
-      positions.push({
-        position: [curX, 0, curZ],
-        rotation: [0, (curAngleDeg * Math.PI) / 180, 0],
-      });
-
-      points.push([curX, 0.02, curZ]);
-    });
-
-    return { stepPositions: positions, embusenPoints: points };
-  }, [steps, kataSlug]);
-
-  const events = kataJsonData?.events || (kataSlug === 'heian_shodan' ? HEIAN_SHODAN_CANONICAL_EVENTS : []);
-  const totalStepsCount = Math.max(steps.length, events.length) || 21;
-  const currentStep = steps[currentIdx] || steps[0] || {};
-  const currentPosData = stepPositions[currentIdx] || { position: [0, 0, 0], rotation: [0, 0, 0] };
-  const currentEvent = events[currentIdx];
+  const composedSteps = composedScenario.steps;
+  const embusenPoints = composedScenario.embusenPoints;
+  const totalStepsCount = composedSteps.length || 21;
+  const currentStep = composedSteps[currentIdx] || {};
+  const currentPosData = currentStep.position
+    ? { position: currentStep.position, rotation: currentStep.rotation }
+    : { position: [0, 0, 0], rotation: [0, 0, 0] };
 
   // Временной диапазон текущего шага в MoCap-анимации Heian Shodan
   const kataTimeRange = useMemo(() => {
     if (playbackMode === 'full') return null;
-    if (currentEvent && currentEvent.startTime !== undefined && currentEvent.endTime !== undefined) {
-      return [currentEvent.startTime, currentEvent.endTime];
+    const sTime = currentStep.mocapStartTime !== undefined ? currentStep.mocapStartTime : currentStep.startTime;
+    const eTime = currentStep.mocapEndTime !== undefined ? currentStep.mocapEndTime : currentStep.endTime;
+    if (sTime !== undefined && eTime !== undefined) {
+      return [sTime, eTime];
     }
     return null;
-  }, [playbackMode, currentEvent]);
+  }, [playbackMode, currentStep]);
 
   // Длительность текущего шага в секундах
   const stepDurationSec = useMemo(() => {
-    if (currentEvent && currentEvent.startTime !== undefined && currentEvent.endTime !== undefined) {
-      return (currentEvent.endTime - currentEvent.startTime).toFixed(2);
+    if (currentStep.duration !== undefined) {
+      return Number(currentStep.duration).toFixed(2);
     }
     return (currentStep.Duration || 2.0).toFixed(2);
-  }, [currentEvent, currentStep.Duration]);
+  }, [currentStep]);
 
   // При первом переходе из стойки Йой к изучению ката однократно плавно фокусируем мастера
   useEffect(() => {
@@ -298,6 +242,7 @@ export default function KataSequencer({
     setHasStarted(true);
     setIsPlaying(true);
     setScrubProgress(null);
+    setReplayTrigger((prev) => prev + 1);
     if (onStepChange) onStepChange(idx);
   }, [onStepChange]);
 
@@ -305,32 +250,41 @@ export default function KataSequencer({
     if (playbackMode === 'steps') {
       if (!isLooping) {
         if (currentIdx < totalStepsCount - 1) {
-          selectStep(currentIdx + 1);
+          // Выдерживаем паузу Дзансин (фиксация техники перед следующим шагом)
+          setTimeout(() => {
+            selectStep(currentIdx + 1);
+          }, 300);
         } else {
           setIsPlaying(false);
         }
       }
     } else if (playbackMode === 'full') {
       setIsPlaying(false);
+      setCurrentTime(totalDuration);
     }
-  }, [playbackMode, isLooping, currentIdx, totalStepsCount, selectStep]);
+  }, [playbackMode, isLooping, currentIdx, totalStepsCount, selectStep, totalDuration]);
 
   // Синхронизация времени в реальном времени при полном мастер-прогоне
-  const handleTimeUpdate = useCallback((time, dur) => {
+  const handleTimeUpdate = useCallback((time, dur, rootPos) => {
     setCurrentTime(time);
-    if (dur > 0) setTotalDuration(dur);
+    if (dur > 0 && playbackMode === 'full') setTotalDuration(dur);
+    if (rootPos) {
+      avatarRealPosRef.current = rootPos;
+    }
 
     if (playbackMode === 'full') {
-      const activeEvents = kataJsonData?.events || (kataSlug === 'heian_shodan' ? HEIAN_SHODAN_CANONICAL_EVENTS : []);
-      const evIdx = activeEvents.findIndex(
-        (ev) => time >= ev.startTime && time <= ev.endTime
-      );
+      const activeEvents = composedSteps;
+      const evIdx = activeEvents.findIndex((ev) => {
+        const sTime = ev.mocapStartTime !== undefined ? ev.mocapStartTime : ev.startTime;
+        const eTime = ev.mocapEndTime !== undefined ? ev.mocapEndTime : ev.endTime;
+        return time >= sTime && time <= eTime;
+      });
       if (evIdx !== -1 && evIdx !== currentIdx) {
         setCurrentIdx(evIdx);
         if (onStepChange) onStepChange(evIdx);
       }
     }
-  }, [playbackMode, kataJsonData, kataSlug, currentIdx, onStepChange]);
+  }, [playbackMode, composedSteps, currentIdx, onStepChange]);
 
   function resetCamera() {
     if (controlsRef.current) {
@@ -341,12 +295,7 @@ export default function KataSequencer({
     }
   }
 
-  const isCurrentKiai = Boolean(
-    currentEvent?.kiai ||
-    kataJsonData?.kiaiMoves?.includes(currentIdx + 1) ||
-    currentStep.Title?.includes('КИАЙ') ||
-    currentStep.Technique?.includes('КИАЙ')
-  );
+  const isCurrentKiai = Boolean(currentStep.kiai);
 
   return (
     <div
@@ -381,20 +330,25 @@ export default function KataSequencer({
           {/* Традиционное деревянное додзё и татами */}
           <TraditionalDojo />
 
-          {/* Аватар мастера Шотокан: точные подклипы шагов или непрерывная форма */}
+          {/* Аватар мастера Шотокан: составление ката из переиспользуемых клипов v4 либо MoCap мастер */}
           <KaratekaLowpolyModel
             role="tori"
             kataMode={hasStarted}
-            stance="ready"
+            stance={currentStep.stance || 'ready'}
+            stepClip={playbackMode === 'full' ? null : (executionMethod === 'composed' ? currentStep.clipName : null)}
+            blendDuration={currentStep.blendDuration || 0.14}
+            kataExecutionMode={playbackMode === 'full' ? 'full' : executionMethod}
             kataClipName={kataSlug}
-            kataTimeRange={playbackMode === 'steps' ? kataTimeRange : null}
+            kataTimeRange={playbackMode === 'steps' && executionMethod === 'mocap' ? kataTimeRange : null}
             kataScrubProgress={scrubProgress}
             speed={speed}
             isPlaying={hasStarted && isPlaying}
             isLooping={playbackMode === 'steps' ? isLooping : false}
             replayTrigger={replayTrigger}
-            position={[0, 0, 0]}
-            rotation={[0, 0, 0]}
+            currentStep={currentStep}
+            prevStep={composedSteps[currentIdx - 1] || null}
+            position={playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.position : [0, 0, 0])}
+            rotation={playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.rotation : [0, 0, 0])}
             onStepEnd={handleStepEnd}
             onTimeUpdate={handleTimeUpdate}
           />
@@ -409,6 +363,8 @@ export default function KataSequencer({
 
           <SmoothCameraRig
             targetPosition={currentPosData.position}
+            avatarRealPosRef={avatarRealPosRef}
+            isFullMode={playbackMode === 'full'}
             follow={cameraFollow}
             hasStarted={hasStarted}
             controlsRef={controlsRef}
@@ -536,7 +492,9 @@ export default function KataSequencer({
               )}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--color-gold, #c5a059)', marginTop: 2, fontWeight: 600 }}>
-              {!hasStarted ? 'Стойка Йой (Сидзэнтай) — готовность к началу' : (currentStep.Technique || 'Каноническая техника')}
+              {!hasStarted
+                ? 'Стойка Йой (Сидзэнтай) — готовность к началу'
+                : `${currentStep.technique || currentStep.title || 'Каноническая техника'} • Стойка: ${currentStep.stance || 'zenkutsu'} • ${currentStep.facingDeg}°`}
             </div>
           </div>
 
@@ -618,6 +576,8 @@ export default function KataSequencer({
                 setPlaybackMode('steps');
                 setHasStarted(true);
                 setIsPlaying(true);
+                setScrubProgress(null);
+                setReplayTrigger((prev) => prev + 1);
               }}
               style={{
                 padding: '5px 12px',
@@ -636,6 +596,9 @@ export default function KataSequencer({
                 setPlaybackMode('full');
                 setHasStarted(true);
                 setIsPlaying(true);
+                setCurrentTime(0);
+                setScrubProgress(0);
+                setReplayTrigger((prev) => prev + 1);
               }}
               style={{
                 padding: '5px 12px',
@@ -646,8 +609,44 @@ export default function KataSequencer({
                 fontWeight: playbackMode === 'full' ? 700 : 500,
               }}
             >
-              ⚡ Всё ката (как на aimokap)
+              ⚡ Всё ката
             </button>
+          </div>
+
+          {/* Метод воспроизведения: Клипы v4 (Композиция) vs MoCap мастер */}
+          <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
+            <button
+              className="btn"
+              onClick={() => setExecutionMethod('composed')}
+              style={{
+                padding: '5px 10px',
+                fontSize: '0.78rem',
+                border: executionMethod === 'composed' ? '1px solid var(--color-gold, #c5a059)' : 'none',
+                background: executionMethod === 'composed' ? 'rgba(197, 160, 89, 0.2)' : 'transparent',
+                color: executionMethod === 'composed' ? 'var(--color-gold, #c5a059)' : 'var(--color-text-muted, #a0a0a0)',
+                fontWeight: executionMethod === 'composed' ? 700 : 500,
+              }}
+              title="Собрать ката из библиотеки 213 переиспользуемых клипов техник и стоек Шотокан"
+            >
+              🥋 Клипы v4
+            </button>
+            {kataSlug === 'heian_shodan' && (
+              <button
+                className="btn"
+                onClick={() => setExecutionMethod('mocap')}
+                style={{
+                  padding: '5px 10px',
+                  fontSize: '0.78rem',
+                  border: executionMethod === 'mocap' ? '1px solid #68d391' : 'none',
+                  background: executionMethod === 'mocap' ? 'rgba(104, 211, 145, 0.2)' : 'transparent',
+                  color: executionMethod === 'mocap' ? '#68d391' : 'var(--color-text-muted, #a0a0a0)',
+                  fontWeight: executionMethod === 'mocap' ? 700 : 500,
+                }}
+                title="Монолитная MoCap запись ката"
+              >
+                ⚡ MoCap
+              </button>
+            )}
           </div>
 
           {/* Кнопки воспроизведения, паузы и повтора */}

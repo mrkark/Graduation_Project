@@ -6,6 +6,7 @@ import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
+import { resolveMediaUrl } from '../utils/media';
 import '../three/avatarWidget.css';
 
 const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
@@ -123,13 +124,27 @@ export default function BunkaiDetailPage() {
         </div>
 
         <aside>
-          <div className="panel">
-            <h4 style={{ marginBottom: '0.6rem' }}>Связанное ката</h4>
-            <p style={{ fontSize: '0.9rem', marginBottom: '0.8rem' }}>
-              Этот бункай является разбором движений канона:
+          <div className="panel bunkai-kata-card-aside">
+            <h4 style={{ marginBottom: '0.8rem' }}>Связанное ката</h4>
+            {bunkai.Thumbnail_URL && (
+              <div
+                className="aside-kata-thumb"
+                style={{
+                  backgroundImage: `url("${resolveMediaUrl(bunkai.Thumbnail_URL)}")`,
+                  height: '140px',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  borderRadius: 'var(--radius-sm, 4px)',
+                  marginBottom: '0.8rem',
+                  border: '1px solid var(--border, rgba(197, 160, 89, 0.25))',
+                }}
+              />
+            )}
+            <p style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.8rem', color: 'var(--gold, #c5a059)' }}>
+              {bunkai.Kata?.Title}
             </p>
-            <Link to={`/kata/${bunkai.Kata_ID}`} className="btn btn-primary" style={{ width: '100%', textAlign: 'center' }}>
-              Смотреть ката
+            <Link to={`/kata/${bunkai.Kata_ID}`} className="btn btn-gold" style={{ width: '100%', textAlign: 'center' }}>
+              Перейти к разбору ката →
             </Link>
           </div>
         </aside>

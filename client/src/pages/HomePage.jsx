@@ -55,6 +55,10 @@ export default function HomePage() {
                 <span className="btn-kanji">解</span>
                 <span>Каталог бункаев</span>
               </Link>
+              <Link to="/motion-lab" className="btn btn-subtle btn-hero-split">
+                <span className="btn-kanji">動</span>
+                <span>AI Мокап Додзё</span>
+              </Link>
             </div>
 
             <div className="hero-split__stats">
@@ -149,6 +153,21 @@ export default function HomePage() {
             </p>
             <Link to="/friends" className="pillar-card__link">
               Найти соратников →
+            </Link>
+          </div>
+
+          <div className="pillar-card">
+            <div className="pillar-card__top">
+              <div className="pillar-card__kanji-badge">動</div>
+              <span className="pillar-card__en">AI MOCAP</span>
+            </div>
+            <h3 className="pillar-card__title">Захват Движений & Зеркало</h3>
+            <p className="pillar-card__desc">
+              Отслеживайте стойки и удары через камеру ПК или смартфона в реальном времени.
+              Оценка углов суставов (ма-ай, кимэ) и управление 3D-аватаром каратиста.
+            </p>
+            <Link to="/motion-lab" className="pillar-card__link">
+              Запустить AI Додзё →
             </Link>
           </div>
         </div>

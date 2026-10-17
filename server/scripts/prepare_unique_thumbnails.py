@@ -13,11 +13,11 @@ os.makedirs(dist_img_dir, exist_ok=True)
 # 8 authentic master photography sources in the dark cedar dojo:
 # Exactly 1 person, exactly 2 arms, no chest embroidery, full sleeves, pure black belt
 BASE = {
-    "shuto": os.path.join(uploads_dir, "sensei_shuto_uke_1789846341208.jpg"),
-    "gedan": os.path.join(uploads_dir, "sensei_gedan_barai_1789846298650.jpg"),
-    "age": os.path.join(uploads_dir, "sensei_age_uke_1789846327585.jpg"),
-    "tettsui": os.path.join(uploads_dir, "sensei_kiba_tettsui_1789846357272.jpg"),
-    "punch": os.path.join(uploads_dir, "sensei_oi_tsuki_1789846313559.jpg"),
+    "shuto": os.path.join(uploads_dir, "step-shuto-uke.jpg"),
+    "gedan": os.path.join(uploads_dir, "step-gedan-barai.jpg"),
+    "age": os.path.join(uploads_dir, "step-age-uke.jpg"),
+    "tettsui": os.path.join(uploads_dir, "step-kiba-tettsui.jpg"),
+    "punch": os.path.join(uploads_dir, "step-oi-tsuki.jpg"),
     "shodan_deep": os.path.join(brain_dir, "kata_heian_shodan_1789889395228.jpg"),
     "chudan_deep": os.path.join(brain_dir, "kata_heian_nidan_1789889492540.jpg"),
     "guard": os.path.join(uploads_dir, "sensei-preview.jpg"),

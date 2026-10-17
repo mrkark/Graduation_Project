@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { solveTwoBoneIK, getContactIKWeight } from './ikSolver';
 import { animationRegistry } from './animationRegistry';
+import { resolveBunkaiClip } from './bunkaiScenarioEngine';
 
 /**
  * Аутентичный 3D-аватар каратиста Шотокан для многопользовательских симуляций Бункая.
@@ -13,7 +14,10 @@ import { animationRegistry } from './animationRegistry';
  * - 'uke' / 'uke1' (традиционное индиго доги)
  * - 'uke2' (графитовое доги для флангового нападающего)
  *
- * Интегрирован с аналитическим 2-Bone IK для точной доводки рук при изменении боевой дистанции.
+ * Интегрирован с:
+ * - Единой библиотекой техник каратэ Шотокан v4 (/models/karateka_techniques_v4.glb, 213 клипов).
+ * - Аналитическим 2-Bone IK для точной доводки рук при изменении боевой дистанции.
+ * - Синхронизацией времени мастер-шкалы (timelineTime) и задержкой старта (delaySeconds).
  */
 
 // Глобальный кэш распарсенных AnimationClip
@@ -118,19 +122,23 @@ export default function MultiAvatarModel({
   rotation = [0, 0, 0],
   speed = 1.0,
   isPlaying = true,
-  scrubProgress = null, // 0.0 .. 1.0 для покадровой синхронизации фаз
-  ikTarget = null,     // THREE.Vector3 мировой таргет контакта (например кулак в торс/блок)
+  scrubProgress = null, // 0.0 .. 1.0 для покадровой синхронизации
+  timelineTime = null,  // текущее время мастер-шкалы в секундах
+  delaySeconds = 0,     // задержка вступления участника в бой
+  waitingClip = null,   // клип стойки во время ожидания
+  ikTarget = null,      // THREE.Vector3 мировой таргет контакта
   ikContactTime = 0.45,
   interactionType = 'non_contact',
   onMissingClip = null,
-  onTrackBones = null, // callback с позициями костей груди и рук для соседних бойцов
+  onTrackBones = null,  // callback с позициями костей для таргетинга соседей
 }) {
   const groupRef = useRef();
   const bonesRef = useRef({});
 
-  const { scene, animations } = useGLTF('/models/karateka_lowpoly.glb');
+  // Загружаем единую библиотеку техник каратэ Шотокан v4 (213 клипов)
+  const { scene, animations } = useGLTF('/models/karateka_techniques_v4.glb');
 
-  // Клонируем SkinnedMesh через SkeletonUtils
+  // Клонируем SkinnedMesh через SkeletonUtils для независимых мешей участников
   const { clonedModel, modelScale, modelYOffset, sceneNames } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene);
     const bbox = new THREE.Box3().setFromObject(clone);
@@ -140,14 +148,14 @@ export default function MultiAvatarModel({
     const s = size.y > 0 ? 1.78 / size.y : 1.0;
     const yOffset = -bbox.min.y * s;
 
-    let giColor = '#faf9f6';
-    let beltColor = '#141414';
+    let giColor = '#faf9f6'; // Белоснежное доги мастера Тори
+    let beltColor = '#141414'; // Черный пояс 5-й Дан
 
     if (role === 'uke' || role === 'uke1') {
-      giColor = '#243346';
+      giColor = '#243346'; // Традиционное индиго доги главного нападающего
       beltColor = '#181818';
     } else if (role === 'uke2') {
-      giColor = '#342b2b';
+      giColor = '#342b2b'; // Графитовое доги флангового нападающего
       beltColor = '#3a1212';
     }
 
@@ -187,7 +195,7 @@ export default function MultiAvatarModel({
     return { clonedModel: clone, modelScale: s, modelYOffset: yOffset, sceneNames: sceneNamesSet };
   }, [scene, role]);
 
-  // Кэшируем ссылки на важные кости для IK и трекинга коллизий
+  // Кэшируем ссылки на кости для IK и трекинга коллизий
   useEffect(() => {
     const b = {};
     clonedModel.traverse((obj) => {
@@ -202,7 +210,7 @@ export default function MultiAvatarModel({
   const mixer = useMemo(() => new THREE.AnimationMixer(clonedModel), [clonedModel]);
   const activeActionRef = useRef(null);
 
-  // Инициализация пула анимаций
+  // Инициализация пула 213 анимаций
   useEffect(() => {
     if (animations && animations.length > 0) {
       animations.forEach((c) => globalClipCache.set(c.name, c));
@@ -214,27 +222,48 @@ export default function MultiAvatarModel({
     animationRegistry.init();
   }, [animations]);
 
-  // Определение актуального клипа для воспроизведения
+  // Определение актуального клипа для воспроизведения (с учетом ожидания delaySeconds)
+  const isWaiting = timelineTime !== null && timelineTime < delaySeconds;
+
   const effectiveClipName = useMemo(() => {
-    if (clipName) return clipName;
+    if (isWaiting) {
+      if (waitingClip) return waitingClip;
+      if (stance === 'kokutsu') return 'kokutsu_dachi_left';
+      if (stance === 'zenkutsu') return 'zenkutsu_dachi_left';
+      if (stance === 'kiba') return 'kiba_dachi';
+      return 'idle_shizentai';
+    }
+
+    if (clipName) {
+      const resolved = resolveBunkaiClip(clipName);
+      if (resolved && resolved.clipName) return resolved.clipName;
+      return clipName;
+    }
     if (stance) {
       if (ACTION_ALIASES[stance]) return ACTION_ALIASES[stance];
       return stance;
     }
     return 'idle_shizentai';
-  }, [clipName, stance]);
+  }, [isWaiting, waitingClip, clipName, stance]);
+
+  // Поиск AnimationClip в кэше с проверкой всех алиасов
+  const targetClip = useMemo(() => {
+    if (globalClipCache.has(effectiveClipName)) return globalClipCache.get(effectiveClipName);
+    if (ACTION_ALIASES[effectiveClipName] && globalClipCache.has(ACTION_ALIASES[effectiveClipName])) {
+      return globalClipCache.get(ACTION_ALIASES[effectiveClipName]);
+    }
+    const resolved = resolveBunkaiClip(effectiveClipName);
+    if (resolved && globalClipCache.has(resolved.clipName)) {
+      return globalClipCache.get(resolved.clipName);
+    }
+    return null;
+  }, [effectiveClipName]);
 
   // Запуск клипа
   useEffect(() => {
     if (!mixer) return;
 
-    let targetClip = globalClipCache.get(effectiveClipName);
-    if (!targetClip && ACTION_ALIASES[effectiveClipName]) {
-      targetClip = globalClipCache.get(ACTION_ALIASES[effectiveClipName]);
-    }
-
     if (!targetClip) {
-      // ЗАПРЕЩЕНА скрытая замена на idle: фиксируем отсутствие в реестре и оповещаем плеер
       animationRegistry.reportMissing(effectiveClipName, {
         role,
         context: `MultiAvatarModel runtime player for role ${role}`,
@@ -250,10 +279,15 @@ export default function MultiAvatarModel({
     action.reset();
     action.timeScale = speed;
 
-    if (scrubProgress !== null) {
-      // Режим ручного скраббера: фиксируем время
+    if (scrubProgress !== null || timelineTime !== null) {
+      // Режим ручного скраббера или мастер-шкалы: время управляется вручную
       action.paused = true;
-      action.time = scrubProgress * filtered.duration;
+      if (scrubProgress !== null) {
+        action.time = scrubProgress * filtered.duration;
+      } else if (timelineTime !== null) {
+        const localTime = Math.max(0, timelineTime - delaySeconds);
+        action.time = Math.min(filtered.duration, localTime);
+      }
       action.play();
     } else {
       action.paused = !isPlaying;
@@ -265,16 +299,21 @@ export default function MultiAvatarModel({
     }
 
     activeActionRef.current = action;
-  }, [effectiveClipName, mixer, sceneNames, speed, isPlaying, scrubProgress, role, onMissingClip]);
+  }, [targetClip, effectiveClipName, mixer, sceneNames, speed, isPlaying, scrubProgress, timelineTime, delaySeconds, role, onMissingClip]);
 
   // Обновление состояния в кадре и применение 2-Bone IK
   useFrame((_, delta) => {
-    if (mixer) {
-      if (scrubProgress === null && isPlaying) {
-        mixer.update(delta);
-      } else if (activeActionRef.current && scrubProgress !== null) {
+    if (mixer && activeActionRef.current) {
+      if (scrubProgress !== null) {
         activeActionRef.current.time = scrubProgress * activeActionRef.current.getClip().duration;
         mixer.update(0);
+      } else if (timelineTime !== null) {
+        const localTime = Math.max(0, timelineTime - delaySeconds);
+        const dur = activeActionRef.current.getClip().duration;
+        activeActionRef.current.time = Math.min(dur, localTime);
+        mixer.update(0);
+      } else if (isPlaying) {
+        mixer.update(delta);
       }
     }
 
@@ -287,10 +326,10 @@ export default function MultiAvatarModel({
 
       if (rootArm && foreArm && hand) {
         const curTime = activeActionRef.current.time;
-        const ikWeight = getContactIKWeight(curTime, ikContactTime, 0.20);
+        const ikWeight = getContactIKWeight(curTime, ikContactTime, 0.22);
 
         if (ikWeight > 0.01) {
-          // Вектор сгиба локтя наружу и немного вниз
+          // Вектор сгиба локтя наружу
           const polePos = new THREE.Vector3();
           rootArm.getWorldPosition(polePos);
           polePos.x += (role === 'tori' ? 0.35 : -0.35);
@@ -304,7 +343,7 @@ export default function MultiAvatarModel({
     // Экспорт позиций суставов для коллизий и таргетинга соседей
     if (onTrackBones && bonesRef.current) {
       const chest = bonesRef.current['mixamorigSpine2'] || bonesRef.current['mixamorigHips'];
-      const hand = bonesRef.current['mixamorigRightHand'];
+      const hand = bonesRef.current['mixamorigRightHand'] || bonesRef.current['mixamorigLeftHand'];
       if (chest) {
         const chestPos = new THREE.Vector3();
         chest.getWorldPosition(chestPos);
@@ -327,4 +366,4 @@ export default function MultiAvatarModel({
   );
 }
 
-useGLTF.preload('/models/karateka_lowpoly.glb');
+useGLTF.preload('/models/karateka_techniques_v4.glb');

@@ -18,6 +18,8 @@ import FriendsPage from './pages/FriendsPage';
 import ChatPage from './pages/ChatPage';
 import MotionLabPage from './pages/MotionLabPage';
 
+import PhoneCameraPage from './pages/PhoneCameraPage';
+
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
@@ -62,6 +64,7 @@ export default function App() {
           <Route path="/motion-lab" element={<MotionLabPage />} />
           <Route path="/aimocap" element={<MotionLabPage />} />
         </Route>
+        <Route path="/phone-camera" element={<PhoneCameraPage />} />
 
         {/* Все остальные маршруты требуют авторизации — иначе редирект на /register */}
         <Route element={<RequireAuth />}>

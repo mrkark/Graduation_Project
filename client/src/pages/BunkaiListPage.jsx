@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
 import StatusBadge from '../components/StatusBadge';
+import { resolveMediaUrl } from '../utils/media';
 
 const DIFFICULTY_LABELS = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', master: 'Мастер' };
 
@@ -72,8 +73,20 @@ export default function BunkaiListPage() {
         <div className="grid grid-cards">
           {items.map((b) => (
             <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="card">
-              <div className="card__thumb" style={b.Thumbnail_URL ? { backgroundImage: `url(${b.Thumbnail_URL})` } : undefined}>
-                {!b.Thumbnail_URL && '分解 Бункай'}
+              <div
+                className="card__thumb"
+                style={
+                  b.Thumbnail_URL
+                    ? { backgroundImage: `url("${resolveMediaUrl(b.Thumbnail_URL)}")` }
+                    : undefined
+                }
+              >
+                {!b.Thumbnail_URL && (
+                  <div className="card__fallback">
+                    <span className="card__kanji">分解</span>
+                    <span>Бункай</span>
+                  </div>
+                )}
               </div>
               <div className="card__body">
                 <div className="card__meta">

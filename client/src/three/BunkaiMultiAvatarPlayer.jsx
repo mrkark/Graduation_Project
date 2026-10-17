@@ -4,66 +4,31 @@ import { OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import MultiAvatarModel from './MultiAvatarModel';
 import TraditionalDojo from './TraditionalDojo';
-import { resolveAvatarCollision, resolveThreeAvatarsCollision } from './collisionAvoidance';
+import {
+  CANONICAL_BUNKAI_EPISODES,
+  normalizeBunkaiEpisode,
+  computeAvatarPlacement,
+  evaluateTimelineState,
+  chainBunkaiEpisodes,
+  resolveBunkaiClip,
+} from './bunkaiScenarioEngine';
 import { animationRegistry } from './animationRegistry';
 
 /**
  * Универсальный плеер боевого применения (Бункай) Шотокан с поддержкой 2 и 3 аватаров.
  * Обеспечивает:
- * - Точное воспроизведение структурированных шагов Бункая из БД.
- * - Интерактивную настройку боевой дистанции (Ма-ай) и угла атаки.
- * - Анти-проникновение тел (капсульные коллизии).
+ * - Воспроизведение структурированных шагов Бункая из БД / конструктора / канонических сценариев.
+ * - Интерактивную настройку боевой дистанции (Ма-ай) и угла атаки противника.
+ * - Анти-проникновение тел (капсульные коллизии min 0.54м).
  * - Доводку рук через 2-Bone IK в окне боевого контакта.
+ * - Мастер-шкалу времени (timelineTime) с задержками (delaySeconds) и плавным скраббингом.
+ * - Поддержку командного бункая (3 участника) с разворотом Тори ко второму нападающему.
+ * - Сохранение состояния (позиций и углов) между последовательными эпизодами.
  * - Детектирование отсутствующих анимаций и предупреждающие баннеры (без скрытых подмен).
  */
 
-const DEFAULT_EPISODES = [
-  {
-    stepNumber: 1,
-    title: 'Защита Сюто-укэ против выпада Ой-цуки',
-    description: 'Укэ атакует мощным прямым выпадом в корпус. Тори смещается с линии атаки в Кокуцу-дати, сбивает предплечье блоком Сюто-укэ и контратакует Гяку-цуки.',
-    optimalDistance: 1.45,
-    attackAngleDeg: 0,
-    interactionType: 'local_contact',
-    tContact: 0.45,
-    participants: [
-      { role: 'tori', clipName: 'shuto_uke', stance: 'kokutsu' },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu' },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready' },
-    ],
-  },
-  {
-    stepNumber: 2,
-    title: 'Восходящий блок Агэ-укэ и сокрушительный локоть Эмпи',
-    description: 'Отражение верхнего удара в голову с последующим глубоким входом и ударом локтем в челюсть.',
-    optimalDistance: 1.25,
-    attackAngleDeg: 15,
-    interactionType: 'local_contact',
-    tContact: 0.40,
-    participants: [
-      { role: 'tori', clipName: 'age_uke_left', stance: 'zenkutsu' },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu' },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready' },
-    ],
-  },
-  {
-    stepNumber: 3,
-    title: 'Нижний смет Гэдан-барай от прямого удара ногой Маэ-гэри',
-    description: 'Укэ наносит прямой хлесткий удар ногой. Тори сметает голень блоком Гэдан-барай и добивает молотом Тэтцуи-учи.',
-    optimalDistance: 1.65,
-    attackAngleDeg: -10,
-    interactionType: 'local_contact',
-    tContact: 0.50,
-    participants: [
-      { role: 'tori', clipName: 'gedan_barai_left', stance: 'zenkutsu' },
-      { role: 'uke1', clipName: 'mae_geri_right', stance: 'zenkutsu' },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready' },
-    ],
-  },
-];
-
 export default function BunkaiMultiAvatarPlayer({
-  steps = null, // Шаги из API getBunkaiSteps()
+  steps = null, // Шаги из API getBunkaiSteps() или формы
   defaultParticipantMode = '2-person', // '2-person' | '3-person'
   height = 540,
   onStepChange = null,
@@ -72,76 +37,123 @@ export default function BunkaiMultiAvatarPlayer({
   const [showUke2, setShowUke2] = useState(defaultParticipantMode === '3-person');
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1.0);
-  const [phaseProgress, setPhaseProgress] = useState(0.5); // 0.0 (Kamae) .. 1.0 (Impact/Kime)
-  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [timelineTime, setTimelineTime] = useState(0); // Мастер-время в секундах
+
+  // Режим сохранения состояния: 'continuous' (непрерывный бой) | 'standalone' (центрированный шаг)
+  const [stateMode, setStateMode] = useState('continuous');
 
   // Пользовательские настройки геометрии боя
-  const [distanceOffset, setDistanceOffset] = useState(0); // смещение относительно оптимальной дистанции (-0.5м .. +1.0м)
-  const [angleOffsetDeg, setAngleOffsetDeg] = useState(0); // дополнительное смещение угла (-45° .. +45°)
+  const [distanceOffset, setDistanceOffset] = useState(0); // смещение относительно оптимальной дистанции (-0.7м .. +1.2м)
+  const [angleOffsetDeg, setAngleOffsetDeg] = useState(0); // дополнительное смещение угла (-60° .. +60°)
 
   // Оповещения об отсутствующих клипах
   const [missingClips, setMissingClips] = useState([]);
 
-  // Трекинг костей для IK
+  // Трекинг костей для аналитического IK
   const trackedBonesRef = useRef({ tori: null, uke1: null, uke2: null });
   const [ikTargets, setIkTargets] = useState({ toriTarget: null, ukeTarget: null });
 
   const controlsRef = useRef();
 
-  // Нормализуем переданные шаги (из API или дефолтные)
-  const activeEpisodes = useMemo(() => {
+  // Нормализуем переданные шаги (из API или канонические по умолчанию)
+  const baseEpisodes = useMemo(() => {
     if (Array.isArray(steps) && steps.length > 0) {
-      return steps.map((s, idx) => {
-        const toriPart = s.Participants?.find((p) => p.Role === 'tori') || {};
-        const uke1Part = s.Participants?.find((p) => p.Role === 'uke' || p.Role === 'uke1') || {};
-        const uke2Part = s.Participants?.find((p) => p.Role === 'uke2') || {};
-
-        return {
-          stepNumber: s.Step_Number || idx + 1,
-          title: s.Title || `Эпизод ${idx + 1}`,
-          description: s.Description || '',
-          optimalDistance: s.Combat_Distance_Meters || 1.45,
-          attackAngleDeg: s.Attack_Angle_Degrees || 0,
-          interactionType: s.Interaction_Type || 'local_contact',
-          tContact: 0.45,
-          participants: [
-            { role: 'tori', clipName: toriPart.Clip_Name || s.Clip_Name || 'shuto_uke', stance: toriPart.Stance_In || 'kokutsu' },
-            { role: 'uke1', clipName: uke1Part.Clip_Name || 'oi_zuki_right', stance: uke1Part.Stance_In || 'zenkutsu' },
-            { role: 'uke2', clipName: uke2Part.Clip_Name || 'idle_shizentai', stance: uke2Part.Stance_In || 'ready' },
-          ],
-        };
-      });
+      return steps.map((s, idx) => normalizeBunkaiEpisode(s, idx));
     }
-    return DEFAULT_EPISODES;
+    return CANONICAL_BUNKAI_EPISODES.map((s, idx) => normalizeBunkaiEpisode(s, idx));
   }, [steps]);
 
-  const currentEpisode = activeEpisodes[currentStepIdx] || activeEpisodes[0];
+  // Вычисляем цепочку эпизодов с непрерывным сохранением позиций
+  const chainedEpisodes = useMemo(() => {
+    return chainBunkaiEpisodes(baseEpisodes, stateMode);
+  }, [baseEpisodes, stateMode]);
 
-  // Проверка переходов между эпизодами
+  const currentEpisode = chainedEpisodes[currentStepIdx] || chainedEpisodes[0];
+
+  // Синхронизатор мастер-шкалы времени для текущего эпизода
+  const timelineState = useMemo(() => {
+    return evaluateTimelineState({
+      episode: currentEpisode,
+      timelineTime,
+      speed,
+    });
+  }, [currentEpisode, timelineTime, speed]);
+
+  const totalDuration = timelineState.totalDuration;
+
+  // Таймер непрерывного воспроизведения мастер-шкалы
   useEffect(() => {
-    if (activeEpisodes.length > 1 && currentStepIdx < activeEpisodes.length - 1) {
-      const curTori = currentEpisode.participants.find((p) => p.role === 'tori');
-      const nextTori = activeEpisodes[currentStepIdx + 1].participants.find((p) => p.role === 'tori');
-      if (curTori?.clipName && nextTori?.clipName) {
-        const res = animationRegistry.validateTransition(
-          curTori.clipName,
-          nextTori.clipName,
-          `Bunkai Episode ${currentStepIdx + 1} -> ${currentStepIdx + 2}`
-        );
-        if (!res.compatible) {
-          setMissingClips((prev) => Array.from(new Set([...prev, res.missingClipName || res.reason])));
+    if (!isPlaying) return;
+    let lastTime = performance.now();
+    let animId;
+
+    const tick = (now) => {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      setTimelineTime((prev) => {
+        const next = prev + dt * speed;
+        if (next >= totalDuration) {
+          return 0; // Плавное зацикливание
+        }
+        return next;
+      });
+
+      animId = requestAnimationFrame(tick);
+    };
+
+    animId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, speed, totalDuration]);
+
+  // Сброс таймера при смене эпизода
+  useEffect(() => {
+    setTimelineTime(0);
+  }, [currentStepIdx]);
+
+  // Расчет взаимного пространственного расположения и ориентации участников
+  const placement = useMemo(() => {
+    return computeAvatarPlacement({
+      episode: currentEpisode,
+      distanceOffset,
+      angleOffsetDeg,
+      showUke2,
+      baseToriPos: currentEpisode.toriStartPos || [0, 0, 0],
+      targetRole: timelineState.currentTargetRole,
+    });
+  }, [currentEpisode, distanceOffset, angleOffsetDeg, showUke2, timelineState.currentTargetRole]);
+
+  // Динамический угол поворота Тори с плавной интерполяцией при развороте ко второму противнику
+  const toriRotation = useMemo(() => {
+    if (timelineState.isTurningToUke2) {
+      const p = timelineState.turnProgress;
+      const yawUke1 = placement.angles.toriYaw; // направление на первого
+      const dirUke2 = Math.atan2(placement.posUke2[0] - placement.posTori[0], placement.posUke2[2] - placement.posTori[2]);
+      const interpolatedYaw = THREE.MathUtils.lerp(yawUke1, dirUke2, p);
+      return [0, interpolatedYaw, 0];
+    }
+    return placement.rotTori;
+  }, [timelineState.isTurningToUke2, timelineState.turnProgress, placement]);
+
+  // Проверка переходов и валидация клипов в реестре
+  useEffect(() => {
+    currentEpisode.participants.forEach((p) => {
+      if (p.clipName) {
+        const resolved = resolveBunkaiClip(p.clipName);
+        if (!resolved.isKnown) {
+          setMissingClips((prev) => Array.from(new Set([...prev, p.clipName])));
         }
       }
-    }
-  }, [activeEpisodes, currentStepIdx, currentEpisode]);
+    });
+  }, [currentEpisode]);
 
   const handleMissingClipDetected = useCallback((clipName) => {
     setMissingClips((prev) => Array.from(new Set([...prev, clipName])));
   }, []);
 
+  // Трекинг костей для аналитического IK
   const handleTrackBones = useCallback((role, data) => {
     trackedBonesRef.current[role] = data;
-    // Обновляем таргет для Тори: кулак или грудь Укэ 1
     if (role === 'uke1' && data.chest) {
       setIkTargets((prev) => ({ ...prev, toriTarget: data.chest.clone() }));
     }
@@ -149,67 +161,6 @@ export default function BunkaiMultiAvatarPlayer({
       setIkTargets((prev) => ({ ...prev, ukeTarget: data.chest.clone() }));
     }
   }, []);
-
-  // Расчет мировых позиций с учетом угла атаки, дистанции и предотвращения столкновения тел
-  const { posTori, posUke1, posUke2, rotTori, rotUke1, rotUke2, hasCollision } = useMemo(() => {
-    const baseDist = currentEpisode.optimalDistance + distanceOffset;
-    const finalDist = Math.max(0.40, baseDist);
-
-    const baseAngleRad = ((currentEpisode.attackAngleDeg + angleOffsetDeg) * Math.PI) / 180;
-
-    // Тори находится в центре татами, обращен лицом к нападающему
-    const rawPosTori = [0, 0, 0];
-
-    // Укэ 1 нападает с фронта/угла baseAngleRad
-    const rawPosUke1 = [
-      Math.sin(baseAngleRad) * finalDist,
-      0,
-      Math.cos(baseAngleRad) * finalDist,
-    ];
-
-    // Укэ 2 (фланговый нападающий) атакует под углом +55 градусов слева
-    const angleUke2Rad = baseAngleRad + (55 * Math.PI) / 180;
-    const rawPosUke2 = [
-      Math.sin(angleUke2Rad) * (finalDist + 0.35),
-      0,
-      Math.cos(angleUke2Rad) * (finalDist + 0.35),
-    ];
-
-    let pTori, pUke1, pUke2, collided;
-
-    if (showUke2) {
-      const col = resolveThreeAvatarsCollision(rawPosTori, rawPosUke1, rawPosUke2);
-      pTori = col.correctedTori;
-      pUke1 = col.correctedUke1;
-      pUke2 = col.correctedUke2;
-      collided = col.collided;
-    } else {
-      const col = resolveAvatarCollision(rawPosTori, rawPosUke1);
-      pTori = col.correctedA;
-      pUke1 = col.correctedB;
-      pUke2 = rawPosUke2;
-      collided = col.collided;
-    }
-
-    // Вращения: Тори смотрит на Укэ 1, Укэ 1 смотрит на Тори
-    const dirUke1ToTori = Math.atan2(pTori[0] - pUke1[0], pTori[2] - pUke1[2]);
-    const dirToriToUke1 = Math.atan2(pUke1[0] - pTori[0], pUke1[2] - pTori[2]);
-    const dirUke2ToTori = Math.atan2(pTori[0] - pUke2[0], pTori[2] - pUke2[2]);
-
-    return {
-      posTori: pTori,
-      posUke1: pUke1,
-      posUke2: pUke2,
-      rotTori: [0, dirToriToUke1, 0],
-      rotUke1: [0, dirUke1ToTori, 0],
-      rotUke2: [0, dirUke2ToTori, 0],
-      hasCollision: collided,
-    };
-  }, [currentEpisode, distanceOffset, angleOffsetDeg, showUke2]);
-
-  const toriData = currentEpisode.participants.find((p) => p.role === 'tori') || {};
-  const uke1Data = currentEpisode.participants.find((p) => p.role === 'uke1' || p.role === 'uke') || {};
-  const uke2Data = currentEpisode.participants.find((p) => p.role === 'uke2') || {};
 
   function handlePrevStep() {
     setCurrentStepIdx((prev) => {
@@ -221,7 +172,7 @@ export default function BunkaiMultiAvatarPlayer({
 
   function handleNextStep() {
     setCurrentStepIdx((prev) => {
-      const next = Math.min(activeEpisodes.length - 1, prev + 1);
+      const next = Math.min(chainedEpisodes.length - 1, prev + 1);
       if (onStepChange) onStepChange(next);
       return next;
     });
@@ -230,9 +181,14 @@ export default function BunkaiMultiAvatarPlayer({
   function resetCamera() {
     if (controlsRef.current) {
       controlsRef.current.reset();
-      controlsRef.current.target.set(0, 0.95, 0.6);
+      const targetPos = placement.posTori;
+      controlsRef.current.target.set(targetPos[0], 0.95, targetPos[2]);
     }
   }
+
+  const toriPart = currentEpisode.participants.find((p) => p.role === 'tori') || {};
+  const uke1Part = currentEpisode.participants.find((p) => p.role === 'uke1') || {};
+  const uke2Part = currentEpisode.participants.find((p) => p.role === 'uke2') || {};
 
   return (
     <div
@@ -250,38 +206,39 @@ export default function BunkaiMultiAvatarPlayer({
       <div style={{ width: '100%', height, position: 'relative' }}>
         <Canvas
           shadows
-          camera={{ position: [2.6, 1.8, 3.2], fov: 42 }}
+          camera={{ position: [placement.posTori[0] + 2.8, 1.9, placement.posTori[2] + 3.4], fov: 42 }}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
         >
           <color attach="background" args={['#0e0d0b']} />
           <ambientLight intensity={0.7} />
           <directionalLight
-            position={[4, 6, 4]}
+            position={[placement.posTori[0] + 4, 6, placement.posTori[2] + 4]}
             intensity={1.4}
             castShadow
             shadow-mapSize={[1024, 1024]}
             shadow-camera-near={0.5}
             shadow-camera-far={15}
-            shadow-camera-left={-3}
-            shadow-camera-right={3}
-            shadow-camera-top={3}
-            shadow-camera-bottom={-3}
+            shadow-camera-left={-4}
+            shadow-camera-right={4}
+            shadow-camera-top={4}
+            shadow-camera-bottom={-4}
           />
           <directionalLight position={[-4, 3, -3]} intensity={0.4} color="#90cdf4" />
 
           {/* Традиционное японское додзё с разметкой татами */}
           <TraditionalDojo />
 
-          {/* Аватар Тори (белое кимоно мастера) */}
+          {/* Аватар Тори (белое доги мастера) */}
           <MultiAvatarModel
             role="tori"
-            clipName={toriData.clipName}
-            stance={toriData.stance}
-            position={posTori}
-            rotation={rotTori}
+            clipName={timelineState.toriState.activeClip}
+            stance={toriPart.stance || 'kokutsu'}
+            position={placement.posTori}
+            rotation={toriRotation}
             speed={speed}
             isPlaying={isPlaying}
-            scrubProgress={isScrubbing ? phaseProgress : null}
+            timelineTime={timelineTime}
+            delaySeconds={toriPart.delaySeconds || 0}
             ikTarget={ikTargets.toriTarget}
             ikContactTime={currentEpisode.tContact}
             interactionType={currentEpisode.interactionType}
@@ -292,13 +249,14 @@ export default function BunkaiMultiAvatarPlayer({
           {/* Аватар Укэ 1 (главный нападающий, доги цвета индиго) */}
           <MultiAvatarModel
             role="uke1"
-            clipName={uke1Data.clipName}
-            stance={uke1Data.stance}
-            position={posUke1}
-            rotation={rotUke1}
+            clipName={timelineState.uke1State.activeClip}
+            stance={uke1Part.stance || 'zenkutsu'}
+            position={placement.posUke1}
+            rotation={placement.rotUke1}
             speed={speed}
             isPlaying={isPlaying}
-            scrubProgress={isScrubbing ? phaseProgress : null}
+            timelineTime={timelineTime}
+            delaySeconds={uke1Part.delaySeconds || 0}
             ikTarget={ikTargets.ukeTarget}
             ikContactTime={currentEpisode.tContact}
             interactionType={currentEpisode.interactionType}
@@ -310,26 +268,27 @@ export default function BunkaiMultiAvatarPlayer({
           {showUke2 && (
             <MultiAvatarModel
               role="uke2"
-              clipName={uke2Data.clipName || 'idle_shizentai'}
-              stance={uke2Data.stance || 'ready'}
-              position={posUke2}
-              rotation={rotUke2}
+              clipName={timelineState.uke2State.activeClip}
+              stance={uke2Part.stance || 'ready'}
+              position={placement.posUke2}
+              rotation={placement.rotUke2}
               speed={speed}
               isPlaying={isPlaying}
-              scrubProgress={isScrubbing ? phaseProgress : null}
-              interactionType="non_contact"
+              timelineTime={timelineTime}
+              delaySeconds={uke2Part.delaySeconds || 1.35}
+              interactionType={timelineState.currentTargetRole === 'uke2' ? 'local_contact' : 'non_contact'}
               onMissingClip={handleMissingClipDetected}
               onTrackBones={handleTrackBones}
             />
           )}
 
-          <ContactShadows position={[0, 0, 0]} opacity={0.65} scale={8} blur={1.5} far={4} />
+          <ContactShadows position={[0, 0, 0]} opacity={0.65} scale={10} blur={1.5} far={4} />
 
           <OrbitControls
             ref={controlsRef}
-            target={[0, 0.95, 0.6]}
+            target={[placement.posTori[0], 0.95, placement.posTori[2]]}
             minDistance={1.2}
-            maxDistance={7.0}
+            maxDistance={8.0}
             maxPolarAngle={Math.PI / 2 - 0.04}
             enablePan
             enableDamping
@@ -353,9 +312,9 @@ export default function BunkaiMultiAvatarPlayer({
         >
           <div
             style={{
-              background: 'rgba(12, 9, 7, 0.88)',
+              background: 'rgba(12, 9, 7, 0.90)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(197, 155, 39, 0.4)',
+              border: '1px solid rgba(197, 155, 39, 0.45)',
               borderRadius: 8,
               padding: '10px 16px',
               maxWidth: '520px',
@@ -364,11 +323,15 @@ export default function BunkaiMultiAvatarPlayer({
           >
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
               <span style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-gold)', fontWeight: 700 }}>
-                Шотокан Бункай · Шаг {currentEpisode.stepNumber} из {activeEpisodes.length}
+                Шотокан Бункай · Эпизод {currentEpisode.stepNumber} из {chainedEpisodes.length}
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>•</span>
               <span style={{ fontSize: '0.75rem', color: showUke2 ? '#68d391' : '#63b3ed', fontWeight: 600 }}>
                 {showUke2 ? '🏆 Командный бункай (3 бойца)' : '🥋 Парный бункай (Дуэль)'}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>•</span>
+              <span style={{ fontSize: '0.72rem', color: stateMode === 'continuous' ? '#f6ad55' : 'var(--color-text-muted)' }}>
+                {stateMode === 'continuous' ? '📍 Непрерывный бой' : '🎯 Центрирован'}
               </span>
             </div>
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-washi)' }}>
@@ -381,10 +344,10 @@ export default function BunkaiMultiAvatarPlayer({
             )}
           </div>
 
-          {/* Легенда ролей участников */}
+          {/* Легенда ролей участников с индикатором активного нападающего */}
           <div
             style={{
-              background: 'rgba(12, 9, 7, 0.88)',
+              background: 'rgba(12, 9, 7, 0.90)',
               backdropFilter: 'blur(8px)',
               border: '1px solid var(--color-border)',
               borderRadius: 8,
@@ -399,25 +362,49 @@ export default function BunkaiMultiAvatarPlayer({
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#fbf8f2', border: '1px solid #999' }}></span>
               <span style={{ color: '#fff', fontWeight: 600 }}>Тори</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>({toriData.clipName || 'Защита'})</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>({timelineState.toriState.activeClip})</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#243346', border: '1px solid #63b3ed' }}></span>
+              <span
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: '#243346',
+                  border: timelineState.currentTargetRole === 'uke1' ? '2px solid #63b3ed' : '1px solid #4a5568',
+                  boxShadow: timelineState.currentTargetRole === 'uke1' ? '0 0 6px #63b3ed' : 'none',
+                }}
+              ></span>
               <span style={{ color: '#90cdf4', fontWeight: 600 }}>Укэ 1</span>
-              <span style={{ color: 'var(--color-text-muted)' }}>({uke1Data.clipName || 'Атака'})</span>
+              <span style={{ color: 'var(--color-text-muted)' }}>({timelineState.uke1State.activeClip})</span>
+              {timelineState.currentTargetRole === 'uke1' && (
+                <span style={{ fontSize: '0.65rem', background: 'rgba(99,179,237,0.2)', color: '#63b3ed', padding: '1px 4px', borderRadius: 3 }}>Цель</span>
+              )}
             </div>
             {showUke2 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#342b2b', border: '1px solid #e53e3e' }}></span>
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    background: '#342b2b',
+                    border: timelineState.currentTargetRole === 'uke2' ? '2px solid #e53e3e' : '1px solid #742a2a',
+                    boxShadow: timelineState.currentTargetRole === 'uke2' ? '0 0 6px #e53e3e' : 'none',
+                  }}
+                ></span>
                 <span style={{ color: '#feb2b2', fontWeight: 600 }}>Укэ 2</span>
-                <span style={{ color: 'var(--color-text-muted)' }}>({uke2Data.clipName || 'Фланг'})</span>
+                <span style={{ color: 'var(--color-text-muted)' }}>({timelineState.uke2State.activeClip})</span>
+                {timelineState.currentTargetRole === 'uke2' && (
+                  <span style={{ fontSize: '0.65rem', background: 'rgba(229,62,62,0.2)', color: '#feb2b2', padding: '1px 4px', borderRadius: 3 }}>Цель</span>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Предупреждение о коллизии и проникновении тел */}
-        {hasCollision && (
+        {/* Предупреждение о коллизии и капсульном анти-проникновении */}
+        {placement.hasCollision && (
           <div
             style={{
               position: 'absolute',
@@ -437,7 +424,7 @@ export default function BunkaiMultiAvatarPlayer({
           </div>
         )}
 
-        {/* Баннер обнаруженных отсутствующих клипов (БЕЗ СКРЫТЫХ ПОДМЕН) */}
+        {/* Баннер обнаруженных отсутствующих клипов */}
         {missingClips.length > 0 && (
           <div
             style={{
@@ -464,7 +451,7 @@ export default function BunkaiMultiAvatarPlayer({
 
       {/* Панель интерактивного управления боевым взаимодействием */}
       <div style={{ background: 'var(--color-surface)', padding: '16px 20px', borderTop: '1px solid var(--color-border)' }}>
-        {/* Верхняя строка: навигация по шагам, режим участников и плеер */}
+        {/* Верхняя строка: навигация по шагам, режим участников, непрерывность и плеер */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           {/* Переключение шагов */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -474,18 +461,18 @@ export default function BunkaiMultiAvatarPlayer({
               onClick={handlePrevStep}
               style={{ padding: '6px 12px', fontSize: '0.85rem' }}
             >
-              ◀ Предыдущий эпизод
+              ◀ Предыдущий
             </button>
             <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-gold)', minWidth: 90, textAlign: 'center' }}>
-              {currentStepIdx + 1} / {activeEpisodes.length}
+              {currentStepIdx + 1} / {chainedEpisodes.length}
             </span>
             <button
               className="btn"
-              disabled={currentStepIdx === activeEpisodes.length - 1}
+              disabled={currentStepIdx === chainedEpisodes.length - 1}
               onClick={handleNextStep}
               style={{ padding: '6px 12px', fontSize: '0.85rem' }}
             >
-              Следующий эпизод ▶
+              Следующий ▶
             </button>
           </div>
 
@@ -494,10 +481,7 @@ export default function BunkaiMultiAvatarPlayer({
             <button
               className="btn btn-primary"
               style={{ minWidth: 120 }}
-              onClick={() => {
-                setIsPlaying(!isPlaying);
-                setIsScrubbing(false);
-              }}
+              onClick={() => setIsPlaying(!isPlaying)}
             >
               {isPlaying ? '⏸ Пауза' : '▶ Воспроизведение'}
             </button>
@@ -506,6 +490,16 @@ export default function BunkaiMultiAvatarPlayer({
               onClick={() => setShowUke2(!showUke2)}
             >
               {showUke2 ? '2 Участника (Дуэль)' : '+ Добавить Укэ 2 (Трио)'}
+            </button>
+            <button
+              className="btn"
+              style={{
+                borderColor: stateMode === 'continuous' ? 'var(--color-gold)' : undefined,
+                background: stateMode === 'continuous' ? 'rgba(197, 155, 39, 0.15)' : undefined,
+              }}
+              onClick={() => setStateMode(stateMode === 'continuous' ? 'standalone' : 'continuous')}
+            >
+              {stateMode === 'continuous' ? '📍 Непрерывный бой' : '🎯 Изолированный шаг'}
             </button>
             <button className="btn btn-gold" onClick={resetCamera}>
               Сброс камеры
@@ -553,7 +547,7 @@ export default function BunkaiMultiAvatarPlayer({
                 📏 Боевая дистанция (Ма-ай):
               </span>
               <span style={{ color: '#fff', fontWeight: 700 }}>
-                {(currentEpisode.optimalDistance + distanceOffset).toFixed(2)} м
+                {placement.finalDist.toFixed(2)} м
               </span>
             </div>
             <input
@@ -599,46 +593,69 @@ export default function BunkaiMultiAvatarPlayer({
           </div>
         </div>
 
-        {/* Нижняя строка: пошаговый скраббер фаз взаимодействия */}
+        {/* Нижняя строка: мастер-скраббер времени и пошаговые фазы взаимодействия */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>
-              Фаза приема (Kamae ➔ Impact ➔ Zanshin):
+              Мастер-шкала боевого времени ({timelineTime.toFixed(2)}с / {totalDuration.toFixed(2)}с):
             </span>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-gold)' }}>
-              {phaseProgress < 0.25 ? '1. Камаэ (Готовность)' : phaseProgress < 0.65 ? '2. Атака / Блок (Контакт)' : '3. Контратака и Киме'}
+              {timelineState.phase === 'kamae'
+                ? '1. Камаэ (Исходная боевая стойка)'
+                : timelineState.phase === 'contact'
+                ? '2. Момент контакта (Атака / Блок / ИК)'
+                : '3. Контратака и фиксация (Кимэ / Дзансин)'}
             </span>
           </div>
 
+          {/* Плавный мастер-слайдер времени */}
+          <div style={{ marginBottom: 10 }}>
+            <input
+              type="range"
+              min="0"
+              max={totalDuration}
+              step="0.02"
+              value={timelineTime}
+              onChange={(e) => {
+                setIsPlaying(false);
+                setTimelineTime(parseFloat(e.target.value));
+              }}
+              style={{ width: '100%', accentColor: 'var(--color-gold)' }}
+            />
+          </div>
+
+          {/* Кнопки быстрого перехода по ключевым фазам */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             {[
-              { label: '1. Исходная стойка (Камаэ)', prog: 0.1 },
-              { label: '2. Момент контакта (ИК-доводка)', prog: 0.45 },
-              { label: '3. Фиксация киме (Дзансин)', prog: 0.9 },
-            ].map((p, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setPhaseProgress(p.prog);
-                  setIsScrubbing(true);
-                  setIsPlaying(false);
-                }}
-                style={{
-                  padding: '8px 10px',
-                  borderRadius: 6,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  border: isScrubbing && Math.abs(phaseProgress - p.prog) < 0.2 ? '1px solid var(--color-gold)' : '1px solid var(--color-border)',
-                  background: isScrubbing && Math.abs(phaseProgress - p.prog) < 0.2 ? 'rgba(197, 155, 39, 0.18)' : 'var(--color-bg)',
-                  color: isScrubbing && Math.abs(phaseProgress - p.prog) < 0.2 ? 'var(--color-gold)' : 'var(--color-washi)',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
+              { label: '1. Исходная стойка (Камаэ)', time: 0.1 },
+              { label: '2. Момент контакта (ИК-доводка)', time: uke1Part.delaySeconds + currentEpisode.tContact },
+              { label: '3. Фиксация киме (Дзансин)', time: totalDuration * 0.9 },
+            ].map((p, idx) => {
+              const isActive = Math.abs(timelineTime - p.time) < 0.25;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setTimelineTime(p.time);
+                    setIsPlaying(false);
+                  }}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    border: isActive ? '1px solid var(--color-gold)' : '1px solid var(--color-border)',
+                    background: isActive ? 'rgba(197, 155, 39, 0.18)' : 'var(--color-bg)',
+                    color: isActive ? 'var(--color-gold)' : 'var(--color-washi)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

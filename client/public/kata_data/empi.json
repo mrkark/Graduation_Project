@@ -1,422 +1,583 @@
 {
-  "kata": "empi",
-  "confidence": "med",
-  "duration": 56.0,
-  "movesCount": 41,
-  "events": [
-    {
-      "moveNumber": 1,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "renoji",
-      "startTime": 1.2,
-      "endTime": 2.46,
-      "kiai": false
-    },
-    {
-      "moveNumber": 2,
-      "technique": [
-        "L:hikite"
-      ],
-      "form": "hachiji",
-      "startTime": 2.46,
-      "endTime": 3.72,
-      "kiai": false
-    },
-    {
-      "moveNumber": 3,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 3.72,
-      "endTime": 4.98,
-      "kiai": false
-    },
-    {
-      "moveNumber": 4,
-      "technique": [
-        "L:kagi_zuki"
-      ],
-      "form": "kiba",
-      "startTime": 4.98,
-      "endTime": 6.24,
-      "kiai": false
-    },
-    {
-      "moveNumber": 5,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 6.24,
-      "endTime": 7.5,
-      "kiai": false
-    },
-    {
-      "moveNumber": 6,
-      "technique": [
-        "R:age_zuki"
-      ],
-      "form": null,
-      "startTime": 7.5,
-      "endTime": 8.94,
-      "kiai": false
-    },
-    {
-      "moveNumber": 7,
-      "technique": [],
-      "form": "mae_geri:R",
-      "startTime": 8.94,
-      "endTime": 10.11,
-      "kiai": false
-    },
-    {
-      "moveNumber": 8,
-      "technique": [
-        "L:gedan_zuki",
-        "R:nagashi_uke"
-      ],
-      "form": "kosa",
-      "startTime": 10.11,
-      "endTime": 11.37,
-      "kiai": false
-    },
-    {
-      "moveNumber": 9,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 11.37,
-      "endTime": 12.63,
-      "kiai": false
-    },
-    {
-      "moveNumber": 10,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 12.63,
-      "endTime": 13.89,
-      "kiai": false
-    },
-    {
-      "moveNumber": 11,
-      "technique": [
-        "R:age_zuki"
-      ],
-      "form": null,
-      "startTime": 13.89,
-      "endTime": 15.33,
-      "kiai": false
-    },
-    {
-      "moveNumber": 12,
-      "technique": [],
-      "form": "mae_geri:R",
-      "startTime": 15.33,
-      "endTime": 16.5,
-      "kiai": false
-    },
-    {
-      "moveNumber": 13,
-      "technique": [
-        "L:gedan_zuki",
-        "R:nagashi_uke"
-      ],
-      "form": "kosa",
-      "startTime": 16.5,
-      "endTime": 17.76,
-      "kiai": false
-    },
-    {
-      "moveNumber": 14,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 17.76,
-      "endTime": 19.02,
-      "kiai": false
-    },
-    {
-      "moveNumber": 15,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 19.02,
-      "endTime": 20.28,
-      "kiai": false
-    },
-    {
-      "moveNumber": 16,
-      "technique": [
-        "L:haishu_uke"
-      ],
-      "form": "kiba",
-      "startTime": 20.28,
-      "endTime": 21.74,
-      "kiai": false
-    },
-    {
-      "moveNumber": 17,
-      "technique": [
-        "R:mae_empi"
-      ],
-      "form": null,
-      "startTime": 21.74,
-      "endTime": 23.18,
-      "kiai": true
-    },
-    {
-      "moveNumber": 18,
-      "technique": [
-        "L:tate_shuto_uke"
-      ],
-      "form": "kiba",
-      "startTime": 23.43,
-      "endTime": 24.69,
-      "kiai": false
-    },
-    {
-      "moveNumber": 19,
-      "technique": [
-        "R:zuki"
-      ],
-      "form": null,
-      "startTime": 24.69,
-      "endTime": 26.13,
-      "kiai": false
-    },
-    {
-      "moveNumber": 20,
-      "technique": [
-        "L:zuki"
-      ],
-      "form": null,
-      "startTime": 26.13,
-      "endTime": 27.57,
-      "kiai": false
-    },
-    {
-      "moveNumber": 21,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 27.57,
-      "endTime": 28.83,
-      "kiai": false
-    },
-    {
-      "moveNumber": 22,
-      "technique": [
-        "R:age_zuki"
-      ],
-      "form": null,
-      "startTime": 28.83,
-      "endTime": 30.27,
-      "kiai": false
-    },
-    {
-      "moveNumber": 23,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 30.27,
-      "endTime": 31.63,
-      "kiai": false
-    },
-    {
-      "moveNumber": 24,
-      "technique": [
-        "L:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 31.63,
-      "endTime": 33.14,
-      "kiai": false
-    },
-    {
-      "moveNumber": 25,
-      "technique": [
-        "R:gyaku_zuki"
-      ],
-      "form": null,
-      "startTime": 33.14,
-      "endTime": 34.58,
-      "kiai": false
-    },
-    {
-      "moveNumber": 26,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 34.58,
-      "endTime": 35.94,
-      "kiai": false
-    },
-    {
-      "moveNumber": 27,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 35.94,
-      "endTime": 37.4,
-      "kiai": false
-    },
-    {
-      "moveNumber": 28,
-      "technique": [
-        "R:age_zuki"
-      ],
-      "form": null,
-      "startTime": 37.4,
-      "endTime": 38.84,
-      "kiai": false
-    },
-    {
-      "moveNumber": 29,
-      "technique": [],
-      "form": "mae_geri:R",
-      "startTime": 38.84,
-      "endTime": 40.01,
-      "kiai": false
-    },
-    {
-      "moveNumber": 30,
-      "technique": [
-        "L:gedan_zuki",
-        "R:nagashi_uke"
-      ],
-      "form": "kosa",
-      "startTime": 40.01,
-      "endTime": 41.27,
-      "kiai": false
-    },
-    {
-      "moveNumber": 31,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 41.27,
-      "endTime": 42.53,
-      "kiai": false
-    },
-    {
-      "moveNumber": 32,
-      "technique": [
-        "L:gedan_barai"
-      ],
-      "form": "zenkutsu",
-      "startTime": 42.53,
-      "endTime": 43.79,
-      "kiai": false
-    },
-    {
-      "moveNumber": 33,
-      "technique": [
-        "R:teisho"
-      ],
-      "form": null,
-      "startTime": 43.79,
-      "endTime": 45.23,
-      "kiai": false
-    },
-    {
-      "moveNumber": 34,
-      "technique": [
-        "R:teisho",
-        "L:teisho"
-      ],
-      "form": "zenkutsu",
-      "startTime": 45.23,
-      "endTime": 46.49,
-      "kiai": false
-    },
-    {
-      "moveNumber": 35,
-      "technique": [
-        "L:teisho",
-        "R:teisho"
-      ],
-      "form": "zenkutsu",
-      "startTime": 46.49,
-      "endTime": 47.75,
-      "kiai": false
-    },
-    {
-      "moveNumber": 36,
-      "technique": [
-        "R:teisho",
-        "L:teisho"
-      ],
-      "form": "zenkutsu",
-      "startTime": 47.75,
-      "endTime": 49.01,
-      "kiai": false
-    },
-    {
-      "moveNumber": 37,
-      "technique": [
-        "R:gedan_barai"
-      ],
-      "form": "kokutsu",
-      "startTime": 49.01,
-      "endTime": 50.37,
-      "kiai": false
-    },
-    {
-      "moveNumber": 38,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "kiba",
-      "startTime": 50.37,
-      "endTime": 51.63,
-      "kiai": false
-    },
-    {
-      "moveNumber": 39,
-      "technique": [
-        "L:tate_shuto_uke"
-      ],
-      "form": "kiba",
-      "startTime": 51.63,
-      "endTime": 52.89,
-      "kiai": false
-    },
-    {
-      "moveNumber": 40,
-      "technique": [
-        "R:shuto_uke"
-      ],
-      "form": "j:0.36:0.0",
-      "startTime": 52.89,
-      "endTime": 54.39,
-      "kiai": true
-    },
-    {
-      "moveNumber": 41,
-      "technique": [
-        "L:shuto_uke"
-      ],
-      "form": "kokutsu",
-      "startTime": 54.64,
-      "endTime": 56.0,
-      "kiai": false
-    }
-  ],
-  "kiaiMoves": [
-    17,
-    40
-  ]
+ "kata": "empi",
+ "confidence": "med",
+ "start": "heisoku",
+ "steps": [
+  {
+   "n": 1,
+   "S": "S_step_heisokuL_renojiL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "renoji",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 2,
+   "S": "S_step_renojiL_hachijiL_L",
+   "T": "T_L-hikite",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "hachiji",
+   "techniques": [
+    "L:hikite"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 3,
+   "S": "S_step_hachijiL_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": "R_m90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 4,
+   "S": "S_step_zenkutsuR_kibaL_R",
+   "T": "T_L-kagi_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "L:kagi_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 5,
+   "S": "S_step_kibaL_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 6,
+   "S": "S_hold_zenkutsuL_R",
+   "T": "T_R-age_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 7,
+   "S": "S_step_zenkutsuL_kosaR_L",
+   "T": "T_L-gedan_zuki+R-nagashi_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kosa",
+   "techniques": [
+    "L:gedan_zuki",
+    "R:nagashi_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 8,
+   "S": "S_step_kosaR_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 9,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 10,
+   "S": "S_hold_zenkutsuL_R",
+   "T": "T_R-age_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 11,
+   "S": "S_step_zenkutsuL_kosaR_L",
+   "T": "T_L-gedan_zuki+R-nagashi_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kosa",
+   "techniques": [
+    "L:gedan_zuki",
+    "R:nagashi_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 12,
+   "S": "S_step_kosaR_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 13,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 14,
+   "S": "S_step_zenkutsuL_kibaL_R",
+   "T": "T_L-haishu_uke",
+   "R": "R_p180",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "L:haishu_uke"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 15,
+   "S": "S_hold_kibaL_R",
+   "T": "T_R-mae_empi",
+   "R": null,
+   "scale": 1.0,
+   "kiai": true,
+   "stance": "kiba",
+   "techniques": [
+    "R:mae_empi"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 16,
+   "S": "S_step_kibaL_kibaL_R",
+   "T": "T_L-tate_shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "L:tate_shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 17,
+   "S": "S_hold_kibaL_R",
+   "T": "T_R-zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "R:zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 18,
+   "S": "S_hold_kibaL_L",
+   "T": "T_L-zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "L:zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 19,
+   "S": "S_step_kibaL_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 20,
+   "S": "S_hold_zenkutsuL_R",
+   "T": "T_R-age_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 21,
+   "S": "S_step_zenkutsuL_kokutsuR_L",
+   "T": "T_R-shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 22,
+   "S": "S_step_kokutsuR_kokutsuL_R",
+   "T": "T_L-shuto_uke",
+   "R": "R_p180",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "L:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 23,
+   "S": "S_hold_kokutsuL_R",
+   "T": "T_R-gyaku_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:gyaku_zuki"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 24,
+   "S": "S_step_kokutsuL_kokutsuR_L",
+   "T": "T_R-shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 0.0,
+   "note": ""
+  },
+  {
+   "n": 25,
+   "S": "S_step_kokutsuR_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": "R_p180",
+   "scale": 1.35,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 26,
+   "S": "S_hold_zenkutsuL_R",
+   "T": "T_R-age_zuki",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:age_zuki"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 27,
+   "S": "S_step_zenkutsuL_kosaR_L",
+   "T": "T_L-gedan_zuki+R-nagashi_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kosa",
+   "techniques": [
+    "L:gedan_zuki",
+    "R:nagashi_uke"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 28,
+   "S": "S_step_kosaR_zenkutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 29,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 30,
+   "S": "S_hold_zenkutsuL_R",
+   "T": "T_R-teisho",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:teisho"
+   ],
+   "part": "move",
+   "facingDeg": -180.0,
+   "note": ""
+  },
+  {
+   "n": 31,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-teisho+L-teisho",
+   "R": "R_m90",
+   "scale": 1.175,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:teisho",
+    "L:teisho"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 32,
+   "S": "S_step_zenkutsuR_zenkutsuL_R",
+   "T": "T_L-teisho+R-teisho",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "L:teisho",
+    "R:teisho"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 33,
+   "S": "S_step_zenkutsuL_zenkutsuR_L",
+   "T": "T_R-teisho+L-teisho",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "zenkutsu",
+   "techniques": [
+    "R:teisho",
+    "L:teisho"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 34,
+   "S": "S_step_zenkutsuR_kokutsuR_L",
+   "T": "T_R-gedan_barai",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:gedan_barai"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 35,
+   "S": "S_step_kokutsuR_kibaL_R",
+   "T": "T_R-shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 36,
+   "S": "S_step_kibaL_kibaL_R",
+   "T": "T_L-tate_shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kiba",
+   "techniques": [
+    "L:tate_shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 37,
+   "S": "S_jump_kibaL_kokutsuR_0.36_0.0",
+   "T": "T_R-shuto_uke",
+   "R": "R_m360",
+   "scale": 1.35,
+   "kiai": true,
+   "stance": "kokutsu",
+   "techniques": [
+    "R:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  },
+  {
+   "n": 38,
+   "S": "S_step_kokutsuR_kokutsuL_R",
+   "T": "T_L-shuto_uke",
+   "R": null,
+   "scale": 1.0,
+   "kiai": false,
+   "stance": "kokutsu",
+   "techniques": [
+    "L:shuto_uke"
+   ],
+   "part": "move",
+   "facingDeg": 90.0,
+   "note": ""
+  }
+ ]
 }

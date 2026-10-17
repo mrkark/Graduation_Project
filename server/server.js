@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const app = require('./src/app');
 const { poolPromise } = require('./src/config/database');
 const { registerChatSocket } = require('./src/sockets/chatSocket');
+const { registerMocapSocket } = require('./src/sockets/mocapSocket');
 
 const PORT = process.env.PORT || 5000;
 
@@ -18,6 +19,7 @@ const io = new Server(server, {
 });
 
 registerChatSocket(io);
+registerMocapSocket(io.of('/mocap'));
 
 // Делаем io доступным контроллерам, если понадобится эмитить события вне сокет-хендлеров
 app.set('io', io);

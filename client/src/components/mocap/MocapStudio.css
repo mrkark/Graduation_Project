@@ -1,6 +1,6 @@
-/* ========================================================
-   AI Karate Motion Capture Studio — Стили веб-приложения
-   ======================================================== */
+/* =========================================================
+   MOCAPSTUDIO.CSS — AI MoCap Додзё (Стилистика Традиционного Додзё)
+   ========================================================= */
 
 .mocap-studio {
   display: flex;
@@ -9,366 +9,528 @@
   width: 100%;
 }
 
-.mocap-studio__topbar {
+.mocap-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
-  background: linear-gradient(135deg, rgba(26, 29, 36, 0.95), rgba(18, 20, 26, 0.95));
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  gap: 1.2rem;
+  padding: 1.2rem 1.6rem;
+  background: linear-gradient(180deg, var(--bg-panel) 0%, #151210 100%);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-card);
 }
 
-.mocap-studio__branding {
+.mocap-title-group {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
-.mocap-studio__seal {
+.mocap-kanji-stamp {
   width: 44px;
   height: 44px;
-  background: radial-gradient(circle, #b91c1c 30%, #7f1d1d 90%);
-  border: 2px solid #d4af37;
-  border-radius: 8px;
+  background: linear-gradient(135deg, var(--crimson-deep) 0%, #3d0a0a 100%);
+  border: 1.5px solid var(--gold);
+  color: #fff;
+  font-family: var(--font-kanji);
+  font-size: 1.45rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff8f0;
-  font-size: 1.4rem;
-  font-weight: 900;
-  box-shadow: 0 0 12px rgba(185, 28, 28, 0.5);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 14px var(--crimson-glow);
 }
 
-.mocap-studio__title {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #f3f4f6;
+.mocap-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--washi);
   margin: 0;
   letter-spacing: 0.04em;
 }
 
-.mocap-studio__subtitle {
+.mocap-subtitle {
   font-size: 0.82rem;
-  color: #9ca3af;
-  margin-top: 2px;
+  color: var(--washi-dim);
+  margin: 3px 0 0;
 }
 
-.mocap-studio__controls {
+.mocap-source-switcher {
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 4px;
 }
 
-.mocap-studio__source-select {
-  background: #111318;
-  color: #e5e7eb;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 0.5rem 0.85rem;
-  font-size: 0.88rem;
-  cursor: pointer;
-  outline: none;
-}
-.mocap-studio__source-select:focus {
-  border-color: #d4af37;
-}
-
-.mocap-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.1rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-  border-radius: 8px;
-  border: 1px solid transparent;
+.source-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--washi-dim);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  outline: none;
-}
-
-.mocap-btn--primary {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-}
-.mocap-btn--primary:hover {
-  background: linear-gradient(135deg, #059669, #047857);
-  transform: translateY(-1px);
-}
-
-.mocap-btn--record {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
-  animation: pulse-border 2s infinite;
-}
-.mocap-btn--record:hover {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
-  transform: translateY(-1px);
-}
-
-.mocap-btn--stop {
-  background: #374151;
-  color: #f3f4f6;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-.mocap-btn--stop:hover {
-  background: #4b5563;
-}
-
-.mocap-btn--gold {
-  background: linear-gradient(135deg, #d4af37, #b8860b);
-  color: #111827;
-  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.3);
-}
-.mocap-btn--gold:hover {
-  background: linear-gradient(135deg, #e5c158, #c59b27);
-  transform: translateY(-1px);
-}
-
-@keyframes pulse-border {
-  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
-  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
-
-/* Двухоконная компоновка: Камера захвата + 3D Аватар */
-.mocap-studio__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-@media (max-width: 1024px) {
-  .mocap-studio__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.mocap-card {
-  background: #15181f;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.mocap-card__header {
-  padding: 0.75rem 1rem;
-  background: #1c202a;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.mocap-card__title {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #e5e7eb;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.mocap-viewport {
-  position: relative;
-  width: 100%;
-  height: 480px;
-  background: #0a0c10;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mocap-video-element {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1); /* Зеркальный режим для удобства пользователя */
-}
-
-.mocap-canvas-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 5;
-}
-
-/* Пульсирующий индикатор записи */
-.mocap-rec-badge {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  background: rgba(220, 38, 38, 0.9);
-  color: white;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 0 16px rgba(220, 38, 38, 0.6);
-  z-index: 10;
-  letter-spacing: 0.05em;
-}
-
-.mocap-rec-dot {
-  width: 10px;
-  height: 10px;
-  background: white;
-  border-radius: 50%;
-  animation: blink 1s infinite alternate;
-}
-@keyframes blink {
-  from { opacity: 0.2; }
-  to { opacity: 1; }
-}
-
-/* Сенсей HUD оверлей: оценка техники */
-.mocap-sensei-hud {
-  position: absolute;
-  bottom: 14px;
-  left: 14px;
-  right: 14px;
-  background: rgba(15, 18, 25, 0.92);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(212, 175, 55, 0.4);
-  border-radius: 10px;
-  padding: 0.85rem 1rem;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.mocap-sensei-stance {
-  display: flex;
-  flex-direction: column;
-}
-
-.mocap-sensei-stance__title {
-  font-size: 1.05rem;
-  font-weight: 800;
-  color: #38bdf8;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-.mocap-sensei-stance__jp {
-  font-size: 0.78rem;
-  color: #94a3b8;
+.source-tab-btn:hover {
+  color: #fff;
 }
 
-.mocap-sensei-metrics {
+.source-tab-btn.active {
+  background: var(--gold);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.35);
+}
+
+/* Алерт состояния */
+.mocap-alert {
+  padding: 0.85rem 1.2rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
   display: flex;
-  gap: 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.mocap-metric {
+.mocap-alert--error {
+  background: rgba(185, 28, 28, 0.25);
+  border: 1px solid var(--crimson-bright);
+  color: #fca5a5;
+}
+
+.mocap-alert--info {
+  background: rgba(197, 160, 89, 0.15);
+  border: 1px solid var(--gold);
+  color: var(--gold-bright);
+}
+
+/* Рабочая зона: 3D арена + Боковая камера */
+.mocap-workspace {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 1040px) {
+  .mocap-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 3D Сцена Додзё */
+.mocap-3d-stage {
+  position: relative;
+  width: 100%;
+  height: 620px;
+  min-height: 540px;
+  background: #0a0807;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-dojo);
+}
+
+.mocap-hud-overlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.hud-badge-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-badge {
+  background: rgba(14, 12, 10, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.hud-badge.action {
+  border-left-color: var(--crimson-bright);
+}
+
+.hud-badge__jp {
+  font-family: var(--font-kanji);
+  font-size: 0.76rem;
+  color: var(--gold-bright);
+  letter-spacing: 0.08em;
+}
+
+.hud-badge__val {
+  font-size: 0.95rem;
+  color: var(--washi);
+  margin-top: 2px;
+}
+
+.hud-score-card {
+  background: rgba(14, 12, 10, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-width: 110px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
-.mocap-metric__label {
-  font-size: 0.72rem;
-  color: #9ca3af;
+.hud-score-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  color: var(--gold);
   text-transform: uppercase;
+  font-weight: 700;
 }
 
-.mocap-metric__val {
-  font-size: 1.05rem;
+.hud-score-num {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
   font-weight: 800;
-  color: #d4af37;
+  color: var(--gold-bright);
+  line-height: 1.1;
+  margin: 2px 0;
 }
 
-.mocap-score-badge {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid #10b981;
-  color: #10b981;
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-weight: 800;
-  font-size: 0.95rem;
+.hud-score-bar {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
 }
 
-/* Вспомогательный экран ожидания/отключения камеры */
-.mocap-placeholder {
+.hud-score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--crimson-bright) 100%);
+  transition: width 0.3s ease;
+}
+
+/* Боковой блок видоискателя камеры */
+.mocap-cam-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.viewfinder-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.1rem;
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.viewfinder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.viewfinder-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--washi);
+}
+
+.viewfinder-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.viewfinder-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.viewfinder-video.hidden {
+  display: none;
+}
+
+.viewfinder-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.viewfinder-placeholder {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 2rem;
-  color: #9ca3af;
-  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(14, 12, 10, 0.95);
+  color: var(--washi-dim);
 }
 
-.mocap-placeholder__icon {
-  font-size: 3.5rem;
+.placeholder-icon {
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
 }
 
-/* Таймлайн воспроизведения записанного захвата */
-.mocap-timeline {
-  background: #181b22;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
+.device-select-wrap {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 4px;
 }
 
-.mocap-timeline__controls {
+.device-select-wrap label {
+  font-size: 0.78rem;
+  color: var(--washi-muted);
+}
+
+.device-select-wrap select {
+  padding: 6px 10px;
+  font-size: 0.84rem;
+}
+
+/* Сетка углов суставов */
+.mocap-angles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.angle-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-left: 2px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+}
+
+.angle-card__label {
+  font-size: 0.76rem;
+  color: var(--washi-dim);
+}
+
+.angle-card__value {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+
+/* Панель рекордера MoCap */
+.mocap-recorder-box {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.recorder-status {
+  font-size: 0.82rem;
+  color: var(--washi-dim);
+}
+
+.rec-active {
+  color: #ef4444;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+}
+
+.recorder-actions {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 1rem;
 }
 
-.mocap-timeline__playback {
+/* Модальное окно QR-кода */
+.qr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  padding: 1.5rem;
 }
 
-.mocap-timeline__slider-wrap {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+.qr-modal-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 2rem 2.2rem;
+  max-width: 460px;
   width: 100%;
+  box-shadow: var(--shadow-dojo);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
-.mocap-timeline__slider {
-  flex: 1;
-  height: 6px;
-  accent-color: #d4af37;
+.qr-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.qr-modal-head h3 {
+  font-size: 1.25rem;
+  color: var(--washi);
+  margin: 0;
+}
+
+.qr-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--washi-muted);
+  font-size: 1.2rem;
   cursor: pointer;
 }
 
-.mocap-timeline__counter {
-  font-family: monospace;
-  font-size: 0.9rem;
-  color: #f3f4f6;
-  min-width: 100px;
-  text-align: right;
+.qr-modal-desc {
+  font-size: 0.88rem;
+  color: var(--washi-dim);
+  margin: 0 0 1.2rem;
+}
+
+.qr-image-wrap {
+  padding: 12px;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.2rem;
+}
+
+.qr-image {
+  width: 180px;
+  height: 180px;
+  display: block;
+}
+
+.qr-room-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: var(--washi-dim);
+  margin-bottom: 0.8rem;
+}
+
+.qr-room-box strong {
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.qr-link-input-wrap {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 0.8rem;
+}
+
+.qr-link-input {
+  flex: 1;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+}
+
+.qr-ip-config {
+  width: 100%;
+  margin-bottom: 0.9rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.qr-ip-label {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--washi-dim);
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.qr-ip-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.qr-ip-input {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+}
+
+.qr-tip {
+  font-size: 0.76rem;
+  color: var(--washi-muted);
+  margin: 0;
+  line-height: 1.4;
 }
