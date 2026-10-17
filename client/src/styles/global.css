@@ -1,5 +1,9 @@
 @import './variables.css';
 
+/* =========================================================
+   GLOBAL.CSS — Традиционная эстетика Японского Додзё
+   ========================================================= */
+
 html,
 body,
 #root {
@@ -12,9 +16,9 @@ body {
   margin: 0;
   background-color: var(--bg-main);
   background-image: 
-    radial-gradient(ellipse 900px 520px at 15% -8%, rgba(191, 38, 38, 0.15), transparent 70%),
-    radial-gradient(circle 600px at 85% 85%, rgba(197, 160, 89, 0.06), transparent 70%),
-    linear-gradient(180deg, #090807 0%, #12100e 50%, #0a0908 100%);
+    radial-gradient(ellipse 1000px 600px at 20% -10%, rgba(197, 28, 28, 0.16), transparent 70%),
+    radial-gradient(circle 700px at 80% 90%, rgba(203, 163, 78, 0.08), transparent 70%),
+    linear-gradient(180deg, #070709 0%, #0d0d12 40%, #08080b 100%);
   background-attachment: fixed;
   color: var(--text-main);
   font-family: var(--font-body);
@@ -24,7 +28,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* --- Заголовки в японском стиле --- */
+/* --- Заголовки в японском каллиграфическом стиле --- */
 h1,
 h2,
 h3,
@@ -34,27 +38,28 @@ h6 {
   font-family: var(--font-display);
   font-weight: 700;
   color: var(--washi);
-  letter-spacing: 0.02em;
-  line-height: 1.24;
+  letter-spacing: 0.03em;
+  line-height: 1.22;
   margin: 0 0 0.55em;
 }
 
 h1 {
-  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6);
+  font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.8);
 }
 
 h2 {
-  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 h3 {
-  font-size: 1.25rem;
-  letter-spacing: 0.03em;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
 }
 
 h4 {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
 }
 
 p {
@@ -66,12 +71,12 @@ p {
 a {
   color: var(--gold-bright);
   text-decoration: none;
-  transition: color 0.2s ease, text-shadow 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 a:hover {
   color: #fff;
-  text-shadow: 0 0 8px var(--gold-glow);
+  text-shadow: 0 0 10px var(--gold-glow);
 }
 
 button {
@@ -79,46 +84,46 @@ button {
   cursor: pointer;
 }
 
-/* --- Кнопки в стиле каратэдо --- */
+/* --- КНОПКИ КАРАТЭДО --- */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55em;
+  gap: 0.6em;
   border: 1px solid var(--border);
-  background: var(--bg-panel);
+  background: linear-gradient(180deg, var(--bg-panel-light) 0%, var(--bg-panel) 100%);
   color: var(--washi);
-  padding: 0.72em 1.5em;
-  font-size: 0.92rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  padding: 0.75em 1.6em;
+  font-size: 0.94rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   border-radius: var(--radius-sm);
   position: relative;
   overflow: hidden;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+  user-select: none;
 }
 
-.btn::after {
+.btn::before {
   content: '';
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
-  transition: left 0.4s ease;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  transition: left 0.45s ease;
 }
 
 .btn:hover {
   border-color: var(--gold);
   color: var(--gold-bright);
-  background: var(--bg-panel-light);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), var(--shadow-glow-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), var(--shadow-glow-gold);
 }
 
-.btn:hover::after {
+.btn:hover::before {
   left: 100%;
 }
 
@@ -127,128 +132,69 @@ button {
 }
 
 .btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-/* Алая кнопка мастера (Ханко / Тории) */
+/* Алая кнопка мастера (Киноварь / Ханко / Тории) */
 .btn-primary {
-  background: linear-gradient(135deg, var(--crimson-bright) 0%, var(--crimson) 100%);
-  border: 1px solid rgba(245, 239, 230, 0.3);
+  background: linear-gradient(135deg, var(--crimson-bright) 0%, var(--crimson-deep) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
-  font-weight: 600;
-  box-shadow: 0 4px 15px var(--crimson-glow);
+  box-shadow: 0 4px 16px var(--crimson-glow);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #f04856 0%, var(--crimson-bright) 100%);
-  border-color: var(--gold-bright);
+  background: linear-gradient(135deg, #ff4040 0%, var(--crimson) 100%);
+  border-color: #fff;
   color: #fff;
-  box-shadow: 0 6px 20px var(--crimson-glow), var(--shadow-glow-gold);
+  box-shadow: 0 6px 24px var(--crimson-glow);
 }
 
-/* Золотая кнопка */
+/* Золотая кнопка ранга */
 .btn-gold {
-  background: rgba(197, 160, 89, 0.1);
-  border: 1px solid var(--gold);
-  color: var(--gold-bright);
-}
-
-.btn-gold:hover {
-  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 100%);
-  border-color: var(--gold-bright);
-  color: var(--ink-darkest);
-  font-weight: 600;
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold-dark) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #0c0b09;
+  font-weight: 700;
   box-shadow: 0 4px 16px var(--gold-glow);
 }
 
+.btn-gold:hover {
+  background: linear-gradient(135deg, #fff 0%, var(--gold) 100%);
+  color: #000;
+  box-shadow: 0 6px 24px var(--gold-glow);
+}
+
 .btn-danger {
-  border-color: var(--danger);
-  color: var(--danger);
-  background: rgba(217, 56, 56, 0.08);
+  background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fff;
 }
 
 .btn-danger:hover {
-  background: var(--danger);
+  border-color: #f87171;
   color: #fff;
-  box-shadow: 0 4px 15px rgba(217, 56, 56, 0.4);
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.5);
 }
 
-/* --- Панели и карточки --- */
-.panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--gold);
-  padding: 1.8rem 2rem;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
-  position: relative;
-}
-
-/* Линия-разделитель в стиле каллиграфического штриха */
-.divider {
-  border: none;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, var(--gold) 30%, var(--gold) 70%, transparent 100%);
-  opacity: 0.35;
-  margin: 2.2rem 0;
-}
-
-/* --- Поля ввода в стиле додзё --- */
-input,
-textarea,
-select {
-  font-family: var(--font-body);
-  background-color: #171310;
-  border: 1px solid var(--border);
-  color: #f7f4ed;
-  padding: 0.72em 0.95em;
-  border-radius: var(--radius-sm);
-  width: 100%;
-  font-size: 0.94rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-select option {
-  background-color: #1a1613;
-  color: #f7f4ed;
-  padding: 8px 12px;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: var(--gold);
-  box-shadow: 0 0 10px var(--gold-glow);
-  background-color: #0f0d0b;
-}
-
-label {
-  display: block;
-  font-size: 0.82rem;
-  color: var(--washi-dim);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  margin-bottom: 0.45em;
-}
-
-.field {
-  margin-bottom: 1.3rem;
-}
-
-.error-text {
-  color: var(--crimson-bright);
+.btn-logout {
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #fca5a5;
+  padding: 0.5em 1.1em;
   font-size: 0.85rem;
-  margin-top: 0.4em;
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
 }
 
-/* --- Японская печать (Ханко / 印) --- */
+.btn-logout:hover {
+  background: var(--crimson);
+  color: #fff;
+  border-color: var(--crimson-bright);
+}
+
+/* --- ПЕЧАТЬ ХАНКО (判子) --- */
 .hanko {
   display: inline-flex;
   align-items: center;
@@ -256,46 +202,71 @@ label {
   background: var(--crimson);
   color: #fff;
   font-family: var(--font-kanji);
-  font-size: 0.85rem;
-  font-weight: 700;
-  padding: 3px 9px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 2px 8px var(--crimson-glow);
-  letter-spacing: 0.08em;
+  border: 2px solid #fff;
+  border-radius: var(--radius-xs);
+  box-shadow: 0 0 14px var(--crimson-glow);
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
 }
 
-/* --- Бейджи --- */
-.badge {
+.hanko--sm {
+  width: 32px;
+  height: 32px;
+  font-size: 1.1rem;
+}
+
+.hanko--md {
+  width: 44px;
+  height: 44px;
+  font-size: 1.5rem;
+}
+
+.hanko--lg {
+  width: 58px;
+  height: 58px;
+  font-size: 2rem;
+  border-width: 3px;
+  box-shadow: 0 0 20px var(--crimson-glow);
+}
+
+/* --- ПОЯСА МАСТЕРСТВА (ОБИ) --- */
+.heian-belt-badge,
+.belt-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 0.78rem;
-  border-left: 3px solid var(--border);
-  padding: 0.2em 0.6em;
-  background: rgba(0, 0, 0, 0.3);
-  letter-spacing: 0.03em;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  line-height: 1.2;
 }
 
-.badge-approved {
-  color: var(--success);
-  border-left-color: var(--success);
+.belt-white { background: #f8fafc; color: #0f172a; border: 1px solid rgba(0, 0, 0, 0.15); }
+.belt-yellow { background: #eab308; color: #1c1917; font-weight: 800; }
+.belt-orange { background: #ea580c; color: #fff; }
+.belt-green { background: #15803d; color: #fff; }
+.belt-blue { background: #1d4ed8; color: #fff; }
+.belt-brown { background: #78350f; color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); }
+.belt-black { 
+  background: #09090b; 
+  color: var(--gold-bright); 
+  border: 1px solid var(--gold); 
+  box-shadow: 0 0 10px rgba(203, 163, 78, 0.35);
 }
 
-.badge-pending {
-  color: var(--gold-bright);
-  border-left-color: var(--gold);
-}
-
-.badge-rejected {
-  color: var(--danger);
-  border-left-color: var(--danger);
-}
-
-/* --- Сетка и контейнер --- */
+/* --- КОНТЕЙНЕРЫ И СЕТКИ --- */
 .container {
-  max-width: 1220px;
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.6rem;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
 }
 
 .grid {
@@ -304,73 +275,113 @@ label {
 }
 
 .grid-cards {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
 }
 
-.loading,
+.panel {
+  background: linear-gradient(175deg, var(--bg-panel) 0%, #0d0d12 100%);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 1.6rem 1.8rem;
+  box-shadow: var(--shadow-card);
+  position: relative;
+}
+
+/* --- ФОРМЫ И ПОЛЯ ВВОДА --- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1.2rem;
+}
+
+.field label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--washi-dim);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+input,
+select,
+textarea {
+  background: #08080b;
+  border: 1px solid var(--border);
+  color: var(--washi);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 14px rgba(203, 163, 78, 0.35);
+  background: #0f0f15;
+}
+
+/* --- СОСТОЯНИЯ --- */
+.loading {
+  color: var(--gold);
+  font-style: italic;
+  font-size: 1rem;
+  text-align: center;
+  padding: 3rem;
+}
+
 .empty-state {
   text-align: center;
-  color: var(--text-muted);
-  padding: 3.5rem 1rem;
-  font-family: var(--font-display);
+  padding: 3.5rem 1.5rem;
+  color: var(--washi-dim);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(18, 18, 24, 0.4);
 }
 
-/* --- Скроллбар в стиле туши и лака --- */
-::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+.error-text {
+  color: #f87171;
+  font-size: 0.86rem;
+  margin: 0.4rem 0 0;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--ink-darkest);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--bg-panel-light);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--gold);
-}
-
-::selection {
-  background: var(--crimson);
-  color: #fff;
-}
-
-:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
-/* Мобильная адаптивность общих сеток и контейнеров */
+/* --- МОБИЛЬНАЯ АДАПТИВНОСТЬ --- */
 @media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+
   .container {
-    padding: 0 1rem;
+    padding: 0 1.1rem;
   }
 
   .grid-cards {
     grid-template-columns: 1fr;
-    gap: 1.2rem;
+    gap: 1.3rem;
   }
 
   .page-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.8rem;
+    gap: 0.9rem;
     margin-bottom: 1.4rem;
     padding-bottom: 1rem;
   }
 
   .page-header h1 {
-    font-size: 1.7rem;
+    font-size: 1.85rem;
   }
 
   .toolbar {
     padding: 1rem;
-    gap: 0.8rem;
+    gap: 0.85rem;
     margin-bottom: 1.4rem;
   }
 
@@ -383,7 +394,7 @@ label {
 
   .toolbar input,
   .toolbar select {
-    font-size: 16px; /* Предотвращает нежелательный авто-зум на iOS */
+    font-size: 16px; /* Защита от авто-зума на iOS */
   }
 
   .pagination {

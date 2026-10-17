@@ -3,7 +3,7 @@
    ========================================================= */
 
 .tech-picker {
-  background: linear-gradient(175deg, #181512 0%, #100e0b 100%);
+  background: linear-gradient(175deg, #121218 0%, #0a0a0e 100%);
   border: 1px solid var(--border);
   border-top: 3px solid var(--gold);
   border-radius: var(--radius-sm);

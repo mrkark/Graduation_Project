@@ -34,7 +34,7 @@
 
 /* --- ВЕРХНИЙ БАННЕР КАТА --- */
 .kata-banner {
-  background: linear-gradient(180deg, var(--bg-panel) 0%, #151210 100%);
+  background: linear-gradient(180deg, var(--bg-panel) 0%, #0e0e14 100%);
   border: 1px solid var(--border);
   border-left: 4px solid var(--gold);
   border-radius: var(--radius-sm);
@@ -341,7 +341,7 @@
 
 /* Карточка мастера с текущим движением */
 .step-master-card {
-  background: linear-gradient(180deg, var(--bg-panel) 0%, #151210 100%);
+  background: linear-gradient(180deg, var(--bg-panel) 0%, #0e0e14 100%);
   border: 1px solid var(--border);
   border-left: 4px solid var(--crimson-bright);
   border-radius: var(--radius-sm);

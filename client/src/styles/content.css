@@ -1,18 +1,49 @@
 /* =========================================================
-   CONTENT.CSS — Стили внутренних страниц в эстетике Каратэдо
+   CONTENT.CSS — Страницы каталога, карточки и разборы Додзё
    ========================================================= */
+
+/* --- Заголовок страницы (Сёдзи / Додзё) --- */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-bottom: 2.2rem;
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.page-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100px;
+  height: 3px;
+  background: var(--crimson-bright);
+  box-shadow: 0 0 10px var(--crimson-glow);
+}
+
+.page-subtitle {
+  color: var(--washi-dim);
+  font-size: 0.95rem;
+  margin: 0.35rem 0 0;
+  letter-spacing: 0.02em;
+}
 
 /* --- Панель фильтров и инструментов --- */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.1rem;
+  gap: 1.2rem;
   align-items: flex-end;
-  margin-bottom: 2rem;
-  padding: 1.2rem 1.5rem;
-  background: linear-gradient(180deg, var(--bg-panel) 0%, #151210 100%);
+  margin-bottom: 1.6rem;
+  padding: 1.2rem 1.6rem;
+  background: linear-gradient(180deg, var(--bg-panel) 0%, #0e0e13 100%);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--gold);
+  border-left: 4px solid var(--gold);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
 }
@@ -25,34 +56,52 @@
 
 .toolbar .field--grow {
   flex: 2;
-  min-width: 240px;
+  min-width: 250px;
 }
 
-.page-header {
+/* Быстрые фильтры поясов каратэ */
+.filter-chips {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  gap: 0.6rem;
   flex-wrap: wrap;
-  gap: 1.2rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.2rem;
-  border-bottom: 1px solid var(--border);
-  position: relative;
+  align-items: center;
+  margin-bottom: 1.8rem;
 }
 
-.page-header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 90px;
-  height: 2px;
-  background: var(--crimson-bright);
+.filter-chip {
+  background: rgba(18, 18, 24, 0.85);
+  border: 1px solid var(--border);
+  color: var(--washi-dim);
+  padding: 0.42rem 1rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  user-select: none;
 }
 
-/* --- Карточки (деревянные таблички додзё / Эма) --- */
+.filter-chip:hover {
+  border-color: var(--gold);
+  color: #fff;
+  background: rgba(28, 28, 38, 0.95);
+  transform: translateY(-1px);
+}
+
+.filter-chip.active {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+  color: #0b0907;
+  border-color: var(--gold-bright);
+  font-weight: 700;
+  box-shadow: 0 0 16px var(--gold-glow);
+}
+
+/* --- КАРТОЧКИ ТЕХНИК ДОДЗЁ (Нафуда / 名札) --- */
 .card {
-  background: linear-gradient(175deg, var(--bg-panel) 0%, #13100e 100%);
+  background: linear-gradient(175deg, var(--bg-panel) 0%, #0b0b0f 100%);
   border: 1px solid var(--border);
   border-left: 4px solid var(--gold-dark);
   display: flex;
@@ -61,90 +110,34 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
   transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  text-decoration: none;
+  position: relative;
 }
 
 .card:hover {
   border-left-color: var(--crimson-bright);
-  border-color: rgba(197, 160, 89, 0.4);
-  background: linear-gradient(175deg, var(--bg-panel-light) 0%, #171411 100%);
-  transform: translateY(-3px);
-  box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.8), 0 0 16px rgba(197, 160, 89, 0.12);
+  border-color: var(--gold-bright);
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px -10px rgba(0, 0, 0, 0.9), 0 0 20px rgba(203, 163, 78, 0.2);
 }
 
 .card__thumb {
   aspect-ratio: 16 / 9;
-  background: #0a0907 center/cover no-repeat;
+  background: #060608 center/cover no-repeat;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--washi-dim);
-  font-family: var(--font-kanji);
-  font-size: 1.2rem;
   border-bottom: 1px solid var(--border-subtle);
   position: relative;
+  overflow: hidden;
 }
 
 .card__thumb::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(0, 0, 0, 0.6) 100%);
+  background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, 0.75) 100%);
   pointer-events: none;
-}
-
-.card__fallback {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  z-index: 1;
-  color: var(--gold);
-}
-
-.card__kanji {
-  font-family: var(--font-kanji, serif);
-  font-size: 2.2rem;
-  line-height: 1;
-  color: var(--gold-bright, #e8c57b);
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
-  display: inline-block;
-}
-
-.card__body {
-  padding: 1.35rem 1.45rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  flex: 1;
-}
-
-.card__title {
-  font-family: var(--font-display);
-  font-size: 1.14rem;
-  font-weight: 700;
-  color: var(--washi);
-  line-height: 1.3;
-}
-
-.card__meta {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-  font-size: 0.78rem;
-  color: var(--washi-dim);
-}
-
-.card__desc {
-  font-size: 0.88rem;
-  color: var(--washi-dim);
-  flex: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.6;
 }
 
 .card__belt-badge {
@@ -158,15 +151,8 @@
   border-radius: var(--radius-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
 }
-
-.belt-white { background: #e8e4de; color: #1c1814; }
-.belt-yellow { background: #e6b800; color: #1c1814; }
-.belt-green { background: #2d8a4e; color: #fff; }
-.belt-blue { background: #2563eb; color: #fff; }
-.belt-brown { background: #7c4a27; color: #fff; }
-.belt-black { background: #1a1a1a; color: var(--gold-bright); border: 1px solid var(--border-gold); }
 
 .card__kanji-seal {
   position: absolute;
@@ -174,19 +160,82 @@
   right: 10px;
   z-index: 2;
   font-family: var(--font-kanji);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
+  font-weight: 700;
   color: var(--gold-bright);
-  background: rgba(14, 12, 10, 0.78);
+  background: rgba(10, 10, 14, 0.85);
   backdrop-filter: blur(4px);
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: var(--radius-xs);
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
+  letter-spacing: 0.08em;
+}
+
+.card__fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  z-index: 1;
+  color: var(--gold);
+}
+
+.card__kanji {
+  font-family: var(--font-kanji, serif);
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--gold-bright);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+}
+
+.card__body {
+  padding: 1.4rem 1.5rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  flex: 1;
+}
+
+.card__title {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--washi);
+  line-height: 1.35;
+  transition: color 0.2s ease;
+}
+
+.card:hover .card__title {
+  color: #fff;
+  text-shadow: 0 0 10px var(--gold-glow);
+}
+
+.card__meta {
+  display: flex;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--washi-dim);
+}
+
+.card__desc {
+  font-size: 0.88rem;
+  color: var(--washi-dim);
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .card__meta--footer {
   margin-top: auto;
-  padding-top: 0.6rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -194,288 +243,153 @@
 
 .card__view-action {
   color: var(--gold-bright);
-  font-weight: 600;
-  font-size: 0.8rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .card:hover .card__view-action {
-  transform: translateX(3px);
+  transform: translateX(4px);
   color: #fff;
 }
 
-.filter-chips {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 1.4rem;
-}
-
-.filter-chip {
-  background: rgba(22, 19, 16, 0.75);
-  border: 1px solid var(--border);
-  color: var(--washi-dim);
-  padding: 0.38rem 0.9rem;
-  font-size: 0.82rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  user-select: none;
-}
-
-.filter-chip:hover {
-  border-color: var(--gold);
-  color: var(--washi);
-  background: rgba(30, 26, 22, 0.9);
-}
-
-.filter-chip.active {
-  background: var(--gold-dark);
-  color: #fff;
-  border-color: var(--gold-bright);
-  box-shadow: 0 0 12px rgba(190, 151, 82, 0.3);
-}
-
+/* --- ПАГИНАЦИЯ --- */
 .pagination {
   display: flex;
   justify-content: center;
-  gap: 0.6rem;
-  margin-top: 2.6rem;
+  gap: 0.65rem;
+  margin-top: 2.8rem;
 }
 
-/* --- Страницы деталей техники --- */
+/* --- СТРАНИЦЫ ДЕТАЛЕЙ ТЕХНИКИ --- */
 .detail-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1.2rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
-  margin-bottom: 1.8rem;
-  padding-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.6rem;
   border-bottom: 1px solid var(--border);
+  position: relative;
 }
 
 .detail-actions {
   display: flex;
-  gap: 0.7rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .detail-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 2.4rem;
+  gap: 2rem;
   align-items: start;
 }
 
-@media (max-width: 880px) {
+@media (max-width: 900px) {
   .detail-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
-}
-
-.video-embed {
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
-  border-radius: var(--radius-sm);
-  background: #000;
-}
-
-.step-card {
-  border: 1px solid var(--border-subtle);
-  border-left: 3px solid var(--gold);
-  padding: 1.1rem 1.2rem;
-  margin-bottom: 0.8rem;
-  background: var(--bg-panel);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: border-color 0.2s ease;
-}
-
-.step-card:hover {
-  border-left-color: var(--crimson-bright);
-}
-
-.step-card__title {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  color: var(--washi);
-  margin-bottom: 0.35rem;
-}
-
-/* --- Комментарии --- */
-.comments {
-  margin-top: 2.8rem;
-}
-
-.comments__form textarea {
-  margin-bottom: 0.8rem;
-}
-
-.comments__list {
-  list-style: none;
-  padding: 0;
-  margin: 1.5rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1.1rem;
-}
-
-.comments__item {
-  border-left: 3px solid var(--gold);
-  padding: 0.7rem 0 0.7rem 1.2rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
-.comments__meta {
-  display: flex;
-  gap: 0.8rem;
-  font-size: 0.78rem;
-  color: var(--washi-dim);
-  margin-bottom: 0.35rem;
-}
-
-.comments__author {
-  color: var(--gold-bright);
-  font-weight: 600;
-}
-
-.comments__text {
-  white-space: pre-wrap;
-  margin: 0;
-  color: var(--washi);
-  font-size: 0.92rem;
-}
-
-.comments__delete {
-  background: none;
-  border: none;
-  color: var(--danger);
-  font-size: 0.76rem;
-  padding: 0;
-  margin-top: 0.4rem;
-  cursor: pointer;
-}
-
-.comments__delete:hover {
-  text-decoration: underline;
 }
 
 /* --- ЧАТ ДОДЗЁ --- */
 .chat-page {
   display: grid;
-  grid-template-columns: 250px 1fr;
-  gap: 1.5rem;
-  height: calc(100vh - 210px);
-  min-height: 480px;
+  grid-template-columns: 280px 1fr;
+  gap: 1.6rem;
+  height: 640px;
 }
 
-@media (max-width: 780px) {
+@media (max-width: 768px) {
   .chat-page {
     grid-template-columns: 1fr;
     height: auto;
-    gap: 1rem;
-  }
-  .chat-rooms {
-    max-height: 150px;
-    display: flex;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-  .chat-rooms__item {
-    border-bottom: none;
-    border-right: 1px solid var(--border-subtle);
-    border-left: none;
-    border-top: 3px solid transparent;
-    padding: 0.7rem 1rem;
-    flex-shrink: 0;
-    width: auto;
-  }
-  .chat-rooms__item.active {
-    border-top-color: var(--crimson-bright);
-    border-left-color: transparent;
-  }
-  .chat-window {
-    min-height: 460px;
-    height: 65vh;
-  }
-  .chat-msg {
-    max-width: 88%;
   }
 }
 
 .chat-rooms {
-  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   background: var(--bg-panel);
-  overflow-y: auto;
+  border: 1px solid var(--border);
+  padding: 0.75rem;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .chat-rooms {
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 0.6rem;
+    gap: 0.5rem;
+  }
 }
 
 .chat-rooms__item {
-  display: block;
-  width: 100%;
   text-align: left;
-  background: none;
-  border: none;
-  border-left: 3px solid transparent;
-  border-bottom: 1px solid var(--border-subtle);
-  padding: 0.9rem 1.2rem;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  border: 1px solid transparent;
   color: var(--washi-dim);
-  font-size: 0.88rem;
+  border-radius: var(--radius-xs);
   transition: all 0.2s ease;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .chat-rooms__item:hover {
-  background: rgba(197, 160, 89, 0.08);
+  background: rgba(203, 163, 78, 0.1);
   color: var(--washi);
 }
 
 .chat-rooms__item.active {
+  background: rgba(203, 163, 78, 0.18);
+  border-color: var(--gold);
   color: var(--gold-bright);
-  border-left-color: var(--crimson-bright);
-  background: var(--bg-panel-light);
-  font-weight: 600;
+  font-weight: 700;
+  border-left: 3px solid var(--crimson-bright);
 }
 
 .chat-window {
   display: flex;
   flex-direction: column;
+  background: #08080c;
   border: 1px solid var(--border);
-  background: #0a0908;
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-card);
+  height: 640px;
 }
 
 .chat-window__status {
-  padding: 0.65rem 1.2rem;
-  font-size: 0.78rem;
-  color: var(--washi-dim);
+  padding: 0.85rem 1.2rem;
   border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--washi-dim);
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  background: #110f0d;
+  gap: 0.55rem;
+  background: var(--bg-panel);
 }
 
 .chat-window__status-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--danger);
-  box-shadow: 0 0 6px var(--danger);
+  background: #64748b;
 }
 
 .chat-window__status-dot.online {
-  background: var(--success);
-  box-shadow: 0 0 8px var(--success);
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
 }
 
 .chat-window__messages {
@@ -484,308 +398,82 @@
   padding: 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.9rem;
 }
 
 .chat-msg {
-  max-width: 72%;
-  padding: 0.6rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 78%;
+  padding: 0.85rem 1.1rem;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.chat-msg.own {
+.chat-msg--own {
   align-self: flex-end;
-  background: linear-gradient(135deg, #241e18 0%, #1a1613 100%);
-  border-color: var(--gold);
-}
-
-.chat-msg__meta {
-  font-size: 0.72rem;
-  color: var(--gold);
-  margin-bottom: 0.25rem;
-  display: flex;
-  gap: 0.6rem;
-}
-
-.chat-msg__text {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: var(--washi);
-  font-size: 0.92rem;
-}
-
-.chat-window__typing {
-  font-size: 0.74rem;
-  color: var(--washi-muted);
-  padding: 0 1.2rem;
-  height: 1.5rem;
-  font-style: italic;
+  background: linear-gradient(135deg, rgba(133, 19, 19, 0.35) 0%, rgba(18, 18, 24, 0.85) 100%);
+  border-color: rgba(230, 46, 46, 0.35);
+  border-right: 3px solid var(--crimson-bright);
 }
 
 .chat-window__form {
   display: flex;
-  gap: 0.7rem;
-  padding: 0.9rem;
+  gap: 0.8rem;
+  padding: 1rem;
   border-top: 1px solid var(--border);
-  background: #12100e;
+  background: var(--bg-panel);
 }
 
-.chat-window__form input {
-  flex: 1;
-}
-
-/* --- Друзья (Соратники) --- */
+/* --- ДРУЗЬЯ (Соратники Додзё) --- */
 .friend-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.95rem 1.2rem;
+  padding: 1rem 1.4rem;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--gold);
+  border-left: 4px solid var(--gold);
   background: var(--bg-panel);
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.85rem;
   border-radius: var(--radius-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
 }
 
 .friend-card__name {
   color: var(--washi);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1.02rem;
 }
 
 .friend-card__actions {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.7rem;
 }
 
 .tabs {
   display: flex;
-  gap: 0.4rem;
-  margin-bottom: 1.6rem;
+  gap: 0.5rem;
+  margin-bottom: 1.8rem;
   border-bottom: 1px solid var(--border);
+  overflow-x: auto;
 }
 
 .tabs button {
   background: none;
   border: none;
   color: var(--washi-dim);
-  padding: 0.65rem 1.2rem;
+  padding: 0.75rem 1.4rem;
   border-bottom: 2px solid transparent;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
+  font-weight: 600;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .tabs button.active {
   color: var(--gold-bright);
   border-bottom-color: var(--crimson-bright);
-  font-weight: 600;
-}
-
-/* --- Админ-панель --- */
-.admin-shell {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 1.8rem;
-}
-
-@media (max-width: 780px) {
-  .admin-shell {
-    grid-template-columns: 1fr;
-  }
-}
-
-.admin-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  border: 1px solid var(--border);
-  background: var(--bg-panel);
-  padding: 0.6rem;
-  border-radius: var(--radius-sm);
-  height: fit-content;
-  box-shadow: var(--shadow-card);
-}
-
-.admin-nav a {
-  padding: 0.65rem 0.9rem;
-  color: var(--washi-dim);
-  font-size: 0.88rem;
-  border-left: 3px solid transparent;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
-}
-
-.admin-nav a.active,
-.admin-nav a:hover {
-  background: var(--bg-panel-light);
-  color: var(--gold-bright);
-  border-left-color: var(--crimson-bright);
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 1.2rem;
-  margin-bottom: 1.8rem;
-}
-
-.stat-card {
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--gold);
-  background: var(--bg-panel);
-  padding: 1.2rem 1.1rem;
-  text-align: center;
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-card);
-}
-
-.stat-card__value {
-  font-family: var(--font-display);
-  font-size: 2.1rem;
-  color: var(--gold-bright);
-  font-weight: 700;
-}
-
-.stat-card__label {
-  font-size: 0.78rem;
-  color: var(--washi-dim);
-  margin-top: 0.25rem;
-}
-
-table.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.88rem;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-}
-
-table.data-table th,
-table.data-table td {
-  text-align: left;
-  padding: 0.75rem 0.85rem;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-table.data-table th {
-  color: var(--gold);
-  font-weight: 600;
-  font-size: 0.78rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  background: #110e0c;
-  border-bottom: 1px solid var(--border);
-}
-
-table.data-table tr:hover td {
-  background: rgba(197, 160, 89, 0.04);
-}
-
-table.data-table td .btn {
-  padding: 0.35em 0.8em;
-  font-size: 0.8rem;
-}
-
-.row-actions {
-  display: flex;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-/* Мобильная адаптивность вкладок, списков, друзей и админ-панели */
-@media (max-width: 768px) {
-  .tabs {
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-    gap: 0.2rem;
-  }
-
-  .tabs button {
-    flex-shrink: 0;
-    padding: 0.55rem 0.85rem;
-    font-size: 0.84rem;
-  }
-
-  .friend-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem;
-  }
-
-  .friend-card__actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .admin-shell {
-    grid-template-columns: 1fr;
-    gap: 1.2rem;
-  }
-
-  .admin-nav {
-    display: flex;
-    overflow-x: auto;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .admin-nav a {
-    flex-shrink: 0;
-    border-left: none;
-    border-bottom: 2px solid transparent;
-    padding: 0.6rem 0.9rem;
-    font-size: 0.82rem;
-  }
-
-  .admin-nav a.active,
-  .admin-nav a:hover {
-    border-left-color: transparent;
-    border-bottom-color: var(--crimson-bright);
-  }
-
-  table.data-table {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .detail-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .detail-actions {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .detail-actions .btn {
-    flex: 1;
-    text-align: center;
-    justify-content: center;
-    padding: 0.65rem 0.85rem;
-    font-size: 0.84rem;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-    gap: 1.4rem;
-  }
+  text-shadow: 0 0 10px var(--gold-glow);
 }

@@ -1,96 +1,84 @@
-/*
-  Bunkai Explorer — Токены дизайна в стиле каратэ и традиционной Японии.
-  Палитра: глубокая тушь (Суми), алый лак (Ака), золотой лист (Кин), рисовая бумага (Васи).
-*/
-:root {
-  /* --- Цвета фона и поверхностей (Суми / 墨 — древесный уголь и тушь) --- */
-  --ink-deep: #070605;
-  --ink-darkest: #0b0908;
-  --bg-main: #0e0c0a;
-  --bg-panel: #161310;
-  --bg-panel-light: #1f1b16;
-  --bg-panel-elevated: #26211b;
-  --bg-surface-translucent: rgba(22, 19, 16, 0.88);
-  --wood-dark: #070605;
+/* =========================================================
+   VARIABLES.CSS — Дизайн-система Додзё Сётокан Каратэдо
+   Палитра: Глубокая тушь Суми (墨), Алая киноварь Тории/Ханко (赤),
+            Императорское золото Кин (金), Рисовая бумага Васи (和紙).
+   ========================================================= */
 
-  /* --- Алый акцент (Ака / 赤 — печать Ханко, ворота Тории, кимэ) --- */
-  --crimson-deep: #7a1515;
-  --crimson: #b32424;
-  --crimson-bright: #de3535;
-  --crimson-glow: rgba(179, 36, 36, 0.38);
+:root {
+  /* --- Фон и поверхности Додзё (Суми / 墨 — чистый уголь и благородный черный) --- */
+  --ink-black: #08080a;
+  --ink-deep: #0d0d12;
+  --bg-main: #0a0a0e;
+  --bg-panel: #121218;
+  --bg-panel-light: #181822;
+  --bg-panel-elevated: #20202c;
+  --bg-surface-translucent: rgba(18, 18, 24, 0.88);
+  --wood-dark: #0f0d0b;
+
+  /* --- Алая киноварь (Ака / 赤 — печать Ханко, ворота Тории, энергия Ки, КИАЙ) --- */
+  --crimson-deep: #851313;
+  --crimson: #c51c1c;
+  --crimson-bright: #e62e2e;
+  --crimson-glow: rgba(230, 46, 46, 0.45);
   --red: var(--crimson);
   --red-light: var(--crimson-bright);
+  --red-seal: #b91c1c;
 
-  /* --- Золото и латунь (Кин / 金 — мастерство, окантовка, свет) --- */
-  --gold-dark: #82652e;
-  --gold: #be9752;
-  --gold-bright: #e4be74;
-  --gold-glow: rgba(190, 151, 82, 0.28);
-  --gold-soft: #d5b57d;
+  /* --- Золото и латунь (Кин / 金 — мастерство, окантовка додзё, эмблема) --- */
+  --gold-dark: #8c6e2d;
+  --gold: #cba34e;
+  --gold-bright: #ecd07a;
+  --gold-glow: rgba(203, 163, 78, 0.35);
+  --gold-soft: #dfbe6c;
 
-  /* --- Рисовая бумага (Васи / 和紙 — текст) --- */
-  --washi: #f4ede3;
-  --washi-dim: #c2b6a3;
-  --washi-muted: #857a6c;
+  /* --- Рисовая бумага (Васи / 和紙 — чистая типографика) --- */
+  --washi: #f8f6f0;
+  --washi-dim: #cfc8b8;
+  --washi-muted: #8e8879;
   --text-main: var(--washi);
   --text-muted: var(--washi-dim);
   --paper: var(--washi);
   --paper-dark: var(--washi-dim);
 
-  /* --- Границы и линии (традиционные сочленения и ширмы) --- */
-  --border: rgba(190, 151, 82, 0.24);
-  --border-subtle: rgba(190, 151, 82, 0.14);
-  --border-faint: rgba(255, 255, 255, 0.06);
-  --border-gold: rgba(190, 151, 82, 0.55);
-  --border-crimson: rgba(179, 36, 36, 0.5);
+  /* --- Границы сочленений и ширмы (Сёдзи / 障子) --- */
+  --border: rgba(203, 163, 78, 0.28);
+  --border-subtle: rgba(203, 163, 78, 0.16);
+  --border-faint: rgba(255, 255, 255, 0.08);
+  --border-gold: rgba(203, 163, 78, 0.6);
+  --border-crimson: rgba(230, 46, 46, 0.55);
 
-  /* --- Пояса мастерства (Ранги каратэ) --- */
-  --belt-white: #e8e4de;
-  --belt-yellow: #e6b800;
-  --belt-green: #2d8a4e;
-  --belt-brown: #7c4a27;
-  --belt-black: #1a1a1a;
+  /* --- Пояса каратэ (Оби / 帯 — традиционная иерархия рангов) --- */
+  --belt-white: #f1f5f9;
+  --belt-white-text: #0f172a;
+  --belt-yellow: #eab308;
+  --belt-orange: #ea580c;
+  --belt-green: #15803d;
+  --belt-blue: #1d4ed8;
+  --belt-brown: #78350f;
+  --belt-black: #09090b;
 
   /* --- Статусы --- */
-  --danger: #cf3434;
-  --success: #3da35d;
-  --warning: #df932b;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
 
-  /* --- Типографика --- */
+  /* --- Типографика каратэдо --- */
   --font-display: 'Cinzel', 'Shippori Mincho', 'Noto Serif JP', serif;
   --font-kanji: 'Shippori Mincho', 'Noto Serif JP', serif;
-  --font-body: 'Inter', 'Zen Kaku Gothic New', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* --- Радиусы и тени (сдержанные, без чрезмерных скруглений) --- */
+  /* --- Радиусы и тени (сдержанные формы японской столярки) --- */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
-  --shadow-dojo: 0 18px 40px -10px rgba(0, 0, 0, 0.85);
-  --shadow-card: 0 8px 24px -6px rgba(0, 0, 0, 0.65);
-  --shadow-glow-gold: 0 0 24px rgba(190, 151, 82, 0.25);
-  --shadow-glow-crimson: 0 0 24px rgba(179, 36, 36, 0.35);
+  --shadow-dojo: 0 20px 45px -12px rgba(0, 0, 0, 0.9);
+  --shadow-card: 0 10px 28px -8px rgba(0, 0, 0, 0.75);
+  --shadow-glow-gold: 0 0 28px rgba(203, 163, 78, 0.25);
+  --shadow-glow-crimson: 0 0 28px rgba(230, 46, 46, 0.4);
 
   /* --- Слои --- */
   --z-header: 100;
-  --z-modal: 200;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  --z-drawer: 200;
+  --z-modal: 300;
 }
