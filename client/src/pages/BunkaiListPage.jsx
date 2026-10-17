@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
 import StatusBadge from '../components/StatusBadge';
-import { resolveMediaUrl } from '../utils/media';
+import './BunkaiListPage.css';
 
-const DIFFICULTY_CONFIG = {
-  beginner: { label: 'Базовый', belt: 'Начальный' },
-  intermediate: { label: 'Средний', belt: 'Средний' },
-  advanced: { label: 'Продвинутый', belt: 'Продвинутый' },
-  master: { label: 'Мастерский', belt: 'Мастерский' },
+const DIFFICULTY_MAP = {
+  beginner: 'Базовый уровень',
+  intermediate: 'Средний уровень',
+  advanced: 'Продвинутый уровень',
+  master: 'Мастерский уровень',
 };
 
 export default function BunkaiListPage() {
@@ -24,13 +24,14 @@ export default function BunkaiListPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listBunkai({ search, sort, page })
+    listBunkai({ search, sort, page, pageSize: 24 })
       .then((res) => {
         if (cancelled) return;
-        setItems(res.data);
-        setMeta(res.meta);
+        setItems(res.data || []);
+        setMeta(res.meta || { total: res.data?.length || 0 });
       })
       .finally(() => !cancelled && setLoading(false));
+
     return () => {
       cancelled = true;
     };
@@ -44,111 +45,81 @@ export default function BunkaiListPage() {
     setParams(next);
   }
 
-  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
-
   return (
-    <div className="container">
-      {/* 1. ЗАГОЛОВОК СТРАНИЦЫ */}
-      <div className="page-header">
+    <div className="container bunkai-catalog">
+      {/* 1. ЭДИЦИОННАЯ ШАПКА РАЗБОРОВ БУНКАЙ */}
+      <header className="bunkai-header">
         <div>
-          <h1>Каталог разборов бункай</h1>
-          <p className="page-subtitle">Практическое применение движений ката против противников (Оё-бункай)</p>
+          <span className="bunkai-header__eyebrow">Оё-Бункай · Боевое применение</span>
+          <h1 className="bunkai-header__title">Каталог боевых сценариев</h1>
+          <p className="bunkai-header__subtitle">
+            Практическая расшифровка скрытых боевых техник ката против реальных ударов, захватов и вооруженных атак в трёхмерном пространстве.
+          </p>
         </div>
+
         <Link to="/bunkai/new" className="btn btn-primary">
-          + Создать бункай в студии
+          + Сконструировать бункай
         </Link>
+      </header>
+
+      {/* 2. ПОИСК */}
+      <div className="bunkai-search-bar">
+        <input
+          type="text"
+          className="bunkai-search-input"
+          value={search}
+          onChange={(e) => updateParam('search', e.target.value)}
+          placeholder="Поиск по названию или технике (гэдан-барай, залом кисти, кудзуси, маэ-гэри)…"
+        />
       </div>
 
-      {/* 2. ПАНЕЛЬ ПОИСКА */}
-      <div className="toolbar">
-        <div className="field field--grow">
-          <input
-            value={search}
-            onChange={(e) => updateParam('search', e.target.value)}
-            placeholder="Поиск по названию или технике (сюто-укэ, залом запястья, контратака)…"
-          />
-        </div>
-        <div className="field" style={{ flex: '0 0 200px' }}>
-          <select value={sort} onChange={(e) => updateParam('sort', e.target.value)}>
-            <option value="newest">Сначала новые</option>
-            <option value="oldest">Сначала старые</option>
-            <option value="title">По названию</option>
-          </select>
-        </div>
-      </div>
-
-      {/* 3. КАРТОЧКИ БУНКАЙ */}
+      {/* 3. СПИСОК БОЕВЫХ СИТУАЦИЙ */}
       {loading ? (
-        <p className="loading">Загрузка каталога бункаев…</p>
+        <p className="loading">Загрузка боевых сценариев…</p>
       ) : items.length === 0 ? (
-        <p className="empty-state">Разборы бункай не найдены.</p>
+        <p className="empty-state">Боевые сценарии бункай не найдены.</p>
       ) : (
-        <div className="grid grid-cards">
+        <div className="bunkai-grid">
           {items.map((b) => {
-            const conf = DIFFICULTY_CONFIG[b.Difficulty] || {
-              label: b.Difficulty,
-              belt: 'Бункай',
-            };
+            const diffLabel = DIFFICULTY_MAP[b.Difficulty] || b.Difficulty || 'Практика';
             return (
-              <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="card">
-                <div
-                  className="card__thumb"
-                  style={
-                    b.Thumbnail_URL
-                      ? { backgroundImage: `url("${resolveMediaUrl(b.Thumbnail_URL)}")` }
-                      : undefined
-                  }
-                >
-                  <span className="card__belt-badge">
-                    {conf.belt}
-                  </span>
-                  {!b.Thumbnail_URL && (
-                    <div className="card__fallback">
-                      <span className="card__kanji">分解</span>
-                      <span>Бункай</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="card__body">
-                  <div className="card__meta">
-                    <StatusBadge status={b.Status} />
-                    {b.Kata && <span>Ката: {b.Kata.Title}</span>}
+              <Link to={`/bunkai/${b.Bunkai_ID}`} key={b.Bunkai_ID} className="bunkai-unit">
+                <div>
+                  <div className="bunkai-unit__dynamic-strip">
+                    <span className="bunkai-unit__roles">
+                      <span>Укэ (Атака)</span>
+                      <span className="bunkai-unit__role-arrow">→</span>
+                      <span>Тори (Защита)</span>
+                    </span>
+                    <span className="bunkai-unit__difficulty">{diffLabel}</span>
                   </div>
 
-                  <h3 className="card__title">{b.Title}</h3>
+                  <h3 className="bunkai-unit__title">{b.Title}</h3>
 
-                  <p className="card__desc">
-                    {b.Description || 'Боевой разбор канонического движения против нападающего.'}
+                  <p className="bunkai-unit__desc">
+                    {b.Description ||
+                      'Пошаговый тактический разбор выхода на дистанцию контратаки с выведением противника из равновесия.'}
                   </p>
+                </div>
 
-                  <div className="card__meta card__meta--footer">
-                    <span>{conf.label}</span>
-                    <span className="card__view-action">3D симуляция →</span>
+                <div>
+                  <div className="bunkai-unit__maai-badge">
+                    <span>🥋 Ма-ай:</span>
+                    <strong>{b.Episodes?.length > 1 ? 'Многофазный бой' : 'Иссоку-итто (Рабочая дистанция)'}</strong>
+                  </div>
+
+                  <div className="bunkai-unit__footer">
+                    <span className="bunkai-unit__author">
+                      {b.Author?.Display_Name || b.Author?.Username || 'Мастер Додзё'}
+                    </span>
+                    <span className="bunkai-unit__action">
+                      Симуляция 3D →
+                    </span>
                   </div>
                 </div>
               </Link>
             );
           })}
-        </div>
-      )}
-
-      {/* 4. ПАГИНАЦИЯ */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              className={`btn ${p === page ? 'btn-primary' : ''}`}
-              onClick={() => {
-                const next = new URLSearchParams(params);
-                next.set('page', String(p));
-                setParams(next);
-              }}
-            >
-              {p}
-            </button>
-          ))}
         </div>
       )}
     </div>

@@ -1,0 +1,438 @@
+/* =========================================================
+   KATALISTPAGE.CSS — Архитектурный атлас 26 Ката Сётокан
+   Принципиально новая композиция: Интерактивный фокус и ступени мастерства
+   ========================================================= */
+
+.kata-atlas {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding-bottom: 5rem;
+}
+
+/* --- 1. ШАПКА КАТАЛОГА --- */
+.atlas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.atlas-header__eyebrow {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-red);
+  margin-bottom: 0.5rem;
+}
+
+.atlas-header__title {
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.atlas-header__subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+  max-width: 600px;
+}
+
+.atlas-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Переключатель режимов просмотра */
+.atlas-view-toggle {
+  display: inline-flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.atlas-view-toggle__btn {
+  border: none;
+  background: transparent;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.atlas-view-toggle__btn.active {
+  background: var(--text-primary);
+  color: #ffffff;
+}
+
+/* --- 2. ПАНЕЛЬ ПОИСКА И ФИЛЬТРОВ --- */
+.atlas-search-strip {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.atlas-search-box {
+  flex: 1;
+  min-width: 260px;
+  position: relative;
+}
+
+.atlas-search-input {
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  transition: border-color 0.18s ease;
+}
+
+.atlas-search-input:focus {
+  outline: none;
+  border-color: var(--text-primary);
+}
+
+.atlas-sort-select {
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* --- 3. ИНТЕРАКТИВНЫЙ ФОКУС ВЫБРАННОЙ КАТА (SPOTLIGHT) --- */
+.atlas-spotlight {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-subtle);
+  transition: all 0.25s ease;
+}
+
+@media (max-width: 900px) {
+  .atlas-spotlight {
+    grid-template-columns: 1fr;
+  }
+}
+
+.atlas-spotlight__body {
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+@media (max-width: 640px) {
+  .atlas-spotlight__body {
+    padding: 1.8rem;
+  }
+}
+
+.atlas-spotlight__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.atlas-spotlight__belt {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-xs);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.atlas-spotlight__kanji-stamp {
+  font-family: var(--font-kanji);
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.atlas-spotlight__title {
+  font-size: clamp(2rem, 3.2vw, 2.6rem);
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 0 0 1rem;
+  color: var(--text-primary);
+}
+
+.atlas-spotlight__desc {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin-bottom: 1.8rem;
+  max-width: 580px;
+}
+
+.atlas-spotlight__stats {
+  display: flex;
+  gap: 2.5rem;
+  padding: 1.25rem 0;
+  margin-bottom: 2rem;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.atlas-spotlight__stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.atlas-spotlight__stat-val {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.atlas-spotlight__stat-lbl {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.atlas-spotlight__actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.atlas-spotlight__visual {
+  position: relative;
+  background: var(--bg-subtle);
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-left: 1px solid var(--border);
+}
+
+@media (max-width: 900px) {
+  .atlas-spotlight__visual {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    min-height: 240px;
+  }
+}
+
+.atlas-spotlight__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* --- 4. ПАВИЛЬОНЫ СТУПЕНЕЙ МАСТЕРСТВА (СТУКТУРИРОВАННЫЙ КАТАЛОГ) --- */
+.atlas-pavilion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.atlas-pavilion__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+.atlas-pavilion__title {
+  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-weight: 500;
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.atlas-pavilion__kanji {
+  font-family: var(--font-kanji);
+  font-size: 1.1rem;
+  color: var(--accent-red);
+}
+
+.atlas-pavilion__count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Сетка архитектурных плашек форм */
+.atlas-pavilion__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 1.25rem;
+}
+
+.atlas-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.atlas-item:hover {
+  border-color: #c8c8be;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lift);
+}
+
+.atlas-item.active {
+  border-color: var(--accent-red);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px var(--accent-red);
+}
+
+.atlas-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.atlas-item__num {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.atlas-item__kanji {
+  font-family: var(--font-kanji);
+  font-size: 1rem;
+  color: var(--text-faint);
+}
+
+.atlas-item__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.4rem;
+  line-height: 1.25;
+}
+
+.atlas-item__meta {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 1rem;
+}
+
+.atlas-item__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.atlas-item__step-pill {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.atlas-item__link-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: color 0.16s ease;
+}
+
+.atlas-item:hover .atlas-item__link-text {
+  color: var(--accent-red);
+}
+
+/* --- 5. ТАБЛИЧНЫЙ СВОДНЫЙ РЕЕСТР (TABLE VIEW) --- */
+.atlas-table-wrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.atlas-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.atlas-table th {
+  padding: 1rem 1.25rem;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.atlas-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.atlas-table tr:hover td {
+  background: var(--bg-subtle);
+}
+
+.atlas-table tr:last-child td {
+  border-bottom: none;
+}
+
+.atlas-table__title {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.atlas-table__title:hover {
+  color: var(--accent-red);
+}
