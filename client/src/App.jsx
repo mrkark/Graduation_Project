@@ -80,6 +80,14 @@ export default function App() {
                 </RequireAdmin>
               }
             />
+            <Route
+              path="/kata/new"
+              element={
+                <RequireAdmin>
+                  <KataFormPage />
+                </RequireAdmin>
+              }
+            />
             <Route path="/kata/:id" element={<KataDetailPage />} />
             <Route
               path="/kata/:id/edit"
@@ -91,7 +99,9 @@ export default function App() {
             />
 
             <Route path="/bunkai" element={<BunkaiListPage />} />
+            <Route path="/bunkai/new" element={<BunkaiFormPage />} />
             <Route path="/bunkai/create" element={<BunkaiFormPage />} />
+            <Route path="/bunkai/studio" element={<BunkaiFormPage />} />
             <Route path="/bunkai/:id" element={<BunkaiDetailPage />} />
             <Route path="/bunkai/:id/edit" element={<BunkaiFormPage />} />
 

@@ -111,11 +111,25 @@ export default function KataFormPage() {
     setSaving(true);
     setError(null);
     try {
-      const payload = { ...form, steps };
+      const payload = {
+        title: form.title?.trim(),
+        description: form.description?.trim() || null,
+        difficulty: form.difficulty || 'beginner',
+        style: form.style?.trim() || null,
+        videoUrl: form.videoUrl?.trim() || null,
+        thumbnailUrl: form.thumbnailUrl?.trim() || null,
+        steps,
+      };
       const kata = isEdit ? await updateKata(id, payload) : await createKata(payload);
       navigate(`/kata/${kata.Kata_ID}`);
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Не удалось сохранить ката');
+      const apiErr = err.response?.data?.error;
+      if (apiErr?.details && Array.isArray(apiErr.details) && apiErr.details.length > 0) {
+        const detailList = apiErr.details.map((d) => d.msg || `${d.path}: некорректное значение`).filter(Boolean);
+        setError(detailList.length > 0 ? detailList.join('. ') : apiErr.message);
+      } else {
+        setError(apiErr?.message || 'Не удалось сохранить ката');
+      }
     } finally {
       setSaving(false);
     }

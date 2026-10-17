@@ -85,7 +85,7 @@ function getMaaiInfo(dist) {
 export default function BunkaiFormPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const isEdit = !!id;
+  const isEdit = !!id && !isNaN(Number(id)) && Number(id) > 0;
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -239,8 +239,21 @@ export default function BunkaiFormPage() {
 
   async function onSubmit(e) {
     if (e) e.preventDefault();
-    setSaving(true);
     setError(null);
+
+    if (!form.kataId || isNaN(Number(form.kataId)) || Number(form.kataId) <= 0) {
+      setError('Пожалуйста, выберите связанное ката Сётокан из списка.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    if (!form.title || form.title.trim().length < 2) {
+      setError('Пожалуйста, укажите название разбора бункая (от 2 до 200 символов).');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setSaving(true);
 
     const modeLabel =
       participantMode === '3-person'
@@ -264,9 +277,13 @@ export default function BunkaiFormPage() {
 
     try {
       const payload = {
-        ...form,
         kataId: Number(form.kataId),
-        application: formattedApplication,
+        title: form.title.trim(),
+        description: form.description?.trim() || null,
+        application: formattedApplication.trim(),
+        difficulty: form.difficulty || 'beginner',
+        videoUrl: form.videoUrl?.trim() || null,
+        thumbnailUrl: form.thumbnailUrl?.trim() || null,
       };
       const bunkai = isEdit ? await updateBunkai(id, payload) : await createBunkai(payload);
       const bunkaiId = bunkai.Bunkai_ID || id;
@@ -324,7 +341,13 @@ export default function BunkaiFormPage() {
 
       navigate(`/bunkai/${bunkaiId}`);
     } catch (err) {
-      setError(err.response?.data?.error?.message || err.message || 'Не удалось сохранить бункай');
+      const apiErr = err.response?.data?.error;
+      if (apiErr?.details && Array.isArray(apiErr.details) && apiErr.details.length > 0) {
+        const detailList = apiErr.details.map((d) => d.msg || `${d.path}: некорректное значение`).filter(Boolean);
+        setError(detailList.length > 0 ? detailList.join('. ') : apiErr.message);
+      } else {
+        setError(apiErr?.message || err.message || 'Не удалось сохранить бункай');
+      }
     } finally {
       setSaving(false);
     }
@@ -346,6 +369,20 @@ export default function BunkaiFormPage() {
           <p className="bunkai-studio__subtitle">
             Тактическое моделирование: 3D-симуляция участников, дистанция Ма-ай и эпизоды боя
           </p>
+          {error && (
+            <div style={{
+              marginTop: '0.85rem',
+              padding: '0.75rem 1.15rem',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.45)',
+              borderRadius: 'var(--radius-sm)',
+              color: '#ef4444',
+              fontSize: '0.9rem',
+              fontWeight: 500,
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
         </div>
 
         <div className="bunkai-studio__header-actions">

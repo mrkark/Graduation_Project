@@ -2,18 +2,24 @@ const { body, param, query } = require('express-validator');
 const { DIFFICULTIES } = require('./kataValidators');
 
 const createBunkaiValidator = [
-  body('kataId').isInt().withMessage('Укажите связанное ката'),
+  body('kataId').isInt({ min: 1 }).withMessage('Укажите связанное ката'),
   body('title').trim().isLength({ min: 2, max: 200 }).withMessage('Название: от 2 до 200 символов'),
-  body('description').optional({ nullable: true }).trim().isLength({ max: 8000 }),
-  body('application').optional({ nullable: true }).trim().isLength({ max: 8000 }),
-  body('difficulty').optional().isIn(DIFFICULTIES).withMessage('Некорректная сложность'),
-  body('videoUrl').optional({ nullable: true }).trim().isURL().withMessage('Некорректная ссылка на видео'),
-  body('thumbnailUrl').optional({ nullable: true }).trim().isURL().withMessage('Некорректная ссылка на изображение'),
+  body('description').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
+  body('application').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
+  body('difficulty').optional({ checkFalsy: true }).isIn(DIFFICULTIES).withMessage('Некорректная сложность'),
+  body('videoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на видео'),
+  body('thumbnailUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на изображение'),
 ];
 
 const updateBunkaiValidator = [
-  param('id').isInt(),
-  ...createBunkaiValidator.map((v) => v.optional()),
+  param('id').isInt().withMessage('Некорректный идентификатор'),
+  body('kataId').optional({ checkFalsy: true }).isInt({ min: 1 }).withMessage('Некорректное ката'),
+  body('title').optional().trim().isLength({ min: 2, max: 200 }).withMessage('Название: от 2 до 200 символов'),
+  body('description').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
+  body('application').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
+  body('difficulty').optional({ checkFalsy: true }).isIn(DIFFICULTIES).withMessage('Некорректная сложность'),
+  body('videoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на видео'),
+  body('thumbnailUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на изображение'),
 ];
 
 const listQueryValidator = [
@@ -29,3 +35,4 @@ const listQueryValidator = [
 const idParamValidator = [param('id').isInt().withMessage('Некорректный идентификатор')];
 
 module.exports = { createBunkaiValidator, updateBunkaiValidator, listQueryValidator, idParamValidator };
+

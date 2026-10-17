@@ -26,6 +26,10 @@ export default function BunkaiDetailPage() {
   const [activeTab, setActiveTab] = useState('application'); // 'application' | 'video' | 'comments'
 
   useEffect(() => {
+    if (!id || id === 'new' || id === 'create' || id === 'studio') {
+      navigate('/bunkai/new', { replace: true });
+      return;
+    }
     setLoading(true);
     Promise.all([
       getBunkai(id),
@@ -37,7 +41,7 @@ export default function BunkaiDetailPage() {
       })
       .catch((err) => setError(err.response?.data?.error?.message || 'Бункай не найден'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, navigate]);
 
   if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
   if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
