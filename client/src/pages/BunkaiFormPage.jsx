@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { getBunkai, createBunkai, updateBunkai, getBunkaiSteps, saveBunkaiSteps } from '../api/bunkai';
 import { listKata } from '../api/kata';
 import { listClips } from '../api/animations';
 import TechniquePicker from '../components/TechniquePicker';
 import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
-import { SHOTOKAN_DIRECTIONS, SHOTOKAN_MOVEMENT_TYPES } from '../data/shotokanTechniques';
+import './BunkaiEditor.css';
 
 const TORI_CLIPS = [
   { id: 'shuto_uke', label: 'Сюто-укэ (Блок ребром ладони)' },
@@ -35,9 +35,19 @@ const UKE_CLIPS = [
   { id: 'idle_shizentai', label: 'Сидзэнтай (Ожидание / финт)' },
 ];
 
+const PHASES = [
+  'Атака и реакция',
+  'Встречный сбив (Укэ)',
+  'Уход с линии (Тайсабаки)',
+  'Залом сустава (Кансэцу)',
+  'Бросок / сваливание (Нагэ)',
+  'Контрудар (Атэми)',
+  'Фиксация и контроль (Дзансин)',
+];
+
 const emptyEpisode = () => ({
   attacker: 'Укэ 1 (фронтальный)',
-  attackAngle: 'Прямо вперед (0°)',
+  attackAngle: '0°',
   attackAngleDeg: 0,
   combatDistance: 1.45,
   toriClip: 'shuto_uke',
@@ -46,8 +56,31 @@ const emptyEpisode = () => ({
   attackTechnique: 'Ой-цуки тюдан (прямой выпад кулаком)',
   toriMovement: 'Круговой уход с линии атаки (Тэнсин)',
   toriCounter: 'Сюто-укэ + залом запястья + контратака Гяку-цуки',
+  phase: 'Встречный сбив (Укэ)',
   outcome: 'Выведение из равновесия и сваливание на татами (Кудзуси)',
 });
+
+function getMaaiInfo(dist) {
+  if (dist < 1.10) {
+    return {
+      name: 'Чика-ма (近間)',
+      desc: 'Ближний бой, захваты, клинч и заломы суставов',
+      className: 'maai-zone--chika',
+    };
+  }
+  if (dist <= 1.80) {
+    return {
+      name: 'Иссоку-итто (一足一刀)',
+      desc: 'Дистанция одного шага и удара (базовая боевая дистанция каратэ)',
+      className: 'maai-zone--issoku',
+    };
+  }
+  return {
+    name: 'То-ма (遠間)',
+    desc: 'Дальняя дистанция маневрирования и входа в атаку',
+    className: 'maai-zone--toma',
+  };
+}
 
 export default function BunkaiFormPage() {
   const { id } = useParams();
@@ -65,15 +98,16 @@ export default function BunkaiFormPage() {
     thumbnailUrl: '',
   });
 
-  // Формат бункая: дуэт (2 человека) или соревновательный командный (3 человека)
   const [participantMode, setParticipantMode] = useState('2-person'); // '2-person' | '3-person'
   const [episodes, setEpisodes] = useState([emptyEpisode()]);
+  const [activeEpisodeIdx, setActiveEpisodeIdx] = useState(0);
 
   const [kataOptions, setKataOptions] = useState([]);
   const [clipsList, setClipsList] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [showMediaDetails, setShowMediaDetails] = useState(false);
 
   // Состояние пикера техник: { episodeIndex, targetField: 'attack' | 'counter' }
   const [pickerTarget, setPickerTarget] = useState(null);
@@ -132,6 +166,7 @@ export default function BunkaiFormPage() {
               attackTechnique: ukePart.clipTitle || 'Ой-цуки тюдан',
               toriMovement: 'Круговой уход с линии атаки (Тэнсин)',
               toriCounter: toriPart.clipTitle || 'Сюто-укэ и контратака',
+              phase: 'Встречный сбив (Укэ)',
               outcome: s.description || 'Выведение из равновесия (Кудзуси)',
             };
           });
@@ -155,17 +190,22 @@ export default function BunkaiFormPage() {
   }
 
   function addEpisode() {
-    setEpisodes((prev) => [
-      ...prev,
-      {
+    setEpisodes((prev) => {
+      const nextEp = {
         ...emptyEpisode(),
         attacker: participantMode === '3-person' && prev.length % 2 !== 0 ? 'Укэ 2 (фланговый)' : 'Укэ 1 (фронтальный)',
-      },
-    ]);
+      };
+      return [...prev, nextEp];
+    });
+    setActiveEpisodeIdx(episodes.length);
   }
 
   function removeEpisode(index) {
+    if (episodes.length <= 1) return;
     setEpisodes((prev) => prev.filter((_, idx) => idx !== index));
+    if (activeEpisodeIdx >= episodes.length - 1) {
+      setActiveEpisodeIdx(Math.max(0, episodes.length - 2));
+    }
   }
 
   function handleTechniquePicked(tech) {
@@ -198,7 +238,7 @@ export default function BunkaiFormPage() {
   }, [episodes]);
 
   async function onSubmit(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSaving(true);
     setError(null);
 
@@ -210,11 +250,12 @@ export default function BunkaiFormPage() {
     let formattedApplication = `${modeLabel}\n\n`;
     episodes.forEach((ep, i) => {
       formattedApplication += `[Эпизод ${i + 1}]\n`;
+      formattedApplication += `• Фаза: ${ep.phase || 'Встречный сбив'}\n`;
       formattedApplication += `• Атакующий: ${ep.attacker} под углом ${ep.attackAngleDeg}° (Дистанция: ${ep.combatDistance}м)\n`;
       formattedApplication += `• Атака противника (Клип: ${ep.ukeClip}): ${ep.attackTechnique}\n`;
       formattedApplication += `• Траектория Тори: ${ep.toriMovement}\n`;
       formattedApplication += `• Защита и контратака (Клип: ${ep.toriClip}): ${ep.toriCounter}\n`;
-      formattedApplication += `• Итог: ${ep.outcome}\n\n`;
+      formattedApplication += `• Биомеханический итог: ${ep.outcome}\n\n`;
     });
 
     if (form.application.trim()) {
@@ -230,7 +271,6 @@ export default function BunkaiFormPage() {
       const bunkai = isEdit ? await updateBunkai(id, payload) : await createBunkai(payload);
       const bunkaiId = bunkai.Bunkai_ID || id;
 
-      // Формируем структурированные шаги и участников для dbo.BunkaiSteps / BunkaiStepParticipants
       const is3Person = participantMode === '3-person';
       const structuredSteps = episodes.map((ep, idx) => {
         const participants = [
@@ -290,201 +330,310 @@ export default function BunkaiFormPage() {
     }
   }
 
-  if (loading) return <p className="loading">Загрузка…</p>;
+  if (loading) return <p className="loading">Загрузка мастерской бункая…</p>;
+
+  const currentEp = episodes[activeEpisodeIdx] || episodes[0] || emptyEpisode();
+  const currentMaai = getMaaiInfo(currentEp.combatDistance);
 
   return (
-    <div style={{ maxWidth: 880, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.5rem' }}>
-        <span className="hanko">分解</span>
-        <h1>{isEdit ? 'Редактирование бункая' : 'Новый бункай Сётокан'}</h1>
-      </div>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-        Конструктор боевого применения ката с интерактивной 3D-ареной, настройкой дистанции (Ма-ай) и углов атаки.
-      </p>
+    <div className="bunkai-studio">
+      {/* ВЕРХНИЙ БАР СТУДИИ */}
+      <header className="bunkai-studio__header">
+        <div className="bunkai-studio__header-left">
+          <span className="hanko hanko--lg">分解場</span>
+          <div>
+            <h1 className="bunkai-studio__title">
+              {isEdit ? 'Студия разбора бункай (Редактирование)' : 'Студия боевого применения Сётокан (Бункай-дзё)'}
+            </h1>
+            <p className="bunkai-studio__subtitle">
+              Конструктор тактических связок: симуляция 3D-аватаров, шкала Ма-ай и таймлайн эпизодов
+            </p>
+          </div>
+        </div>
 
-      {/* ИНТЕРАКТИВНЫЙ 3D ПРЕДПРОСМОТР В РЕАЛЬНОМ ВРЕМЕНИ */}
-      <div style={{ marginBottom: '1.8rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="bunkai-studio__header-actions">
+          <button type="button" className="btn" onClick={() => navigate(-1)} disabled={saving}>
+            Отмена
+          </button>
+          <button type="button" className="btn btn-primary" onClick={onSubmit} disabled={saving}>
+            {saving ? 'Сохранение в БД…' : isEdit ? 'Обновить бункай' : 'Опубликовать бункай'}
+          </button>
+        </div>
+      </header>
+
+      {/* ВЕРХНЯЯ ПАНЕЛЬ: МЕТАДАННЫЕ И ВЫБОР РЕЖИМА */}
+      <section className="bunkai-studio__meta-panel">
+        <div className="bunkai-studio__meta-grid">
+          <div className="field" style={{ margin: 0 }}>
+            <label>Связанное ката Сётокан *</label>
+            <select required value={form.kataId} onChange={update('kataId')} disabled={isEdit}>
+              <option value="">Выберите ката из списка…</option>
+              {kataOptions.map((k) => (
+                <option key={k.Kata_ID} value={k.Kata_ID}>
+                  {k.Title} {k.Style ? `(${k.Style})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field" style={{ margin: 0 }}>
+            <label>Название разбора бункая *</label>
+            <input
+              required
+              value={form.title}
+              onChange={update('title')}
+              placeholder="Например: Разбор начальной связки Хэйан Сёдан против захвата и удара"
+            />
+          </div>
+
+          <div className="field" style={{ margin: 0 }}>
+            <label>Уровень сложности</label>
+            <select value={form.difficulty} onChange={update('difficulty')}>
+              <option value="beginner">Начальный (Белый / Жёлтый пояс)</option>
+              <option value="intermediate">Средний (Зелёный / Синий пояс)</option>
+              <option value="advanced">Продвинутый (Коричневый пояс)</option>
+              <option value="master">Мастерский (Чёрный пояс / Дан)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Выбор режима участников: 2 или 3 человека */}
+        <div style={{ marginTop: '1rem' }}>
+          <label style={{ display: 'block', fontSize: '0.82rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '0.4rem' }}>
+            Формат боевого взаимодействия (Участники)
+          </label>
+          <div className="bunkai-mode-toggle">
+            <div
+              className={`bunkai-mode-option ${participantMode === '2-person' ? 'active' : ''}`}
+              onClick={() => setParticipantMode('2-person')}
+            >
+              <span style={{ fontSize: '1.4rem' }}>🥋</span>
+              <div>
+                <strong style={{ color: '#fff', fontSize: '0.92rem' }}>Дуэт (2 участника)</strong>
+                <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
+                  Тори (защита/контратака) + Укэ 1 (нападающий)
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`bunkai-mode-option bunkai-mode-option--3p ${participantMode === '3-person' ? 'active' : ''}`}
+              onClick={() => setParticipantMode('3-person')}
+            >
+              <span style={{ fontSize: '1.4rem' }}>🏆</span>
+              <div>
+                <strong style={{ color: '#fff', fontSize: '0.92rem' }}>Трио (3 участника — Соревновательный бункай)</strong>
+                <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
+                  Тори + Укэ 1 (фронтальный выпад) + Укэ 2 (фланговая атака)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Дополнительный концепт и ссылки на медиа */}
+        <div style={{ marginTop: '1.1rem' }}>
+          <div className="field" style={{ margin: 0 }}>
+            <label>Тактический сценарий и контекст применения</label>
+            <textarea
+              rows={2}
+              value={form.description}
+              onChange={update('description')}
+              placeholder="Опишите контекст ситуации (нападение на улице, захват за отвороты кимоно, неожиданная атака с фланга)..."
+            />
+          </div>
+        </div>
+
+        <div style={{ marginTop: '0.8rem' }}>
+          <button
+            type="button"
+            className="btn"
+            style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+            onClick={() => setShowMediaDetails(!showMediaDetails)}
+          >
+            {showMediaDetails ? '▲ Скрыть ссылки на медиа' : '▼ Добавить ссылки на видео / превью'}
+          </button>
+
+          {showMediaDetails && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.8rem' }}>
+              <div className="field" style={{ margin: 0 }}>
+                <label>Ссылка на видео демонстрации (YouTube)</label>
+                <input value={form.videoUrl} onChange={update('videoUrl')} placeholder="https://youtube.com/watch?v=…" />
+              </div>
+              <div className="field" style={{ margin: 0 }}>
+                <label>Ссылка на изображение превью</label>
+                <input value={form.thumbnailUrl} onChange={update('thumbnailUrl')} placeholder="https://…" />
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ЦЕНТР СТУДИИ: БОЛЬШАЯ 3D-АРЕНА ДОДЗЁ */}
+      <section className="bunkai-studio__arena-wrap">
+        <div className="bunkai-studio__arena-bar">
+          <div className="bunkai-studio__arena-title">
             <span>🥋</span>
-            <span>Интерактивный 3D-предпросмотр симуляции</span>
-          </h3>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-            {participantMode === '3-person' ? '3 Участника (Тори + 2 Укэ)' : '2 Участника (Дуэль)'}
+            <span>Интерактивная 3D-арена боевого взаимодействия (Тори и Укэ)</span>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 600 }}>
+            {participantMode === '3-person' ? 'Режим: 3 участника (Команда)' : 'Режим: 2 участника (Дуэт)'}
           </span>
         </div>
+
         <BunkaiMultiAvatarPlayer
           steps={previewSteps}
           defaultParticipantMode={participantMode}
-          height={380}
+          height={480}
         />
-      </div>
+      </section>
 
-      <form onSubmit={onSubmit} className="panel">
-        <div className="field">
-          <label>Связанное ката Сётокан *</label>
-          <select required value={form.kataId} onChange={update('kataId')} disabled={isEdit}>
-            <option value="">Выберите ката из списка…</option>
-            {kataOptions.map((k) => (
-              <option key={k.Kata_ID} value={k.Kata_ID}>
-                {k.Title} {k.Style ? `(${k.Style})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* ГОРИЗОНТАЛЬНЫЙ ТАЙМЛАЙН БОЕВЫХ ЭПИЗОДОВ */}
+      <section className="bunkai-timeline">
+        <div className="bunkai-timeline__header">
+          <h3 className="bunkai-timeline__title">
+            <span>⚔️</span>
+            <span>Хронология боевых эпизодов (Кэйко-дзюн / 稽古順)</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--washi-dim)', fontWeight: 400 }}>
+              (Всего эпизодов: {episodes.length})
+            </span>
+          </h3>
 
-        <div className="field">
-          <label>Название разбора бункая *</label>
-          <input
-            required
-            value={form.title}
-            onChange={update('title')}
-            placeholder="Например: Разбор начальной связки Хэйан Сёдан против захвата и удара"
-          />
-        </div>
-
-        <div className="field">
-          <label>Общая концепция и тактический сценарий</label>
-          <textarea
-            rows={3}
-            value={form.description}
-            onChange={update('description')}
-            placeholder="Опишите контекст ситуации (нападение на улице, захват за отвороты, неожиданная атака с фланга)..."
-          />
-        </div>
-
-        {/* ВЫБОР ФОРМАТА УЧАСТНИКОВ: 2 ИЛИ 3 ЧЕЛОВЕКА */}
-        <div className="field">
-          <label style={{ color: 'var(--gold)' }}>Формат участников бункая</label>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <label
-              style={{
-                flex: 1,
-                minWidth: 240,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.7rem',
-                background: participantMode === '2-person' ? 'rgba(197, 160, 89, 0.15)' : 'rgba(0,0,0,0.3)',
-                border: `1px solid ${participantMode === '2-person' ? 'var(--gold)' : 'var(--border)'}`,
-                padding: '0.8rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="radio"
-                name="mode"
-                checked={participantMode === '2-person'}
-                onChange={() => setParticipantMode('2-person')}
-                style={{ width: 'auto', margin: 0 }}
-              />
-              <div>
-                <strong style={{ color: '#fff' }}>2 участника (Дуэт)</strong>
-                <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
-                  Тори (белое доги) + Укэ (индиго доги)
-                </div>
-              </div>
-            </label>
-
-            <label
-              style={{
-                flex: 1,
-                minWidth: 240,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.7rem',
-                background: participantMode === '3-person' ? 'rgba(191, 38, 38, 0.18)' : 'rgba(0,0,0,0.3)',
-                border: `1px solid ${participantMode === '3-person' ? 'var(--crimson-bright)' : 'var(--border)'}`,
-                padding: '0.8rem 1rem',
-                borderRadius: 'var(--radius-sm)',
-                cursor: 'pointer',
-              }}
-            >
-              <input
-                type="radio"
-                name="mode"
-                checked={participantMode === '3-person'}
-                onChange={() => setParticipantMode('3-person')}
-                style={{ width: 'auto', margin: 0 }}
-              />
-              <div>
-                <strong style={{ color: '#fff' }}>3 участника (Соревновательный)</strong>
-                <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
-                  Тори + Укэ 1 (фронт) + Укэ 2 (фланг)
-                </div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <hr className="divider" />
-
-        {/* ПОШАГОВЫЙ КОНСТРУКТОР БОЕВЫХ ЭПИЗОДОВ */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div>
-            <h3 style={{ margin: 0 }}>Боевая цепочка бункая (Эпизоды)</h3>
-            <small style={{ color: 'var(--text-muted)' }}>
-              Настройка 3D-анимаций, дистанции (Ма-ай) и углов атаки для каждого шага
-            </small>
-          </div>
-          <button type="button" className="btn btn-gold" onClick={addEpisode}>
-            + Добавить эпизод
+          <button type="button" className="btn btn-gold" onClick={addEpisode} style={{ fontSize: '0.82rem' }}>
+            + Добавить боевой эпизод
           </button>
         </div>
 
-        {episodes.map((ep, i) => (
-          <div
-            key={i}
-            className="step-card"
-            style={{
-              marginBottom: '1.4rem',
-              padding: '1.2rem',
-              background: 'rgba(255,255,255,0.02)',
-              borderRadius: 8,
-              border: '1px solid var(--color-border)',
-              borderLeft: `4px solid ${ep.attacker.includes('2') ? 'var(--crimson-bright)' : 'var(--gold)'}`,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <strong style={{ color: 'var(--gold-bright)', fontSize: '0.95rem' }}>Эпизод {i + 1}</strong>
-                <span className="badge badge-pending">{ep.attacker}</span>
+        <div className="bunkai-timeline__strip">
+          {episodes.map((ep, idx) => {
+            const epMaai = getMaaiInfo(ep.combatDistance);
+            const isActive = idx === activeEpisodeIdx;
+            return (
+              <div
+                key={idx}
+                className={`bunkai-step-pill ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveEpisodeIdx(idx)}
+              >
+                <div className="bunkai-step-pill__head">
+                  <span className="bunkai-step-pill__num">
+                    第 {idx + 1} 幕 · Эпизод {idx + 1}
+                  </span>
+                  <span className={`bunkai-step-pill__maai ${epMaai.className}`}>
+                    {ep.combatDistance}м
+                  </span>
+                </div>
+
+                <div className="bunkai-step-pill__summary">
+                  <strong style={{ color: '#fff' }}>{ep.phase || 'Встречный сбив'}:</strong>{' '}
+                  {ep.attackTechnique} против {ep.toriCounter}
+                </div>
+
+                <div className="bunkai-step-pill__footer">
+                  <span>{ep.attacker.includes('2') ? '🔴 Укэ 2' : '🔵 Укэ 1'} ({ep.attackAngleDeg}°)</span>
+                  {episodes.length > 1 && (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ padding: '2px 6px', fontSize: '0.7rem' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeEpisode(idx);
+                      }}
+                      title="Удалить этот эпизод"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
               </div>
-              {episodes.length > 1 && (
-                <button type="button" className="btn btn-danger" onClick={() => removeEpisode(i)} style={{ padding: '4px 8px' }}>
-                  ✕ Удалить
-                </button>
-              )}
+            );
+          })}
+
+          <div className="bunkai-step-add-card" onClick={addEpisode}>
+            <span style={{ fontSize: '1.4rem' }}>➕</span>
+            <span>Новый шаг</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ИНСПЕКТОР ВЫБРАННОГО ЭПИЗОДА (3 КОЛОНКИ: АТАКА, МА-АЙ, КОНТРАТАКА) */}
+      <section className="bunkai-inspector">
+        <div className="bunkai-inspector__header">
+          <div>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span className="hanko">第{activeEpisodeIdx + 1}幕</span>
+              <span>Параметры эпизода {activeEpisodeIdx + 1} из {episodes.length}</span>
+            </h3>
+            <p style={{ margin: '0.2rem 0 0', color: 'var(--washi-dim)', fontSize: '0.84rem' }}>
+              Тонкая настройка анимаций, углов, фазы взаимодействия и дистанции Ма-ай
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <span className="badge badge--gold">Фаза: {currentEp.phase || 'Встречный сбив'}</span>
+            {episodes.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
+                onClick={() => removeEpisode(activeEpisodeIdx)}
+              >
+                ✕ Удалить эпизод
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="bunkai-inspector__grid">
+          {/* КОЛОНКА 1: АТАКА ПРОТИВНИКА (УКЭ) */}
+          <div className="bunkai-card-column">
+            <h4 className="bunkai-card-column__title bunkai-card-column__title--attack">
+              <span>💥</span>
+              <span>Атака противника (Укэ / 攻撃)</span>
+            </h4>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>Атакующий противник:</label>
+              <select
+                value={currentEp.attacker}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'attacker', e.target.value)}
+                style={{ width: '100%', marginTop: 4 }}
+              >
+                <option value="Укэ 1 (фронтальный)">Укэ 1 (фронтальный нападающий)</option>
+                {participantMode === '3-person' && (
+                  <option value="Укэ 2 (фланговый)">Укэ 2 (фланговый нападающий)</option>
+                )}
+                {participantMode === '3-person' && (
+                  <option value="Укэ 1 и Укэ 2">Одновременная атака (Укэ 1 + Укэ 2)</option>
+                )}
+              </select>
             </div>
 
-            {/* Выбор 3D-анимаций для участников эпизода */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, marginBottom: 14 }}>
-              {/* Клип Тори */}
-              <div>
-                <label style={{ fontSize: '0.78rem', color: 'var(--color-gold)', fontWeight: 600 }}>
-                  🥋 3D Анимация Тори (Защита/Контратака):
-                </label>
-                <select
-                  value={ep.toriClip}
-                  onChange={(e) => updateEpisode(i, 'toriClip', e.target.value)}
-                  style={{ width: '100%', marginTop: 4 }}
-                >
-                  {TORI_CLIPS.map((tc) => (
-                    <option key={tc.id} value={tc.id}>
-                      {tc.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label style={{ fontSize: '0.76rem', color: '#90cdf4', fontWeight: 600 }}>
+                3D-анимация Укэ 1:
+              </label>
+              <select
+                value={currentEp.ukeClip}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'ukeClip', e.target.value)}
+                style={{ width: '100%', marginTop: 4 }}
+              >
+                {UKE_CLIPS.map((uc) => (
+                  <option key={uc.id} value={uc.id}>
+                    {uc.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              {/* Клип Укэ 1 */}
+            {participantMode === '3-person' && (
               <div>
-                <label style={{ fontSize: '0.78rem', color: '#90cdf4', fontWeight: 600 }}>
-                  💥 3D Анимация Укэ 1 (Атака):
+                <label style={{ fontSize: '0.76rem', color: '#fca5a5', fontWeight: 600 }}>
+                  3D-анимация Укэ 2 (Фланг):
                 </label>
                 <select
-                  value={ep.ukeClip}
-                  onChange={(e) => updateEpisode(i, 'ukeClip', e.target.value)}
+                  value={currentEp.uke2Clip}
+                  onChange={(e) => updateEpisode(activeEpisodeIdx, 'uke2Clip', e.target.value)}
                   style={{ width: '100%', marginTop: 4 }}
                 >
                   {UKE_CLIPS.map((uc) => (
@@ -494,152 +643,207 @@ export default function BunkaiFormPage() {
                   ))}
                 </select>
               </div>
+            )}
 
-              {/* Клип Укэ 2 (если 3 участника) */}
-              {participantMode === '3-person' && (
-                <div>
-                  <label style={{ fontSize: '0.78rem', color: '#feb2b2', fontWeight: 600 }}>
-                    🥊 3D Анимация Укэ 2 (Фланг):
-                  </label>
-                  <select
-                    value={ep.uke2Clip}
-                    onChange={(e) => updateEpisode(i, 'uke2Clip', e.target.value)}
-                    style={{ width: '100%', marginTop: 4 }}
-                  >
-                    {UKE_CLIPS.map((uc) => (
-                      <option key={uc.id} value={uc.id}>
-                        {uc.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Слайдеры дистанции и угла */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginBottom: 14, background: 'rgba(0,0,0,0.25)', padding: 12, borderRadius: 6 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--color-gold)' }}>📏 Дистанция Ма-ай:</span>
-                  <strong style={{ color: '#fff' }}>{ep.combatDistance} м</strong>
-                </div>
-                <input
-                  type="range"
-                  min="0.80"
-                  max="2.50"
-                  step="0.05"
-                  value={ep.combatDistance}
-                  onChange={(e) => updateEpisode(i, 'combatDistance', parseFloat(e.target.value))}
-                  style={{ width: '100%', accentColor: 'var(--color-gold)' }}
-                />
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: 4 }}>
-                  <span style={{ color: 'var(--color-gold)' }}>🧭 Угол атаки:</span>
-                  <strong style={{ color: '#fff' }}>{ep.attackAngleDeg}°</strong>
-                </div>
-                <input
-                  type="range"
-                  min="-60"
-                  max="60"
-                  step="5"
-                  value={ep.attackAngleDeg}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    updateEpisode(i, 'attackAngleDeg', val);
-                    updateEpisode(i, 'attackAngle', `${val}°`);
-                  }}
-                  style={{ width: '100%', accentColor: 'var(--color-gold)' }}
-                />
-              </div>
-            </div>
-
-            {/* Текстовые поля описания приема */}
-            <div style={{ marginBottom: '0.8rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                <label style={{ fontSize: '0.75rem', margin: 0 }}>Атака противника (описание)</label>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.76rem', margin: 0, color: 'var(--washi-dim)' }}>
+                  Техника удара (Shotokan)
+                </label>
                 <button
                   type="button"
                   className="btn"
-                  style={{ fontSize: '0.72rem', padding: '0.2em 0.6em' }}
-                  onClick={() => setPickerTarget({ index: i, field: 'attack' })}
+                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                  onClick={() => setPickerTarget({ index: activeEpisodeIdx, field: 'attack' })}
                 >
-                  📖 Справочник ударов
+                  📖 Справочник
                 </button>
               </div>
               <input
-                value={ep.attackTechnique}
-                onChange={(e) => updateEpisode(i, 'attackTechnique', e.target.value)}
-                placeholder="Например: Прямой выпад Ой-цуки в лицо (Дзёдан)"
+                value={currentEp.attackTechnique}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'attackTechnique', e.target.value)}
+                placeholder="Прямой выпад Ой-цуки в голову (Дзёдан)"
               />
             </div>
 
-            <div style={{ marginBottom: '0.8rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                <label style={{ fontSize: '0.75rem', margin: 0 }}>Защита и контратака Тори</label>
-                <button
-                  type="button"
-                  className="btn"
-                  style={{ fontSize: '0.72rem', padding: '0.2em 0.6em' }}
-                  onClick={() => setPickerTarget({ index: i, field: 'counter' })}
-                >
-                  📖 Справочник блоков
-                </button>
+            {/* Слайдер угла атаки */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem', marginBottom: 4 }}>
+                <span style={{ color: 'var(--washi-dim)' }}>Угол направления атаки:</span>
+                <strong style={{ color: '#fff' }}>
+                  {currentEp.attackAngleDeg > 0 ? `+${currentEp.attackAngleDeg}°` : `${currentEp.attackAngleDeg}°`}
+                  {currentEp.attackAngleDeg === 0 ? ' (Прямо)' : currentEp.attackAngleDeg < 0 ? ' (Слева)' : ' (Справа)'}
+                </strong>
               </div>
               <input
-                value={ep.toriCounter}
-                onChange={(e) => updateEpisode(i, 'toriCounter', e.target.value)}
-                placeholder="Например: Блок Сюто-укэ, скручивание локтя, контрудар Гяку-цуки"
+                type="range"
+                min="-60"
+                max="60"
+                step="5"
+                value={currentEp.attackAngleDeg}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  updateEpisode(activeEpisodeIdx, 'attackAngleDeg', val);
+                  updateEpisode(activeEpisodeIdx, 'attackAngle', `${val}°`);
+                }}
+                style={{ width: '100%', accentColor: '#90cdf4' }}
+              />
+            </div>
+          </div>
+
+          {/* КОЛОНКА 2: ДИСТАНЦИЯ МА-АЙ (間合い) */}
+          <div className="bunkai-card-column">
+            <h4 className="bunkai-card-column__title bunkai-card-column__title--maai">
+              <span>📏</span>
+              <span>Дистанция контакта (Ма-ай / 間合い)</span>
+            </h4>
+
+            <div className="maai-scale">
+              <div className="maai-meter">
+                <span style={{ fontSize: '0.8rem', color: 'var(--washi-dim)' }}>Расстояние контакта:</span>
+                <span className="maai-meter__val">{currentEp.combatDistance.toFixed(2)} м</span>
+              </div>
+
+              <div className={`maai-zone-badge ${currentMaai.className}`}>
+                {currentMaai.name}
+              </div>
+
+              <input
+                type="range"
+                min="0.80"
+                max="2.50"
+                step="0.05"
+                value={currentEp.combatDistance}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'combatDistance', parseFloat(e.target.value))}
+                style={{ width: '100%', accentColor: 'var(--gold-bright)' }}
+              />
+
+              <div className="maai-zones-legend">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#fca5a5', fontWeight: 600 }}>0.8 - 1.1 м:</span>
+                  <span>Чика-ма (ближний бой, заломы)</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--gold-bright)', fontWeight: 600 }}>1.1 - 1.8 м:</span>
+                  <span>Иссоку-итто (шаг и удар)</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>1.8 - 2.5 м:</span>
+                  <span>То-ма (дальняя дистанция)</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>Фаза взаимодействия:</label>
+                <select
+                  value={currentEp.phase || 'Встречный сбив (Укэ)'}
+                  onChange={(e) => updateEpisode(activeEpisodeIdx, 'phase', e.target.value)}
+                  style={{ width: '100%', marginTop: 4 }}
+                >
+                  {PHASES.map((ph) => (
+                    <option key={ph} value={ph}>
+                      {ph}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* КОЛОНКА 3: ЗАЩИТА И КОНТРАТАКА (ТОРИ) */}
+          <div className="bunkai-card-column">
+            <h4 className="bunkai-card-column__title bunkai-card-column__title--counter">
+              <span>🥋</span>
+              <span>Защита и контрудар (Тори / 防御・反撃)</span>
+            </h4>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', color: 'var(--gold)', fontWeight: 600 }}>
+                3D-анимация Тори:
+              </label>
+              <select
+                value={currentEp.toriClip}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'toriClip', e.target.value)}
+                style={{ width: '100%', marginTop: 4 }}
+              >
+                {TORI_CLIPS.map((tc) => (
+                  <option key={tc.id} value={tc.id}>
+                    {tc.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
+                Траектория перемещения (Тайсабаки / Тэнсин):
+              </label>
+              <input
+                value={currentEp.toriMovement}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'toriMovement', e.target.value)}
+                placeholder="Круговой уход с линии атаки (Тэнсин), шаг назад (Хики-аси)"
+                style={{ marginTop: 4 }}
               />
             </div>
 
             <div>
-              <label style={{ fontSize: '0.75rem' }}>Биомеханический результат</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label style={{ fontSize: '0.76rem', margin: 0, color: 'var(--washi-dim)' }}>
+                  Защитное действие и контрудар
+                </label>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                  onClick={() => setPickerTarget({ index: activeEpisodeIdx, field: 'counter' })}
+                >
+                  📖 Справочник
+                </button>
+              </div>
               <input
-                value={ep.outcome}
-                onChange={(e) => updateEpisode(i, 'outcome', e.target.value)}
-                placeholder="Сваливание на татами, залом сустава, нейтрализация атаки"
+                value={currentEp.toriCounter}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'toriCounter', e.target.value)}
+                placeholder="Сюто-укэ, залом запястья, контратака Гяку-цуки"
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
+                Биомеханический итог (Кудзуси / Сваливание):
+              </label>
+              <input
+                value={currentEp.outcome}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'outcome', e.target.value)}
+                placeholder="Выведение из равновесия и нейтрализация противника"
+                style={{ marginTop: 4 }}
               />
             </div>
           </div>
-        ))}
+        </div>
+      </section>
 
-        <div className="field" style={{ marginTop: '1.4rem' }}>
-          <label>Дополнительное текстовое описание практического применения</label>
-          <textarea
-            rows={3}
-            value={form.application}
-            onChange={update('application')}
-            placeholder="Любые дополнительные нюансы: дистанция ма-ай, дыхание, точки воздействия кюсё..."
-          />
+      {/* НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ */}
+      <footer className="bunkai-studio__actions">
+        <div>
+          {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
+          {!error && (
+            <p style={{ margin: 0, color: 'var(--washi-dim)', fontSize: '0.88rem' }}>
+              Всего настроено эпизодов: <strong>{episodes.length}</strong> · Активный: <strong>Эпизод {activeEpisodeIdx + 1}</strong>
+            </p>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <div className="field" style={{ flex: 1, minWidth: 220 }}>
-            <label>Ссылка на видео демонстрации (YouTube)</label>
-            <input value={form.videoUrl} onChange={update('videoUrl')} placeholder="https://youtube.com/watch?v=…" />
-          </div>
-
-          <div className="field" style={{ flex: 1, minWidth: 220 }}>
-            <label>Ссылка на превью</label>
-            <input value={form.thumbnailUrl} onChange={update('thumbnailUrl')} placeholder="https://…" />
-          </div>
-        </div>
-
-        {error && <p className="error-text" style={{ marginTop: '1rem' }}>{error}</p>}
-
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.8rem' }}>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Сохранение в БД…' : isEdit ? 'Обновить бункай' : 'Опубликовать бункай Сётокан'}
-          </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <button type="button" className="btn" onClick={() => navigate(-1)} disabled={saving}>
             Отмена
           </button>
+          <button type="button" className="btn btn-primary" onClick={onSubmit} disabled={saving}>
+            {saving ? 'Сохранение в базе данных…' : isEdit ? 'Обновить бункай' : '🥋 Опубликовать бункай Сётокан'}
+          </button>
         </div>
-      </form>
+      </footer>
 
-      {/* Модальное окно каталога техник Сётокан */}
+      {/* Модальное окно справочника приемов Shotokan */}
       {pickerTarget !== null && (
         <div
           style={{

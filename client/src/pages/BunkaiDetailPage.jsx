@@ -57,14 +57,18 @@ export default function BunkaiDetailPage() {
     <div>
       <div className="detail-header">
         <div>
-          <div className="card__meta" style={{ marginBottom: '0.4rem' }}>
+          <div className="card__meta" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+            <span className="hanko">分解</span>
             <StatusBadge status={bunkai.Status} />
-            <span>{DIFFICULTY_LABELS[bunkai.Difficulty] || bunkai.Difficulty}</span>
+            <span className="badge badge--gold">{DIFFICULTY_LABELS[bunkai.Difficulty] || bunkai.Difficulty}</span>
           </div>
           <h1>{bunkai.Title}</h1>
-          <p style={{ color: 'var(--text-muted)' }}>
-            Ката: <Link to={`/kata/${bunkai.Kata_ID}`}>{bunkai.Kata?.Title}</Link> · Автор:{' '}
-            {bunkai.Author?.Display_Name || bunkai.Author?.Username}
+          <p style={{ color: 'var(--washi-dim)' }}>
+            Ката:{' '}
+            <Link to={`/kata/${bunkai.Kata_ID}`} style={{ color: 'var(--gold-bright)', fontWeight: 600 }}>
+              {bunkai.Kata?.Title}
+            </Link>{' '}
+            · Автор: <strong style={{ color: 'var(--washi)' }}>{bunkai.Author?.Display_Name || bunkai.Author?.Username}</strong>
           </p>
         </div>
         <div className="detail-actions">

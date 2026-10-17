@@ -149,7 +149,7 @@
   transform: translateY(-2px);
   border-left-color: var(--crimson-bright);
   border-color: var(--gold);
-  background: #221d18;
+  background: rgba(203, 163, 78, 0.08);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.7);
 }
 
@@ -162,7 +162,7 @@
 .tech-card__badge-kanji {
   width: 32px;
   height: 32px;
-  background: #2a2219;
+  background: rgba(203, 163, 78, 0.12);
   border: 1px solid var(--gold);
   color: var(--gold-bright);
   border-radius: var(--radius-sm);
