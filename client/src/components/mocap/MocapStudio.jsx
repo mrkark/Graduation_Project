@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import io from 'socket.io-client';
-import QRCode from 'qrcode';
+import QRCode from '../../utils/qrCodeStandalone';
 import TraditionalDojo from '../../three/TraditionalDojo';
 import MocapPuppetAvatar from '../../three/MocapPuppetAvatar';
 import {
@@ -67,7 +67,6 @@ export default function MocapStudio() {
   const [multiCameraFusion, setMultiCameraFusion] = useState(true);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedQrSlot, setSelectedQrSlot] = useState(1);
-  const [copiedLink, setCopiedLink] = useState(false);
 
   // Режим подключения смартфонов: 'local' (локальная сеть Wi-Fi) по умолчанию!
   const [connectionMode, setConnectionMode] = useState('local');
@@ -727,22 +726,6 @@ export default function MocapStudio() {
     };
   }, [getPhoneConnectUrl, selectedQrSlot]);
 
-  const copyPhoneUrl = (slotNum = selectedQrSlot) => {
-    const url = getPhoneConnectUrl(slotNum);
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(url)
-        .then(() => {
-          setCopiedLink(true);
-          setTimeout(() => setCopiedLink(false), 2500);
-        })
-        .catch(() => {
-          prompt('Скопируйте ссылку для телефона:', url);
-        });
-    } else {
-      prompt('Скопируйте ссылку для телефона:', url);
-    }
-  };
-
   const activePhoneCount = connectedCameras.length;
 
   return (
@@ -1317,46 +1300,6 @@ export default function MocapStudio() {
               )}
             </div>
 
-            {/* Карточка ссылки для удобства, проверки на ПК и копирования */}
-            <div className="qr-direct-link-card">
-              <div className="direct-link-header">
-                <span className="direct-link-badge">
-                  {useHttpsForPhone ? '🔒 БЕЗОПАСНЫЙ ШЛЮЗ HTTPS' : '⚡ ПРЯМОЙ HTTP ПОТОК'}
-                </span>
-                <span className="direct-link-hint">
-                  {useHttpsForPhone ? 'Автодоступ к камере' : 'Локальный порт Vite'}
-                </span>
-              </div>
-              <div className="direct-link-url-box">
-                <a
-                  href={getPhoneConnectUrl(selectedQrSlot)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="direct-link-anchor"
-                  title="Нажмите, чтобы протестировать на ПК"
-                >
-                  {getPhoneConnectUrl(selectedQrSlot)}
-                </a>
-              </div>
-              <div className="direct-link-btn-row">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-gold direct-link-copy-btn"
-                  onClick={() => copyPhoneUrl(selectedQrSlot)}
-                >
-                  {copiedLink ? '✔ Ссылка скопирована!' : '📋 Скопировать ссылку'}
-                </button>
-                <a
-                  href={getPhoneConnectUrl(selectedQrSlot)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-sm btn-subtle direct-link-open-btn"
-                >
-                  🔗 Проверить на ПК
-                </a>
-              </div>
-            </div>
-
             <div className="qr-room-box">
               <span>Додзё-комната: <strong>{roomId}</strong></span>
               <span className="qr-target-tag">{PHONE_CONFIGS[selectedQrSlot - 1].label}</span>
@@ -1370,7 +1313,7 @@ export default function MocapStudio() {
               </div>
               <div className="qr-guide-step">
                 <span className="step-badge">2</span>
-                <span>Отсканируйте динамический QR-код камерой телефона или введите ссылку выше в браузере.</span>
+                <span>Отсканируйте динамический QR-код камерой телефона.</span>
               </div>
               <div className="qr-guide-step">
                 <span className="step-badge">3</span>
