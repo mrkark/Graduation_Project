@@ -6,9 +6,9 @@
 
 function getApiBaseUrl() {
   const envUrl = import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
-      return `${window.location.protocol}//${window.location.hostname}:5000/api`;
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+      return '/api';
     }
   }
   return envUrl || 'http://localhost:5000/api';

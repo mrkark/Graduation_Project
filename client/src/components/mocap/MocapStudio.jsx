@@ -18,12 +18,12 @@ import {
 import './MocapStudio.css';
 
 function getSocketUrl() {
-  const envUrl = import.meta.env.VITE_SOCKET_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
-      return `${window.location.protocol}//${window.location.hostname}:5000`;
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+      return window.location.origin;
     }
   }
+  const envUrl = import.meta.env.VITE_SOCKET_URL;
   return envUrl || 'http://localhost:5000';
 }
 
@@ -73,6 +73,7 @@ export default function MocapStudio() {
     : 'localhost';
   const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
   const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
+  const [useHttpsForPhone, setUseHttpsForPhone] = useState(true);
 
   // Состояние захвата движений и биомеханики
   const [isPoseModelLoading, setIsPoseModelLoading] = useState(true);
@@ -562,9 +563,8 @@ export default function MocapStudio() {
   };
 
   const getPhoneConnectUrl = (slotNum = 1) => {
-    return typeof window !== 'undefined'
-      ? `${window.location.protocol}//${networkHost}:${networkPort}/phone-camera?room=${roomId}&slot=${slotNum}`
-      : `http://localhost:5173/phone-camera?room=${roomId}&slot=${slotNum}`;
+    const proto = useHttpsForPhone ? 'https:' : (typeof window !== 'undefined' ? window.location.protocol : 'https:');
+    return `${proto}//${networkHost}:${networkPort}/phone-camera?room=${roomId}&slot=${slotNum}`;
   };
 
   const copyPhoneUrl = (slotNum = 1) => {
@@ -1171,8 +1171,19 @@ export default function MocapStudio() {
               </div>
             </div>
 
+            <div className="qr-protocol-row">
+              <label className="qr-protocol-label">
+                <input
+                  type="checkbox"
+                  checked={useHttpsForPhone}
+                  onChange={(e) => setUseHttpsForPhone(e.target.checked)}
+                />
+                <span>🔒 Использовать <strong>HTTPS</strong> (рекомендуется для мгновенного доступа к камере на смартфонах)</span>
+              </label>
+            </div>
+
             <div className="qr-perm-notice">
-              🔒 <strong>Важно:</strong> При открытии страницы на телефоне коснитесь экрана для активации камеры. Если мобильный Chrome блокирует камеру на HTTP, на странице телефона доступна 1-минутная инструкция со флагом Chrome.
+              🔒 <strong>Важно для смартфонов:</strong> При первом открытии ссылки браузер телефона (Chrome/Safari) предупредит о сертификате. Нажмите <em>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</em> (в Safari: «Подробнее» ➔ «Посетить этот веб-сайт»). После этого камера включится сразу!
             </div>
           </div>
         </div>

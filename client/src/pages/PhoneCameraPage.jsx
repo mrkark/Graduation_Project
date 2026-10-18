@@ -4,12 +4,12 @@ import io from 'socket.io-client';
 import './PhoneCameraPage.css';
 
 function getSocketUrl() {
-  const envUrl = import.meta.env.VITE_SOCKET_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
-      return `${window.location.protocol}//${window.location.hostname}:5000`;
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
+      return window.location.origin;
     }
   }
+  const envUrl = import.meta.env.VITE_SOCKET_URL;
   return envUrl || 'http://localhost:5000';
 }
 
@@ -516,9 +516,42 @@ export default function PhoneCameraPage() {
   };
 
   const isStreamFullyLive = streamActive && isVideoPlaying;
+  const isHttp =
+    typeof window !== 'undefined' &&
+    window.location.protocol === 'http:' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
+
+  const switchToHttps = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = window.location.href.replace(/^http:/, 'https:');
+    }
+  };
 
   return (
     <div className="phone-cam-page">
+      {/* 0. БАННЕР ПЕРЕХОДА НА HTTPS (РЕШАЕТ ПРОБЛЕМУ БЛОКИРОВКИ КАМЕРЫ НА ТЕЛЕФОНАХ) */}
+      {isHttp && (
+        <div className="phone-cam-https-banner">
+          <div className="https-banner-content">
+            <span className="https-banner-icon">⚡</span>
+            <div className="https-banner-text">
+              <strong>Камера разрешена в настройках, но заблокирована из-за HTTP</strong>
+              <p>
+                Браузеры телефонов (Chrome/Safari) запускают камеру только по защищенному протоколу <code>https://</code>.
+                Нажмите кнопку ниже для моментального перехода — камера включится сразу!
+              </p>
+            </div>
+            <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={switchToHttps}>
+              🔒 Перейти на HTTPS
+            </button>
+          </div>
+          <div className="https-banner-hint">
+            * При переходе нажмите «Дополнительно» ➔ «Перейти на сайт (небезопасно)», так как это локальный сертификат Додзё.
+          </div>
+        </div>
+      )}
+
       {/* 1. БАННЕР-ИНСТРУКЦИЯ О РАЗРЕШЕНИИ НА КАМЕРУ */}
       {permissionGuideVisible && (
         <div className={`phone-cam-perm-banner ${isStreamFullyLive ? 'is-granted' : 'is-prompt'}`}>

@@ -637,3 +637,51 @@
   justify-content: flex-end;
 }
 
+/* Баннер моментального переключения на HTTPS */
+.phone-cam-https-banner {
+  background: linear-gradient(135deg, #241607 0%, #3a220a 100%);
+  border-bottom: 2px solid var(--gold-bright, #e8c57b);
+  padding: 0.85rem 1rem;
+  z-index: 60;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
+}
+
+.https-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.https-banner-icon {
+  font-size: 1.6rem;
+  color: var(--gold-bright, #e8c57b);
+  flex-shrink: 0;
+}
+
+.https-banner-text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.https-banner-text strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #fff;
+  margin-bottom: 3px;
+}
+
+.https-banner-text p {
+  margin: 0;
+  font-size: 0.76rem;
+  color: rgba(245, 239, 230, 0.88);
+  line-height: 1.35;
+}
+
+.https-banner-hint {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--gold, #c5a059);
+}
+
+
