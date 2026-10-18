@@ -533,6 +533,7 @@ export default function PhoneCameraPage() {
                 slot: assignedSlot,
                 deviceId: selectedDeviceId || facingMode,
                 timestamp: Date.now(),
+                trackingLost: false,
                 facingMode,
                 isMirrored: facingMode === 'user',
                 landmarks: results.poseLandmarks,
@@ -557,6 +558,21 @@ export default function PhoneCameraPage() {
           } else {
             setBodyInFrame(false);
             setLimbWarnings([]);
+            if (socketRef.current && socketConnected) {
+              socketRef.current.emit('mocap:landmarks-stream', {
+                version: 2,
+                format: 'bunkai-stream-packet',
+                roomId,
+                slot: assignedSlot,
+                deviceId: selectedDeviceId || facingMode,
+                timestamp: Date.now(),
+                trackingLost: true,
+                landmarks: null,
+                worldLandmarks: null,
+                confidence: { overall: 0 },
+                performanceMode,
+              });
+            }
           }
         });
       })

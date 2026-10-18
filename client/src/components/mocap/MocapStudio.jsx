@@ -19,6 +19,8 @@ import {
   exportCaptureJson,
   exportRetargetedJson,
   parseBunkaiMocapJson,
+  calibrateCameraFromPose,
+  sharedMultiCameraEngine,
 } from '../../utils/mocapPoseTracker';
 import './MocapStudio.css';
 
@@ -139,6 +141,13 @@ export default function MocapStudio() {
   const [rootYOffset, setRootYOffset] = useState(0.0);
   const [headPitchOffset, setHeadPitchOffset] = useState(0.0);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [multiCamStats, setMultiCamStats] = useState({
+    mode: 'monocular',
+    activeCount: 1,
+    syncHealth: 'perfect',
+    driftMs: 0,
+    reprojErr: 0,
+  });
 
   // Запись сессии MoCap
   const [isRecording, setIsRecording] = useState(false);
@@ -272,6 +281,15 @@ export default function MocapStudio() {
 
       // Стереоскопическое слияние камер (1..3 камеры)
       const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
+      if (fused) {
+        setMultiCamStats({
+          mode: fused.cameraMode || 'single',
+          activeCount: fused.activeCameras?.length || 1,
+          syncHealth: fused.syncHealth || 'perfect',
+          driftMs: fused.maxDriftMs || 0,
+          reprojErr: fused.reprojectionErrorAvg || 0,
+        });
+      }
       const finalLandmarks = fused?.landmarks || results.poseLandmarks;
       const finalWorldLandmarks = fused?.worldLandmarks || results.poseWorldLandmarks;
 
@@ -490,7 +508,15 @@ export default function MocapStudio() {
 
     // Прием потока ключевых точек напрямую от смартфонов
     socket.on('mocap:landmarks-data', (payload) => {
-      const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands } = payload || {};
+      const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands, trackingLost } = payload || {};
+      
+      if (slot && trackingLost) {
+        if (latestLandmarksBySlot.current[slot]) {
+          latestLandmarksBySlot.current[slot].trackingLost = true;
+        }
+        return;
+      }
+
       if (slot && landmarks && landmarks.length >= 33) {
         setCameraActive(true);
         setBodyDetected(true);
@@ -503,6 +529,7 @@ export default function MocapStudio() {
           fingers: incomingFingers,
           head: incomingHead,
           hands: incomingHands,
+          trackingLost: false,
         };
 
         const now = Date.now();
@@ -513,6 +540,15 @@ export default function MocapStudio() {
         }
 
         const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
+        if (fused) {
+          setMultiCamStats({
+            mode: fused.cameraMode || 'single',
+            activeCount: fused.activeCameras?.length || 1,
+            syncHealth: fused.syncHealth || 'perfect',
+            driftMs: fused.maxDriftMs || 0,
+            reprojErr: fused.reprojectionErrorAvg || 0,
+          });
+        }
         const finalLandmarks = fused?.landmarks || landmarks;
         const finalWorldLandmarks = fused?.worldLandmarks || worldLandmarks || landmarks;
 
@@ -832,13 +868,26 @@ export default function MocapStudio() {
       socketRef.current.emit('mocap:calibrate', { roomId });
     }
 
+    const calibResults = [];
+    for (const [slotStr, feed] of Object.entries(latestLandmarksBySlot.current)) {
+      if (feed?.landmarks && feed.landmarks.length >= 33) {
+        const slotNum = Number(slotStr);
+        const calibratedCam = calibrateCameraFromPose(slotNum, feed.landmarks, feed.worldLandmarks);
+        if (calibratedCam) {
+          sharedMultiCameraEngine.setCameraCalibration(slotNum, calibratedCam);
+          calibResults.push(`Слот #${slotNum}: невязка ${(calibratedCam.calibrationError * 100).toFixed(1)}%`);
+        }
+      }
+    }
+
     setTimeout(() => {
-      setCalibrationMessage('✅ Калибровка завершена! Камеры согласованы, сенсорный шум сброшен.');
+      const detailStr = calibResults.length > 0 ? ` [${calibResults.join(' · ')}]` : '';
+      setCalibrationMessage(`✅ Калибровка завершена! Камеры согласованы в едином базисе${detailStr}`);
       setTimeout(() => {
         setCalibrationActive(false);
         setCalibrationMessage(null);
-      }, 3000);
-    }, 1500);
+      }, 4000);
+    }, 1200);
   };
 
   // Таймер записи
@@ -1208,7 +1257,9 @@ export default function MocapStudio() {
                       {!cameraActive
                         ? 'Камера выключена'
                         : bodyDetected
-                        ? `3D Захват (${sourceMode === 'phone' ? `Слот #${activeCameraSlot}` : 'Веб-камера'})`
+                        ? multiCamStats.activeCount >= 2
+                          ? `🎯 Мульти-захват (${multiCamStats.activeCount} кам. · ${multiCamStats.syncHealth === 'perfect' ? 'Синхронно' : `Дрейф ${multiCamStats.driftMs}мс`})`
+                          : `3D Захват (${sourceMode === 'phone' ? `Слот #${activeCameraSlot}` : 'Веб-камера'})`
                         : 'Поиск бойца в кадре...'}
                     </span>
                   </div>
@@ -1241,18 +1292,38 @@ export default function MocapStudio() {
                     {PHONE_CONFIGS.map((cfg) => {
                       const isConnected = connectedCameras.some((c) => c.slot === cfg.slot);
                       const isSelected = activeCameraSlot === cfg.slot;
+                      const feed = latestLandmarksBySlot.current[cfg.slot];
+                      const hasRecentData = feed && (Date.now() - (feed.timestamp || 0) < 1800);
+                      const isTrackingLost = feed?.trackingLost;
+
+                      let statusText = '⚪ Ожидание';
+                      let statusClass = 'is-empty';
+                      if (isConnected) {
+                        if (isTrackingLost) {
+                          statusText = '⚠️ Вне кадра';
+                          statusClass = 'is-warning';
+                        } else if (hasRecentData) {
+                          statusText = '🟢 В эфире (30 FPS)';
+                          statusClass = 'is-connected';
+                        } else {
+                          statusText = '🟡 Подключен';
+                          statusClass = 'is-idle';
+                        }
+                      }
+
                       return (
                         <div
                           key={cfg.slot}
-                          className={`cam-slot-card ${isSelected ? 'is-selected' : ''} ${isConnected ? 'is-connected' : 'is-empty'}`}
+                          className={`cam-slot-card ${isSelected ? 'is-selected' : ''} ${statusClass}`}
                           onClick={() => setActiveCameraSlot(cfg.slot)}
+                          title={`Камера #${cfg.slot}: ${cfg.desc}`}
                         >
                           <div className="slot-card-header">
                             <span className="slot-card-num">#{cfg.slot}</span>
                             <span className="slot-card-angle">{cfg.angle}</span>
                           </div>
                           <span className="slot-card-name">{cfg.slot === 1 ? 'Фронт (0°)' : cfg.slot === 2 ? 'Бок (90°)' : 'Угол (45°)'}</span>
-                          <span className="slot-card-status">{isConnected ? '🟢 В эфире' : '⚪ Ожидание'}</span>
+                          <span className="slot-card-status">{statusText}</span>
                         </div>
                       );
                     })}

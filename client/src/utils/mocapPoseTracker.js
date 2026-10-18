@@ -11,8 +11,26 @@
  */
 
 import { computePerFingerConfidence, disambiguateHandSide } from './mocapHandRetargeter.js';
+import {
+  CameraParameters,
+  calibrateCameraFromPose,
+  SynchronizedFrameBuffer,
+  triangulateRays,
+  filterOutlierRays,
+  MultiCameraMoCapEngine,
+} from './mocapMultiCameraEngine.js';
 
-const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
+export {
+  CameraParameters,
+  calibrateCameraFromPose,
+  SynchronizedFrameBuffer,
+  triangulateRays,
+  filterOutlierRays,
+  MultiCameraMoCapEngine,
+  sharedMultiCameraEngine,
+};
+
+const sharedMultiCameraEngine = new MultiCameraMoCapEngine();
 
 let poseInstance = null;
 let poseLoadPromise = null;
@@ -515,86 +533,109 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
     }
   } else {
     // --- СЛУЧАЙ 2 И 3: МУЛЬТИ-КАМЕРНЫЙ ЗАХВАТ (2 ИЛИ 3 КАМЕРЫ) ---
-    const hasC1 = Boolean(c1?.landmarks);
-    const hasC2 = Boolean(c2?.landmarks);
-    const hasC3 = Boolean(c3?.landmarks);
-
-    const c2_w = c2?.worldLandmarks;
-    const c2_hipX = c2_w && c2_w[23] && c2_w[24]
-      ? (c2_w[23].x + c2_w[24].x) * 0.5
-      : 0;
-
-    for (let i = 0; i < 33; i++) {
-      const p1 = c1?.landmarks?.[i];
-      const w1 = c1?.worldLandmarks?.[i];
-      const vis1 = p1?.visibility ?? 0;
-
-      const p2 = c2?.landmarks?.[i];
-      const w2 = c2?.worldLandmarks?.[i];
-      const vis2 = p2?.visibility ?? 0;
-
-      const p3 = c3?.landmarks?.[i];
-      const w3 = c3?.worldLandmarks?.[i];
-      const vis3 = p3?.visibility ?? 0;
-
-      // 1. Определение координаты X (Ширина):
-      // Приоритет фронтальной камере; при перекрытиях берется угловая или боковая
-      let fx = 0.5;
-      let wx = 0.0;
-      if (hasC1 && vis1 >= 0.35) {
-        fx = p1.x;
-        wx = w1.x;
-      } else if (hasC3 && vis3 > 0.45) {
-        fx = p3.x;
-        wx = (w3.x + (w3.z || 0)) * 0.7071;
-      } else if (hasC2 && vis2 > 0.45) {
-        fx = (p2.z ?? 0) * 0.5 + 0.5;
-        wx = -(w2.z || 0);
-      } else {
-        fx = p1?.x ?? p3?.x ?? p2?.x ?? 0.5;
-        wx = w1?.x ?? w3?.x ?? w2?.x ?? 0.0;
-      }
-
-      // 2. Определение координаты Y (Высота):
-      let totalVisY = 0;
-      let sumFy = 0;
-      let sumWy = 0;
-      if (hasC1 && p1) { sumFy += p1.y * Math.max(0.2, vis1); sumWy += w1.y * Math.max(0.2, vis1); totalVisY += Math.max(0.2, vis1); }
-      if (hasC2 && p2) { sumFy += p2.y * Math.max(0.2, vis2); sumWy += w2.y * Math.max(0.2, vis2); totalVisY += Math.max(0.2, vis2); }
-      if (hasC3 && p3) { sumFy += p3.y * Math.max(0.2, vis3); sumWy += w3.y * Math.max(0.2, vis3); totalVisY += Math.max(0.2, vis3); }
-
-      const fy = totalVisY > 0 ? sumFy / totalVisY : (p1?.y ?? p2?.y ?? p3?.y ?? 0.5);
-      const wy = totalVisY > 0 ? sumWy / totalVisY : (w1?.y ?? w2?.y ?? w3?.y ?? 0.0);
-
-      // 3. Определение координаты Z (Физическая глубина стойки / удара):
-      // Боковая камера дает прямое физическое измерение глубины!
-      let fz = 0.0;
-      let wz = 0.0;
-      if (hasC2 && vis2 >= 0.28) {
-        const physicalDepthZ = (w2.x - c2_hipX) * 1.15;
-        wz = (hasC1 && vis1 > 0.5) ? (physicalDepthZ * 0.85 + w1.z * 0.15) : physicalDepthZ;
-        fz = wz;
-      } else if (hasC3 && vis3 >= 0.38) {
-        const angleDepthZ = (-w3.x + (w3.z || 0)) * 0.7071;
-        wz = (hasC1 && vis1 > 0.45) ? (angleDepthZ * 0.65 + w1.z * 0.35) : angleDepthZ;
-        fz = wz;
-      } else if (hasC1) {
-        fz = p1.z || 0;
-        wz = w1.z || 0;
-      }
-
-      const maxVis = Math.max(vis1, vis2, vis3);
-      fusedLmsRaw.push({ x: fx, y: fy, z: fz, visibility: maxVis });
-      fusedWlmsRaw.push({ x: wx, y: wy, z: wz, visibility: maxVis });
+    // Подаем пакеты в геометрический движок лучевой триангуляции
+    for (const s of activeSlots) {
+      const feed = cameraFeeds[s];
+      sharedMultiCameraEngine.ingestCameraPacket({
+        slot: Number(s),
+        timestamp: feed.timestamp || curTime,
+        landmarks: feed.landmarks,
+        worldLandmarks: feed.worldLandmarks || feed.landmarks,
+        fingers: feed.fingers,
+        hands: feed.hands,
+        head: feed.head,
+        trackingLost: feed.trackingLost || false,
+      });
     }
 
-    cameraMode = activeSlots.length === 3
-      ? 'triangulation_3cam'
-      : (activeSlots.includes(1) && activeSlots.includes(2))
-        ? 'stereo_front_side'
-        : (activeSlots.includes(1) && activeSlots.includes(3))
-          ? 'stereo_front_angle'
-          : 'stereo_side_angle';
+    let engineTriangulated = null;
+    try {
+      engineTriangulated = sharedMultiCameraEngine.reconstructFrame(curTime);
+    } catch (e) {
+      console.warn('Triangulation fallback:', e);
+    }
+
+    if (engineTriangulated && engineTriangulated.worldLandmarks && engineTriangulated.worldLandmarks.length === 33) {
+      fusedLmsRaw = engineTriangulated.landmarks;
+      fusedWlmsRaw = engineTriangulated.worldLandmarks;
+      cameraMode = engineTriangulated.mode;
+    } else {
+      const hasC1 = Boolean(c1?.landmarks);
+      const hasC2 = Boolean(c2?.landmarks);
+      const hasC3 = Boolean(c3?.landmarks);
+
+      const c2_w = c2?.worldLandmarks;
+      const c2_hipX = c2_w && c2_w[23] && c2_w[24]
+        ? (c2_w[23].x + c2_w[24].x) * 0.5
+        : 0;
+
+      for (let i = 0; i < 33; i++) {
+        const p1 = c1?.landmarks?.[i];
+        const w1 = c1?.worldLandmarks?.[i];
+        const vis1 = p1?.visibility ?? 0;
+
+        const p2 = c2?.landmarks?.[i];
+        const w2 = c2?.worldLandmarks?.[i];
+        const vis2 = p2?.visibility ?? 0;
+
+        const p3 = c3?.landmarks?.[i];
+        const w3 = c3?.worldLandmarks?.[i];
+        const vis3 = p3?.visibility ?? 0;
+
+        let fx = 0.5;
+        let wx = 0.0;
+        if (hasC1 && vis1 >= 0.35) {
+          fx = p1.x;
+          wx = w1.x;
+        } else if (hasC3 && vis3 > 0.45) {
+          fx = p3.x;
+          wx = (w3.x + (w3.z || 0)) * 0.7071;
+        } else if (hasC2 && vis2 > 0.45) {
+          fx = (p2.z ?? 0) * 0.5 + 0.5;
+          wx = -(w2.z || 0);
+        } else {
+          fx = p1?.x ?? p3?.x ?? p2?.x ?? 0.5;
+          wx = w1?.x ?? w3?.x ?? w2?.x ?? 0.0;
+        }
+
+        let totalVisY = 0;
+        let sumFy = 0;
+        let sumWy = 0;
+        if (hasC1 && p1) { sumFy += p1.y * Math.max(0.2, vis1); sumWy += w1.y * Math.max(0.2, vis1); totalVisY += Math.max(0.2, vis1); }
+        if (hasC2 && p2) { sumFy += p2.y * Math.max(0.2, vis2); sumWy += w2.y * Math.max(0.2, vis2); totalVisY += Math.max(0.2, vis2); }
+        if (hasC3 && p3) { sumFy += p3.y * Math.max(0.2, vis3); sumWy += w3.y * Math.max(0.2, vis3); totalVisY += Math.max(0.2, vis3); }
+
+        const fy = totalVisY > 0 ? sumFy / totalVisY : (p1?.y ?? p2?.y ?? p3?.y ?? 0.5);
+        const wy = totalVisY > 0 ? sumWy / totalVisY : (w1?.y ?? w2?.y ?? w3?.y ?? 0.0);
+
+        let fz = 0.0;
+        let wz = 0.0;
+        if (hasC2 && vis2 >= 0.28) {
+          const physicalDepthZ = (w2.x - c2_hipX) * 1.15;
+          wz = (hasC1 && vis1 > 0.5) ? (physicalDepthZ * 0.85 + w1.z * 0.15) : physicalDepthZ;
+          fz = wz;
+        } else if (hasC3 && vis3 >= 0.38) {
+          const angleDepthZ = (-w3.x + (w3.z || 0)) * 0.7071;
+          wz = (hasC1 && vis1 > 0.45) ? (angleDepthZ * 0.65 + w1.z * 0.35) : angleDepthZ;
+          fz = wz;
+        } else if (hasC1) {
+          fz = p1.z || 0;
+          wz = w1.z || 0;
+        }
+
+        const maxVis = Math.max(vis1, vis2, vis3);
+        fusedLmsRaw.push({ x: fx, y: fy, z: fz, visibility: maxVis });
+        fusedWlmsRaw.push({ x: wx, y: wy, z: wz, visibility: maxVis });
+      }
+
+      cameraMode = activeSlots.length === 3
+        ? 'triangulation_3cam'
+        : (activeSlots.includes(1) && activeSlots.includes(2))
+          ? 'stereo_front_side'
+          : (activeSlots.includes(1) && activeSlots.includes(3))
+            ? 'stereo_front_angle'
+            : 'stereo_side_angle';
+    }
   }
 
   // --- 4. ПРИМЕНЕНИЕ АДАПТИВНОГО 1€ ФИЛЬТРА КО ВСЕМ ТОЧКАМ ---
@@ -628,34 +669,39 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
   const clearedWlms = applyTorsoClearanceToLandmarks(filteredWlms);
 
   // Слияние кинематики кистей и пальцев:
-  // Если у одной камеры рука перекрыта, берем ракурс второй или третьей камеры
-  let fusedFingers = null;
-  let fusedHands = null;
-  for (const s of [1, 3, 2]) {
-    const feed = cameraFeeds[s];
-    if (feed?.fingers && (feed.fingers.left?.detected || feed.fingers.right?.detected)) {
-      if (!fusedFingers) {
-        fusedFingers = { ...feed.fingers };
-      } else {
-        if (!fusedFingers.left?.detected && feed.fingers.left?.detected) {
-          fusedFingers.left = feed.fingers.left;
-        }
-        if (!fusedFingers.right?.detected && feed.fingers.right?.detected) {
-          fusedFingers.right = feed.fingers.right;
+  // При наличии данных из движка триангуляции используем его выбор ракурса с наивысшей уверенностью
+  let fusedFingers = engineTriangulated?.fingers || null;
+  let fusedHands = engineTriangulated?.hands || null;
+  let fusedHead = engineTriangulated?.head || null;
+
+  if (!fusedFingers) {
+    for (const s of [1, 3, 2]) {
+      const feed = cameraFeeds[s];
+      if (feed?.fingers && (feed.fingers.left?.detected || feed.fingers.right?.detected)) {
+        if (!fusedFingers) {
+          fusedFingers = { ...feed.fingers };
+        } else {
+          if (!fusedFingers.left?.detected && feed.fingers.left?.detected) {
+            fusedFingers.left = feed.fingers.left;
+          }
+          if (!fusedFingers.right?.detected && feed.fingers.right?.detected) {
+            fusedFingers.right = feed.fingers.right;
+          }
         }
       }
-    }
-    if (feed?.hands && Array.isArray(feed.hands) && feed.hands.length > 0) {
-      if (!fusedHands) fusedHands = feed.hands;
+      if (feed?.hands && Array.isArray(feed.hands) && feed.hands.length > 0) {
+        if (!fusedHands) fusedHands = feed.hands;
+      }
     }
   }
 
   // Слияние ориентации взгляда Мэцукэ
-  let fusedHead = null;
-  for (const s of [1, 3, 2]) {
-    if (cameraFeeds[s]?.head) {
-      fusedHead = cameraFeeds[s].head;
-      break;
+  if (!fusedHead) {
+    for (const s of [1, 3, 2]) {
+      if (cameraFeeds[s]?.head) {
+        fusedHead = cameraFeeds[s].head;
+        break;
+      }
     }
   }
 
@@ -668,6 +714,9 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
     fingers: fusedFingers,
     hands: fusedHands,
     head: fusedHead,
+    syncHealth: engineTriangulated?.syncHealth || 'perfect',
+    maxDriftMs: engineTriangulated?.maxDriftMs || 0,
+    reprojectionErrorAvg: engineTriangulated?.reprojectionErrorAvg || 0.0,
   };
 }
 
@@ -840,16 +889,24 @@ export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
     z: (rawHipsMid.z + rawNeck.z) * 0.5,
   };
 
-  const lowestFootY = Math.max(
-    rawLA.y,
-    rawRA.y,
-    rawLToe?.y || rawLA.y,
-    rawRToe?.y || rawRA.y
-  );
+  const isYUp = (rawNeck.y || 0) > (rawLA.y || 0);
+  const lowestFootY = isYUp
+    ? Math.min(
+        rawLA.y,
+        rawRA.y,
+        rawLToe?.y !== undefined ? rawLToe.y : rawLA.y,
+        rawRToe?.y !== undefined ? rawRToe.y : rawRA.y
+      )
+    : Math.max(
+        rawLA.y,
+        rawRA.y,
+        rawLToe?.y !== undefined ? rawLToe.y : rawLA.y,
+        rawRToe?.y !== undefined ? rawRToe.y : rawRA.y
+      );
 
   const toThreeCoords = (p) => {
     if (!p) return { x: 0, y: 0, z: 0, visibility: 0 };
-    const yThree = (lowestFootY - p.y) * scale;
+    const yThree = isYUp ? (p.y - lowestFootY) * scale : (lowestFootY - p.y) * scale;
     const xMult = mirrorX ? -1 : 1;
     const xThree = -(p.x - rawHipsMid.x) * scale * xMult;
     const zThree = -((p.z || 0) - rawHipsMid.z) * scale;

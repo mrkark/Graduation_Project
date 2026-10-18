@@ -1258,6 +1258,14 @@
   color: #4ade80;
 }
 
+.cam-slot-card.is-warning .slot-card-status {
+  color: #f59e0b;
+}
+
+.cam-slot-card.is-idle .slot-card-status {
+  color: #fbbf24;
+}
+
 .multi-cam-fusion-bar {
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
