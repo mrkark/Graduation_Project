@@ -63,21 +63,39 @@ app.get('/api/mocap/tunnel', (req, res) => {
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     if (fs.existsSync(tunnelPath)) {
       const data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
+      if (!data.localIp) data.localIp = '192.168.100.28';
       return res.json({ success: true, data });
     }
   } catch (e) {
     // игнорируем ошибку чтения файла
   }
-  return res.json({ success: true, data: { active: false, url: null } });
+  return res.json({
+    success: true,
+    data: {
+      active: false,
+      url: null,
+      localIp: '192.168.100.28',
+      localIps: [{ name: 'Ethernet (LAN)', ip: '192.168.100.28', isPrimary: true }],
+    },
+  });
 });
 
 app.post('/api/mocap/tunnel', (req, res) => {
   try {
-    const { url, active } = req.body;
+    const { url, active, localIp, localIps } = req.body;
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
+    let existing = {};
+    if (fs.existsSync(tunnelPath)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
+      } catch (e) {}
+    }
     const data = {
+      ...existing,
       active: active !== undefined ? Boolean(active) : Boolean(url),
       url: url || null,
+      localIp: localIp || existing.localIp || '192.168.100.28',
+      localIps: localIps || existing.localIps || [{ name: 'Ethernet', ip: '192.168.100.28', isPrimary: true }],
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(tunnelPath, JSON.stringify(data, null, 2), 'utf8');

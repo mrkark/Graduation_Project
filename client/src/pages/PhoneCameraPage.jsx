@@ -102,10 +102,22 @@ export default function PhoneCameraPage() {
   const [isInsecureOrigin, setIsInsecureOrigin] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [fps, setFps] = useState(0);
+  const [tunnelUrl, setTunnelUrl] = useState(null);
 
   // Копирование адресов для настройки Chrome
   const [copiedFlag, setCopiedFlag] = useState(false);
   const [copiedOrigin, setCopiedOrigin] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/mocap/tunnel')
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.data?.active && json?.data?.url) {
+          setTunnelUrl(json.data.url);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Состояние записи MoCap анимации, инициируемой с телефона
   const [isRecording, setIsRecording] = useState(false);
@@ -550,12 +562,37 @@ export default function PhoneCameraPage() {
       {/* 2. ПОШАГОВОЕ РУКОВОДСТВО ДЛЯ CHROME НА АНДРОИД ПРИ ПОДКЛЮЧЕНИИ ПО HTTP */}
       {isHttp && !isStreamFullyLive && (
         <div className="phone-cam-insecure-guide">
+          {tunnelUrl && (
+            <div style={{
+              margin: '0 0 14px 0',
+              padding: '12px 14px',
+              background: 'rgba(212, 175, 55, 0.12)',
+              border: '1px solid #d4af37',
+              borderRadius: '8px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#f5d77f', marginBottom: '8px' }}>
+                🚀 Доступно защищенное HTTPS-подключение!
+              </div>
+              <p style={{ margin: '0 0 10px 0', fontSize: '0.82rem', color: '#ccc' }}>
+                Перейдите по HTTPS — камера на телефоне включится сразу в 1 клик без флагов Chrome:
+              </p>
+              <a
+                href={`${tunnelUrl}/phone-camera?room=${roomId}&slot=${assignedSlot}`}
+                className="btn btn-sm btn-gold btn-pulse"
+                style={{ display: 'inline-block', textDecoration: 'none', padding: '8px 16px', fontWeight: 700 }}
+              >
+                🔒 Открыть через HTTPS (Рекомендуется)
+              </a>
+            </div>
+          )}
+
           <div className="insecure-guide-head">
             <span className="insecure-icon">💡</span>
             <div className="insecure-title-box">
-              <strong>Ваши настройки в порядке! Chrome блокирует камеру на локальном IP</strong>
+              <strong>Или используйте локальный Wi-Fi (требуется флаг Chrome)</strong>
               <p>
-                Разрешения в настройках уже даны, но мобильный Chrome по стандарту требует подтвердить локальный IP через флаг разработчика (займет 20 секунд):
+                Чтобы камера работала по локальному HTTP-адресу, подтвердите локальный IP через флаг (займет 20 секунд):
               </p>
             </div>
           </div>

@@ -74,9 +74,13 @@ export default function MocapStudio() {
 
   // Настройка сетевого IP для QR-кода телефона
   const defaultNetworkHost = typeof window !== 'undefined'
-    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.6' : window.location.hostname)
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.28' : window.location.hostname)
     : 'localhost';
   const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
+  const [availableIps, setAvailableIps] = useState([
+    { name: 'Ethernet (LAN)', ip: '192.168.100.28', isPrimary: true },
+    { name: 'Wi-Fi IP', ip: '192.168.100.6', isPrimary: false },
+  ]);
   const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
   const [useHttpsForPhone, setUseHttpsForPhone] = useState(false);
 
@@ -94,6 +98,12 @@ export default function MocapStudio() {
         if (json?.data?.url) {
           setTunnelUrl(json.data.url);
           setTunnelActive(Boolean(json.data.active));
+        }
+        if (json?.data?.localIp) {
+          setNetworkHost(json.data.localIp);
+        }
+        if (Array.isArray(json?.data?.localIps) && json.data.localIps.length > 0) {
+          setAvailableIps(json.data.localIps);
         }
       }
     } catch (e) {
@@ -1149,31 +1159,34 @@ export default function MocapStudio() {
             ) : (
               <div className="qr-ip-config">
                 <label className="qr-ip-label">Сетевой IP компьютера (для доступа внутри локального Wi-Fi):</label>
-                <div className="qr-ip-row">
+                <div className="qr-ip-row" style={{ flexWrap: 'wrap', gap: '8px' }}>
                   <input
                     type="text"
                     value={networkHost}
                     onChange={(e) => setNetworkHost(e.target.value.trim())}
-                    placeholder="192.168.100.6"
+                    placeholder="192.168.100.28"
                     className="qr-ip-input"
+                    style={{ minWidth: '160px' }}
                   />
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-subtle"
-                    onClick={() => setNetworkHost('192.168.100.6')}
-                  >
-                    Wi-Fi IP
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-subtle"
-                    onClick={() => setNetworkHost('192.168.100.28')}
-                  >
-                    Ethernet IP
-                  </button>
+                  {availableIps.map((adapter) => (
+                    <button
+                      key={adapter.ip}
+                      type="button"
+                      className={`btn btn-sm ${networkHost === adapter.ip ? 'btn-gold' : 'btn-subtle'}`}
+                      onClick={() => setNetworkHost(adapter.ip)}
+                      title={`Выбрать IP ${adapter.ip}`}
+                    >
+                      {adapter.isPrimary ? '★ ' : ''}{adapter.name}: {adapter.ip}
+                    </button>
+                  ))}
                 </div>
-                <div className="qr-perm-notice" style={{ marginTop: '8px' }}>
-                  📱 <strong>Для Chrome на Android:</strong> На странице телефона будет готова подсказка из 3 пунктов для включения доверия к локальному IP в <code>chrome://flags</code>.
+                <div className="qr-perm-notice" style={{ marginTop: '10px' }}>
+                  <div><strong>⚠️ Если на телефоне пишет «Не удается получить доступ к сайту»:</strong></div>
+                  <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: '0.82rem', lineHeight: '1.4' }}>
+                    <li>Убедитесь, что телефон подключен к тому же Wi-Fi роутеру, что и компьютер.</li>
+                    <li>Если компьютер подключен по кабелю, выберите кнопку <strong>Ethernet: 192.168.100.28</strong> выше.</li>
+                    <li>Либо переключитесь на вкладку выше <strong>«Внешний интернет / 4G (HTTPS)»</strong> — она работает на любом телефоне без настроек сети!</li>
+                  </ul>
                 </div>
               </div>
             )}
