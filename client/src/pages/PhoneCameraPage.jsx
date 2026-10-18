@@ -556,30 +556,18 @@ export default function PhoneCameraPage() {
             {isHttp && (
               <div className="starter-chrome-help">
                 <div>
-                  <strong>💡 Chrome блокирует камеру на локальном IP?</strong>
+                  <strong>💡 Браузер блокирует камеру на незащищенном HTTP?</strong>
                 </div>
 
-                {tunnelUrl ? (
-                  <div className="starter-help-actions">
-                    <span>Доступен защищенный режим без настроек:</span>
-                    <a
-                      href={`${tunnelUrl}/phone-camera?room=${roomId}&slot=${assignedSlot}`}
-                      className="starter-https-redirect"
-                    >
-                      🔒 Открыть через HTTPS (Без настроек)
-                    </a>
-                  </div>
-                ) : (
-                  <div className="starter-help-actions">
-                    <span>Для работы по домашней сети Wi-Fi включите флаг Chrome:</span>
-                    <button type="button" className="starter-copy-btn" onClick={copyChromeFlag}>
-                      {copiedFlag ? '✔ Скопировано' : '1. Скопировать адрес флага'}
-                    </button>
-                    <button type="button" className="starter-copy-btn" onClick={copyOriginUrl}>
-                      {copiedOrigin ? '✔ Скопировано' : '2. Скопировать адрес сайта'}
-                    </button>
-                  </div>
-                )}
+                <div className="starter-help-actions">
+                  <span>Перейдите на защищенный порт Додзё (SSL):</span>
+                  <a
+                    href={`https://${typeof window !== 'undefined' ? window.location.hostname : '192.168.100.6'}:8443/phone-camera?room=${roomId}&slot=${assignedSlot}`}
+                    className="starter-https-redirect"
+                  >
+                    🔒 Открыть через защищенный HTTPS (Wi-Fi)
+                  </a>
+                </div>
               </div>
             )}
           </div>

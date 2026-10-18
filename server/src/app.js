@@ -57,13 +57,13 @@ app.use('/uploads', express.static(uploadsPath));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok' } }));
 
-// Получение и обновление статуса публичного HTTPS туннеля для подключения телефонов из внешней сети
+// Получение и обновление статуса локального HTTPS шлюза для подключения телефонов
 app.get('/api/mocap/tunnel', (req, res) => {
   try {
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     if (fs.existsSync(tunnelPath)) {
       const data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
-      if (!data.localIp) data.localIp = '192.168.100.28';
+      if (!data.localIp) data.localIp = '192.168.100.6';
       return res.json({ success: true, data });
     }
   } catch (e) {
@@ -72,17 +72,22 @@ app.get('/api/mocap/tunnel', (req, res) => {
   return res.json({
     success: true,
     data: {
-      active: false,
-      url: null,
-      localIp: '192.168.100.28',
-      localIps: [{ name: 'Ethernet (LAN)', ip: '192.168.100.28', isPrimary: true }],
+      active: true,
+      url: 'https://192.168.100.6:8443',
+      httpsUrl: 'https://192.168.100.6:8443',
+      httpsPort: 8443,
+      localIp: '192.168.100.6',
+      localIps: [
+        { name: 'Wi-Fi (Активный LAN)', ip: '192.168.100.6', isPrimary: true },
+        { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
+      ],
     },
   });
 });
 
 app.post('/api/mocap/tunnel', (req, res) => {
   try {
-    const { url, active, localIp, localIps } = req.body;
+    const { url, active, localIp, localIps, httpsPort, httpsUrl } = req.body;
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     let existing = {};
     if (fs.existsSync(tunnelPath)) {
@@ -92,10 +97,12 @@ app.post('/api/mocap/tunnel', (req, res) => {
     }
     const data = {
       ...existing,
-      active: active !== undefined ? Boolean(active) : Boolean(url),
-      url: url || null,
-      localIp: localIp || existing.localIp || '192.168.100.28',
-      localIps: localIps || existing.localIps || [{ name: 'Ethernet', ip: '192.168.100.28', isPrimary: true }],
+      active: active !== undefined ? Boolean(active) : true,
+      url: url || httpsUrl || existing.url || 'https://192.168.100.6:8443',
+      httpsUrl: httpsUrl || url || existing.httpsUrl || 'https://192.168.100.6:8443',
+      httpsPort: httpsPort || existing.httpsPort || 8443,
+      localIp: localIp || existing.localIp || '192.168.100.6',
+      localIps: localIps || existing.localIps || [{ name: 'Wi-Fi', ip: '192.168.100.6', isPrimary: true }],
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(tunnelPath, JSON.stringify(data, null, 2), 'utf8');

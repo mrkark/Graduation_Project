@@ -1,12 +1,16 @@
 # ========================================================
-# Karate Bunkai Explorer — Скрипт HTTPS Туннеля для AI MoCap
-# Позволяет подключать телефон из любой сети (4G/LTE/Wi-Fi)
+# Karate Bunkai Explorer — Запуск AI MoCap Шлюза (HTTPS)
+# Позволяет подключать телефон по локальному Wi-Fi с нативной камерой
 # ========================================================
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "  Karate Bunkai Explorer — Запуск AI MoCap HTTPS Туннеля" -ForegroundColor Cyan
+Write-Host "  Karate Bunkai Explorer — Запуск AI MoCap Шлюза (HTTPS)" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "Туннель создает доверенный публичный HTTPS-домен для" -ForegroundColor Yellow
-Write-Host "камеры смартфона (без chrome://flags и без предупреждений)." -ForegroundColor Yellow
+Write-Host "Шлюз обеспечивает защищенное HTTPS-соединение для смартфона" -ForegroundColor Yellow
+Write-Host "внутри локальной сети Wi-Fi (без необходимости chrome://flags)." -ForegroundColor Yellow
 Write-Host "--------------------------------------------------------"
 
-node scripts/start-mocap-tunnel.js
+$CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $CurrentDir
+
+node scripts/start-mocap-gateway.js

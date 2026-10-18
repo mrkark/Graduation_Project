@@ -1,8 +1,9 @@
 @echo off
-title AI MoCap HTTPS Tunnel - Karate Bunkai Explorer
+title AI MoCap HTTPS Gateway - Karate Bunkai Explorer
 echo ========================================================
-echo   Karate Bunkai Explorer - AI MoCap HTTPS Tunnel
+echo   Karate Bunkai Explorer - AI MoCap HTTPS Gateway
 echo ========================================================
-echo Launching tunnel for phone camera over external networks (4G/LTE)...
-node scripts\start-mocap-tunnel.js
+echo Starting local secure HTTPS gateway for phone cameras...
+cd /d "%~dp0"
+node scripts\start-mocap-gateway.js
 pause

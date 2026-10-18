@@ -59,44 +59,35 @@ export default function MocapStudio() {
   const [selectedQrSlot, setSelectedQrSlot] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Режим подключения смартфонов: 'tunnel' (HTTPS через интернет/4G по умолчанию) | 'local' (локальная сеть Wi-Fi)
-  const [connectionMode, setConnectionMode] = useState('tunnel');
-  const [tunnelUrl, setTunnelUrl] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-      return window.location.origin;
-    }
-    return '';
-  });
-  const [tunnelActive, setTunnelActive] = useState(() => {
-    return typeof window !== 'undefined' && window.location.protocol === 'https:';
-  });
+  // Режим подключения смартфонов: 'local' (локальная сеть Wi-Fi) по умолчанию!
+  const [connectionMode, setConnectionMode] = useState('local');
+  const [httpsGatewayUrl, setHttpsGatewayUrl] = useState('https://192.168.100.6:8443');
+  const [tunnelUrl, setTunnelUrl] = useState('');
+  const [tunnelActive, setTunnelActive] = useState(false);
   const [tunnelLoading, setTunnelLoading] = useState(false);
 
-  // Настройка сетевого IP для QR-кода телефона
+  // Настройка сетевого IP для QR-кода телефона (активный Wi-Fi 192.168.100.6)
   const defaultNetworkHost = typeof window !== 'undefined'
-    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.28' : window.location.hostname)
-    : 'localhost';
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.6' : window.location.hostname)
+    : '192.168.100.6';
   const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
   const [availableIps, setAvailableIps] = useState([
-    { name: 'Ethernet (LAN)', ip: '192.168.100.28', isPrimary: true },
-    { name: 'Wi-Fi IP', ip: '192.168.100.6', isPrimary: false },
+    { name: 'Wi-Fi (Активный LAN)', ip: '192.168.100.6', isPrimary: true },
+    { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
   ]);
-  const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
-  const [useHttpsForPhone, setUseHttpsForPhone] = useState(false);
+  const [networkPort, setNetworkPort] = useState('8443');
+  const [useHttpsForPhone, setUseHttpsForPhone] = useState(true);
 
   const fetchTunnelStatus = useCallback(async () => {
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-      setTunnelUrl(window.location.origin);
-      setTunnelActive(true);
-      return;
-    }
     try {
       setTunnelLoading(true);
       const res = await fetch('/api/mocap/tunnel');
       if (res.ok) {
         const json = await res.json();
-        if (json?.data?.url) {
-          setTunnelUrl(json.data.url);
+        const activeHttps = json?.data?.httpsUrl || json?.data?.url;
+        if (activeHttps) {
+          setHttpsGatewayUrl(activeHttps);
+          setTunnelUrl(activeHttps);
           setTunnelActive(Boolean(json.data.active));
         }
         if (json?.data?.localIp) {
@@ -107,7 +98,7 @@ export default function MocapStudio() {
         }
       }
     } catch (e) {
-      console.warn('Не удалось запросить статус HTTPS туннеля:', e);
+      console.warn('Не удалось запросить статус HTTPS шлюза:', e);
     } finally {
       setTunnelLoading(false);
     }
@@ -611,12 +602,13 @@ export default function MocapStudio() {
   };
 
   const getPhoneConnectUrl = (slotNum = 1) => {
-    if (connectionMode === 'tunnel' && tunnelUrl) {
-      const cleanUrl = tunnelUrl.replace(/\/+$/, '');
+    if (httpsGatewayUrl) {
+      const cleanUrl = httpsGatewayUrl.replace(/\/+$/, '');
       return `${cleanUrl}/phone-camera?room=${roomId}&slot=${slotNum}`;
     }
-    const proto = useHttpsForPhone ? 'https:' : (typeof window !== 'undefined' ? window.location.protocol : 'http:');
-    return `${proto}//${networkHost}:${networkPort}/phone-camera?room=${roomId}&slot=${slotNum}`;
+    const host = networkHost || '192.168.100.6';
+    const port = networkPort ? `:${networkPort}` : ':8443';
+    return `https://${host}${port}/phone-camera?room=${roomId}&slot=${slotNum}`;
   };
 
   const copyPhoneUrl = (slotNum = 1) => {
@@ -1039,30 +1031,8 @@ export default function MocapStudio() {
             </div>
 
             <p className="qr-modal-desc">
-              Отсканируйте QR-код смартфоном для мгновенного захвата движений. Доступно до 3 телефонов одновременно.
+              Отсканируйте QR-код смартфоном в сети Wi-Fi для мгновенного захвата движений. Доступно до 3 телефонов одновременно.
             </p>
-
-            {/* Переключатель режимов подключения: Локальная сеть (Wi-Fi) или Внешний интернет (HTTPS) */}
-            <div className="qr-net-mode-switch">
-              <button
-                type="button"
-                className={`qr-net-mode-btn ${connectionMode === 'local' ? 'active' : ''}`}
-                onClick={() => setConnectionMode('local')}
-              >
-                <span className="net-mode-icon">🏠</span>
-                <span className="net-mode-title">Локальная сеть (Wi-Fi)</span>
-                <span className="net-mode-tag">Один роутер / Домашняя сеть</span>
-              </button>
-              <button
-                type="button"
-                className={`qr-net-mode-btn ${connectionMode === 'tunnel' ? 'active' : ''}`}
-                onClick={() => setConnectionMode('tunnel')}
-              >
-                <span className="net-mode-icon">🌍</span>
-                <span className="net-mode-title">Внешний интернет / 4G (HTTPS)</span>
-                <span className="net-mode-tag gold">Без флагов и настроек</span>
-              </button>
-            </div>
 
             {/* Вкладки выбора телефона 1, 2 или 3 */}
             <div className="qr-slot-tabs">
@@ -1085,7 +1055,6 @@ export default function MocapStudio() {
               })}
             </div>
 
-
             <div className="qr-image-wrap">
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
@@ -1101,82 +1070,43 @@ export default function MocapStudio() {
               <span className="qr-target-tag">{PHONE_CONFIGS[selectedQrSlot - 1].label}</span>
             </div>
 
-            {/* Конфигурация в зависимости от выбранного режима */}
-            {connectionMode === 'tunnel' ? (
-              <div className="qr-tunnel-config">
-                <div className="qr-tunnel-header">
-                  <div className="qr-tunnel-status">
-                    <span className={`status-dot ${tunnelActive ? 'online' : 'standby'}`} />
-                    <span>
-                      {tunnelActive ? 'Публичный HTTPS туннель активен' : 'Ожидание запуска туннеля...'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-subtle"
-                    onClick={fetchTunnelStatus}
-                    disabled={tunnelLoading}
-                  >
-                    {tunnelLoading ? '...' : '🔄 Обновить'}
-                  </button>
-                </div>
+            <div className="qr-gateway-status-pill">
+              <span className="status-dot online" />
+              <span>Шлюз камеры: <strong>{httpsGatewayUrl || `https://${networkHost}:8443`}</strong></span>
+            </div>
 
-                <div className="qr-tunnel-input-row">
-                  <input
-                    type="text"
-                    value={tunnelUrl}
-                    onChange={(e) => {
-                      setTunnelUrl(e.target.value.trim());
-                      setTunnelActive(Boolean(e.target.value.trim()));
-                    }}
-                    placeholder="https://tiny-newt-32.loca.lt"
-                    className="qr-tunnel-input"
-                  />
-                </div>
-
-                <div className="qr-https-perks">
-                  <div className="perk-row">
-                    <span>✨</span>
-                    <span><strong>Любая сеть:</strong> Компьютер и смартфон могут быть в совершенно разных сетях (телефон на 4G/LTE/моб. интернете, ПК дома).</span>
-                  </div>
-                  <div className="perk-row">
-                    <span>🔒</span>
-                    <span><strong>Чистый HTTPS:</strong> Камера на телефоне включается сразу в 1 клик без предупреждений безопасности и флагов <code>chrome://flags</code>.</span>
-                  </div>
-                </div>
+            <div className="qr-guide-box">
+              <div className="qr-guide-step">
+                <span className="step-badge">1</span>
+                <span>Подключите телефон к тому же Wi-Fi роутеру, что и компьютер.</span>
               </div>
-            ) : (
-              <div className="qr-ip-config">
-                <label className="qr-ip-label">Сетевой IP компьютера (для доступа внутри локального Wi-Fi):</label>
-                <div className="qr-ip-row" style={{ flexWrap: 'wrap', gap: '8px' }}>
-                  <input
-                    type="text"
-                    value={networkHost}
-                    onChange={(e) => setNetworkHost(e.target.value.trim())}
-                    placeholder="192.168.100.28"
-                    className="qr-ip-input"
-                    style={{ minWidth: '160px' }}
-                  />
-                  {availableIps.map((adapter) => (
-                    <button
-                      key={adapter.ip}
-                      type="button"
-                      className={`btn btn-sm ${networkHost === adapter.ip ? 'btn-gold' : 'btn-subtle'}`}
-                      onClick={() => setNetworkHost(adapter.ip)}
-                      title={`Выбрать IP ${adapter.ip}`}
-                    >
-                      {adapter.isPrimary ? '★ ' : ''}{adapter.name}: {adapter.ip}
-                    </button>
-                  ))}
-                </div>
-                <div className="qr-perm-notice" style={{ marginTop: '10px' }}>
-                  <div><strong>⚠️ Если на телефоне пишет «Не удается получить доступ к сайту»:</strong></div>
-                  <ul style={{ margin: '4px 0 0 16px', padding: 0, fontSize: '0.82rem', lineHeight: '1.4' }}>
-                    <li>Убедитесь, что телефон подключен к тому же Wi-Fi роутеру, что и компьютер.</li>
-                    <li>Если компьютер подключен по кабелю, выберите кнопку <strong>Ethernet: 192.168.100.28</strong> выше.</li>
-                    <li>Либо переключитесь на вкладку выше <strong>«Внешний интернет / 4G (HTTPS)»</strong> — она работает на любом телефоне без настроек сети!</li>
-                  </ul>
-                </div>
+              <div className="qr-guide-step">
+                <span className="step-badge">2</span>
+                <span>Наведите камеру смартфона на QR-код и откройте страницу.</span>
+              </div>
+              <div className="qr-guide-step">
+                <span className="step-badge">3</span>
+                <span>При первом входе нажмите <strong>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</strong>, чтобы подтвердить локальный SSL-сертификат. Камера включится автоматически!</span>
+              </div>
+            </div>
+
+            {availableIps.length > 1 && (
+              <div className="qr-adapter-row">
+                <span className="qr-adapter-label">IP адаптера:</span>
+                {availableIps.map((adapter) => (
+                  <button
+                    key={adapter.ip}
+                    type="button"
+                    className={`btn btn-xs ${networkHost === adapter.ip ? 'btn-gold' : 'btn-subtle'}`}
+                    onClick={() => {
+                      setNetworkHost(adapter.ip);
+                      setHttpsGatewayUrl(`https://${adapter.ip}:8443`);
+                    }}
+                    title={`Выбрать IP ${adapter.ip}`}
+                  >
+                    {adapter.isPrimary ? '★ ' : ''}{adapter.name}: {adapter.ip}
+                  </button>
+                ))}
               </div>
             )}
           </div>
