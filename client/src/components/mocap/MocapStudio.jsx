@@ -452,11 +452,11 @@ export default function MocapStudio() {
     return peer;
   }, [roomId]);
 
-  // Socket.IO подключение
+  // Socket.IO подключение к шлюзу MoCap (/mocap)
   useEffect(() => {
     if (sourceMode !== 'phone') return;
 
-    const socket = io(SOCKET_URL, {
+    const socket = io(`${SOCKET_URL}/mocap`, {
       path: '/socket.io/',
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -465,14 +465,94 @@ export default function MocapStudio() {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      socket.emit('mocap:join', { roomId, role: 'host' });
+      socket.emit('mocap:join-room', { roomId, role: 'host' }, (res) => {
+        if (res?.cameras) {
+          setConnectedCameras(res.cameras);
+        }
+      });
     });
 
-    socket.on('mocap:camera-list-updated', ({ cameras }) => {
+    socket.on('mocap:cameras-updated', ({ cameras }) => {
       if (Array.isArray(cameras)) {
         setConnectedCameras(cameras);
         if (cameras.length > 0 && !cameras.some((c) => c.slot === activeCameraSlot)) {
           setActiveCameraSlot(cameras[0].slot);
+        }
+      }
+    });
+
+    socket.on('mocap:camera-joined', (cameraInfo) => {
+      setConnectedCameras((prev) => {
+        const filtered = prev.filter((c) => c.slot !== cameraInfo.slot && c.peerId !== cameraInfo.peerId);
+        return [...filtered, cameraInfo];
+      });
+    });
+
+    // Прием потока ключевых точек напрямую от смартфонов
+    socket.on('mocap:landmarks-data', ({ slot, landmarks, worldLandmarks, metrics }) => {
+      if (slot && landmarks && landmarks.length >= 33) {
+        setCameraActive(true);
+        setBodyDetected(true);
+
+        latestLandmarksBySlot.current[slot] = {
+          landmarks,
+          worldLandmarks: worldLandmarks || landmarks,
+          slot,
+          timestamp: Date.now(),
+        };
+
+        const now = Date.now();
+        for (const s of Object.keys(latestLandmarksBySlot.current)) {
+          if (now - (latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
+            delete latestLandmarksBySlot.current[s];
+          }
+        }
+
+        const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
+        const finalLandmarks = fused?.landmarks || landmarks;
+        const finalWorldLandmarks = fused?.worldLandmarks || worldLandmarks || landmarks;
+
+        const calculatedMetrics = metrics || analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
+        setKarateMetrics(calculatedMetrics);
+
+        const fingers = extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
+        const head = estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
+
+        const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
+        if (s3d) setSkeleton3DData(s3d);
+
+        const retargeted = retargetSkeleton3DToMasterAvatar(s3d, finalWorldLandmarks, finalLandmarks);
+        if (retargeted) setBoneRotations(retargeted.bones);
+
+        latestPoseRef.current = {
+          landmarks: finalLandmarks,
+          worldLandmarks: finalWorldLandmarks,
+          fingers,
+          head,
+        };
+
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          const displayLms = (latestLandmarksBySlot.current[activeCameraSlot]?.landmarks) || finalLandmarks;
+          drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics);
+        }
+
+        if (isRecording) {
+          setRecordedFrames((prev) => [
+            ...prev,
+            {
+              timestamp: Date.now(),
+              frame: prev.length,
+              landmarks: finalLandmarks,
+              worldLandmarks: finalWorldLandmarks,
+              fingers,
+              head,
+              skeleton3D: s3d,
+              metrics: calculatedMetrics,
+              bones: retargeted?.bones || null,
+            },
+          ]);
         }
       }
     });
@@ -528,7 +608,7 @@ export default function MocapStudio() {
       });
       peersRef.current.clear();
     };
-  }, [sourceMode, roomId, getOrCreateHostPeer, activeCameraSlot]);
+  }, [sourceMode, roomId, getOrCreateHostPeer, activeCameraSlot, isRecording]);
 
   // Переключение источников
   useEffect(() => {

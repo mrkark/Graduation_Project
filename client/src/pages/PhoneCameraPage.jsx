@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import io from 'socket.io-client';
+import {
+  loadMediaPipePose,
+  drawNeonKarateSkeleton,
+  analyzeKarateBiomechanics,
+} from '../utils/mocapPoseTracker';
 import './PhoneCameraPage.css';
 
 function getSocketUrl() {
@@ -28,7 +33,6 @@ const PHONE_ROLES = [
   { slot: 3, label: 'Угол (45°)', desc: 'Диагональная триангуляция' },
 ];
 
-// Короткий звуковой сигнал подтверждения через Web Audio API
 function playBeep(freq = 880, duration = 0.12) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -66,36 +70,28 @@ export default function PhoneCameraPage() {
   const [hostId, setHostId] = useState(null);
   const [roomCameras, setRoomCameras] = useState([]);
 
+  // Неоновый скелет на телефоне
+  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [bodyInFrame, setBodyInFrame] = useState(false);
+  const [detectedStance, setDetectedStance] = useState('');
+
   // Запись сессии MoCap
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordFrames, setRecordFrames] = useState(0);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
-  // Статус туннеля и флагов Chrome
-  const [tunnelUrl, setTunnelUrl] = useState(null);
-  const [copiedFlag, setCopiedFlag] = useState(false);
-  const [copiedOrigin, setCopiedOrigin] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const socketRef = useRef(null);
   const peerRef = useRef(null);
+  const poseRef = useRef(null);
+  const animFrameRef = useRef(null);
   const frameCountRef = useRef(0);
   const isStartingRef = useRef(false);
-
-  // Запрос статуса туннеля для 1-клик HTTPS подсказки
-  useEffect(() => {
-    fetch('/api/mocap/tunnel')
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.data?.active && json?.data?.url) {
-          setTunnelUrl(json.data.url);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // 1. Привязка видеопотока к элементу <video>
   const bindStream = useCallback((stream) => {
@@ -116,7 +112,13 @@ export default function PhoneCameraPage() {
       if (p && typeof p.then === 'function') {
         p.then(() => {
           setIsCameraActive(true);
-          setVideoDim({ w: v.videoWidth || 1280, h: v.videoHeight || 720 });
+          const vw = v.videoWidth || 1280;
+          const vh = v.videoHeight || 720;
+          setVideoDim({ w: vw, h: vh });
+          if (canvasRef.current) {
+            canvasRef.current.width = vw;
+            canvasRef.current.height = vh;
+          }
         }).catch(() => {
           setIsCameraActive(false);
         });
@@ -124,72 +126,20 @@ export default function PhoneCameraPage() {
     };
 
     v.onloadedmetadata = () => {
-      setVideoDim({ w: v.videoWidth, h: v.videoHeight });
+      const vw = v.videoWidth;
+      const vh = v.videoHeight;
+      setVideoDim({ w: vw, h: vh });
+      if (canvasRef.current) {
+        canvasRef.current.width = vw;
+        canvasRef.current.height = vh;
+      }
       tryPlay();
     };
     v.onplaying = () => setIsCameraActive(true);
     tryPlay();
   }, []);
 
-  // 2. Запуск камеры смартфона с прогрессивными ограничениями
-  const startCamera = useCallback(async () => {
-    if (isStartingRef.current) return;
-    isStartingRef.current = true;
-    setCameraError(null);
-
-    const nav = typeof navigator !== 'undefined' ? navigator : null;
-    const md = nav?.mediaDevices;
-
-    if (!md || typeof md.getUserMedia !== 'function') {
-      isStartingRef.current = false;
-      setIsCameraActive(false);
-      setCameraError('Браузер блокирует камеру на незащищенном HTTP-адресе.');
-      return;
-    }
-
-    const tiers = [
-      { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-      { video: { facingMode: { ideal: facingMode } }, audio: false },
-      { video: true, audio: false },
-    ];
-
-    let stream = null;
-    let lastErr = null;
-
-    for (const constraints of tiers) {
-      try {
-        stream = await md.getUserMedia(constraints);
-        if (stream) break;
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-
-    isStartingRef.current = false;
-
-    if (!stream) {
-      setIsCameraActive(false);
-      const msg = lastErr?.name === 'NotAllowedError'
-        ? 'Доступ к камере отклонен. Разрешите доступ в браузере.'
-        : `Не удалось включить камеру (${lastErr?.name || 'Сбой'}).`;
-      setCameraError(msg);
-      return;
-    }
-
-    if (streamRef.current && streamRef.current !== stream) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-    }
-
-    streamRef.current = stream;
-    bindStream(stream);
-
-    // Если хост уже подключен, настраиваем WebRTC передачу
-    if (hostId) {
-      setupPeerConnection(stream, hostId);
-    }
-  }, [facingMode, bindStream, hostId]);
-
-  // 3. WebRTC соединение для трансляции на ПК
+  // 2. WebRTC соединение для трансляции видео на ПК
   const setupPeerConnection = useCallback((stream, targetHostId) => {
     if (!stream || !targetHostId) return;
 
@@ -239,9 +189,67 @@ export default function PhoneCameraPage() {
       .catch((err) => console.warn('WebRTC Offer Error:', err));
   }, [roomId, assignedSlot]);
 
-  // 4. Подключение к Socket.IO
+  // 3. Запуск камеры смартфона
+  const startCamera = useCallback(async () => {
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+    setCameraError(null);
+
+    const nav = typeof navigator !== 'undefined' ? navigator : null;
+    const md = nav?.mediaDevices;
+
+    if (!md || typeof md.getUserMedia !== 'function') {
+      isStartingRef.current = false;
+      setIsCameraActive(false);
+      setCameraError('Браузер блокирует доступ к камере.');
+      return;
+    }
+
+    const tiers = [
+      { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      { video: { facingMode: { ideal: facingMode } }, audio: false },
+      { video: true, audio: false },
+    ];
+
+    let stream = null;
+    let lastErr = null;
+
+    for (const constraints of tiers) {
+      try {
+        stream = await md.getUserMedia(constraints);
+        if (stream) break;
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+
+    isStartingRef.current = false;
+
+    if (!stream) {
+      setIsCameraActive(false);
+      const msg = lastErr?.name === 'NotAllowedError'
+        ? 'Доступ к камере отклонен. Разрешите доступ в браузере.'
+        : `Не удалось включить камеру (${lastErr?.name || 'Сбой'}).`;
+      setCameraError(msg);
+      return;
+    }
+
+    if (streamRef.current && streamRef.current !== stream) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+    }
+
+    streamRef.current = stream;
+    bindStream(stream);
+
+    if (hostId) {
+      setupPeerConnection(stream, hostId);
+    }
+  }, [facingMode, bindStream, hostId, setupPeerConnection]);
+
+  // 4. Подключение к Socket.IO шлюзу (/mocap)
   useEffect(() => {
     const socket = io(`${SOCKET_URL}/mocap`, {
+      path: '/socket.io/',
       transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
@@ -260,7 +268,12 @@ export default function PhoneCameraPage() {
           if (res?.ok) {
             setAssignedSlot(res.slot);
             setDeviceLabel(res.label);
-            setHostId(res.hostId || null);
+            if (res.hostId) {
+              setHostId(res.hostId);
+              if (streamRef.current) {
+                setupPeerConnection(streamRef.current, res.hostId);
+              }
+            }
             if (res.cameras) setRoomCameras(res.cameras);
           }
         }
@@ -278,6 +291,9 @@ export default function PhoneCameraPage() {
 
     socket.on('mocap:host-joined', ({ hostId: newHostId }) => {
       setHostId(newHostId);
+      if (streamRef.current) {
+        setupPeerConnection(streamRef.current, newHostId);
+      }
     });
 
     socket.on('mocap:host-left', () => {
@@ -329,7 +345,98 @@ export default function PhoneCameraPage() {
     return () => {
       socket.disconnect();
     };
-  }, [roomId, assignedSlot]);
+  }, [roomId, assignedSlot, setupPeerConnection]);
+
+  // 5. Инициализация и цикл трекинга MediaPipe Pose на смартфоне (Отрисовка скелета на человеке + передача на сайт)
+  useEffect(() => {
+    let active = true;
+    let isProcessing = false;
+
+    loadMediaPipePose()
+      .then((pose) => {
+        if (!active) return;
+        poseRef.current = pose;
+
+        pose.setOptions({
+          modelComplexity: 0, // Ультра-легкая модель для мобильных браузеров (высокий FPS без лагов)
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          smoothSegmentation: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        pose.onResults((results) => {
+          if (!active) return;
+          const canvas = canvasRef.current;
+          const video = videoRef.current;
+          if (!canvas || !video) return;
+
+          const vw = video.videoWidth || 1280;
+          const vh = video.videoHeight || 720;
+          if (canvas.width !== vw || canvas.height !== vh) {
+            canvas.width = vw;
+            canvas.height = vh;
+          }
+
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (results.poseLandmarks && results.poseLandmarks.length >= 33) {
+            setBodyInFrame(true);
+
+            // Биомеханический анализ стойки каратэ
+            const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
+            setDetectedStance(metrics.stanceName || 'Камаэ');
+
+            // Отрисовываем неоновый скелет прямо на человеке на экране смартфона!
+            if (showSkeleton) {
+              drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics);
+            }
+
+            // Отправляем поток ключевых точек на сайт / ПК Додзё
+            if (socketRef.current && socketConnected) {
+              socketRef.current.emit('mocap:landmarks-stream', {
+                roomId,
+                landmarks: results.poseLandmarks,
+                worldLandmarks: results.poseWorldLandmarks,
+                metrics,
+                slot: assignedSlot,
+              });
+            }
+          } else {
+            setBodyInFrame(false);
+          }
+        });
+      })
+      .catch((err) => {
+        console.warn('Не удалось загрузить MediaPipe Pose на смартфоне:', err);
+      });
+
+    const loop = async () => {
+      if (!active) return;
+      const v = videoRef.current;
+      if (v && v.readyState >= 2 && poseRef.current && !isProcessing) {
+        try {
+          isProcessing = true;
+          await poseRef.current.send({ image: v });
+        } catch (e) {
+        } finally {
+          isProcessing = false;
+        }
+      }
+      animFrameRef.current = requestAnimationFrame(loop);
+    };
+
+    animFrameRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      active = false;
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [socketConnected, roomId, assignedSlot, showSkeleton]);
 
   // Запуск камеры при монтировании
   useEffect(() => {
@@ -355,12 +462,10 @@ export default function PhoneCameraPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Переключение селфи/основная камера
   const toggleFacing = () => {
     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
   };
 
-  // Переключение слота ракурса
   const handleSelectSlot = (newSlot) => {
     if (newSlot === assignedSlot) return;
     setAssignedSlot(newSlot);
@@ -384,41 +489,24 @@ export default function PhoneCameraPage() {
     }
   };
 
-  // Старт/стоп записи с телефона
   const handleToggleRecord = () => {
-    if ('vibrate' in navigator) {
-      navigator.vibrate([100]);
-    }
+    if ('vibrate' in navigator) navigator.vibrate([100]);
     playBeep(isRecording ? 440 : 880, 0.15);
 
     if (socketRef.current && socketConnected) {
-      socketRef.current.emit('mocap:toggle-record', { roomId });
+      socketRef.current.emit('mocap:record-command', {
+        roomId,
+        action: isRecording ? 'stop' : 'start',
+      });
     }
     setIsRecording((prev) => !prev);
   };
 
-  // Полноэкранный режим
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
     } else {
       document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
-    }
-  };
-
-  const copyChromeFlag = () => {
-    navigator.clipboard.writeText('chrome://flags/#unsafely-treat-insecure-origin-as-secure').then(() => {
-      setCopiedFlag(true);
-      setTimeout(() => setCopiedFlag(false), 2500);
-    });
-  };
-
-  const copyOriginUrl = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.origin).then(() => {
-        setCopiedOrigin(true);
-        setTimeout(() => setCopiedOrigin(false), 2500);
-      });
     }
   };
 
@@ -428,11 +516,9 @@ export default function PhoneCameraPage() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
-  const isHttp = typeof window !== 'undefined' && window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
-
   return (
     <div className="phone-cam-root">
-      {/* 1. ПОЛНОЭКРАННЫЙ ВИДОИСКАТЕЛЬ */}
+      {/* 1. ПОЛНОЭКРАННЫЙ ВИДОИСКАТЕЛЬ И НЕОНОВЫЙ СКЕЛЕТ НА ЧЕЛОВЕКЕ */}
       <div className={`phone-cam-viewport ${isRecording ? 'is-recording' : ''}`} onClick={startCamera}>
         <video
           ref={videoRef}
@@ -443,6 +529,12 @@ export default function PhoneCameraPage() {
           onTimeUpdate={() => { frameCountRef.current++; }}
         />
 
+        {/* Холст с наложением неонового скелета прямо на тело человека */}
+        <canvas
+          ref={canvasRef}
+          className="phone-cam-canvas"
+        />
+
         {/* HUD-элементы кадрирования */}
         <div className="phone-cam-hud">
           <div className="hud-corner tl" />
@@ -450,14 +542,24 @@ export default function PhoneCameraPage() {
           <div className="hud-corner bl" />
           <div className="hud-corner br" />
 
-          <div className="hud-guide-silhouette">
-            <span className="hud-guide-text">
-              {assignedSlot === 1 && 'Встаньте лицом к камере в полный рост (Фронт)'}
-              {assignedSlot === 2 && 'Встаньте боком для фиксации глубины удара (Бок)'}
-              {assignedSlot === 3 && 'Диагональный угол 45° для 3D триангуляции'}
-            </span>
-          </div>
+          {!bodyInFrame && (
+            <div className="hud-guide-silhouette">
+              <span className="hud-guide-text">
+                {assignedSlot === 1 && 'Встаньте лицом к камере в полный рост (Фронт)'}
+                {assignedSlot === 2 && 'Встаньте боком для фиксации глубины удара (Бок)'}
+                {assignedSlot === 3 && 'Диагональный угол 45° для 3D триангуляции'}
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Бейдж распознанной стойки каратэ в реальном времени */}
+        {bodyInFrame && (
+          <div className="hud-live-stance-pill">
+            <span className="live-stance-dot" />
+            <span>🥋 {detectedStance}</span>
+          </div>
+        )}
       </div>
 
       {/* 2. ВЕРХНЯЯ ПАНЕЛЬ СТАТУСА (GLASS BAR) */}
@@ -472,13 +574,23 @@ export default function PhoneCameraPage() {
           </div>
 
           <div className="topbar-status-group">
+            {/* Кнопка включения/выключения неонового скелета на экране */}
+            <button
+              type="button"
+              className={`topbar-skeleton-btn ${showSkeleton ? 'on' : 'off'}`}
+              onClick={() => setShowSkeleton((s) => !s)}
+              title="Переключить отображение неонового скелета"
+            >
+              🦴 {showSkeleton ? 'Скелет: ВКЛ' : 'Скелет: ВЫКЛ'}
+            </button>
+
             <div className={`topbar-status-pill ${peerConnected ? 'online' : socketConnected ? 'standby' : 'offline'}`}>
               <span className="topbar-status-dot" />
               <span>
                 {peerConnected
                   ? 'В эфире (ПК)'
                   : socketConnected
-                  ? (hostId ? 'Связь с ПК...' : 'Ожидание 3D')
+                  ? (hostId ? '🟢 Связь с Додзё' : '🟡 Поиск 3D Додзё')
                   : 'Подключение...'}
               </span>
             </div>
@@ -520,7 +632,6 @@ export default function PhoneCameraPage() {
         </div>
       )}
 
-      {/* Всплывающий тост при успешной записи */}
       {showSavedToast && (
         <div className="phone-cam-toast-success">
           🥋 3D-Анимация успешно записана и передана мастеру на ПК!
@@ -538,7 +649,7 @@ export default function PhoneCameraPage() {
         </div>
       )}
 
-      {/* 4. ОВЕРЛЕЙ ЗАПУСКА КАМЕРЫ (ЕСЛИ ЕЩЕ НЕ ВКЛЮЧЕНА ИЛИ БРАУЗЕР БЛОКИРУЕТ) */}
+      {/* 4. ОВЕРЛЕЙ ЗАПУСКА КАМЕРЫ */}
       {!isCameraActive && (
         <div className="phone-cam-starter-overlay">
           <div className="starter-card">
@@ -551,38 +662,17 @@ export default function PhoneCameraPage() {
             <button type="button" className="starter-btn-main" onClick={startCamera}>
               ВКЛЮЧИТЬ КАМЕРУ
             </button>
-
-            {/* Подсказка для Chrome Android при подключении по HTTP */}
-            {isHttp && (
-              <div className="starter-chrome-help">
-                <div>
-                  <strong>💡 Браузер блокирует камеру на незащищенном HTTP?</strong>
-                </div>
-
-                <div className="starter-help-actions">
-                  <span>Перейдите на защищенный порт Додзё (SSL):</span>
-                  <a
-                    href={`https://${typeof window !== 'undefined' ? window.location.hostname : '192.168.100.6'}:8443/phone-camera?room=${roomId}&slot=${assignedSlot}`}
-                    className="starter-https-redirect"
-                  >
-                    🔒 Открыть через защищенный HTTPS (Wi-Fi)
-                  </a>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* 5. НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ (RECORD BAR) */}
+      {/* 5. НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ */}
       <footer className="phone-cam-bottom-bar">
-        {/* Переворот камеры */}
         <button type="button" className="ctrl-side-btn" onClick={toggleFacing} title="Сменить камеру">
           <span>🔄</span>
           <label>{facingMode === 'environment' ? 'Селфи' : 'Сзади'}</label>
         </button>
 
-        {/* Центральная кнопка записи 3D MoCap */}
         <div className="ctrl-record-btn-wrap">
           <button
             type="button"
@@ -597,7 +687,6 @@ export default function PhoneCameraPage() {
           </span>
         </div>
 
-        {/* Перезапуск/фокус камеры */}
         <button type="button" className="ctrl-side-btn" onClick={startCamera} title="Обновить камеру">
           <span>⚡</span>
           <label>Старт</label>
