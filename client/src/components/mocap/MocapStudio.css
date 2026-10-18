@@ -1417,3 +1417,278 @@
     height: 160px;
   }
 }
+
+/* =========================================================
+   ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ РЕЖИМА A, БУНКАЙ И ТАЙМЛАЙНА
+   ========================================================= */
+
+/* Селектор участников Бункай (Тори, Укэ, Парный) */
+.performer-selector-group {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  gap: 6px;
+}
+
+.performer-label {
+  font-size: 0.76rem;
+  color: var(--washi-dim);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.performer-pill {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--washi-dim);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.performer-pill:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.performer-pill.active {
+  background: rgba(197, 160, 89, 0.2);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+/* Режим A: Видео дропзона и обработка */
+.video-mode-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.video-dropzone-header h3 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  color: var(--gold-bright);
+}
+
+.video-dropzone-header p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--washi-dim);
+}
+
+.video-dropzone {
+  border: 2px dashed rgba(197, 160, 89, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(18, 15, 12, 0.6);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.video-dropzone:hover {
+  border-color: var(--gold);
+  background: rgba(197, 160, 89, 0.1);
+}
+
+.dropzone-icon {
+  font-size: 2.5rem;
+}
+
+.video-dropzone h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--washi);
+}
+
+.video-dropzone p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--washi-dim);
+}
+
+/* Прогресс обработки видео */
+.video-processing-card {
+  padding: 2rem;
+  background: rgba(18, 15, 12, 0.8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.processing-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(197, 160, 89, 0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.video-processing-card h4 {
+  margin: 0;
+  color: var(--washi);
+  font-size: 1rem;
+}
+
+.processing-bar-wrap {
+  width: 100%;
+  max-width: 380px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.processing-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold) 0%, var(--gold-bright) 100%);
+  transition: width 0.2s ease;
+}
+
+.processing-text {
+  font-size: 0.8rem;
+  color: var(--washi-dim);
+}
+
+/* Таймлайн скруббер */
+.video-playback-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.timeline-viewfinder-preview {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-meta-badge {
+  display: flex;
+  gap: 16px;
+  font-size: 0.82rem;
+  color: var(--washi-dim);
+}
+
+.timeline-meta-badge strong {
+  color: var(--gold-bright);
+}
+
+.mocap-timeline-box {
+  background: rgba(15, 12, 10, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.timeline-slider-wrap {
+  width: 100%;
+}
+
+.timeline-range-slider {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--gold);
+}
+
+.timeline-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.timeline-btn-group {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.playback-speed-pills {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.speed-pill {
+  background: transparent;
+  border: none;
+  color: var(--washi-dim);
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+
+.speed-pill.active {
+  background: var(--gold);
+  color: #000;
+  font-weight: 700;
+}
+
+/* Ручные подстройки биомеханики */
+.biomechanics-tuning-box {
+  background: rgba(18, 15, 12, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tuning-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tuning-label {
+  font-size: 0.75rem;
+  color: var(--washi-dim);
+}
+
+.tuning-slider {
+  width: 100%;
+  height: 4px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+/* Группа кнопок экспорта */
+.export-btn-group {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

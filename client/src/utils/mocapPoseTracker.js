@@ -1099,3 +1099,415 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.fillText(`${biomechanics.kneeAngleR}° R`, rk.x + 12, rk.y + 3);
   }
 }
+
+// ============================================================================
+// 8. БИОМЕХАНИКА КИСТЕЙ И ПАЛЬЦЕВ (5 ПАЛЬЦЕВ, 3 ФАЛАНГИ НА КАЖДЫЙ)
+// Порт кинематики из Karate Motion Studio (core/mocap_tracker.py & viewer_template.html)
+// ============================================================================
+
+/**
+ * Расчет биомеханики кистей и пальцев обеих рук (Thumb, Index, Middle, Ring, Pinky 1..3)
+ * Анализирует нормаль ладони, вектор направления, сжатие кулака (Сэйкэн) и раскрытие ладони (Сюто).
+ */
+export function extractHandBiomechanics(landmarks, worldLandmarks) {
+  const pts = worldLandmarks || landmarks;
+  if (!pts || pts.length < 33) {
+    return {
+      left: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: false },
+      right: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: false },
+    };
+  }
+
+  // Индексы точек MediaPipe Pose:
+  // Левая рука: локоть 13, запястье 15, мизинец 17, указательный 19, большой 21
+  // Правая рука: локоть 14, запястье 16, мизинец 18, указательный 20, большой 22
+  const computeHand = (idxElbow, idxWrist, idxPinky, idxIndex, idxThumb, sideKey) => {
+    const el = pts[idxElbow];
+    const wr = pts[idxWrist];
+    const pk = pts[idxPinky];
+    const ix = pts[idxIndex];
+    const tb = pts[idxThumb];
+
+    if (!wr || !ix || !el) {
+      return {
+        thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15,
+        detected: false,
+      };
+    }
+
+    // В координатах Three.js: X вправо, Y вверх (-y), Z вперед (-z)
+    const pW = [wr.x, -wr.y, -(wr.z || 0)];
+    const pE = [el.x, -el.y, -(el.z || 0)];
+    const pI = [ix.x, -ix.y, -(ix.z || 0)];
+    const pP = pk ? [pk.x, -pk.y, -(pk.z || 0)] : [pW[0] + 0.05, pW[1], pW[2]];
+    const pT = tb ? [tb.x, -tb.y, -(tb.z || 0)] : [pW[0] - 0.04, pW[1], pW[2]];
+
+    // 1. Отношение расстояния запястье-пальцы к предплечью
+    const dHand = Math.hypot(pI[0] - pW[0], pI[1] - pW[1], pI[2] - pW[2]);
+    const dArm = Math.max(1e-4, Math.hypot(pW[0] - pE[0], pW[1] - pE[1], pW[2] - pE[2]));
+    const ratio = dHand / dArm;
+
+    // В карате: раскрытая ладонь ratio ~0.65..0.78, сжатый кулак Сэйкэн ratio ~0.35..0.45
+    let rawCurl = (0.64 - ratio) / (0.64 - 0.38);
+    rawCurl = Math.max(0.0, Math.min(1.0, rawCurl));
+
+    // Сглаженный кулак: в покое 0.15 (естественная расслабленная кисть Камаэ)
+    const baseCurl = rawCurl > 0.40 ? rawCurl : Math.max(0.12, rawCurl);
+
+    // Палец к пальцу — оппозиция большого пальца
+    const dThumbIndex = Math.hypot(pT[0] - pI[0], pT[1] - pI[1], pT[2] - pI[2]);
+    const thumbCurl = Math.max(0.15, Math.min(1.0, 1.0 - (dThumbIndex / (dHand * 0.9 + 1e-4))));
+
+    // Мизинец сгибается быстрее в кулаке
+    const pinkyCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.08));
+    const indexCurl = baseCurl;
+    const middleCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.04));
+    const ringCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.06));
+
+    // Вектор направления кисти (от запястья к среднему пальцу)
+    const midKnuckle = [(pI[0] + pP[0]) * 0.5, (pI[1] + pP[1]) * 0.5, (pI[2] + pP[2]) * 0.5];
+    let vFwd = [midKnuckle[0] - pW[0], midKnuckle[1] - pW[1], midKnuckle[2] - pW[2]];
+    const nFwd = Math.hypot(vFwd[0], vFwd[1], vFwd[2]);
+    vFwd = nFwd > 1e-4 ? [vFwd[0] / nFwd, vFwd[1] / nFwd, vFwd[2] / nFwd] : [0, 1, 0];
+
+    // Вектор поперек ладони
+    let vAcross = sideKey === 'L'
+      ? [pP[0] - pI[0], pP[1] - pI[1], pP[2] - pI[2]]
+      : [pI[0] - pP[0], pI[1] - pP[1], pI[2] - pP[2]];
+    const nAcross = Math.hypot(vAcross[0], vAcross[1], vAcross[2]);
+    vAcross = nAcross > 1e-4 ? [vAcross[0] / nAcross, vAcross[1] / nAcross, vAcross[2] / nAcross] : [1, 0, 0];
+
+    // Нормаль ладони: vNorm = vAcross x vFwd
+    const vNorm = [
+      vAcross[1] * vFwd[2] - vAcross[2] * vFwd[1],
+      vAcross[2] * vFwd[0] - vAcross[0] * vFwd[2],
+      vAcross[0] * vFwd[1] - vAcross[1] * vFwd[0],
+    ];
+    const nNorm = Math.hypot(vNorm[0], vNorm[1], vNorm[2]);
+    const palmNormal = nNorm > 1e-4 ? [vNorm[0] / nNorm, vNorm[1] / nNorm, vNorm[2] / nNorm] : [0, 0, 1];
+
+    // Фаланги пальцев: [MCP, PIP, DIP] в радианах
+    const toPhalanges = (c) => [
+      parseFloat((c * 1.40).toFixed(3)),
+      parseFloat((c * 1.65).toFixed(3)),
+      parseFloat((c * 1.30).toFixed(3)),
+    ];
+
+    return {
+      thumb: parseFloat(thumbCurl.toFixed(2)),
+      index: parseFloat(indexCurl.toFixed(2)),
+      middle: parseFloat(middleCurl.toFixed(2)),
+      ring: parseFloat(ringCurl.toFixed(2)),
+      pinky: parseFloat(pinkyCurl.toFixed(2)),
+      general_curl: parseFloat(baseCurl.toFixed(2)),
+      phalanges: {
+        thumb: [
+          parseFloat((thumbCurl * 0.95).toFixed(3)),
+          parseFloat((thumbCurl * 1.20).toFixed(3)),
+          parseFloat((thumbCurl * 1.10).toFixed(3)),
+        ],
+        index: toPhalanges(indexCurl),
+        middle: toPhalanges(middleCurl),
+        ring: toPhalanges(ringCurl),
+        pinky: toPhalanges(pinkyCurl),
+      },
+      abduction: {
+        thumb: parseFloat((thumbCurl * 0.45).toFixed(3)),
+        index: parseFloat((baseCurl * 0.15).toFixed(3)),
+        middle: 0.0,
+        ring: parseFloat((-baseCurl * 0.08).toFixed(3)),
+        pinky: parseFloat((-baseCurl * 0.20).toFixed(3)),
+      },
+      palm_normal: [parseFloat(palmNormal[0].toFixed(3)), parseFloat(palmNormal[1].toFixed(3)), parseFloat(palmNormal[2].toFixed(3))],
+      hand_direction: [parseFloat(vFwd[0].toFixed(3)), parseFloat(vFwd[1].toFixed(3)), parseFloat(vFwd[2].toFixed(3))],
+      detected: true,
+      fistScore: Math.round(baseCurl * 100),
+    };
+  };
+
+  return {
+    left: computeHand(13, 15, 17, 19, 21, 'L'),
+    right: computeHand(14, 16, 18, 20, 22, 'R'),
+  };
+}
+
+/**
+ * Оценка ориентации головы (Взгляд Мэцукэ)
+ */
+export function estimateHeadOrientation(landmarks, worldLandmarks) {
+  const pts = worldLandmarks || landmarks;
+  if (!pts || pts.length < 33) return { yaw: 0, pitch: 0, roll: 0 };
+
+  const nose = pts[0];
+  const lEar = pts[7];
+  const rEar = pts[8];
+
+  if (!nose || !lEar || !rEar) return { yaw: 0, pitch: 0, roll: 0 };
+
+  const midEar = [
+    (lEar.x + rEar.x) * 0.5,
+    (-lEar.y + -rEar.y) * 0.5,
+    (-(lEar.z || 0) + -(rEar.z || 0)) * 0.5,
+  ];
+
+  const nose3D = [nose.x, -nose.y, -(nose.z || 0)];
+  const faceFwd = [nose3D[0] - midEar[0], nose3D[1] - midEar[1], nose3D[2] - midEar[2]];
+
+  const yaw = Math.atan2(faceFwd[0], Math.max(0.01, faceFwd[2]));
+  const pitch = Math.atan2(faceFwd[1], Math.max(0.01, faceFwd[2]));
+  const roll = Math.atan2(-lEar.y - (-rEar.y), Math.max(0.05, Math.abs(lEar.x - rEar.x)));
+
+  return {
+    yaw: parseFloat(yaw.toFixed(3)),
+    pitch: parseFloat(pitch.toFixed(3)),
+    roll: parseFloat(roll.toFixed(3)),
+  };
+}
+
+// ============================================================================
+// 9. ОФФЛАЙН ОБРАБОТКА ВИДЕОФАЙЛОВ (РЕЖИМ A)
+// Покадровый захват с генерацией полного проекта Bunkai MoCap
+// ============================================================================
+
+export async function processOfflineVideo(videoFile, onProgress = null, options = {}) {
+  const pose = await loadMediaPipePose();
+  if (!pose) throw new Error('Не удалось инициализировать нейросеть MediaPipe Pose');
+
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(videoFile);
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const targetFps = options.fps || 30.0;
+    const capturedFrames = [];
+    let isCancelled = false;
+
+    video.onloadedmetadata = async () => {
+      canvas.width = video.videoWidth || 1280;
+      canvas.height = video.videoHeight || 720;
+      const duration = video.duration || 1.0;
+      const totalFrames = Math.max(1, Math.floor(duration * targetFps));
+
+      resetMocapFilters();
+
+      let currentFrameIdx = 0;
+
+      const processNextFrame = async () => {
+        if (isCancelled || currentFrameIdx >= totalFrames) {
+          URL.revokeObjectURL(video.src);
+          resolve({
+            format: 'bunkai-capture-json',
+            version: 1,
+            name: videoFile.name.replace(/\.[^/.]+$/, ''),
+            duration,
+            fps: targetFps,
+            frameCount: capturedFrames.length,
+            frames: capturedFrames,
+          });
+          return;
+        }
+
+        const currentTime = currentFrameIdx / targetFps;
+        video.currentTime = currentTime;
+
+        video.onseeked = async () => {
+          try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Обработка кадра нейросетью
+            let poseResult = null;
+            const onPoseResult = (res) => {
+              poseResult = res;
+            };
+
+            pose.onResults(onPoseResult);
+            await pose.send({ image: canvas });
+
+            if (poseResult && poseResult.poseLandmarks && poseResult.poseLandmarks.length >= 33) {
+              const lms = poseResult.poseLandmarks;
+              const wlms = poseResult.poseWorldLandmarks || lms;
+              const clearedWlms = applyTorsoClearanceToLandmarks(wlms);
+
+              const biomechanics = analyzeKarateBiomechanics(lms, clearedWlms);
+              const fingers = extractHandBiomechanics(lms, clearedWlms);
+              const head = estimateHeadOrientation(lms, clearedWlms);
+
+              // 3D суставы в метрах
+              const joints3D = {};
+              const conf = {};
+              const jointNames = [
+                'nose', 'left_eye_inner', 'left_eye', 'left_eye_outer', 'right_eye_inner', 'right_eye', 'right_eye_outer',
+                'left_ear', 'right_ear', 'mouth_left', 'mouth_right',
+                'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist',
+                'left_pinky', 'right_pinky', 'left_index', 'right_index', 'left_thumb', 'right_thumb',
+                'left_hip', 'right_hip', 'left_knee', 'right_knee', 'left_ankle', 'right_ankle',
+                'left_heel', 'right_heel', 'left_foot_index', 'right_foot_index'
+              ];
+
+              for (let i = 0; i < 33; i++) {
+                const jName = jointNames[i] || `joint_${i}`;
+                const w = clearedWlms[i];
+                joints3D[jName] = [
+                  parseFloat(w.x.toFixed(4)),
+                  parseFloat((-w.y).toFixed(4)),
+                  parseFloat((-w.z).toFixed(4)),
+                ];
+                conf[jName] = parseFloat((lms[i].visibility ?? 1.0).toFixed(2));
+              }
+
+              // Вычисление положения корня (Центр таза)
+              const rootPos = [
+                parseFloat(((joints3D.left_hip[0] + joints3D.right_hip[0]) * 0.5).toFixed(4)),
+                parseFloat(((joints3D.left_hip[1] + joints3D.right_hip[1]) * 0.5 + 0.90).toFixed(4)),
+                parseFloat(((joints3D.left_hip[2] + joints3D.right_hip[2]) * 0.5).toFixed(4)),
+              ];
+
+              capturedFrames.push({
+                frame: currentFrameIdx,
+                time: parseFloat(currentTime.toFixed(3)),
+                rootPosition: rootPos,
+                joints: joints3D,
+                confidence: conf,
+                landmarks: lms,
+                worldLandmarks: clearedWlms,
+                head,
+                fingers,
+                biomechanics,
+                tracking_loss: false,
+              });
+            } else {
+              // Кадр с потерей трекинга
+              capturedFrames.push({
+                frame: currentFrameIdx,
+                time: parseFloat(currentTime.toFixed(3)),
+                rootPosition: [0, 0.9, 0],
+                joints: {},
+                confidence: {},
+                tracking_loss: true,
+              });
+            }
+
+            if (onProgress) {
+              onProgress({
+                currentFrame: currentFrameIdx + 1,
+                totalFrames,
+                percentage: Math.round(((currentFrameIdx + 1) / totalFrames) * 100),
+                currentTime,
+                duration,
+              });
+            }
+
+            currentFrameIdx++;
+            setTimeout(processNextFrame, 0);
+          } catch (err) {
+            console.error('Ошибка анализа кадра видео:', err);
+            currentFrameIdx++;
+            setTimeout(processNextFrame, 0);
+          }
+        };
+      };
+
+      processNextFrame();
+    };
+
+    video.onerror = (e) => {
+      URL.revokeObjectURL(video.src);
+      reject(new Error('Не удалось загрузить видеофайл для анализа'));
+    };
+  });
+}
+
+// ============================================================================
+// 10. СТАНДАРТИЗИРОВАННЫЙ ЭКСПОРТ И ИМПОРТ JSON
+// Форматы bunkai-capture-json и bunkai-retargeted-animation
+// ============================================================================
+
+export function exportCaptureJson(projectData, metadata = {}) {
+  const exportObj = {
+    format: 'bunkai-capture-json',
+    version: 1,
+    technique: metadata.technique || projectData.name || 'karate_technique',
+    name: metadata.name || projectData.name || `bunkai_mocap_${Date.now()}`,
+    tags: metadata.tags || ['shotokan', 'mocap', 'bunkai_explorer'],
+    fps: projectData.fps || 30.0,
+    duration: projectData.duration || 0,
+    frameCount: projectData.frameCount || (projectData.frames ? projectData.frames.length : 0),
+    coordinateSystem: {
+      handedness: 'right-handed',
+      upAxis: 'Y',
+      forwardAxis: 'Z',
+      units: 'meters',
+      description: 'Three.js compatible world coordinates: X right, Y up, Z forward',
+    },
+    frames: (projectData.frames || []).map((f) => ({
+      frame: f.frame,
+      time: f.time,
+      rootPosition: f.rootPosition || [0, 0.9, 0],
+      joints: f.joints || {},
+      confidence: f.confidence || {},
+      head: f.head || { yaw: 0, pitch: 0, roll: 0 },
+      fingers: f.fingers || {
+        left: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: true },
+        right: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: true },
+      },
+      biomechanics: f.biomechanics || {},
+      tracking_loss: Boolean(f.tracking_loss),
+    })),
+  };
+
+  return JSON.stringify(exportObj, null, 2);
+}
+
+export function exportRetargetedJson(projectData, metadata = {}) {
+  const exportObj = {
+    format: 'bunkai-retargeted-animation',
+    version: 1,
+    technique: metadata.technique || projectData.name || 'karate_technique',
+    name: metadata.name || projectData.name || `bunkai_retargeted_${Date.now()}`,
+    tags: metadata.tags || ['shotokan', 'retargeted', 'Karateka_Armature'],
+    targetRig: 'Karateka_Armature',
+    fps: projectData.fps || 30.0,
+    duration: projectData.duration || 0,
+    frameCount: projectData.frameCount || (projectData.frames ? projectData.frames.length : 0),
+    frames: (projectData.frames || []).map((f) => {
+      // Преобразуем суставы в локальные вращения костей
+      const bones = {};
+      if (f.bones) {
+        Object.assign(bones, f.bones);
+      }
+      return {
+        frame: f.frame,
+        time: f.time,
+        rootPosition: f.rootPosition || [0, 0.9, 0],
+        bones,
+        fingers: f.fingers,
+      };
+    }),
+  };
+
+  return JSON.stringify(exportObj, null, 2);
+}
+
+export function parseBunkaiMocapJson(jsonStr) {
+  try {
+    const data = JSON.parse(jsonStr);
+    if (!data.format || (!data.format.includes('bunkai') && !data.format.includes('karate'))) {
+      throw new Error('Неизвестный формат файла анимации.');
+    }
+    return {
+      success: true,
+      data,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+}
+

@@ -3,17 +3,22 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { extractHandBiomechanics, estimateHeadOrientation } from '../utils/mocapPoseTracker';
 
 /**
  * MocapPuppetAvatar — 3D-аватар мастера каратэ Шотокан (Karateka lowpoly).
  * 
- * Точный кинематический движок из Karate Motion Studio (viewer_template.html):
+ * Точный кинематический движок из Karate Motion Studio:
  * 1. Иерархическое выравнивание костей (alignBone) с защитой от сингулярностей (Gimbal flip)
  * 2. Динамическая протракция и депрессия ключиц (alignShoulder) для естественной посадки плеча
  * 3. Ориентация стоп на татами (alignFoot) с сохранением угла атаки и разворота носка
- * 4. Многосегментный позвоночник (Spine 45%, Spine1 75%, Chest 100%) и наклон таза (Pelvic Tilt 35%)
- * 5. Физическое заземление подошв на Y = 0 (Tatami floor): присед опускает корень строго синхронно с компрессией ног,
+ * 4. Полный анатомический контроль 30 костей фаланг пальцев (Thumb1..3, Index1..3, Middle1..3, Ring1..3, Pinky1..3)
+ *    с поддержкой перехода Сэйкэн (кулак) <-> Шуто (открытая ладонь)
+ * 5. Ориентация взгляда и головы Мэцукэ (Head + Neck)
+ * 6. Многосегментный позвоночник (Spine 45%, Spine1 75%, Chest 100%) и наклон таза (Pelvic Tilt 35%)
+ * 7. Физическое заземление подошв на Y = 0 (Tatami floor): присед опускает корень строго синхронно с компрессией ног,
  *    исключая подтягивание ног к себе и проваливание под пол!
+ * 8. Поддержка ролей Тори (Белое ги) и Укэ (Индиго ги) для парного режима Бункай и Кумитэ.
  */
 
 function alignBone(bone, targetDir, alpha = 0.85) {
@@ -99,6 +104,50 @@ function alignFoot(bone, vFoot, sideKey = 'R', alphaTarget = 0.75) {
   bone.updateMatrixWorld(true);
 }
 
+const FINGER_TYPES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
+
+/**
+ * Анатомический перенос движений пальцев на фаланги Karateka_Armature (30 костей)
+ */
+function applyFingersToArmature(boneMap, fData, sideKey = 'R', alpha = 0.80) {
+  if (!boneMap || !fData) return;
+  const isLeft = sideKey === 'L';
+
+  FINGER_TYPES.forEach((ftype) => {
+    const fKey = ftype.toLowerCase();
+    const curl = typeof fData[fKey] === 'number' ? fData[fKey] : (fData.general_curl ?? 0.15);
+    const phalanges = fData.phalanges?.[fKey];
+    const abd = fData.abduction?.[fKey] || 0.0;
+
+    for (let ph = 1; ph <= 3; ph++) {
+      const bname = `${ftype}${ph}.${sideKey}`;
+      const bone = boneMap.get(bname);
+      if (!bone || !bone.restLocalQ) continue;
+
+      let flexAng = 0.0;
+      if (phalanges && Array.isArray(phalanges) && phalanges.length >= 3) {
+        flexAng = phalanges[ph - 1];
+      } else {
+        const maxAng = ftype === 'Thumb' ? 0.75 : (ph === 1 ? 1.35 : 1.15);
+        flexAng = curl * maxAng;
+      }
+
+      // Сгибание фаланги вокруг оси +X
+      const qFlex = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), flexAng);
+
+      // Разведение / приведение (Abduction) для проксимальной фаланги (ph === 1)
+      let qTarget = bone.restLocalQ.clone().multiply(qFlex);
+      if (ph === 1 && Math.abs(abd) > 0.01) {
+        const abdSign = isLeft ? 1 : -1;
+        const qAbd = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), abd * abdSign);
+        qTarget.multiply(qAbd);
+      }
+
+      bone.quaternion.slerp(qTarget, alpha);
+    }
+  });
+}
+
 export default function MocapPuppetAvatar({
   boneRotations = null,
   poseLandmarks = null,
@@ -110,6 +159,7 @@ export default function MocapPuppetAvatar({
   rotation = [0, 0, 0],
   scale = 1.0,
   xrayMode = false,
+  role = 'tori', // 'tori' (белое ги) | 'uke' (индиго ги)
 }) {
   const groupRef = useRef();
   // Загружаем классическую легковесную модель мастера из Karate Motion Studio
@@ -141,13 +191,13 @@ export default function MocapPuppetAvatar({
           mat.side = THREE.DoubleSide;
           const name = child.name || '';
           if (name.includes('Belt') || name.includes('Obi')) {
-            mat.color = new THREE.Color('#141414');
+            mat.color = new THREE.Color(role === 'uke' ? '#2d1808' : '#141414');
             if (xrayMode) {
               mat.transparent = true;
               mat.opacity = 0.7;
             }
           } else if (name.includes('Gi') || name.includes('Jacket') || name.includes('Pants') || name.includes('Mesh')) {
-            mat.color = new THREE.Color('#faf9f6');
+            mat.color = new THREE.Color(role === 'uke' ? '#1b2c45' : '#faf9f6');
             if (xrayMode) {
               mat.transparent = true;
               mat.opacity = 0.45;
@@ -160,7 +210,7 @@ export default function MocapPuppetAvatar({
     });
 
     return { clonedModel: clone, boneMap: map, modelScale: s, modelYOffset: yOff };
-  }, [scene, xrayMode]);
+  }, [scene, xrayMode, role]);
 
   useEffect(() => {
     clonedModel.updateMatrixWorld(true);
@@ -203,6 +253,10 @@ export default function MocapPuppetAvatar({
       const pREl = toVec(14);
       const pLWr = toVec(15);
       const pRWr = toVec(16);
+      const pLPinky = toVec(17);
+      const pRPinky = toVec(18);
+      const pLIdx = toVec(19);
+      const pRIdx = toVec(20);
       const pLHp = toVec(23);
       const pRHp = toVec(24);
       const pLKn = toVec(25);
@@ -217,10 +271,12 @@ export default function MocapPuppetAvatar({
       // Маппинг костей: Зеркальный режим vs Прямой
       const armR_Upper = mirrorMode ? boneMap.get('UpperArm.L') : boneMap.get('UpperArm.R');
       const armR_Lower = mirrorMode ? boneMap.get('LowerArm.L') : boneMap.get('LowerArm.R');
+      const armR_Hand = mirrorMode ? boneMap.get('Hand.L') : boneMap.get('Hand.R');
       const armR_Shoulder = mirrorMode ? boneMap.get('Shoulder.L') : boneMap.get('Shoulder.R');
 
       const armL_Upper = mirrorMode ? boneMap.get('UpperArm.R') : boneMap.get('UpperArm.L');
       const armL_Lower = mirrorMode ? boneMap.get('LowerArm.R') : boneMap.get('LowerArm.L');
+      const armL_Hand = mirrorMode ? boneMap.get('Hand.R') : boneMap.get('Hand.L');
       const armL_Shoulder = mirrorMode ? boneMap.get('Shoulder.R') : boneMap.get('Shoulder.L');
 
       const legR_Upper = mirrorMode ? boneMap.get('UpperLeg.L') : boneMap.get('UpperLeg.R');
@@ -242,6 +298,16 @@ export default function MocapPuppetAvatar({
           const vForearm = pRWr.clone().sub(pREl);
           if (mirrorMode) vForearm.x = -vForearm.x;
           alignBone(armR_Lower, vForearm, 0.78);
+
+          // Кисть правой руки
+          if (armR_Hand && (pRIdx || pRPinky)) {
+            const pKnuckles = (pRIdx && pRPinky)
+              ? pRIdx.clone().add(pRPinky).multiplyScalar(0.5)
+              : (pRIdx || pRPinky);
+            const vHand = pKnuckles.clone().sub(pRWr);
+            if (mirrorMode) vHand.x = -vHand.x;
+            alignBone(armR_Hand, vHand, 0.75);
+          }
         }
       }
 
@@ -256,10 +322,29 @@ export default function MocapPuppetAvatar({
           const vForearm = pLWr.clone().sub(pLEl);
           if (mirrorMode) vForearm.x = -vForearm.x;
           alignBone(armL_Lower, vForearm, 0.78);
+
+          // Кисть левой руки
+          if (armL_Hand && (pLIdx || pLPinky)) {
+            const pKnuckles = (pLIdx && pLPinky)
+              ? pLIdx.clone().add(pLPinky).multiplyScalar(0.5)
+              : (pLIdx || pLPinky);
+            const vHand = pKnuckles.clone().sub(pLWr);
+            if (mirrorMode) vHand.x = -vHand.x;
+            alignBone(armL_Hand, vHand, 0.75);
+          }
         }
       }
 
-      // 3. ПРАВАЯ НОГА ЧЕЛОВЕКА
+      // 3. БИОМЕХАНИКА КИСТЕЙ И ПАЛЬЦЕВ (Thumb, Index, Middle, Ring, Pinky 1..3)
+      const fingersBio = activePose.fingers || extractHandBiomechanics(ptsRaw);
+      if (fingersBio) {
+        const fR = fingersBio.right;
+        const fL = fingersBio.left;
+        if (fR) applyFingersToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.80);
+        if (fL) applyFingersToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.80);
+      }
+
+      // 4. ПРАВАЯ НОГА ЧЕЛОВЕКА
       if (pRHp && pRKn) {
         const vThigh = pRKn.clone().sub(pRHp);
         if (mirrorMode) vThigh.x = -vThigh.x;
@@ -278,7 +363,7 @@ export default function MocapPuppetAvatar({
         }
       }
 
-      // 4. ЛЕВАЯ НОГА ЧЕЛОВЕКА
+      // 5. ЛЕВАЯ НОГА ЧЕЛОВЕКА
       if (pLHp && pLKn) {
         const vThigh = pLKn.clone().sub(pLHp);
         if (mirrorMode) vThigh.x = -vThigh.x;
@@ -297,7 +382,35 @@ export default function MocapPuppetAvatar({
         }
       }
 
-      // 5. МНОГОСЕГМЕНТНЫЙ ПОЗВОНОЧНИК, ГРУДЬ И ТАЗ
+      // 6. ОРИЕНТАЦИЯ ГОЛОВЫ И ВЗГЛЯД МЭЦУКЭ
+      const bHead = boneMap.get('Head');
+      const bNeck = boneMap.get('Neck');
+      const headBio = activePose.head || estimateHeadOrientation(ptsRaw);
+      if (bHead && bHead.restWorldQ && headBio) {
+        const yaw = mirrorMode ? -headBio.yaw : headBio.yaw;
+        const pitch = headBio.pitch;
+        const roll = mirrorMode ? -headBio.roll : headBio.roll;
+
+        if (bNeck && bNeck.restWorldQ) {
+          const eulerNeck = new THREE.Euler(-pitch * 0.35, yaw * 0.35, roll * 0.30, 'YXZ');
+          const qNeckDelta = new THREE.Quaternion().setFromEuler(eulerNeck);
+          const targetWorldQNeck = qNeckDelta.multiply(bNeck.restWorldQ);
+          const parentWorldQNeck = new THREE.Quaternion();
+          if (bNeck.parent) bNeck.parent.getWorldQuaternion(parentWorldQNeck);
+          const targetLocalQNeck = parentWorldQNeck.clone().invert().multiply(targetWorldQNeck);
+          bNeck.quaternion.slerp(targetLocalQNeck, 0.70);
+        }
+
+        const eulerHead = new THREE.Euler(-pitch * 0.65, yaw * 0.65, roll * 0.50, 'YXZ');
+        const qHeadDelta = new THREE.Quaternion().setFromEuler(eulerHead);
+        const targetWorldQHead = qHeadDelta.multiply(bHead.restWorldQ);
+        const parentWorldQHead = new THREE.Quaternion();
+        if (bHead.parent) bHead.parent.getWorldQuaternion(parentWorldQHead);
+        const targetLocalQHead = parentWorldQHead.clone().invert().multiply(targetWorldQHead);
+        bHead.quaternion.slerp(targetLocalQHead, 0.75);
+      }
+
+      // 7. МНОГОСЕГМЕНТНЫЙ ПОЗВОНОЧНИК, ГРУДЬ И ТАЗ
       const bHips = boneMap.get('Hips');
       const bSpine = boneMap.get('Spine');
       const bSpine1 = boneMap.get('Spine1');
@@ -389,10 +502,7 @@ export default function MocapPuppetAvatar({
           }
         }
 
-        // 6. ФИЗИЧЕСКОЕ ЗАЗЕМЛЕНИЕ ПОДОШВ НА ТАТАМИ (Y = 0) И РАСЧЕТ СТОЕК:
-        // Алгоритм вычисляет вертикальное сжатие ног (hipY - footY).
-        // Высота таза опускается строго синхронно с приседом бойца,
-        // сохраняя ступни неподвижно стоящими на полу Додзё.
+        // 8. ФИЗИЧЕСКОЕ ЗАЗЕМЛЕНИЕ ПОДОШВ НА ТАТАМИ (Y = 0) И ПЕРЕМЕЩЕНИЕ КОРНЯ:
         const hasAnkle = pLAn || pRAn;
         if (hasAnkle) {
           const hipY = (pLHp.y + pRHp.y) * 0.5;
@@ -421,8 +531,11 @@ export default function MocapPuppetAvatar({
           smoothRootZRef.current = smoothRootZRef.current * 0.80 + targetRootZ * 0.20;
 
           if (bHips && bHips.restPosition) {
+            const rootX = activePose.rootPosition ? (mirrorMode ? -activePose.rootPosition[0] : activePose.rootPosition[0]) : 0;
+            const rootZ = activePose.rootPosition ? activePose.rootPosition[2] : 0;
+            bHips.position.x = bHips.restPosition.x + rootX;
             bHips.position.y = bHips.restPosition.y + smoothRootYRef.current;
-            bHips.position.z = bHips.restPosition.z + smoothRootZRef.current;
+            bHips.position.z = bHips.restPosition.z + rootZ + smoothRootZRef.current;
           }
         }
       }
@@ -434,8 +547,9 @@ export default function MocapPuppetAvatar({
 
         if (boneRotations[name]) {
           const rot = boneRotations[name];
-          if (rot.quaternion) {
-            const q = new THREE.Quaternion(rot.quaternion[0], rot.quaternion[1], rot.quaternion[2], rot.quaternion[3]);
+          if (rot.quaternion || Array.isArray(rot)) {
+            const arr = rot.quaternion || rot;
+            const q = new THREE.Quaternion(arr[0], arr[1], arr[2], arr[3]);
             bone.quaternion.slerp(q, lerpFactor);
           } else {
             const euler = new THREE.Euler(rot.x || 0, rot.y || 0, rot.z || 0, 'XYZ');
