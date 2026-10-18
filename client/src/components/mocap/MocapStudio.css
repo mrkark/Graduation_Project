@@ -486,17 +486,85 @@
   font-size: 1.1rem;
 }
 
-.qr-link-input-wrap {
-  display: flex;
-  gap: 8px;
+/* Выделенный блок прямой ссылки для перехода на телефоне */
+.qr-direct-link-card {
   width: 100%;
-  margin-bottom: 0.8rem;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.14) 0%, rgba(20, 22, 28, 0.95) 100%);
+  border: 1.5px solid #d4af37;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+  text-align: left;
 }
 
-.qr-link-input {
+.direct-link-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.direct-link-badge {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #f5d77f;
+  background: rgba(212, 175, 55, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.direct-link-hint {
+  font-size: 0.72rem;
+  color: var(--washi-muted);
+}
+
+.direct-link-url-box {
+  background: #090a0d;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.direct-link-anchor {
+  font-family: monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: #d4af37;
+  display: block;
+}
+
+.direct-link-anchor:hover {
+  color: #f5d77f;
+}
+
+.direct-link-btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.direct-link-copy-btn {
+  flex: 2;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 8px 14px;
+}
+
+.direct-link-open-btn {
   flex: 1;
+  text-align: center;
+  text-decoration: none;
   font-size: 0.82rem;
-  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Переключатель режимов подключения (Внешний интернет / Локальный) */

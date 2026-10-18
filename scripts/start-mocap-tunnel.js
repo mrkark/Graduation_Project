@@ -1,24 +1,20 @@
 /**
- * AI MoCap HTTPS Tunnel & Network Discovery Service (Karate Bunkai Explorer)
+ * AI MoCap Network Gateway & Stable HTTPS Tunnel (Karate Bunkai Explorer)
  * 
- * 1. Автоматически определяет реальный IPv4-адрес компьютера в локальной сети (Wi-Fi/Ethernet)
- *    для прямого подключения смартфона внутри домашней сети.
- * 2. Создает и поддерживает живой защищенный HTTPS-туннель (localhost.run) для смартфонов
- *    из внешней сети (4G/LTE), где мобильный браузер мгновенно получает доступ к камере
- *    без флагов chrome://flags.
- * 3. Регулярно мониторит здоровье HTTPS туннеля (health-check) и мгновенно перезапускает его
- *    при сбоях связи (HTTP 502 / тайм-аут).
+ * 1. Определяет реальный IPv4-адрес компьютера в локальной сети (Wi-Fi/Ethernet: 192.168.100.28).
+ * 2. Запускает надежный HTTPS туннель с постоянным поддоменом (localtunnel).
+ * 3. Сохраняет статус в uploads/tunnel-info.json.
  */
 
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const https = require('https');
 const os = require('os');
 const dgram = require('dgram');
 
 const PORT = 5173;
+const SUBDOMAIN = 'bunkai-dojo-karate';
 const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 const STATUS_FILE = path.join(UPLOADS_DIR, 'tunnel-info.json');
 
@@ -26,7 +22,6 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-// Определение основного IP-адреса хоста в локальной сети
 function getLocalNetworkAddresses() {
   return new Promise((resolve) => {
     let primaryIp = '192.168.100.28';
@@ -36,7 +31,6 @@ function getLocalNetworkAddresses() {
       const list = [];
 
       for (const [name, addrs] of Object.entries(ifaces)) {
-        // Исключаем виртуальные адаптеры гипервизоров и WSL
         if (/vEthernet|VMware|Virtual|Loopback|WSL/i.test(name)) continue;
         for (const a of addrs) {
           if (a.family === 'IPv4' && !a.internal) {
@@ -50,7 +44,7 @@ function getLocalNetworkAddresses() {
       }
 
       if (!list.some((item) => item.ip === mainIp)) {
-        list.unshift({ name: 'Основной адаптер', ip: mainIp, isPrimary: true });
+        list.unshift({ name: 'Ethernet (LAN)', ip: mainIp, isPrimary: true });
       }
 
       resolve({ primaryIp: mainIp, all: list });
@@ -70,30 +64,26 @@ function getLocalNetworkAddresses() {
   });
 }
 
-let cachedNetworkInfo = { primaryIp: '192.168.100.28', all: [] };
-let currentProcess = null;
-let reconnectTimer = null;
-let healthCheckTimer = null;
-let currentUrl = null;
-let isHealthy = false;
-let consecutiveFailures = 0;
+let cachedNetwork = { primaryIp: '192.168.100.28', all: [] };
+let currentTunnelProcess = null;
+let currentUrl = `https://${SUBDOMAIN}.loca.lt`;
 
-function updateStatusFile(url, active = true) {
+function saveStatus(url, active = true) {
   const payload = {
     active,
-    url: url || null,
-    localIp: cachedNetworkInfo.primaryIp,
-    localIps: cachedNetworkInfo.all,
+    url: url || `https://${SUBDOMAIN}.loca.lt`,
+    localIp: cachedNetwork.primaryIp,
+    localIps: cachedNetwork.all,
     updatedAt: new Date().toISOString(),
   };
 
   try {
     fs.writeFileSync(STATUS_FILE, JSON.stringify(payload, null, 2), 'utf8');
   } catch (e) {
-    console.error('[-] Ошибка записи tunnel-info.json:', e.message);
+    console.error('[-] Ошибка сохранения tunnel-info.json:', e.message);
   }
 
-  // Оповещаем бэкенд через локальный API
+  // Оповещаем бэкенд
   const req = http.request(
     {
       hostname: 'localhost',
@@ -110,149 +100,55 @@ function updateStatusFile(url, active = true) {
   req.end();
 }
 
-// Проверка работоспособности туннеля через реальный HTTP-запрос
-function checkTunnelHealth(url) {
-  if (!url) return;
-
-  const targetUrl = `${url.replace(/\/+$/, '')}/phone-camera`;
-
-  const req = https.get(targetUrl, { timeout: 8000 }, (res) => {
-    if (res.statusCode >= 200 && res.statusCode < 400) {
-      consecutiveFailures = 0;
-      if (!isHealthy) {
-        isHealthy = true;
-        updateStatusFile(url, true);
-        console.log(`[✔] Проверка связи HTTPS туннеля успешна: HTTP ${res.statusCode} OK`);
-      }
-    } else {
-      consecutiveFailures++;
-      console.warn(`[!] Туннель вернул статус HTTP ${res.statusCode} (сбой #${consecutiveFailures})`);
-      if (consecutiveFailures >= 2) {
-        restartTunnel('HTTP статус не 200/300');
-      }
-    }
-  });
-
-  req.on('error', (err) => {
-    consecutiveFailures++;
-    console.warn(`[!] Ошибка проверки HTTPS туннеля: ${err.message} (сбой #${consecutiveFailures})`);
-    if (consecutiveFailures >= 2) {
-      restartTunnel('Тайм-аут или ошибка сети');
-    }
-  });
-
-  req.on('timeout', () => {
-    req.destroy();
-    consecutiveFailures++;
-    console.warn(`[!] Превышен тайм-аут HTTPS туннеля (сбой #${consecutiveFailures})`);
-    if (consecutiveFailures >= 2) {
-      restartTunnel('Превышен тайм-аут ответа');
-    }
-  });
-}
-
-function restartTunnel(reason) {
-  console.log(`\n[!] Перезапуск туннеля по причине: ${reason}`);
-  consecutiveFailures = 0;
-  isHealthy = false;
-  if (healthCheckTimer) clearInterval(healthCheckTimer);
-
-  if (currentProcess) {
-    try {
-      currentProcess.kill('SIGTERM');
-    } catch (e) {}
-    currentProcess = null;
-  }
-
-  updateStatusFile(currentUrl, false);
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(startTunnel, 3000);
-}
-
-async function startTunnel() {
-  cachedNetworkInfo = await getLocalNetworkAddresses();
+async function start() {
+  cachedNetwork = await getLocalNetworkAddresses();
 
   console.log('\n========================================================');
-  console.log('🥋 Karate Bunkai Explorer — Сетевой шлюз MoCap & HTTPS');
+  console.log('🥋 Karate Bunkai Explorer — Сетевой шлюз MoCap');
   console.log('========================================================');
-  console.log(`🏠 Локальный IP компьютера: ${cachedNetworkInfo.primaryIp}`);
-  cachedNetworkInfo.all.forEach((item) => {
+  console.log(`🏠 Основной локальный IP компьютера: ${cachedNetwork.primaryIp}`);
+  cachedNetwork.all.forEach((item) => {
     console.log(`   - [${item.name}]: http://${item.ip}:${PORT}`);
   });
-  console.log(`[+] Подключение к безопасному HTTPS-туннелю (localhost.run)...`);
+  console.log(`[+] Запуск стабильного HTTPS туннеля (localtunnel: ${SUBDOMAIN})...`);
 
-  // Сразу сохраняем локальный IP в tunnel-info.json, чтобы фронтенд сразу его увидел
-  updateStatusFile(currentUrl, false);
+  saveStatus(currentUrl, true);
 
-  const args = [
-    '-o', 'StrictHostKeyChecking=no',
-    '-o', 'ServerAliveInterval=15',
-    '-o', 'ServerAliveCountMax=3',
-    '-o', 'ExitOnForwardFailure=yes',
-    '-R', `80:127.0.0.1:${PORT}`,
-    'nokey@localhost.run',
-  ];
-
-  const sshBin = process.platform === 'win32' ? 'ssh.exe' : 'ssh';
-  currentProcess = spawn(sshBin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-
-  let buffer = '';
-
-  const handleData = (chunk) => {
-    const text = chunk.toString();
-    buffer += text;
-
-    const match = buffer.match(/https:\/\/[a-zA-Z0-9.-]+\.lhr\.life/);
-    if (match && match[0] !== currentUrl) {
-      currentUrl = match[0];
-      isHealthy = false;
-      consecutiveFailures = 0;
-
-      console.log('\n--------------------------------------------------------');
-      console.log('✔ ПУБЛИЧНЫЙ HTTPS ТУННЕЛЬ УСПЕШНО АКТИВИРОВАН!');
-      console.log(`🌐 Адрес для смартфонов: ${currentUrl}`);
-      console.log(`📱 Ссылка для камеры:   ${currentUrl}/phone-camera`);
-      console.log('--------------------------------------------------------');
-      console.log('✔ Смартфон может быть в 4G/LTE, а ПК дома на Wi-Fi!');
-      console.log('========================================================\n');
-
-      updateStatusFile(currentUrl, true);
-
-      // Запускаем периодический мониторинг здоровья туннеля раз в 15 секунд
-      if (healthCheckTimer) clearInterval(healthCheckTimer);
-      healthCheckTimer = setInterval(() => checkTunnelHealth(currentUrl), 15000);
-      // И сразу первую быструю проверку через 3 секунды
-      setTimeout(() => checkTunnelHealth(currentUrl), 3000);
-    }
-  };
-
-  currentProcess.stdout.on('data', handleData);
-  currentProcess.stderr.on('data', handleData);
-
-  currentProcess.on('close', (code) => {
-    console.log(`[!] SSH-процесс завершился с кодом ${code}. Переподключение через 5 сек...`);
-    if (healthCheckTimer) clearInterval(healthCheckTimer);
-    updateStatusFile(currentUrl, false);
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(startTunnel, 5000);
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  currentTunnelProcess = spawn(npxCmd, ['--yes', 'localtunnel', '--port', String(PORT), '--subdomain', SUBDOMAIN], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    shell: true,
   });
 
-  currentProcess.on('error', (err) => {
-    console.error('[!] Ошибка запуска ssh:', err.message);
-    if (healthCheckTimer) clearInterval(healthCheckTimer);
-    if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(startTunnel, 5000);
+  currentTunnelProcess.stdout.on('data', (d) => {
+    const text = d.toString();
+    console.log('[Tunnel]', text.trim());
+    if (text.includes('your url is:')) {
+      const match = text.match(/https:\/\/[^\s]+/);
+      if (match) {
+        currentUrl = match[0];
+        saveStatus(currentUrl, true);
+        console.log(`[✔] Постоянный HTTPS адрес: ${currentUrl}`);
+      }
+    }
+  });
+
+  currentTunnelProcess.stderr.on('data', (d) => {
+    console.warn('[Tunnel Error]', d.toString().trim());
+  });
+
+  currentTunnelProcess.on('close', (code) => {
+    console.log(`[!] Туннель завершился (код ${code}). Перезапуск через 5 сек...`);
+    saveStatus(currentUrl, false);
+    setTimeout(start, 5000);
   });
 }
 
 function cleanup() {
-  console.log('\n[+] Остановка сетевого шлюза MoCap...');
-  if (reconnectTimer) clearTimeout(reconnectTimer);
-  if (healthCheckTimer) clearInterval(healthCheckTimer);
-  updateStatusFile(null, false);
-  if (currentProcess) {
+  saveStatus(null, false);
+  if (currentTunnelProcess) {
     try {
-      currentProcess.kill('SIGTERM');
+      currentTunnelProcess.kill();
     } catch (e) {}
   }
   process.exit(0);
@@ -260,6 +156,6 @@ function cleanup() {
 
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
-process.on('exit', () => updateStatusFile(null, false));
+process.on('exit', () => saveStatus(null, false));
 
-startTunnel();
+start();

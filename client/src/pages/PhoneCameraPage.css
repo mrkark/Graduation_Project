@@ -1,723 +1,567 @@
-.phone-cam-page {
+/* ==========================================================================
+   📱 Bunkai Explorer — Mobile MoCap Camera Studio
+   Современный интерфейс мобильного видоискателя для захвата движений карате
+   ========================================================================== */
+
+.phone-cam-root {
   position: fixed;
   inset: 0;
-  background: #090807;
-  color: var(--washi, #f5efe6);
+  width: 100vw;
+  height: 100dvh;
+  background: #060709;
+  color: #f5f6f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  overflow: hidden;
-  font-family: var(--font-body, sans-serif);
 }
 
-.phone-cam-header {
-  padding: 0.9rem 1.2rem;
-  background: rgba(18, 16, 14, 0.95);
-  border-bottom: 1px solid var(--border, rgba(197, 160, 89, 0.25));
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.phone-cam-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-}
-
-.phone-cam-brand h1 {
-  font-size: 1.05rem;
-  margin: 0;
-  color: var(--washi, #fff);
-  font-family: var(--font-display, serif);
-}
-
-.phone-cam-room-tag {
-  font-size: 0.74rem;
-  color: var(--gold, #c5a059);
-}
-
-.phone-cam-status-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.76rem;
-  padding: 0.35rem 0.75rem;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
-  border-radius: 20px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #a0a0a0;
-}
-
-.status-dot.online {
-  background: #22c55e;
-  box-shadow: 0 0 8px #22c55e;
-}
-
-.status-dot.standby {
-  background: #eab308;
-}
-
-.status-dot.offline {
-  background: #ef4444;
-}
-
-.phone-cam-error {
-  padding: 0.6rem 1rem;
-  background: rgba(185, 28, 28, 0.9);
-  color: #fff;
-  font-size: 0.84rem;
-  text-align: center;
-}
-
+/* 1. ПОЛНОЭКРАННЫЙ ВИДЕОПОТОК */
 .phone-cam-viewport {
-  position: relative;
-  flex: 1;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   background: #000;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
 }
 
 .phone-cam-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
-.phone-cam-reticle {
+/* 2. КРАСНАЯ ПУЛЬСИРУЮЩАЯ РАМКА ПРИ ЗАПИСИ */
+.phone-cam-viewport.is-recording::after {
+  content: '';
   position: absolute;
-  inset: 12% 8%;
-  border: 1px dashed rgba(197, 160, 89, 0.35);
+  inset: 0;
+  border: 4px solid #ef4444;
+  box-shadow: inset 0 0 24px rgba(239, 68, 68, 0.45);
   pointer-events: none;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 12px;
+  animation: recBorderPulse 1.2s ease-in-out infinite alternate;
+  z-index: 5;
 }
 
-.reticle-corner {
+@keyframes recBorderPulse {
+  0% { border-color: rgba(239, 68, 68, 0.5); }
+  100% { border-color: rgba(239, 68, 68, 1); box-shadow: inset 0 0 36px rgba(239, 68, 68, 0.7); }
+}
+
+/* 3. СЕТКА И ОРИЕНТИР ПОЗЫ КАРАТЕКА (HUD) */
+.phone-cam-hud {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border-color: var(--gold-bright, #e8c57b);
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Уголки эмбусэн прицеливания */
+.hud-corner {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-color: rgba(212, 175, 55, 0.75);
   border-style: solid;
 }
 
-.reticle-corner.top-left {
-  top: -1px;
-  left: -1px;
-  border-width: 3px 0 0 3px;
-}
+.hud-corner.tl { top: 60px; left: 16px; border-width: 3px 0 0 3px; border-top-left-radius: 8px; }
+.hud-corner.tr { top: 60px; right: 16px; border-width: 3px 3px 0 0; border-top-right-radius: 8px; }
+.hud-corner.bl { bottom: 120px; left: 16px; border-width: 0 0 3px 3px; border-bottom-left-radius: 8px; }
+.hud-corner.br { bottom: 120px; right: 16px; border-width: 0 3px 3px 0; border-bottom-right-radius: 8px; }
 
-.reticle-corner.top-right {
-  top: -1px;
-  right: -1px;
-  border-width: 3px 3px 0 0;
-}
-
-.reticle-corner.bottom-left {
-  bottom: -1px;
-  left: -1px;
-  border-width: 0 0 3px 3px;
-}
-
-.reticle-corner.bottom-right {
-  bottom: -1px;
-  right: -1px;
-  border-width: 0 3px 3px 0;
-}
-
-.reticle-guide-text {
-  font-size: 0.76rem;
-  color: var(--washi-dim, #c5baa8);
-  background: rgba(0, 0, 0, 0.65);
-  padding: 4px 10px;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-}
-
-.phone-cam-overlay {
+/* Силуэт стойки карате (подсказка кадрирования) */
+.hud-guide-silhouette {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  pointer-events: none;
-}
-
-.telemetry-pill {
-  display: flex;
-  gap: 8px;
-  padding: 4px 10px;
-  background: rgba(14, 12, 10, 0.85);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.15));
-  border-radius: 4px;
-  font-size: 0.74rem;
-  color: var(--gold-bright, #e8c57b);
-}
-
-.phone-cam-controls {
-  padding: 0.9rem 1.2rem;
-  background: rgba(18, 16, 14, 0.98);
-  border-top: 1px solid var(--border, rgba(197, 160, 89, 0.25));
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  max-width: 260px;
+  height: 55%;
+  border: 1px dashed rgba(212, 175, 55, 0.25);
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 12px;
+  opacity: 0.75;
+  transition: opacity 0.3s ease;
 }
 
-.btn-phone-action {
-  padding: 0.85rem;
-  font-size: 0.88rem;
-  font-weight: 600;
+.hud-guide-text {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  color: #f5d77f;
+  letter-spacing: 0.5px;
   text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* 4. ВЕРХНЯЯ ПАНЕЛЬ СТАТУСА (GLASS BAR) */
+.phone-cam-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(10, 12, 16, 0.85) 0%, rgba(10, 12, 16, 0.4) 70%, transparent 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.topbar-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-logo {
+  font-size: 1.15rem;
+}
+
+.topbar-title-box h1 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.3px;
+}
+
+.topbar-room-badge {
+  font-size: 0.68rem;
+  color: #d4af37;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.topbar-status-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.topbar-status-pill.online {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+
+.topbar-status-pill.standby {
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #facc15;
+}
+
+.topbar-status-pill.offline {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.topbar-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.topbar-status-pill.online .topbar-status-dot {
+  box-shadow: 0 0 6px #22c55e;
+}
+
+.topbar-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm, 4px);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Выбор слота ракурса (Фронт, Бок, Угол) */
+.topbar-slots-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.topbar-slots-row::-webkit-scrollbar {
+  display: none;
+}
+
+.slot-btn {
+  flex: 1;
+  padding: 5px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #bbb;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.phone-cam-secondary-actions {
-  display: flex;
-  gap: 0.6rem;
+.slot-btn.active {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: #d4af37;
+  color: #f5d77f;
 }
 
-.phone-cam-secondary-actions .btn-phone-action {
-  flex: 1;
-  padding: 0.65rem;
-  font-size: 0.8rem;
+.slot-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-/* Большая кнопка записи анимации */
-.btn-phone-record {
-  background: linear-gradient(135deg, #8a1c14 0%, #ba261b 100%);
-  color: #ffffff;
-  border: 1px solid #e53e3e;
-  box-shadow: 0 4px 14px rgba(186, 38, 27, 0.4);
-  font-size: 0.96rem;
-  letter-spacing: 0.03em;
-  padding: 1rem;
-}
-
-.btn-phone-record:hover {
-  background: linear-gradient(135deg, #a82218 0%, #dc2626 100%);
-  transform: translateY(-1px);
-}
-
-.btn-phone-record.is-recording {
-  background: #1c1917;
-  border: 2px solid #ef4444;
-  color: #fca5a5;
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
-  animation: pulse-recording 1.5s infinite;
-}
-
-@keyframes pulse-recording {
-  0% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 18px rgba(239, 68, 68, 0.9); }
-  100% { box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
-}
-
-/* Баннер записи на видеоэкране */
-.phone-cam-rec-banner {
+/* 5. ИНДИКАТОР АКТИВНОЙ ЗАПИСИ (RECORDING BANNER) */
+.phone-cam-rec-pill {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(185, 28, 28, 0.92);
+  background: rgba(220, 38, 38, 0.92);
   color: #fff;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
-  z-index: 10;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.6);
+  animation: recPillGlow 1.5s infinite alternate;
 }
 
-.rec-dot {
-  width: 10px;
-  height: 10px;
-  background: #ffffff;
+@keyframes recPillGlow {
+  0% { transform: translateX(-50%) scale(1); }
+  100% { transform: translateX(-50%) scale(1.04); }
+}
+
+.rec-pulse-circle {
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  animation: blink-dot 1s infinite;
+  background: #fff;
+  animation: blink 0.8s infinite;
 }
 
-@keyframes blink-dot {
+@keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }
 }
 
-.rec-frames {
-  font-size: 0.7rem;
-  opacity: 0.85;
-  font-weight: 400;
-}
-
-.phone-cam-rec-success {
+/* Уведомление об успешном сохранении 3D-анимации */
+.phone-cam-toast-success {
   position: absolute;
-  bottom: 24px;
-  left: 14px;
-  right: 14px;
-  background: rgba(15, 60, 30, 0.95);
-  border: 1px solid #22c55e;
-  color: #bbf7d0;
+  top: 96px;
+  left: 16px;
+  right: 16px;
+  z-index: 12;
+  background: rgba(16, 185, 129, 0.95);
+  color: #fff;
   padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 0.84rem;
-  text-align: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
-  z-index: 10;
-}
-
-/* Баннер разрешения на камеру */
-.phone-cam-perm-banner {
-  background: linear-gradient(135deg, rgba(28, 24, 20, 0.98), rgba(40, 34, 28, 0.98));
-  border-bottom: 2px solid var(--gold, #c5a059);
-  padding: 0.75rem 1rem;
-  z-index: 50;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
-  animation: slide-down 0.25s ease-out;
-}
-
-.phone-cam-perm-banner.is-prompt {
-  background: linear-gradient(135deg, #2a1a0c 0%, #3d2611 100%);
-  border-bottom: 2px solid #f59e0b;
-}
-
-.phone-cam-perm-banner.is-granted {
-  background: linear-gradient(135deg, #0e2717 0%, #153c23 100%);
-  border-bottom: 2px solid #22c55e;
-}
-
-.perm-banner-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.perm-banner-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
-.perm-banner-text {
-  flex: 1;
-}
-
-.perm-banner-text strong {
-  display: block;
-  font-size: 0.86rem;
-  color: #ffffff;
-  margin-bottom: 2px;
-}
-
-.perm-banner-text p {
-  margin: 0;
-  font-size: 0.74rem;
-  color: rgba(245, 239, 230, 0.8);
-  line-height: 1.35;
-}
-
-.perm-banner-actions {
-  display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
-}
-
-.perm-banner-help {
-  margin-top: 0.6rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.74rem;
-  color: #fecaca;
-}
-
-.perm-banner-help .help-title {
-  display: block;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.perm-banner-help ol {
-  margin: 0;
-  padding-left: 1.2rem;
-  line-height: 1.4;
-}
-
-.perm-banner-help li {
-  margin-bottom: 3px;
-}
-
-.btn-ghost-light {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.btn-ghost-light:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-/* Мета-информация в заголовке */
-.phone-cam-meta {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin-top: 2px;
-}
-
-.phone-cam-slot-tag {
-  font-size: 0.72rem;
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-/* Панель выбора позиции смартфона (мульти-камера) */
-.phone-cam-slots-bar {
-  background: rgba(14, 12, 10, 0.95);
-  padding: 0.45rem 0.8rem;
-  border-bottom: 1px solid rgba(197, 160, 89, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.slots-title {
-  font-size: 0.72rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: var(--gold, #c5a059);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+  animation: slideDownToast 0.3s ease;
 }
 
-.slots-pills {
+@keyframes slideDownToast {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 6. ПАНЕЛЬ УПРАВЛЕНИЯ ВНИЗУ (BOTTOM CONTROL BAR) */
+.phone-cam-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: 14px 20px 24px 20px;
+  background: linear-gradient(0deg, rgba(8, 10, 14, 0.92) 0%, rgba(8, 10, 14, 0.65) 60%, transparent 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
-  gap: 0.4rem;
-  flex: 1;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16px;
 }
 
-.slot-pill {
-  flex: 1;
+/* Кнопка смены камеры (Селфи / Основная) */
+.ctrl-side-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(26, 23, 20, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  padding: 4px 6px;
-  color: #d1c7b7;
+  gap: 2px;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.2s ease;
+}
+
+.ctrl-side-btn:active {
+  transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ctrl-side-btn span {
+  font-size: 1.15rem;
+}
+
+.ctrl-side-btn label {
+  font-size: 0.58rem;
+  color: #bbb;
+  cursor: pointer;
+}
+
+/* ЦЕНТРАЛЬНАЯ КНОПКА ЗАПИСИ (HERO RECORD BUTTON) */
+.ctrl-record-btn-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ctrl-record-btn {
   position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #111;
+  border: 4px solid #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4);
 }
 
-.slot-pill:hover:not(:disabled) {
-  border-color: var(--gold, #c5a059);
-  background: rgba(40, 35, 30, 0.95);
+.ctrl-record-btn:active {
+  transform: scale(0.94);
 }
 
-.slot-pill.active {
-  background: linear-gradient(135deg, rgba(197, 160, 89, 0.25), rgba(138, 28, 20, 0.3));
-  border-color: var(--gold-bright, #e8c57b);
-  color: #ffffff;
-  box-shadow: 0 0 10px rgba(197, 160, 89, 0.35);
+.ctrl-record-inner {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #ef4444;
+  transition: all 0.25s ease;
 }
 
-.slot-pill.is-taken {
-  opacity: 0.45;
-  cursor: not-allowed;
-  border-style: dashed;
+/* При активной записи кнопка превращается в квадрат "Стоп" */
+.ctrl-record-btn.recording {
+  border-color: #fff;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.8);
 }
 
-.slot-num {
-  font-size: 0.85rem;
+.ctrl-record-btn.recording .ctrl-record-inner {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #ef4444;
+}
+
+.ctrl-record-label {
+  font-size: 0.72rem;
   font-weight: 700;
-  color: var(--gold-bright, #e8c57b);
+  letter-spacing: 0.5px;
+  color: #eee;
+  text-transform: uppercase;
 }
 
-.slot-txt {
-  font-size: 0.64rem;
-  white-space: nowrap;
-}
-
-.slot-current-badge {
-  font-size: 0.58rem;
-  background: #22c55e;
-  color: #000;
-  font-weight: 700;
-  border-radius: 3px;
-  padding: 1px 3px;
-  margin-top: 2px;
-}
-
-.slot-taken-badge {
-  font-size: 0.58rem;
+.ctrl-record-btn.recording + .ctrl-record-label {
   color: #ef4444;
 }
 
-.slots-info {
-  font-size: 0.68rem;
-  color: var(--text-muted, #9c8e7c);
-  white-space: nowrap;
+/* Телеметрия над нижней панелью (FPS / Разрешение) */
+.phone-cam-telemetry-pill {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.7rem;
+  color: #aaa;
+  display: flex;
+  gap: 8px;
+  font-family: monospace;
 }
 
-@keyframes slide-down {
-  from { transform: translateY(-100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.phone-cam-telemetry-pill strong {
+  color: #f5d77f;
 }
 
-@keyframes pulse-btn {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 197, 123, 0.7); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(232, 197, 123, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 197, 123, 0); }
-}
-
-.btn-pulse {
-  animation: pulse-btn 2s infinite;
-}
-
-/* Интерактивный оверлей поверх видоискателя для запуска камеры */
-.phone-cam-tap-overlay {
+/* 7. ОВЕРЛЕЙ ЗАПУСКА КАМЕРЫ (КОГДА КАМЕРА НЕ ЗАПУЩЕНА) */
+.phone-cam-starter-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(9, 8, 7, 0.82);
-  backdrop-filter: blur(4px);
+  z-index: 20;
+  background: rgba(6, 7, 9, 0.88);
+  backdrop-filter: blur(14px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.1rem;
-  z-index: 25;
-  cursor: pointer;
-  padding: 1.5rem;
+  padding: 24px;
   text-align: center;
 }
 
-.tap-play-btn {
-  background: linear-gradient(135deg, #e8c57b 0%, #c5a059 100%);
-  color: #12100e;
-  border: none;
-  font-weight: 700;
-  font-size: 1.05rem;
-  padding: 1rem 1.8rem;
-  border-radius: 40px;
-  box-shadow: 0 0 25px rgba(232, 197, 123, 0.45);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  animation: pulse-btn 2s infinite ease-in-out;
-}
-
-.tap-play-btn:active {
-  transform: scale(0.96);
-}
-
-.tap-play-hint {
-  font-size: 0.82rem;
-  color: #e5e0d8;
+.starter-card {
+  width: 100%;
   max-width: 340px;
-  line-height: 1.4;
-}
-
-/* Специальное руководство при незащищенном HTTP */
-.phone-cam-insecure-guide {
-  background: linear-gradient(135deg, rgba(38, 24, 12, 0.98), rgba(48, 30, 16, 0.98));
-  border-bottom: 2px solid #f59e0b;
-  padding: 0.85rem 1rem;
-  z-index: 45;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
-}
-
-.insecure-guide-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.insecure-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
-.insecure-title-box strong {
-  display: block;
-  font-size: 0.86rem;
-  color: #fbbf24;
-  margin-bottom: 3px;
-}
-
-.insecure-title-box p {
-  margin: 0;
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.82);
-  line-height: 1.35;
-}
-
-.insecure-steps {
+  background: rgba(18, 20, 26, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 8px;
-  padding: 0.65rem 0.8rem;
-  margin-bottom: 0.75rem;
-}
-
-.insecure-step {
-  display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 14px;
 }
 
-.step-badge {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: #f59e0b;
-  color: #000;
-  font-weight: 700;
-  font-size: 0.72rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.starter-icon {
+  font-size: 2.8rem;
+  margin-bottom: -4px;
 }
 
-.step-body {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  font-size: 0.74rem;
-  color: #f3f4f6;
-}
-
-.btn-xs {
-  font-size: 0.7rem;
-  padding: 2px 7px;
-  border-radius: 4px;
-}
-
-.btn-outline-gold {
-  background: rgba(232, 197, 123, 0.12);
-  border: 1px solid var(--gold-bright, #e8c57b);
-  color: var(--gold-bright, #e8c57b);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-outline-gold:hover {
-  background: var(--gold-bright, #e8c57b);
-  color: #12100e;
-}
-
-.insecure-footer {
-  display: flex;
-  justify-content: flex-end;
-}
-
-/* Баннер моментального переключения на HTTPS */
-.phone-cam-https-banner {
-  background: linear-gradient(135deg, #241607 0%, #3a220a 100%);
-  border-bottom: 2px solid var(--gold-bright, #e8c57b);
-  padding: 0.85rem 1rem;
-  z-index: 60;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.65);
-}
-
-.https-banner-content {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  flex-wrap: wrap;
-}
-
-.https-banner-icon {
-  font-size: 1.6rem;
-  color: var(--gold-bright, #e8c57b);
-  flex-shrink: 0;
-}
-
-.https-banner-text {
-  flex: 1;
-  min-width: 200px;
-}
-
-.https-banner-text strong {
-  display: block;
-  font-size: 0.88rem;
+.starter-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
   color: #fff;
-  margin-bottom: 3px;
+  font-weight: 700;
 }
 
-.https-banner-text p {
+.starter-card p {
   margin: 0;
+  font-size: 0.84rem;
+  color: #aaa;
+  line-height: 1.45;
+}
+
+.starter-btn-main {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(212, 175, 55, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.starter-btn-main:active {
+  transform: scale(0.97);
+}
+
+/* Блок подсказок для Chrome на Android */
+.starter-chrome-help {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  text-align: left;
   font-size: 0.76rem;
-  color: rgba(245, 239, 230, 0.88);
-  line-height: 1.35;
-}
-
-.https-banner-hint {
-  margin-top: 0.5rem;
-  font-size: 0.72rem;
-  color: var(--gold, #c5a059);
-}
-
-/* Сообщение о включении разрешения камеры по HTTPS */
-.phone-cam-https-notice {
-  background: linear-gradient(135deg, rgba(30, 24, 18, 0.96) 0%, rgba(20, 16, 12, 0.98) 100%);
-  border-bottom: 2px solid var(--gold, #c5a059);
-  padding: 0.85rem 1.1rem;
+  color: #ccc;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  z-index: 50;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  flex-direction: column;
+  gap: 8px;
 }
 
-.https-notice-icon {
-  font-size: 1.8rem;
-  flex-shrink: 0;
+.starter-chrome-help strong {
+  color: #f5d77f;
 }
 
-.https-notice-content {
-  flex: 1;
+.starter-help-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
 }
 
-.https-notice-content strong {
+.starter-copy-btn {
+  padding: 7px 10px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid #d4af37;
+  color: #f5d77f;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.starter-https-redirect {
   display: block;
-  font-size: 0.9rem;
-  color: var(--gold-bright, #e8c57b);
-  margin-bottom: 2px;
+  padding: 8px 10px;
+  background: #d4af37;
+  color: #000;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  text-align: center;
 }
-
-.https-notice-content p {
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--washi, #f5efe6);
-  line-height: 1.35;
-}
-
-

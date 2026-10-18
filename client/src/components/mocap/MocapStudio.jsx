@@ -1085,9 +1085,45 @@ export default function MocapStudio() {
               })}
             </div>
 
+            {/* Выделенная карточка с крупной прямой ссылкой для телефона */}
+            <div className="qr-direct-link-card">
+              <div className="direct-link-header">
+                <span className="direct-link-badge">📱 ПРЯМАЯ ССЫЛКА ДЛЯ ТЕЛЕФОНА</span>
+                <span className="direct-link-hint">Перейдите в браузере или отсканируйте QR</span>
+              </div>
+              <div className="direct-link-url-box">
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="direct-link-anchor"
+                  title="Нажмите, чтобы открыть ссылку прямо сейчас"
+                >
+                  {getPhoneConnectUrl(selectedQrSlot)}
+                </a>
+              </div>
+              <div className="direct-link-btn-row">
+                <button
+                  type="button"
+                  className="btn btn-gold direct-link-copy-btn"
+                  onClick={() => copyPhoneUrl(selectedQrSlot)}
+                >
+                  {copiedLink ? '✔ ССЫЛКА СКОПИРОВАНА!' : '📋 СКОПИРОВАТЬ ССЫЛКУ'}
+                </button>
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-subtle direct-link-open-btn"
+                >
+                  🔗 Открыть на ПК
+                </a>
+              </div>
+            </div>
+
             <div className="qr-image-wrap">
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
                   getPhoneConnectUrl(selectedQrSlot)
                 )}`}
                 alt={`QR код для подключения ${PHONE_CONFIGS[selectedQrSlot - 1].label}`}
@@ -1098,18 +1134,6 @@ export default function MocapStudio() {
             <div className="qr-room-box">
               <span>Додзё-комната: <strong>{roomId}</strong></span>
               <span className="qr-target-tag">{PHONE_CONFIGS[selectedQrSlot - 1].label}</span>
-            </div>
-
-            <div className="qr-link-input-wrap">
-              <input
-                type="text"
-                readOnly
-                value={getPhoneConnectUrl(selectedQrSlot)}
-                className="qr-link-input"
-              />
-              <button type="button" className="btn btn-gold" onClick={() => copyPhoneUrl(selectedQrSlot)}>
-                {copiedLink ? 'Скопировано! ✔' : 'Копировать'}
-              </button>
             </div>
 
             {/* Конфигурация в зависимости от выбранного режима */}
@@ -1140,7 +1164,7 @@ export default function MocapStudio() {
                       setTunnelUrl(e.target.value.trim());
                       setTunnelActive(Boolean(e.target.value.trim()));
                     }}
-                    placeholder="https://xxxx.lhr.life"
+                    placeholder="https://tiny-newt-32.loca.lt"
                     className="qr-tunnel-input"
                   />
                 </div>
