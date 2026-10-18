@@ -4,12 +4,10 @@ import io from 'socket.io-client';
 import './PhoneCameraPage.css';
 
 function getSocketUrl() {
-  if (typeof window !== 'undefined') {
-    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
-      return window.location.origin;
-    }
-  }
   const envUrl = import.meta.env.VITE_SOCKET_URL;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
   return envUrl || 'http://localhost:5000';
 }
 
@@ -530,87 +528,16 @@ export default function PhoneCameraPage() {
 
   return (
     <div className="phone-cam-page">
-      {/* 0. БАННЕР ПЕРЕХОДА НА HTTPS (РЕШАЕТ ПРОБЛЕМУ БЛОКИРОВКИ КАМЕРЫ НА ТЕЛЕФОНАХ) */}
-      {isHttp && (
-        <div className="phone-cam-https-banner">
-          <div className="https-banner-content">
-            <span className="https-banner-icon">⚡</span>
-            <div className="https-banner-text">
-              <strong>Камера разрешена в настройках, но заблокирована из-за HTTP</strong>
-              <p>
-                Браузеры телефонов (Chrome/Safari) запускают камеру только по защищенному протоколу <code>https://</code>.
-                Нажмите кнопку ниже для моментального перехода — камера включится сразу!
-              </p>
-            </div>
-            <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={switchToHttps}>
-              🔒 Перейти на HTTPS
-            </button>
-          </div>
-          <div className="https-banner-hint">
-            * При переходе нажмите «Дополнительно» ➔ «Перейти на сайт (небезопасно)», так как это локальный сертификат Додзё.
-          </div>
-        </div>
-      )}
-
-      {/* 1. БАННЕР-ИНСТРУКЦИЯ О РАЗРЕШЕНИИ НА КАМЕРУ */}
-      {permissionGuideVisible && (
-        <div className={`phone-cam-perm-banner ${isStreamFullyLive ? 'is-granted' : 'is-prompt'}`}>
-          <div className="perm-banner-content">
-            <div className="perm-banner-icon">
-              {isStreamFullyLive ? '✅' : '📷'}
-            </div>
-            <div className="perm-banner-text">
-              <strong>
-                {isStreamFullyLive
-                  ? 'Камера включена и транслируется в Додзё'
-                  : 'Нажмите кнопку ниже для включения камеры смартфона'}
-              </strong>
-              <p>
-                {isStreamFullyLive
-                  ? `Поток активен (${fps} FPS) · Привязан как ${deviceLabel}. Закрепите телефон неподвижно.`
-                  : 'Для захвата 3D-биомеханики требуется подтвердить доступ к камере в браузере.'}
-              </p>
-            </div>
-            <div className="perm-banner-actions">
-              {!isStreamFullyLive && (
-                <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={handleViewportTap}>
-                  🎥 Включить камеру
-                </button>
-              )}
-              {isStreamFullyLive && (
-                <button
-                  type="button"
-                  className="btn btn-sm btn-ghost-light"
-                  onClick={() => setPermissionGuideVisible(false)}
-                >
-                  ✕ Скрыть
-                </button>
-              )}
-            </div>
-          </div>
-
-          {permissionState === 'denied' && (
-            <div className="perm-banner-help">
-              <span className="help-title">⚠️ Браузер заблокировал доступ к камере:</span>
-              <ol>
-                <li>В адресной строке браузера нажмите на значок замочка <strong>🔒</strong> или настроек сайта.</li>
-                <li>Найдите пункт <strong>«Камера»</strong> и переключите в режим <strong>«Разрешить»</strong>.</li>
-                <li>В iOS Safari: «Настройки» → «Safari» → «Камера» → «Разрешить».</li>
-                <li>После изменения нажмите кнопку «Включить камеру» выше.</li>
-              </ol>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 2. СПЕЦИАЛЬНОЕ РУКОВОДСТВО ДЛЯ CHROME ПРИ ПОДКЛЮЧЕНИИ ПО ЛОКАЛЬНОМУ HTTP */}
-      {isInsecureOrigin && !isStreamFullyLive && (
+      {/* 1. ПОШАГОВОЕ РУКОВОДСТВО ДЛЯ CHROME НА АНДРОИД ПРИ ПОДКЛЮЧЕНИИ ПО HTTP */}
+      {isHttp && !isStreamFullyLive && (
         <div className="phone-cam-insecure-guide">
           <div className="insecure-guide-head">
-            <span className="insecure-icon">🔒</span>
+            <span className="insecure-icon">💡</span>
             <div className="insecure-title-box">
-              <strong>Браузер смартфона требует подтвердить локальный IP-адрес</strong>
-              <p>Chrome и Safari блокируют камеру на незащищенных HTTP-сайтах без флага доверия.</p>
+              <strong>Ваши настройки в порядке! Chrome блокирует камеру на локальном IP</strong>
+              <p>
+                Разрешения в настройках уже даны, но мобильный Chrome по стандарту требует подтвердить локальный IP через флаг разработчика (займет 20 секунд):
+              </p>
             </div>
           </div>
 
@@ -618,7 +545,7 @@ export default function PhoneCameraPage() {
             <div className="insecure-step">
               <span className="step-badge">1</span>
               <div className="step-body">
-                <span>Скопируйте адрес флага для Chrome:</span>
+                <span>Скопируйте ссылку и откройте её в новой вкладке Chrome:</span>
                 <button type="button" className="btn btn-xs btn-outline-gold" onClick={copyFlagToClipboard}>
                   {copiedFlag ? '✔ Скопировано' : '📋 Скопировать chrome://flags/...'}
                 </button>
@@ -628,7 +555,7 @@ export default function PhoneCameraPage() {
             <div className="insecure-step">
               <span className="step-badge">2</span>
               <div className="step-body">
-                <span>Откройте новую вкладку в Chrome, вставьте флаг и введите в поле этот адрес:</span>
+                <span>В текстовое поле флага вставьте адрес сайта:</span>
                 <button type="button" className="btn btn-xs btn-outline-gold" onClick={copyOriginToClipboard}>
                   {copiedOrigin ? '✔ Скопировано' : `📋 Скопировать ${typeof window !== 'undefined' ? window.location.origin : ''}`}
                 </button>
@@ -638,15 +565,37 @@ export default function PhoneCameraPage() {
             <div className="insecure-step">
               <span className="step-badge">3</span>
               <div className="step-body">
-                <span>Переключите в <strong>Enabled</strong> и нажмите синюю кнопку <strong>Relaunch</strong>.</span>
+                <span>В выпадающем списке выберите <strong>Enabled</strong> и нажмите кнопку <strong>Relaunch</strong>.</span>
               </div>
             </div>
           </div>
 
           <div className="insecure-footer">
-            <button type="button" className="btn btn-sm btn-gold" onClick={startCamera}>
-              🔄 Проверить и включить камеру
+            <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={startCamera}>
+              🔄 Я включил флаг — запустить камеру
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2. БАННЕР СТАТУСА КАМЕРЫ */}
+      {permissionGuideVisible && isStreamFullyLive && (
+        <div className="phone-cam-perm-banner is-granted">
+          <div className="perm-banner-content">
+            <div className="perm-banner-icon">✅</div>
+            <div className="perm-banner-text">
+              <strong>Камера включена и транслируется в Додзё</strong>
+              <p>Поток активен ({fps} FPS) · Привязан как {deviceLabel}. Закрепите телефон неподвижно.</p>
+            </div>
+            <div className="perm-banner-actions">
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost-light"
+                onClick={() => setPermissionGuideVisible(false)}
+              >
+                ✕ Скрыть
+              </button>
+            </div>
           </div>
         </div>
       )}

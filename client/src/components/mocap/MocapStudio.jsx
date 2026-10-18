@@ -18,12 +18,10 @@ import {
 import './MocapStudio.css';
 
 function getSocketUrl() {
-  if (typeof window !== 'undefined') {
-    if (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')) {
-      return window.location.origin;
-    }
-  }
   const envUrl = import.meta.env.VITE_SOCKET_URL;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
   return envUrl || 'http://localhost:5000';
 }
 
@@ -73,7 +71,7 @@ export default function MocapStudio() {
     : 'localhost';
   const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
   const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
-  const [useHttpsForPhone, setUseHttpsForPhone] = useState(true);
+  const [useHttpsForPhone, setUseHttpsForPhone] = useState(false);
 
   // Состояние захвата движений и биомеханики
   const [isPoseModelLoading, setIsPoseModelLoading] = useState(true);
@@ -1171,19 +1169,8 @@ export default function MocapStudio() {
               </div>
             </div>
 
-            <div className="qr-protocol-row">
-              <label className="qr-protocol-label">
-                <input
-                  type="checkbox"
-                  checked={useHttpsForPhone}
-                  onChange={(e) => setUseHttpsForPhone(e.target.checked)}
-                />
-                <span>🔒 Использовать <strong>HTTPS</strong> (рекомендуется для мгновенного доступа к камере на смартфонах)</span>
-              </label>
-            </div>
-
             <div className="qr-perm-notice">
-              🔒 <strong>Важно для смартфонов:</strong> При первом открытии ссылки браузер телефона (Chrome/Safari) предупредит о сертификате. Нажмите <em>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</em> (в Safari: «Подробнее» ➔ «Посетить этот веб-сайт»). После этого камера включится сразу!
+              📱 <strong>Для Chrome на Android:</strong> Браузер требует подтвердить доверие к локальной сети. На странице телефона будет готова пошаговая подсказка из 3 пунктов с кнопками копирования флага <code>chrome://flags</code>.
             </div>
           </div>
         </div>
