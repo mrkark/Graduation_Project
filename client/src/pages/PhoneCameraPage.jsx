@@ -29,6 +29,54 @@ const PHONE_ROLES = [
   { slot: 3, label: 'Телефон 3 (Угол / 45°)', desc: 'Диагональ / устранение слепых зон' },
 ];
 
+// Безопасное получение navigator.mediaDevices с поддержкой legacy API (webkitGetUserMedia и т.д.)
+function getMediaDevices() {
+  if (typeof navigator === 'undefined') return null;
+  if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+    return navigator.mediaDevices;
+  }
+  const legacyGetUserMedia =
+    navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia;
+
+  if (legacyGetUserMedia) {
+    return {
+      getUserMedia: (constraints) =>
+        new Promise((resolve, reject) => {
+          legacyGetUserMedia.call(navigator, constraints, resolve, reject);
+        }),
+    };
+  }
+  return null;
+}
+
+// Прогрессивные наборы ограничений видеопотока (от идеального мобильного до универсального fallback)
+const CONSTRAINT_TIERS = [
+  // Уровень 1: Идеальное качество под смартфон (без жестких ограничений max, предотвращая OverconstrainedError в портретном режиме)
+  (facing) => ({
+    video: {
+      facingMode: facing ? { ideal: facing } : 'environment',
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: false,
+  }),
+  // Уровень 2: Только направление камеры (facingMode)
+  (facing) => ({
+    video: {
+      facingMode: facing ? { ideal: facing } : 'environment',
+    },
+    audio: false,
+  }),
+  // Уровень 3: Базовое видео (гарантированное включение на любом смартфоне и браузере)
+  () => ({
+    video: true,
+    audio: false,
+  }),
+];
+
 export default function PhoneCameraPage() {
   const [params] = useSearchParams();
   const initialRoom = params.get('room') || 'MOCAP-DOJO';
@@ -41,16 +89,22 @@ export default function PhoneCameraPage() {
 
   const [facingMode, setFacingMode] = useState('environment'); // 'user' | 'environment'
   const [streamActive, setStreamActive] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [socketConnected, setSocketConnected] = useState(false);
   const [peerConnected, setPeerConnected] = useState(false);
   const [hostId, setHostId] = useState(null);
   const [roomCameras, setRoomCameras] = useState([]);
 
-  // Состояние разрешения на камеру
+  // Состояние разрешения и контекста безопасности браузера
   const [permissionState, setPermissionState] = useState('prompt'); // 'prompt' | 'granted' | 'denied'
   const [permissionGuideVisible, setPermissionGuideVisible] = useState(true);
+  const [isInsecureOrigin, setIsInsecureOrigin] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
   const [fps, setFps] = useState(0);
+
+  // Копирование адресов для настройки Chrome
+  const [copiedFlag, setCopiedFlag] = useState(false);
+  const [copiedOrigin, setCopiedOrigin] = useState(false);
 
   // Состояние записи MoCap анимации, инициируемой с телефона
   const [isRecording, setIsRecording] = useState(false);
@@ -63,9 +117,21 @@ export default function PhoneCameraPage() {
   const socketRef = useRef(null);
   const peerRef = useRef(null);
   const frameCountRef = useRef(0);
+  const isStartingRef = useRef(false);
 
-  // Проверка статуса разрешения браузера на камеру (Permissions API)
+  // Проверка Secure Context и Permissions API
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const isHttps = window.location.protocol === 'https:';
+      const isSecure = Boolean(window.isSecureContext ?? (isLocal || isHttps));
+      const hasMedia = Boolean(getMediaDevices());
+
+      if (!isSecure && !hasMedia) {
+        setIsInsecureOrigin(true);
+      }
+    }
+
     if (navigator.permissions && navigator.permissions.query) {
       navigator.permissions
         .query({ name: 'camera' })
@@ -73,16 +139,168 @@ export default function PhoneCameraPage() {
           setPermissionState(status.state);
           status.onchange = () => {
             setPermissionState(status.state);
-            if (status.state === 'granted') {
+            if (status.state === 'granted' && !streamRef.current) {
               startCamera();
             }
           };
         })
         .catch(() => {
-          // Permissions query может не поддерживаться в некоторых мобильных браузерах
+          // Игнорируем: в некоторых браузерах permissions.query не поддерживает 'camera'
         });
     }
   }, []);
+
+  // Привязка видеопотока к элементу <video> с принудительным autoplay и muted для iOS/Android
+  const bindStreamToVideo = useCallback((stream) => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    v.srcObject = stream;
+    // Обязательные свойства для Safari iOS и мобильного Chrome
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    v.setAttribute('playsinline', 'true');
+    v.setAttribute('webkit-playsinline', 'true');
+    v.setAttribute('autoplay', 'true');
+    v.setAttribute('muted', 'true');
+
+    const tryPlay = () => {
+      const playPromise = v.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise
+          .then(() => {
+            setStreamActive(true);
+            setIsVideoPlaying(true);
+          })
+          .catch((err) => {
+            console.warn('Autoplay отложен до касания экрана:', err);
+            setIsVideoPlaying(false);
+          });
+      }
+    };
+
+    v.onloadedmetadata = tryPlay;
+    v.oncanplay = tryPlay;
+    v.onplaying = () => setIsVideoPlaying(true);
+    v.onpause = () => setIsVideoPlaying(false);
+    tryPlay();
+  }, []);
+
+  // Запуск камеры смартфона с прогрессивными уровнями fallback (не зависит от сокетов и hostId)
+  const startCamera = useCallback(async () => {
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
+    setErrorMsg(null);
+
+    const md = getMediaDevices();
+    if (!md) {
+      isStartingRef.current = false;
+      setStreamActive(false);
+      setIsVideoPlaying(false);
+      setIsInsecureOrigin(true);
+      setErrorMsg('Браузер телефона блокирует доступ к камере на HTTP-адресе. Включите флаг Chrome по инструкции ниже.');
+      return;
+    }
+
+    let stream = null;
+    let lastError = null;
+
+    for (let i = 0; i < CONSTRAINT_TIERS.length; i++) {
+      try {
+        const constraints = CONSTRAINT_TIERS[i](facingMode);
+        stream = await md.getUserMedia(constraints);
+        if (stream) break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`Уровень ограничений ${i + 1} отклонен, пробуем запасной...`, err);
+      }
+    }
+
+    isStartingRef.current = false;
+
+    if (!stream) {
+      setStreamActive(false);
+      setIsVideoPlaying(false);
+      console.error('Все уровни подключения камеры завершились ошибкой:', lastError);
+
+      if (lastError?.name === 'NotAllowedError' || lastError?.name === 'PermissionDeniedError') {
+        setPermissionState('denied');
+        setErrorMsg('Доступ к камере заблокирован в настройках сайта. Нажмите на значок 🔒 или настроек в адресной строке и выберите «Камера ➔ Разрешить».');
+      } else if (lastError?.name === 'NotFoundError' || lastError?.name === 'DevicesNotFoundError') {
+        setErrorMsg('Камера не найдена на этом устройстве.');
+      } else if (lastError?.name === 'NotReadableError' || lastError?.name === 'AbortError') {
+        setErrorMsg('Камера занята другим приложением или перезагружается. Нажмите «Включить камеру» снова.');
+      } else {
+        setErrorMsg(`Ошибка доступа к камере: ${lastError?.message || 'Неизвестная ошибка'}`);
+      }
+      return;
+    }
+
+    // При успешном получении нового потока аккуратно заменяем старый
+    if (streamRef.current && streamRef.current !== stream) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+    }
+
+    streamRef.current = stream;
+    setPermissionState('granted');
+    setErrorMsg(null);
+    bindStreamToVideo(stream);
+  }, [facingMode, bindStreamToVideo]);
+
+  // Настройка WebRTC соединения для трансляции на ПК
+  const setupPeerConnection = useCallback((stream, targetHostId) => {
+    if (!stream || !targetHostId) return;
+
+    if (peerRef.current) {
+      try {
+        peerRef.current.close();
+      } catch (e) {}
+    }
+
+    const peer = new RTCPeerConnection(ICE_SERVERS);
+    peerRef.current = peer;
+
+    // Добавляем видеотрек с камеры телефона
+    stream.getTracks().forEach((track) => {
+      peer.addTrack(track, stream);
+    });
+
+    peer.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current) {
+        socketRef.current.emit('mocap:candidate', {
+          roomId,
+          candidate: event.candidate,
+          targetId: targetHostId,
+          slot: assignedSlot,
+        });
+      }
+    };
+
+    peer.onconnectionstatechange = () => {
+      if (peer.connectionState === 'connected') {
+        setPeerConnected(true);
+      } else if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
+        setPeerConnected(false);
+      }
+    };
+
+    // Создаем Offer для ПК
+    peer
+      .createOffer({ offerToReceiveVideo: false, offerToReceiveAudio: false })
+      .then((offer) => peer.setLocalDescription(offer))
+      .then(() => {
+        if (socketRef.current) {
+          socketRef.current.emit('mocap:offer', {
+            roomId,
+            sdp: peer.localDescription,
+            targetId: targetHostId,
+            slot: assignedSlot,
+          });
+        }
+      })
+      .catch((err) => console.error('Ошибка создания Offer:', err));
+  }, [roomId, assignedSlot]);
 
   // Подключение к Socket.IO пространству /mocap
   useEffect(() => {
@@ -129,10 +347,6 @@ export default function PhoneCameraPage() {
 
     socket.on('mocap:host-joined', ({ hostId: newHostId }) => {
       setHostId(newHostId);
-      // Если видеопоток уже работает, заново инициируем WebRTC подключение к хосту
-      if (streamRef.current) {
-        setupPeerConnection(streamRef.current, newHostId);
-      }
     });
 
     socket.on('mocap:host-left', () => {
@@ -196,109 +410,24 @@ export default function PhoneCameraPage() {
     };
   }, [roomId, selectedSlot, assignedSlot]);
 
-  // Запуск камеры смартфона с явной обработкой разрешений
-  const startCamera = useCallback(async () => {
-    try {
-      setErrorMsg(null);
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30 },
-        },
-        audio: false,
-      });
-
-      streamRef.current = stream;
-      setPermissionState('granted');
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch((e) => console.warn('Autoplay предупреждение:', e));
-      }
-      setStreamActive(true);
-
-      // Инициализируем WebRTC соединение для трансляции на ПК
-      setupPeerConnection(stream, hostId);
-    } catch (err) {
-      console.error('Ошибка доступа к камере телефона:', err);
-      setStreamActive(false);
-
-      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        setPermissionState('denied');
-        setErrorMsg('Доступ к камере заблокирован в настройках браузера. Разрешите камеру для этого сайта.');
-      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-        setErrorMsg('Камера на устройстве не найдена.');
-      } else {
-        setErrorMsg(`Не удалось включить камеру: ${err.message || 'Ошибка устройства'}`);
-      }
+  // Синхронизация WebRTC при появлении хоста ПК (НЕ перезапускает видеопоток камеры!)
+  useEffect(() => {
+    if (streamRef.current && hostId) {
+      setupPeerConnection(streamRef.current, hostId);
     }
-  }, [facingMode, hostId, assignedSlot]);
+  }, [hostId, assignedSlot, setupPeerConnection]);
 
-  // Настройка WebRTC соединения
-  const setupPeerConnection = (stream, targetHostId) => {
-    if (peerRef.current) {
-      try {
-        peerRef.current.close();
-      } catch (e) {}
-    }
-
-    const peer = new RTCPeerConnection(ICE_SERVERS);
-    peerRef.current = peer;
-
-    // Добавляем видеотрек с камеры телефона
-    stream.getTracks().forEach((track) => {
-      peer.addTrack(track, stream);
-    });
-
-    peer.onicecandidate = (event) => {
-      if (event.candidate && socketRef.current) {
-        socketRef.current.emit('mocap:candidate', {
-          roomId,
-          candidate: event.candidate,
-          targetId: targetHostId,
-          slot: assignedSlot,
-        });
-      }
-    };
-
-    peer.onconnectionstatechange = () => {
-      if (peer.connectionState === 'connected') {
-        setPeerConnected(true);
-      } else if (peer.connectionState === 'disconnected' || peer.connectionState === 'failed') {
-        setPeerConnected(false);
-      }
-    };
-
-    // Создаем Offer для ПК
-    peer
-      .createOffer({ offerToReceiveVideo: false, offerToReceiveAudio: false })
-      .then((offer) => peer.setLocalDescription(offer))
-      .then(() => {
-        if (socketRef.current) {
-          socketRef.current.emit('mocap:offer', {
-            roomId,
-            sdp: peer.localDescription,
-            targetId: targetHostId,
-            slot: assignedSlot,
-          });
-        }
-      })
-      .catch((err) => console.error('Ошибка создания Offer:', err));
-  };
-
+  // Запуск камеры при монтировании компонента и смене facingMode
   useEffect(() => {
     startCamera();
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
       if (peerRef.current) {
         peerRef.current.close();
+        peerRef.current = null;
       }
     };
   }, [startCamera]);
@@ -341,7 +470,7 @@ export default function PhoneCameraPage() {
           if (res?.ok) {
             setAssignedSlot(res.slot);
             setDeviceLabel(res.label);
-            if (streamRef.current) {
+            if (streamRef.current && res.hostId) {
               setupPeerConnection(streamRef.current, res.hostId);
             }
           }
@@ -350,40 +479,72 @@ export default function PhoneCameraPage() {
     }
   };
 
+  // Прямое пользовательское касание экрана для гарантированного запуска воспроизведения
+  const handleViewportTap = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = true;
+      videoRef.current
+        .play()
+        .then(() => setIsVideoPlaying(true))
+        .catch(console.warn);
+    }
+    if (!streamActive || !streamRef.current) {
+      startCamera();
+    }
+  };
+
+  const copyOriginToClipboard = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(window.location.origin).then(() => {
+        setCopiedOrigin(true);
+        setTimeout(() => setCopiedOrigin(false), 2500);
+      });
+    }
+  };
+
+  const copyFlagToClipboard = () => {
+    navigator.clipboard.writeText('chrome://flags/#unsafely-treat-insecure-origin-as-secure').then(() => {
+      setCopiedFlag(true);
+      setTimeout(() => setCopiedFlag(false), 2500);
+    });
+  };
+
   const formatTimer = (sec) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  const isStreamFullyLive = streamActive && isVideoPlaying;
+
   return (
     <div className="phone-cam-page">
       {/* 1. БАННЕР-ИНСТРУКЦИЯ О РАЗРЕШЕНИИ НА КАМЕРУ */}
       {permissionGuideVisible && (
-        <div className={`phone-cam-perm-banner ${permissionState === 'granted' && streamActive ? 'is-granted' : 'is-prompt'}`}>
+        <div className={`phone-cam-perm-banner ${isStreamFullyLive ? 'is-granted' : 'is-prompt'}`}>
           <div className="perm-banner-content">
             <div className="perm-banner-icon">
-              {permissionState === 'granted' && streamActive ? '✅' : '📷'}
+              {isStreamFullyLive ? '✅' : '📷'}
             </div>
             <div className="perm-banner-text">
               <strong>
-                {permissionState === 'granted' && streamActive
-                  ? 'Камера разрешена и транслируется в Додзё'
-                  : 'Включите разрешение на использование камеры на этом сайте'}
+                {isStreamFullyLive
+                  ? 'Камера включена и транслируется в Додзё'
+                  : 'Нажмите кнопку ниже для включения камеры смартфона'}
               </strong>
               <p>
-                {permissionState === 'granted' && streamActive
+                {isStreamFullyLive
                   ? `Поток активен (${fps} FPS) · Привязан как ${deviceLabel}. Закрепите телефон неподвижно.`
-                  : 'Для захвата 3D-движений и биомеханики каратэ браузеру требуется доступ к камере вашего смартфона.'}
+                  : 'Для захвата 3D-биомеханики требуется подтвердить доступ к камере в браузере.'}
               </p>
             </div>
             <div className="perm-banner-actions">
-              {(!streamActive || permissionState !== 'granted') && (
-                <button type="button" className="btn btn-sm btn-gold" onClick={startCamera}>
+              {!isStreamFullyLive && (
+                <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={handleViewportTap}>
                   🎥 Включить камеру
                 </button>
               )}
-              {permissionState === 'granted' && streamActive && (
+              {isStreamFullyLive && (
                 <button
                   type="button"
                   className="btn btn-sm btn-ghost-light"
@@ -397,19 +558,67 @@ export default function PhoneCameraPage() {
 
           {permissionState === 'denied' && (
             <div className="perm-banner-help">
-              <span className="help-title">⚠️ Как включить доступ, если он был запрещен:</span>
+              <span className="help-title">⚠️ Браузер заблокировал доступ к камере:</span>
               <ol>
                 <li>В адресной строке браузера нажмите на значок замочка <strong>🔒</strong> или настроек сайта.</li>
                 <li>Найдите пункт <strong>«Камера»</strong> и переключите в режим <strong>«Разрешить»</strong>.</li>
                 <li>В iOS Safari: «Настройки» → «Safari» → «Камера» → «Разрешить».</li>
-                <li>После изменения разрешения нажмите кнопку «Включить камеру» выше или обновите страницу.</li>
+                <li>После изменения нажмите кнопку «Включить камеру» выше.</li>
               </ol>
             </div>
           )}
         </div>
       )}
 
-      {/* 2. ЗАГОЛОВОК МОБИЛЬНОГО ВИДОИСКАТЕЛЯ */}
+      {/* 2. СПЕЦИАЛЬНОЕ РУКОВОДСТВО ДЛЯ CHROME ПРИ ПОДКЛЮЧЕНИИ ПО ЛОКАЛЬНОМУ HTTP */}
+      {isInsecureOrigin && !isStreamFullyLive && (
+        <div className="phone-cam-insecure-guide">
+          <div className="insecure-guide-head">
+            <span className="insecure-icon">🔒</span>
+            <div className="insecure-title-box">
+              <strong>Браузер смартфона требует подтвердить локальный IP-адрес</strong>
+              <p>Chrome и Safari блокируют камеру на незащищенных HTTP-сайтах без флага доверия.</p>
+            </div>
+          </div>
+
+          <div className="insecure-steps">
+            <div className="insecure-step">
+              <span className="step-badge">1</span>
+              <div className="step-body">
+                <span>Скопируйте адрес флага для Chrome:</span>
+                <button type="button" className="btn btn-xs btn-outline-gold" onClick={copyFlagToClipboard}>
+                  {copiedFlag ? '✔ Скопировано' : '📋 Скопировать chrome://flags/...'}
+                </button>
+              </div>
+            </div>
+
+            <div className="insecure-step">
+              <span className="step-badge">2</span>
+              <div className="step-body">
+                <span>Откройте новую вкладку в Chrome, вставьте флаг и введите в поле этот адрес:</span>
+                <button type="button" className="btn btn-xs btn-outline-gold" onClick={copyOriginToClipboard}>
+                  {copiedOrigin ? '✔ Скопировано' : `📋 Скопировать ${typeof window !== 'undefined' ? window.location.origin : ''}`}
+                </button>
+              </div>
+            </div>
+
+            <div className="insecure-step">
+              <span className="step-badge">3</span>
+              <div className="step-body">
+                <span>Переключите в <strong>Enabled</strong> и нажмите синюю кнопку <strong>Relaunch</strong>.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="insecure-footer">
+            <button type="button" className="btn btn-sm btn-gold" onClick={startCamera}>
+              🔄 Проверить и включить камеру
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 3. ЗАГОЛОВОК МОБИЛЬНОГО ВИДОИСКАТЕЛЯ */}
       <header className="phone-cam-header">
         <div className="phone-cam-brand">
           <span className="hanko">分解</span>
@@ -434,7 +643,7 @@ export default function PhoneCameraPage() {
         </div>
       </header>
 
-      {/* 3. ПАНЕЛЬ ВЫБОРА РОЛИ ТЕЛЕФОНА (МУЛЬТИ-КАМЕРА ДО 3 ТЕЛЕФОНОВ) */}
+      {/* 4. ПАНЕЛЬ ВЫБОРА РОЛИ ТЕЛЕФОНА (МУЛЬТИ-КАМЕРА ДО 3 ТЕЛЕФОНОВ) */}
       <div className="phone-cam-slots-bar">
         <span className="slots-title">Позиция смартфона:</span>
         <div className="slots-pills">
@@ -470,8 +679,8 @@ export default function PhoneCameraPage() {
         </div>
       )}
 
-      {/* 4. ЭКРАН ВИДЕОПОТОКА С КАМЕРЫ */}
-      <main className="phone-cam-viewport">
+      {/* 5. ЭКРАН ВИДЕОПОТОКА С КАМЕРЫ С ИНТЕРАКТИВНЫМ ОВЕРЛЕЕМ ЗАПУСКА */}
+      <main className="phone-cam-viewport" onClick={handleViewportTap}>
         <video
           ref={videoRef}
           playsInline
@@ -480,6 +689,20 @@ export default function PhoneCameraPage() {
           className="phone-cam-video"
           onTimeUpdate={() => { frameCountRef.current++; }}
         />
+
+        {/* Интерактивный оверлей для запуска камеры касанием (обходит блокировку Autoplay мобильных браузеров) */}
+        {!isStreamFullyLive && (
+          <div className="phone-cam-tap-overlay">
+            <button type="button" className="tap-play-btn" onClick={(e) => { e.stopPropagation(); handleViewportTap(); }}>
+              🎥 Коснитесь для включения камеры
+            </button>
+            <span className="tap-play-hint">
+              {permissionState === 'denied'
+                ? '⚠️ Доступ отклонен браузером. Нажмите значок замочка 🔒 в строке адреса.'
+                : 'Нажмите в любой точке экрана для передачи видео в 3D Додзё'}
+            </span>
+          </div>
+        )}
 
         {/* Сетка эмбусэн прицеливания */}
         <div className="phone-cam-reticle">
@@ -515,12 +738,12 @@ export default function PhoneCameraPage() {
           <div className="telemetry-pill">
             <span>{deviceLabel}</span>
             <span>{facingMode === 'environment' ? 'Основная' : 'Селфи'}</span>
-            <span>{fps} FPS</span>
+            <span>{isStreamFullyLive ? `${fps} FPS` : 'Камера ожидает'}</span>
           </div>
         </div>
       </main>
 
-      {/* 5. ПАНЕЛЬ УПРАВЛЕНИЯ НА ТЕЛЕФОНЕ */}
+      {/* 6. ПАНЕЛЬ УПРАВЛЕНИЯ НА ТЕЛЕФОНЕ */}
       <footer className="phone-cam-controls">
         <button
           type="button"
@@ -538,11 +761,9 @@ export default function PhoneCameraPage() {
           <button
             type="button"
             className="btn btn-phone-action btn-gold"
-            onClick={() => {
-              startCamera();
-            }}
+            onClick={handleViewportTap}
           >
-            ⚡ Обновить камеру
+            ⚡ {isStreamFullyLive ? 'Обновить камеру' : 'Включить камеру'}
           </button>
         </div>
       </footer>

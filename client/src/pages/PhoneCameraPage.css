@@ -484,3 +484,156 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes pulse-btn {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 197, 123, 0.7); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(232, 197, 123, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(232, 197, 123, 0); }
+}
+
+.btn-pulse {
+  animation: pulse-btn 2s infinite;
+}
+
+/* Интерактивный оверлей поверх видоискателя для запуска камеры */
+.phone-cam-tap-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 8, 7, 0.82);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  z-index: 25;
+  cursor: pointer;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.tap-play-btn {
+  background: linear-gradient(135deg, #e8c57b 0%, #c5a059 100%);
+  color: #12100e;
+  border: none;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 1rem 1.8rem;
+  border-radius: 40px;
+  box-shadow: 0 0 25px rgba(232, 197, 123, 0.45);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  animation: pulse-btn 2s infinite ease-in-out;
+}
+
+.tap-play-btn:active {
+  transform: scale(0.96);
+}
+
+.tap-play-hint {
+  font-size: 0.82rem;
+  color: #e5e0d8;
+  max-width: 340px;
+  line-height: 1.4;
+}
+
+/* Специальное руководство при незащищенном HTTP */
+.phone-cam-insecure-guide {
+  background: linear-gradient(135deg, rgba(38, 24, 12, 0.98), rgba(48, 30, 16, 0.98));
+  border-bottom: 2px solid #f59e0b;
+  padding: 0.85rem 1rem;
+  z-index: 45;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+.insecure-guide-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.insecure-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.insecure-title-box strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #fbbf24;
+  margin-bottom: 3px;
+}
+
+.insecure-title-box p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.35;
+}
+
+.insecure-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.insecure-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.step-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #000;
+  font-weight: 700;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-body {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.74rem;
+  color: #f3f4f6;
+}
+
+.btn-xs {
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.btn-outline-gold {
+  background: rgba(232, 197, 123, 0.12);
+  border: 1px solid var(--gold-bright, #e8c57b);
+  color: var(--gold-bright, #e8c57b);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline-gold:hover {
+  background: var(--gold-bright, #e8c57b);
+  color: #12100e;
+}
+
+.insecure-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+

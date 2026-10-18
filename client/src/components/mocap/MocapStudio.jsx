@@ -306,10 +306,21 @@ export default function MocapStudio() {
 
       if (targetVideo) {
         targetVideo.srcObject = stream;
-        targetVideo.onloadedmetadata = () => {
+        targetVideo.muted = true;
+        targetVideo.defaultMuted = true;
+        targetVideo.playsInline = true;
+        targetVideo.setAttribute('playsinline', 'true');
+        targetVideo.setAttribute('webkit-playsinline', 'true');
+        targetVideo.setAttribute('autoplay', 'true');
+        targetVideo.setAttribute('muted', 'true');
+
+        const playStream = () => {
           targetVideo.play().catch((e) => console.warn('Autoplay предупреждение:', e));
           setCameraActive(true);
         };
+        targetVideo.onloadedmetadata = playStream;
+        targetVideo.oncanplay = playStream;
+        playStream();
       }
     };
 
@@ -929,6 +940,7 @@ export default function MocapStudio() {
                 ref={phoneVideo1Ref}
                 playsInline
                 autoPlay
+                muted
                 className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 1 ? 'active' : 'hidden'}`}
               />
 
@@ -937,6 +949,7 @@ export default function MocapStudio() {
                 ref={phoneVideo2Ref}
                 playsInline
                 autoPlay
+                muted
                 className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 2 ? 'active' : 'hidden'}`}
               />
 
@@ -945,6 +958,7 @@ export default function MocapStudio() {
                 ref={phoneVideo3Ref}
                 playsInline
                 autoPlay
+                muted
                 className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 3 ? 'active' : 'hidden'}`}
               />
 
@@ -1158,7 +1172,7 @@ export default function MocapStudio() {
             </div>
 
             <div className="qr-perm-notice">
-              🔒 <strong>Важно:</strong> При открытии страницы на телефоне разрешите браузеру доступ к видеокамере.
+              🔒 <strong>Важно:</strong> При открытии страницы на телефоне коснитесь экрана для активации камеры. Если мобильный Chrome блокирует камеру на HTTP, на странице телефона доступна 1-минутная инструкция со флагом Chrome.
             </div>
           </div>
         </div>
