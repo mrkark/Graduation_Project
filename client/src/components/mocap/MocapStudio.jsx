@@ -869,196 +869,124 @@ export default function MocapStudio() {
         </div>
       )}
 
-      {/* ПАНЕЛЬ УПРАВЛЕНИЯ РАСКЛАДКОЙ И БУНКАЙ РЕЖИМАМИ */}
+      {/* 2. ПАНЕЛЬ ПЕРЕКЛЮЧЕНИЯ РАСКЛАДКИ РАБОЧЕЙ ОБЛАСТИ */}
       <div className="mocap-layout-toolbar">
         <div className="layout-btn-group">
           <button
             type="button"
             className={`layout-pill ${workspaceLayout === 'split' ? 'active' : ''}`}
             onClick={() => setWorkspaceLayout('split')}
+            title="Сбалансированный вид: 3D Додзё и видео видоискателя 50/50"
           >
-            ⚖️ 50 / 50
+            ⚖️ Баланс (50/50)
           </button>
           <button
             type="button"
             className={`layout-pill ${workspaceLayout === 'camFocus' ? 'active' : ''}`}
             onClick={() => setWorkspaceLayout('camFocus')}
+            title="Фокус на камере: увеличенный видоискатель для точной калибровки стоек"
           >
-            📹 Фокус Видео (70%)
+            📹 Фокус: Камера
           </button>
           <button
             type="button"
             className={`layout-pill ${workspaceLayout === 'dojoFocus' ? 'active' : ''}`}
             onClick={() => setWorkspaceLayout('dojoFocus')}
+            title="Фокус на 3D Додзё: детальный 3D-разбор движений мастера"
           >
-            🥋 Фокус 3D (70%)
+            🥋 Фокус: 3D Додзё
+          </button>
+          <button
+            type="button"
+            className={`layout-pill ${isViewfinderFullscreen ? 'active' : ''}`}
+            onClick={() => setIsViewfinderFullscreen(!isViewfinderFullscreen)}
+            title="Полноэкранный видоискатель для съемки с расстояния 2-3 метра"
+          >
+            {isViewfinderFullscreen ? '✖ Свернуть видоискатель' : '⛶ Во весь экран'}
           </button>
         </div>
-
-        {/* Переключатель участников Бункай (Тори, Укэ, Парный) */}
-        <div className="performer-selector-group">
-          <span className="performer-label">Участники Бункай:</span>
-          <button
-            type="button"
-            className={`performer-pill ${performerMode === 'tori' ? 'active' : ''}`}
-            onClick={() => setPerformerMode('tori')}
-          >
-            🥋 Тори (Белое ги)
-          </button>
-          <button
-            type="button"
-            className={`performer-pill ${performerMode === 'uke' ? 'active' : ''}`}
-            onClick={() => setPerformerMode('uke')}
-          >
-            🥊 Укэ (Индиго ги)
-          </button>
-          <button
-            type="button"
-            className={`performer-pill ${performerMode === 'dual' ? 'active' : ''}`}
-            onClick={() => setPerformerMode('dual')}
-          >
-            ⚔️ Бункай спаринг (Тори + Укэ)
-          </button>
-        </div>
-
-        {/* Кнопка калибровки камер */}
-        <button
-          type="button"
-          className="btn btn-sm btn-gold"
-          onClick={handleCalibrateCameras}
-          disabled={calibrationActive}
-          title="Сброс сенсорного шума и привязка к базовой стойке Камаэ"
-        >
-          🎯 Калибровка камер
-        </button>
       </div>
 
       {/* 2. РАБОЧАЯ ОБЛАСТЬ: 3D ДОДЗЁ + ВИДОИСКАТЕЛЬ/ТАЙМЛАЙН */}
       <div className={`mocap-workspace layout-${workspaceLayout}`}>
-        {/* ЛЕВАЯ КОЛОНКА: ТРАДИЦИОННОЕ 3D ДОДЗЁ С МАСТЕРОМ */}
-        <main className="mocap-3d-stage">
-          <div className="stage-top-hud">
-            <div className="hud-badge hud-badge--stance">
-              <span className="hud-badge__jp">{karateMetrics.stanceJp}</span>
-              <span className="hud-badge__ru">{karateMetrics.stanceName}</span>
-            </div>
+        {/* ГЛАВНАЯ 3D АРЕНА (THREE.JS): ТОЛЬКО 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
+        <div className="mocap-3d-stage">
+          <Canvas
+            shadows
+            camera={{ position: [0, 1.4, 3.4], fov: 42 }}
+            style={{ width: '100%', height: '100%', background: '#0a0807' }}
+          >
+            <ambientLight intensity={0.7} />
+            <directionalLight
+              position={[4, 7, 5]}
+              intensity={1.2}
+              castShadow
+              shadow-mapSize={[1024, 1024]}
+            />
+            <pointLight position={[-3, 2, -2]} intensity={0.5} color="#e8c57b" />
 
-            <div className="stage-hud-controls">
+            <Suspense fallback={null}>
+              <TraditionalDojo />
+
+              {/* 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
+              <MocapPuppetAvatar
+                boneRotations={boneRotations}
+                poseDataRef={latestPoseRef}
+                mirrorMode={mirrorMode}
+                detectedStance={karateMetrics.detectedStance}
+                position={[0, 0, 0]}
+                rotation={[0, 0, 0]}
+                xrayMode={false}
+              />
+
+              <ContactShadows opacity={0.7} scale={6} blur={1.5} far={4} color="#000000" />
+            </Suspense>
+
+            <OrbitControls
+              makeDefault
+              minDistance={1.0}
+              maxDistance={7}
+              maxPolarAngle={Math.PI / 2 - 0.05}
+              target={[0, 0.9, 0]}
+            />
+          </Canvas>
+
+          {/* HUD ТЕЛЕМЕТРИИ В 3D СЦЕНЕ */}
+          <div className="mocap-hud-overlay">
+            <div className="hud-badge-group">
+              <div className="hud-badge stance">
+                <span className="hud-badge__jp">{karateMetrics.stanceJp}</span>
+                <strong className="hud-badge__val">{karateMetrics.stanceName}</strong>
+              </div>
+
+              <div className="hud-badge action">
+                <span className="hud-badge__jp">技 · Техника</span>
+                <strong className="hud-badge__val">{karateMetrics.actionTitle}</strong>
+              </div>
+
+              {/* Переключатель зеркального отображения движений */}
               <button
                 type="button"
-                className={`btn btn-xs ${mirrorMode ? 'btn-gold' : 'btn-subtle'}`}
+                className={`hud-mode-pill ${mirrorMode ? 'is-active' : ''}`}
                 onClick={() => setMirrorMode((m) => !m)}
-                title="Зеркальный режим отображения (как перед зеркалом)"
+                title="Переключить режим отражения аватара (зеркало Додзё)"
               >
-                🪞 Зеркало: {mirrorMode ? 'ВКЛ' : 'ВЫКЛ'}
+                {mirrorMode ? '🪞 Зеркало (Вкл)' : '🎯 Прямой режим'}
               </button>
-
-              <button
-                type="button"
-                className="btn btn-xs btn-subtle"
-                onClick={() => {
-                  if (jsonInputRef.current) jsonInputRef.current.click();
-                }}
-              >
-                📂 Загрузить 3D JSON
-              </button>
-              <input
-                ref={jsonInputRef}
-                type="file"
-                accept=".json"
-                style={{ display: 'none' }}
-                onChange={handleJsonImport}
-              />
             </div>
-          </div>
 
-          <div className="stage-canvas-wrap">
-            <Canvas
-              shadows
-              camera={{ position: [0, 1.4, 3.8], fov: 45 }}
-              className="three-canvas"
-            >
-              <Suspense fallback={null}>
-                <TraditionalDojo />
-
-                {/* Рендеринг мастеров каратэ Шотокан с анатомическим 64-костным ригом и пальцами */}
-                {performerMode === 'dual' ? (
-                  <>
-                    {/* Тори (Защитник/Исполнитель техники) */}
-                    <MocapPuppetAvatar
-                      poseDataRef={latestPoseRef}
-                      boneRotations={boneRotations}
-                      mirrorMode={mirrorMode}
-                      detectedStance={karateMetrics.detectedStance}
-                      position={[-0.85, rootYOffset, 0]}
-                      rotation={[0, Math.PI / 4, 0]}
-                      scale={1.0}
-                      role="tori"
-                    />
-                    {/* Укэ (Атакующий партнер) */}
-                    <MocapPuppetAvatar
-                      poseDataRef={latestPoseRef}
-                      boneRotations={boneRotations}
-                      mirrorMode={!mirrorMode}
-                      detectedStance={karateMetrics.detectedStance}
-                      position={[0.85, rootYOffset, 0]}
-                      rotation={[0, -Math.PI / 4, 0]}
-                      scale={1.0}
-                      role="uke"
-                    />
-                  </>
-                ) : (
-                  <MocapPuppetAvatar
-                    poseDataRef={latestPoseRef}
-                    boneRotations={boneRotations}
-                    mirrorMode={mirrorMode}
-                    detectedStance={karateMetrics.detectedStance}
-                    position={[0, rootYOffset, 0]}
-                    scale={1.0}
-                    role={performerMode}
-                  />
-                )}
-
-                <ContactShadows
-                  position={[0, 0.01, 0]}
-                  opacity={0.65}
-                  scale={6}
-                  blur={1.8}
-                  far={3}
+            <div className="hud-score-card">
+              <span className="hud-score-label">SENSEI SCORE</span>
+              <span className="hud-score-num">{bodyDetected ? `${karateMetrics.overallScore}%` : '—'}</span>
+              <div className="hud-score-bar">
+                <div
+                  className="hud-score-fill"
+                  style={{ width: `${bodyDetected ? karateMetrics.overallScore : 0}%` }}
                 />
-              </Suspense>
-              <OrbitControls
-                makeDefault
-                target={[0, 0.9, 0]}
-                minDistance={1.2}
-                maxDistance={8}
-                maxPolarAngle={Math.PI / 2 + 0.05}
-              />
-            </Canvas>
-          </div>
-
-          {/* Нижняя биомеханическая телеметрия */}
-          <div className="stage-bottom-hud">
-            <div className="mocap-hud-grid">
-              <div className="hud-cell">
-                <span className="hud-cell__label">Стойка</span>
-                <span className="hud-cell__val gold">{karateMetrics.stanceName.split(' ')[0]}</span>
-              </div>
-              <div className="hud-cell">
-                <span className="hud-cell__label">Действие</span>
-                <span className="hud-cell__val">{karateMetrics.actionTitle}</span>
-              </div>
-              <div className="hud-cell">
-                <span className="hud-cell__label">Хикитэ (Замах)</span>
-                <span className="hud-cell__val">{bodyDetected ? `${karateMetrics.hikiteScore}%` : '—'}</span>
-              </div>
-              <div className="hud-cell">
-                <span className="hud-cell__label">Биомеханика</span>
-                <span className="hud-cell__val">{bodyDetected ? `${karateMetrics.overallScore} / 100` : '—'}</span>
               </div>
             </div>
           </div>
-        </main>
+        </div>
 
         {/* ПРАВАЯ КОЛОНКА: РЕЖИМ A (ВИДЕО) ИЛИ РЕЖИМ B (КАМЕРЫ) */}
         <aside className="mocap-viewfinder-panel">
@@ -1199,6 +1127,15 @@ export default function MocapStudio() {
                   </div>
 
                   <div className="viewfinder-topbar-actions">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-subtle"
+                      onClick={handleCalibrateCameras}
+                      disabled={calibrationActive}
+                      title="Сброс сенсорного шума и привязка к базовой стойке Камаэ"
+                    >
+                      🎯 Калибровка
+                    </button>
                     {sourceMode === 'phone' && (
                       <button
                         type="button"
@@ -1398,6 +1335,22 @@ export default function MocapStudio() {
                     </button>
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  className="btn btn-subtle"
+                  onClick={() => jsonInputRef.current?.click()}
+                  title="Импорт файла bunkai-capture-json или bunkai-retargeted-animation"
+                >
+                  📂 Загрузить 3D JSON
+                </button>
+                <input
+                  ref={jsonInputRef}
+                  type="file"
+                  accept=".json"
+                  style={{ display: 'none' }}
+                  onChange={handleJsonImport}
+                />
               </div>
             </div>
           </div>
