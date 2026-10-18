@@ -1,15 +1,13 @@
 /**
  * Bunkai Explorer — AI Motion Capture & Karate Biomechanics Engine
  * 
- * Интеграция MediaPipe Pose (33 ключевые точки тела):
- * - Реальное отслеживание позы человека с веб-камеры или до 3 камер смартфонов
- * - Мульти-камерная триангуляция и слияние 3D-данных (фронт 0°, бок 90°, угол 45°)
- * - Построение полноценной 3D кинематической модели из объемных костей и суставов в Three.js
- * - Расчет 3D-углов суставов в градусах и радианах
- * - Распознавание канонических стоек каратэ (Дзэнкуцу, Киба, Кокуцу, Йой, Ганкаку)
- * - Детекция ударов и блоков (Ой-цуки, Гяку-цуки, Агэ-укэ, Гэдан-барай, Сюто-укэ, Маэ-гэри)
- * - Расчет оценки мастерства (Sensei Biomechanics Score 0-100%)
- * - Полноценный 3D-маппинг кватернионов костей для аватара
+ * Интеграция алгоритмов захвата движений и биомеханики из Karate Motion Studio:
+ * - Адаптивный 1€ (One-Euro) фильтр для устранения высокочастотного дрожания при сохранении резких ударов (Кимэ)
+ * - Анатомический клиренс грудной клетки (Torso Clearance) для исключения проваливания рук сквозь ребра
+ * - Поддержка захвата движений с 1, 2 или 3 камер смартфонов (0° Фронт, 90° Бок, 45° Угол)
+ * - Стереоскопическая 3D-триангуляция и слияние глубины (Front X, Y + Side Z depth)
+ * - Пиксель-в-пиксель наложение неонового 2D-скелета на видоискатель
+ * - Биомеханический анализ стоек каратэ (Дзэнкуцу, Киба, Кокуцу, Йой) и ударов
  */
 
 const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
@@ -17,53 +15,337 @@ const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.167
 let poseInstance = null;
 let poseLoadPromise = null;
 
+// ============================================================================
+// 1. АДАПТИВНЫЙ 1€ (ONE-EURO) ФИЛЬТР (Casiez et al., CHI 2012)
+// Точный порт из Karate Motion Studio (core/filters.py)
+// ============================================================================
+
+export class LowPassFilter {
+  constructor(alpha = 0.5) {
+    this.alpha = alpha;
+    this.s = null;
+    this.y = null;
+  }
+
+  filter(value, alpha = null) {
+    if (alpha !== null) this.alpha = alpha;
+    if (this.s === null) {
+      this.s = value;
+    } else {
+      this.s = this.alpha * value + (1.0 - this.alpha) * this.s;
+    }
+    this.y = value;
+    return this.s;
+  }
+
+  reset() {
+    this.s = null;
+    this.y = null;
+  }
+}
+
+export class OneEuroFilter {
+  /**
+   * Адаптивный фильтр 1€:
+   * - В покое: низкая частота среза полностью устраняет сенсорный шум и микродрожание
+   * - При резком ударе (Кимэ): частота среза расширяется пропорционально скорости (dx),
+   *   обеспечивая мгновенный отклик без фазового запаздывания.
+   */
+  constructor(freq = 30.0, minCutoff = 1.2, beta = 0.08, dCutoff = 1.0) {
+    this.freq = Math.max(1e-3, freq);
+    this.minCutoff = minCutoff;
+    this.beta = beta;
+    this.dCutoff = dCutoff;
+
+    this.xFilter = new LowPassFilter(this._alpha(minCutoff));
+    this.dxFilter = new LowPassFilter(this._alpha(dCutoff));
+    this.lastTime = null;
+  }
+
+  _alpha(cutoff) {
+    const tau = 1.0 / (2.0 * Math.PI * cutoff);
+    const te = 1.0 / this.freq;
+    return 1.0 / (1.0 + tau / te);
+  }
+
+  filter(x, timestamp = null) {
+    if (this.lastTime !== null && timestamp !== null) {
+      const dt = (timestamp - this.lastTime) / 1000.0;
+      if (dt > 1e-4) {
+        this.freq = 1.0 / dt;
+      }
+    }
+    this.lastTime = timestamp;
+
+    const prevX = this.xFilter.y;
+    const rawDiff = prevX === null ? 0.0 : Math.abs(x - prevX);
+    let dx = prevX === null ? 0.0 : (x - prevX) * this.freq;
+
+    // Подавление зоны нечувствительности для неподвижного бойца (deadband suppression)
+    if (rawDiff < 0.006) {
+      dx *= 0.15;
+    }
+
+    const edx = this.dxFilter.filter(dx, this._alpha(this.dCutoff));
+    const cutoff = this.minCutoff + this.beta * Math.abs(edx);
+    return this.xFilter.filter(x, this._alpha(cutoff));
+  }
+
+  reset() {
+    this.xFilter.reset();
+    this.dxFilter.reset();
+    this.lastTime = null;
+  }
+}
+
+export class Vector3DOneEuroFilter {
+  constructor(freq = 30.0, minCutoff = 1.2, beta = 0.08, dCutoff = 1.0) {
+    this.fx = new OneEuroFilter(freq, minCutoff, beta, dCutoff);
+    this.fy = new OneEuroFilter(freq, minCutoff, beta, dCutoff);
+    this.fz = new OneEuroFilter(freq, minCutoff, beta, dCutoff);
+  }
+
+  filter(pt, timestamp = null) {
+    if (!pt) return pt;
+    return [
+      this.fx.filter(pt[0], timestamp),
+      this.fy.filter(pt[1], timestamp),
+      this.fz.filter(pt[2], timestamp),
+    ];
+  }
+
+  reset() {
+    this.fx.reset();
+    this.fy.reset();
+    this.fz.reset();
+  }
+}
+
+// Банк 1€ фильтров для сглаживания 33 ключевых точек
+const landmark3DFilters = Array.from({ length: 33 }, () => new Vector3DOneEuroFilter(30.0, 1.2, 0.08, 1.0));
+const landmark2DFilters = Array.from({ length: 33 }, () => new Vector3DOneEuroFilter(30.0, 1.5, 0.06, 1.0));
+
+export function resetMocapFilters() {
+  landmark3DFilters.forEach((f) => f.reset());
+  landmark2DFilters.forEach((f) => f.reset());
+}
+
+// ============================================================================
+// 2. АНАТОМИЧЕСКИЙ КЛИРЕНС ГРУДНОЙ КЛЕТКИ (Torso Clearance)
+// Порт из Karate Motion Studio (core/mocap_tracker.py, lines 498–555)
+// ============================================================================
+
 /**
- * Иерархия соединений костей для построения объемной 3D-модели скелета в Three.js
+ * Исключает проваливание рук сквозь ребра и позвоночник при скрещивании рук
+ * перед грудью (блоки Агэ-укэ, Дзюдзи-укэ, исходные позиции и удары).
  */
-export const BONE_CONNECTIONS_3D = [
-  // Позвоночный столб и центральная линия (Chushin-sen)
-  { id: 'spine_lower', from: 'hipsMid', to: 'spineMid', color: '#f59e0b', radius: 0.032, label: 'Поясница' },
-  { id: 'spine_upper', from: 'spineMid', to: 'neck', color: '#f59e0b', radius: 0.030, label: 'Грудной отдел' },
-  { id: 'neck_head', from: 'neck', to: 'head', color: '#ffd700', radius: 0.026, label: 'Шея / Голова' },
+export function applyTorsoClearance(rawPts3D) {
+  if (
+    !rawPts3D ||
+    !rawPts3D.left_shoulder ||
+    !rawPts3D.right_shoulder ||
+    !rawPts3D.left_hip ||
+    !rawPts3D.right_hip
+  ) {
+    return rawPts3D;
+  }
 
-  // Плечевой пояс
-  { id: 'clavicle_l', from: 'neck', to: 'shoulderL', color: '#06b6d4', radius: 0.024, label: 'Левая ключица' },
-  { id: 'clavicle_r', from: 'neck', to: 'shoulderR', color: '#ef4444', radius: 0.024, label: 'Правая ключица' },
+  const l_sh = rawPts3D.left_shoulder;
+  const r_sh = rawPts3D.right_shoulder;
+  const l_hp = rawPts3D.left_hip;
+  const r_hp = rawPts3D.right_hip;
 
-  // Левая рука (Цвет Cyan / Изумруд)
-  { id: 'upper_arm_l', from: 'shoulderL', to: 'elbowL', color: '#06b6d4', radius: 0.026, label: 'Левое плечо' },
-  { id: 'lower_arm_l', from: 'elbowL', to: 'wristL', color: '#10b981', radius: 0.022, label: 'Левое предплечье' },
-  { id: 'hand_l', from: 'wristL', to: 'handL', color: '#34d399', radius: 0.018, label: 'Левая кисть' },
+  const mid_sh = [
+    (l_sh[0] + r_sh[0]) * 0.5,
+    (l_sh[1] + r_sh[1]) * 0.5,
+    (l_sh[2] + r_sh[2]) * 0.5,
+  ];
+  const mid_hp = [
+    (l_hp[0] + r_hp[0]) * 0.5,
+    (l_hp[1] + r_hp[1]) * 0.5,
+    (l_hp[2] + r_hp[2]) * 0.5,
+  ];
 
-  // Правая рука (Цвет Amber / Алый)
-  { id: 'upper_arm_r', from: 'shoulderR', to: 'elbowR', color: '#f59e0b', radius: 0.026, label: 'Правое плечо' },
-  { id: 'lower_arm_r', from: 'elbowR', to: 'wristR', color: '#ef4444', radius: 0.022, label: 'Правое предплечье' },
-  { id: 'hand_r', from: 'wristR', to: 'handR', color: '#f87171', radius: 0.018, label: 'Правая кисть' },
+  const v_spine = [
+    mid_sh[0] - mid_hp[0],
+    mid_sh[1] - mid_hp[1],
+    mid_sh[2] - mid_hp[2],
+  ];
+  const spine_len_sq =
+    v_spine[0] * v_spine[0] + v_spine[1] * v_spine[1] + v_spine[2] * v_spine[2];
 
-  // Тазовый пояс
-  { id: 'pelvis_l', from: 'hipsMid', to: 'hipL', color: '#06b6d4', radius: 0.032, label: 'Таз L' },
-  { id: 'pelvis_r', from: 'hipsMid', to: 'hipR', color: '#ef4444', radius: 0.032, label: 'Таз R' },
+  if (spine_len_sq <= 1e-4) return rawPts3D;
 
-  // Левая нога (Стойки и удары ногами)
-  { id: 'upper_leg_l', from: 'hipL', to: 'kneeL', color: '#06b6d4', radius: 0.035, label: 'Левое бедро' },
-  { id: 'lower_leg_l', from: 'kneeL', to: 'ankleL', color: '#10b981', radius: 0.028, label: 'Левая голень' },
-  { id: 'foot_l', from: 'ankleL', to: 'footL', color: '#34d399', radius: 0.022, label: 'Левая стопа' },
+  const spine_len = Math.sqrt(spine_len_sq);
+  const uy = [v_spine[0] / spine_len, v_spine[1] / spine_len, v_spine[2] / spine_len];
 
-  // Правая нога
-  { id: 'upper_leg_r', from: 'hipR', to: 'kneeR', color: '#f59e0b', radius: 0.035, label: 'Правое бедро' },
-  { id: 'lower_leg_r', from: 'kneeR', to: 'ankleR', color: '#ef4444', radius: 0.028, label: 'Правая голень' },
-  { id: 'foot_r', from: 'ankleR', to: 'footR', color: '#f87171', radius: 0.022, label: 'Правая стопа' },
-];
+  const v_lat = [l_sh[0] - r_sh[0], l_sh[1] - r_sh[1], l_sh[2] - r_sh[2]];
+  const dot_lat_uy = v_lat[0] * uy[0] + v_lat[1] * uy[1] + v_lat[2] * uy[2];
+  let ux = [
+    v_lat[0] - dot_lat_uy * uy[0],
+    v_lat[1] - dot_lat_uy * uy[1],
+    v_lat[2] - dot_lat_uy * uy[2],
+  ];
+  const ux_norm = Math.hypot(ux[0], ux[1], ux[2]);
+  if (ux_norm <= 1e-4) return rawPts3D;
+
+  ux = [ux[0] / ux_norm, ux[1] / ux_norm, ux[2] / ux_norm];
+
+  // Нормаль вперед от грудины: uz = ux x uy
+  const uz = [
+    ux[1] * uy[2] - ux[2] * uy[1],
+    ux[2] * uy[0] - ux[0] * uy[2],
+    ux[0] * uy[1] - ux[1] * uy[0],
+  ];
+
+  const v_lat_norm = Math.hypot(v_lat[0], v_lat[1], v_lat[2]);
+  const ribcage_half_width = v_lat_norm * 0.55;
+
+  const armJoints = [
+    'left_elbow',
+    'left_wrist',
+    'right_elbow',
+    'right_wrist',
+    'left_index',
+    'right_index',
+  ];
+
+  const out = { ...rawPts3D };
+
+  for (const arm_j of armJoints) {
+    if (out[arm_j]) {
+      const pt = out[arm_j];
+      const v_pt = [pt[0] - mid_hp[0], pt[1] - mid_hp[1], pt[2] - mid_hp[2]];
+      const t =
+        (v_pt[0] * v_spine[0] + v_pt[1] * v_spine[1] + v_pt[2] * v_spine[2]) /
+        spine_len_sq;
+
+      // Применяется только к грудному отделу (t in [0.20, 1.08])
+      // Бедра и колени (t < 0.20) остаются свободными для касания руками
+      if (t >= 0.2 && t <= 1.08) {
+        const spine_center = [
+          mid_hp[0] + t * v_spine[0],
+          mid_hp[1] + t * v_spine[1],
+          mid_hp[2] + t * v_spine[2],
+        ];
+        const delta = [
+          pt[0] - spine_center[0],
+          pt[1] - spine_center[1],
+          pt[2] - spine_center[2],
+        ];
+        const dist_lateral = Math.abs(
+          delta[0] * ux[0] + delta[1] * ux[1] + delta[2] * ux[2]
+        );
+
+        if (dist_lateral < ribcage_half_width) {
+          const dist_along_normal =
+            delta[0] * uz[0] + delta[1] * uz[1] + delta[2] * uz[2];
+          const min_clearance = 0.08; // 8 см перед центральной линией позвоночника
+          if (dist_along_normal < min_clearance) {
+            const shift = min_clearance - dist_along_normal;
+            out[arm_j] = [
+              pt[0] + shift * uz[0],
+              pt[1] + shift * uz[1],
+              pt[2] + shift * uz[2],
+            ];
+          }
+        }
+      }
+    }
+  }
+
+  return out;
+}
 
 /**
- * Загрузка библиотеки MediaPipe Pose из CDN
+ * Применяет анатомический клиренс грудины напрямую к массиву 33 точек MediaPipe Pose
  */
+export function applyTorsoClearanceToLandmarks(worldLandmarks) {
+  if (!worldLandmarks || worldLandmarks.length < 33) return worldLandmarks;
+
+  const rawLS = worldLandmarks[11];
+  const rawRS = worldLandmarks[12];
+  const rawLH = worldLandmarks[23];
+  const rawRH = worldLandmarks[24];
+
+  if (!rawLS || !rawRS || !rawLH || !rawRH) return worldLandmarks;
+
+  // В координатах Three.js: X вправо, Y вверх (-raw.y), Z вперед (-raw.z)
+  const l_sh = [rawLS.x, -rawLS.y, -rawLS.z];
+  const r_sh = [rawRS.x, -rawRS.y, -rawRS.z];
+  const l_hp = [rawLH.x, -rawLH.y, -rawLH.z];
+  const r_hp = [rawRH.x, -rawRH.y, -rawRH.z];
+
+  const mid_sh = [(l_sh[0] + r_sh[0]) * 0.5, (l_sh[1] + r_sh[1]) * 0.5, (l_sh[2] + r_sh[2]) * 0.5];
+  const mid_hp = [(l_hp[0] + r_hp[0]) * 0.5, (l_hp[1] + r_hp[1]) * 0.5, (l_hp[2] + r_hp[2]) * 0.5];
+
+  const v_spine = [mid_sh[0] - mid_hp[0], mid_sh[1] - mid_hp[1], mid_sh[2] - mid_hp[2]];
+  const spine_len_sq = v_spine[0] * v_spine[0] + v_spine[1] * v_spine[1] + v_spine[2] * v_spine[2];
+  if (spine_len_sq <= 1e-4) return worldLandmarks;
+
+  const spine_len = Math.sqrt(spine_len_sq);
+  const uy = [v_spine[0] / spine_len, v_spine[1] / spine_len, v_spine[2] / spine_len];
+
+  const v_lat = [l_sh[0] - r_sh[0], l_sh[1] - r_sh[1], l_sh[2] - r_sh[2]];
+  const dot_lat_uy = v_lat[0] * uy[0] + v_lat[1] * uy[1] + v_lat[2] * uy[2];
+  let ux = [v_lat[0] - dot_lat_uy * uy[0], v_lat[1] - dot_lat_uy * uy[1], v_lat[2] - dot_lat_uy * uy[2]];
+  const ux_norm = Math.hypot(ux[0], ux[1], ux[2]);
+  if (ux_norm <= 1e-4) return worldLandmarks;
+  ux = [ux[0] / ux_norm, ux[1] / ux_norm, ux[2] / ux_norm];
+
+  const uz = [
+    ux[1] * uy[2] - ux[2] * uy[1],
+    ux[2] * uy[0] - ux[0] * uy[2],
+    ux[0] * uy[1] - ux[1] * uy[0],
+  ];
+
+  const ribcage_half_width = Math.hypot(v_lat[0], v_lat[1], v_lat[2]) * 0.55;
+  const out = worldLandmarks.map((p) => ({ ...p }));
+  const armIndices = [13, 14, 15, 16, 19, 20];
+
+  for (const idx of armIndices) {
+    const raw = out[idx];
+    if (!raw) continue;
+    const pt = [raw.x, -raw.y, -raw.z];
+    const v_pt = [pt[0] - mid_hp[0], pt[1] - mid_hp[1], pt[2] - mid_hp[2]];
+    const t = (v_pt[0] * v_spine[0] + v_pt[1] * v_spine[1] + v_pt[2] * v_spine[2]) / spine_len_sq;
+
+    if (t >= 0.20 && t <= 1.08) {
+      const spine_center = [
+        mid_hp[0] + t * v_spine[0],
+        mid_hp[1] + t * v_spine[1],
+        mid_hp[2] + t * v_spine[2],
+      ];
+      const delta = [pt[0] - spine_center[0], pt[1] - spine_center[1], pt[2] - spine_center[2]];
+      const dist_lateral = Math.abs(delta[0] * ux[0] + delta[1] * ux[1] + delta[2] * ux[2]);
+
+      if (dist_lateral < ribcage_half_width) {
+        const dist_along_normal = delta[0] * uz[0] + delta[1] * uz[1] + delta[2] * uz[2];
+        const min_clearance = 0.08;
+        if (dist_along_normal < min_clearance) {
+          const shift = min_clearance - dist_along_normal;
+          const cleared = [pt[0] + shift * uz[0], pt[1] + shift * uz[1], pt[2] + shift * uz[2]];
+          out[idx].x = cleared[0];
+          out[idx].y = -cleared[1];
+          out[idx].z = -cleared[2];
+        }
+      }
+    }
+  }
+
+  return out;
+}
+
+// ============================================================================
+// 3. ЗАГРУЗКА MEDIAPIPE POSE
+// ============================================================================
+
 export function loadMediaPipePose() {
   if (poseInstance) return Promise.resolve(poseInstance);
   if (poseLoadPromise) return poseLoadPromise;
 
   poseLoadPromise = new Promise((resolve, reject) => {
-    if (window.Pose) {
+    if (typeof window !== 'undefined' && window.Pose) {
       initPose();
       return;
     }
@@ -71,12 +353,10 @@ export function loadMediaPipePose() {
     const script = document.createElement('script');
     script.src = MEDIAPIPE_POSE_CDN;
     script.crossOrigin = 'anonymous';
-    script.onload = () => {
-      initPose();
-    };
+    script.onload = () => initPose();
     script.onerror = (err) => {
       console.error('Ошибка загрузки MediaPipe Pose CDN:', err);
-      reject(new Error('Не удалось загрузить библиотеку компьютерного зрения MediaPipe Pose'));
+      reject(new Error('Не удалось загрузить библиотеку MediaPipe Pose'));
     };
     document.head.appendChild(script);
 
@@ -106,9 +386,6 @@ export function loadMediaPipePose() {
   return poseLoadPromise;
 }
 
-/**
- * Расчет 3D угла между тремя точками (в градусах)
- */
 export function calculateAngle3D(p1, p2, p3) {
   if (!p1 || !p2 || !p3) return 180;
   const v1 = { x: p1.x - p2.x, y: p1.y - p2.y, z: (p1.z || 0) - (p2.z || 0) };
@@ -122,27 +399,11 @@ export function calculateAngle3D(p1, p2, p3) {
   return Math.round((Math.acos(cosine) * 180) / Math.PI);
 }
 
-/**
- * Адаптивное мульти-камерное слияние и 3D-триангуляция данных для 1, 2 или 3 камер:
- * 
- * 1 КАМЕРА:
- * - Фронт (0°): точные X и Y, моно-глубина Z.
- * - Бок (90°): разворачивает ось X в глубину Z, проецирует позу на аватар.
- * - Угол (45°): деротирует диагональную проекцию на 45°.
- * 
- * 2 КАМЕРЫ (Стереоскопическая триангуляция):
- * - Фронт (1) + Бок (2): ЗОЛОТОЙ СТАНДАРТ MoCap.
- *   X и Y берутся с фронтальной камеры, а Z (глубина ударов и стоек) — напрямую
- *   с боковой камеры. Устраняет погрешности монокулярной оценки глубины!
- * - Фронт (1) + Угол (3): заполнение слепых зон перекрытия рук и ног.
- * - Бок (2) + Угол (3): глубина с боковой камеры + восстановление ширины с угловой.
- * 
- * 3 КАМЕРЫ (Полный захват 360°):
- * - Фронт (0°) + Бок (90°) + Угол (45°).
- * - Слияние с весами достоверности видимости (visibility confidence weighting).
- * - Устранение перекрытий конечностей (окклюзий) и физическая глубина Z.
- */
-export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
+// ============================================================================
+// 4. МУЛЬТИ-КАМЕРНОЕ СЛИЯНИЕ ДЛЯ 1, 2 ИЛИ 3 КАМЕР (С 1€ ФИЛЬТРАЦИЕЙ)
+// ============================================================================
+
+export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
   const c1 = cameraFeeds[1]; // Фронт (0°)
   const c2 = cameraFeeds[2]; // Бок (90°)
   const c3 = cameraFeeds[3]; // Угол (45°)
@@ -153,6 +414,12 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
 
   if (activeSlots.length === 0) return null;
 
+  const curTime = timestamp || Date.now();
+
+  let fusedLmsRaw = [];
+  let fusedWlmsRaw = [];
+  let cameraMode = 'single_front';
+
   // --- СЛУЧАЙ 1: РОВНО 1 КАМЕРА ---
   if (activeSlots.length === 1) {
     const slot = activeSlots[0];
@@ -161,21 +428,14 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
     const wlms = feed.worldLandmarks || lms;
 
     if (slot === 1) {
-      // Фронтальная камера (или ПК веб-камера) — прямая передача данных
-      return {
-        landmarks: lms,
-        worldLandmarks: wlms,
-        fused: false,
-        cameraMode: 'single_front',
-        activeCameras: [1],
-      };
-    }
-
-    if (slot === 2) {
-      // Только боковая камера (90°): горизонтальная ось камеры X соответствует мировой глубине Z!
-      const rotatedLms = [];
-      const rotatedWlms = [];
+      // 1 камера: Фронтальная
+      fusedLmsRaw = lms;
+      fusedWlmsRaw = wlms;
+      cameraMode = 'single_front';
+    } else if (slot === 2) {
+      // 1 камера: Боковая (90°) — разворачиваем X в мировую глубину Z
       const hipX = ((wlms[23]?.x ?? 0) + (wlms[24]?.x ?? 0)) * 0.5;
+      cameraMode = 'single_side';
 
       for (let i = 0; i < 33; i++) {
         const p = lms[i];
@@ -183,36 +443,14 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
         const depthZ = (w.x - hipX) * 1.15;
         const lateralX = -(w.z || 0);
 
-        rotatedLms.push({
-          x: p.x,
-          y: p.y,
-          z: depthZ,
-          visibility: p.visibility ?? 1,
-        });
-
-        rotatedWlms.push({
-          x: lateralX,
-          y: w.y,
-          z: depthZ,
-          visibility: w.visibility ?? 1,
-        });
+        fusedLmsRaw.push({ x: p.x, y: p.y, z: depthZ, visibility: p.visibility ?? 1 });
+        fusedWlmsRaw.push({ x: lateralX, y: w.y, z: depthZ, visibility: w.visibility ?? 1 });
       }
-
-      return {
-        landmarks: rotatedLms,
-        worldLandmarks: rotatedWlms,
-        fused: true,
-        cameraMode: 'single_side',
-        activeCameras: [2],
-      };
-    }
-
-    if (slot === 3) {
-      // Только угловая камера (45°): вращение вокруг Y на -45°
+    } else if (slot === 3) {
+      // 1 камера: Угловая (45°)
       const cos45 = 0.7071;
       const sin45 = 0.7071;
-      const rotatedLms = [];
-      const rotatedWlms = [];
+      cameraMode = 'single_angle';
 
       for (let i = 0; i < 33; i++) {
         const p = lms[i];
@@ -220,148 +458,268 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
         const rx = w.x * cos45 + (w.z || 0) * sin45;
         const rz = -w.x * sin45 + (w.z || 0) * cos45;
 
-        rotatedLms.push({ ...p, z: rz });
-        rotatedWlms.push({ x: rx, y: w.y, z: rz, visibility: w.visibility ?? 1 });
+        fusedLmsRaw.push({ ...p, z: rz });
+        fusedWlmsRaw.push({ x: rx, y: w.y, z: rz, visibility: w.visibility ?? 1 });
+      }
+    }
+  } else {
+    // --- СЛУЧАЙ 2 И 3: МУЛЬТИ-КАМЕРНЫЙ ЗАХВАТ (2 ИЛИ 3 КАМЕРЫ) ---
+    const hasC1 = Boolean(c1?.landmarks);
+    const hasC2 = Boolean(c2?.landmarks);
+    const hasC3 = Boolean(c3?.landmarks);
+
+    const c2_w = c2?.worldLandmarks;
+    const c2_hipX = c2_w && c2_w[23] && c2_w[24]
+      ? (c2_w[23].x + c2_w[24].x) * 0.5
+      : 0;
+
+    for (let i = 0; i < 33; i++) {
+      const p1 = c1?.landmarks?.[i];
+      const w1 = c1?.worldLandmarks?.[i];
+      const vis1 = p1?.visibility ?? 0;
+
+      const p2 = c2?.landmarks?.[i];
+      const w2 = c2?.worldLandmarks?.[i];
+      const vis2 = p2?.visibility ?? 0;
+
+      const p3 = c3?.landmarks?.[i];
+      const w3 = c3?.worldLandmarks?.[i];
+      const vis3 = p3?.visibility ?? 0;
+
+      // 1. Определение координаты X (Ширина):
+      // Приоритет фронтальной камере; при перекрытиях берется угловая или боковая
+      let fx = 0.5;
+      let wx = 0.0;
+      if (hasC1 && vis1 >= 0.35) {
+        fx = p1.x;
+        wx = w1.x;
+      } else if (hasC3 && vis3 > 0.45) {
+        fx = p3.x;
+        wx = (w3.x + (w3.z || 0)) * 0.7071;
+      } else if (hasC2 && vis2 > 0.45) {
+        fx = (p2.z ?? 0) * 0.5 + 0.5;
+        wx = -(w2.z || 0);
+      } else {
+        fx = p1?.x ?? p3?.x ?? p2?.x ?? 0.5;
+        wx = w1?.x ?? w3?.x ?? w2?.x ?? 0.0;
       }
 
-      return {
-        landmarks: rotatedLms,
-        worldLandmarks: rotatedWlms,
-        fused: true,
-        cameraMode: 'single_angle',
-        activeCameras: [3],
-      };
+      // 2. Определение координаты Y (Высота):
+      let totalVisY = 0;
+      let sumFy = 0;
+      let sumWy = 0;
+      if (hasC1 && p1) { sumFy += p1.y * Math.max(0.2, vis1); sumWy += w1.y * Math.max(0.2, vis1); totalVisY += Math.max(0.2, vis1); }
+      if (hasC2 && p2) { sumFy += p2.y * Math.max(0.2, vis2); sumWy += w2.y * Math.max(0.2, vis2); totalVisY += Math.max(0.2, vis2); }
+      if (hasC3 && p3) { sumFy += p3.y * Math.max(0.2, vis3); sumWy += w3.y * Math.max(0.2, vis3); totalVisY += Math.max(0.2, vis3); }
+
+      const fy = totalVisY > 0 ? sumFy / totalVisY : (p1?.y ?? p2?.y ?? p3?.y ?? 0.5);
+      const wy = totalVisY > 0 ? sumWy / totalVisY : (w1?.y ?? w2?.y ?? w3?.y ?? 0.0);
+
+      // 3. Определение координаты Z (Физическая глубина стойки / удара):
+      // Боковая камера дает прямое физическое измерение глубины!
+      let fz = 0.0;
+      let wz = 0.0;
+      if (hasC2 && vis2 >= 0.28) {
+        const physicalDepthZ = (w2.x - c2_hipX) * 1.15;
+        wz = (hasC1 && vis1 > 0.5) ? (physicalDepthZ * 0.85 + w1.z * 0.15) : physicalDepthZ;
+        fz = wz;
+      } else if (hasC3 && vis3 >= 0.38) {
+        const angleDepthZ = (-w3.x + (w3.z || 0)) * 0.7071;
+        wz = (hasC1 && vis1 > 0.45) ? (angleDepthZ * 0.65 + w1.z * 0.35) : angleDepthZ;
+        fz = wz;
+      } else if (hasC1) {
+        fz = p1.z || 0;
+        wz = w1.z || 0;
+      }
+
+      const maxVis = Math.max(vis1, vis2, vis3);
+      fusedLmsRaw.push({ x: fx, y: fy, z: fz, visibility: maxVis });
+      fusedWlmsRaw.push({ x: wx, y: wy, z: wz, visibility: maxVis });
     }
+
+    cameraMode = activeSlots.length === 3
+      ? 'triangulation_3cam'
+      : (activeSlots.includes(1) && activeSlots.includes(2))
+        ? 'stereo_front_side'
+        : (activeSlots.includes(1) && activeSlots.includes(3))
+          ? 'stereo_front_angle'
+          : 'stereo_side_angle';
   }
 
-  // --- СЛУЧАЙ 2 И 3: МУЛЬТИ-КАМЕРНОЕ СЛИЯНИЕ (2 ИЛИ 3 КАМЕРЫ) ---
-  const fusedLms = [];
-  const fusedWlms = [];
-
-  const c2_w = c2?.worldLandmarks;
-  const c2_hipX = c2_w && c2_w[23] && c2_w[24]
-    ? (c2_w[23].x + c2_w[24].x) * 0.5
-    : 0;
-
-  const hasC1 = Boolean(c1?.landmarks);
-  const hasC2 = Boolean(c2?.landmarks);
-  const hasC3 = Boolean(c3?.landmarks);
+  // --- 4. ПРИМЕНЕНИЕ АДАПТИВНОГО 1€ ФИЛЬТРА КО ВСЕМ ТОЧКАМ ---
+  const filteredLms = [];
+  const filteredWlms = [];
 
   for (let i = 0; i < 33; i++) {
-    const p1 = c1?.landmarks?.[i];
-    const w1 = c1?.worldLandmarks?.[i];
-    const vis1 = p1?.visibility ?? 0;
+    const p2 = fusedLmsRaw[i];
+    const p3 = fusedWlmsRaw[i];
 
-    const p2 = c2?.landmarks?.[i];
-    const w2 = c2?.worldLandmarks?.[i];
-    const vis2 = p2?.visibility ?? 0;
-
-    const p3 = c3?.landmarks?.[i];
-    const w3 = c3?.worldLandmarks?.[i];
-    const vis3 = p3?.visibility ?? 0;
-
-    // 1. ОПРЕДЕЛЕНИЕ X (Ширина):
-    // Приоритет отдается фронтальной камере (1). Если точка на фронте перекрыта (vis1 < 0.4),
-    // восстанавливаем X из угловой камеры (3) или боковой (2).
-    let fx = 0.5;
-    let wx = 0.0;
-
-    if (hasC1 && vis1 >= 0.35) {
-      fx = p1.x;
-      wx = w1.x;
-    } else if (hasC3 && vis3 > 0.45) {
-      fx = p3.x;
-      wx = (w3.x + (w3.z || 0)) * 0.7071;
-    } else if (hasC2 && vis2 > 0.45) {
-      fx = (p2.z ?? 0) * 0.5 + 0.5;
-      wx = -(w2.z || 0);
-    } else {
-      fx = p1?.x ?? p3?.x ?? p2?.x ?? 0.5;
-      wx = w1?.x ?? w3?.x ?? w2?.x ?? 0.0;
-    }
-
-    // 2. ОПРЕДЕЛЕНИЕ Y (Высота):
-    // Взвешенное среднее по всем доступным камерам с учетом качества детекции
-    let totalVisY = 0;
-    let sumFy = 0;
-    let sumWy = 0;
-
-    if (hasC1 && p1) { sumFy += p1.y * Math.max(0.2, vis1); sumWy += w1.y * Math.max(0.2, vis1); totalVisY += Math.max(0.2, vis1); }
-    if (hasC2 && p2) { sumFy += p2.y * Math.max(0.2, vis2); sumWy += w2.y * Math.max(0.2, vis2); totalVisY += Math.max(0.2, vis2); }
-    if (hasC3 && p3) { sumFy += p3.y * Math.max(0.2, vis3); sumWy += w3.y * Math.max(0.2, vis3); totalVisY += Math.max(0.2, vis3); }
-
-    const fy = totalVisY > 0 ? sumFy / totalVisY : (p1?.y ?? p2?.y ?? p3?.y ?? 0.5);
-    const wy = totalVisY > 0 ? sumWy / totalVisY : (w1?.y ?? w2?.y ?? w3?.y ?? 0.0);
-
-    // 3. ОПРЕДЕЛЕНИЕ Z (Физическая глубина Додзё):
-    // Боковая камера (2) дает ПРЯМОЕ измерение физической глубины!
-    let fz = 0.0;
-    let wz = 0.0;
-
-    if (hasC2 && vis2 >= 0.30) {
-      const physicalDepthZ = (w2.x - c2_hipX) * 1.15;
-      fz = physicalDepthZ;
-      wz = physicalDepthZ;
-
-      if (hasC1 && vis1 > 0.5) {
-        wz = physicalDepthZ * 0.85 + w1.z * 0.15;
-        fz = wz;
-      }
-    } else if (hasC3 && vis3 >= 0.40) {
-      const angleDepthZ = (-w3.x + (w3.z || 0)) * 0.7071;
-      wz = hasC1 ? (angleDepthZ * 0.65 + w1.z * 0.35) : angleDepthZ;
-      fz = wz;
-    } else if (hasC1) {
-      fz = p1.z || 0;
-      wz = w1.z || 0;
-    }
-
-    const maxVis = Math.max(vis1, vis2, vis3);
-
-    fusedLms.push({
-      x: fx,
-      y: fy,
-      z: fz,
-      visibility: maxVis,
+    // Фильтруем 2D экранные координаты
+    const f2 = landmark2DFilters[i].filter([p2.x, p2.y, p2.z || 0], curTime);
+    filteredLms.push({
+      x: f2[0],
+      y: f2[1],
+      z: f2[2],
+      visibility: p2.visibility ?? 1,
     });
 
-    fusedWlms.push({
-      x: wx,
-      y: wy,
-      z: wz,
-      visibility: maxVis,
+    // Фильтруем 3D мировые координаты
+    const f3 = landmark3DFilters[i].filter([p3.x, p3.y, p3.z || 0], curTime);
+    filteredWlms.push({
+      x: f3[0],
+      y: f3[1],
+      z: f3[2],
+      visibility: p3.visibility ?? 1,
     });
   }
 
-  const cameraMode = activeSlots.length === 3
-    ? 'triangulation_3cam'
-    : (activeSlots.includes(1) && activeSlots.includes(2))
-      ? 'stereo_front_side'
-      : (activeSlots.includes(1) && activeSlots.includes(3))
-        ? 'stereo_front_angle'
-        : 'stereo_side_angle';
+  // Применяем анатомический клиренс грудины (руки не проваливаются сквозь ребра)
+  const clearedWlms = applyTorsoClearanceToLandmarks(filteredWlms);
 
   return {
-    landmarks: fusedLms,
-    worldLandmarks: fusedWlms,
-    fused: true,
+    landmarks: filteredLms,
+    worldLandmarks: clearedWlms,
+    fused: activeSlots.length > 1,
     cameraMode,
     activeCameras: activeSlots,
   };
 }
 
-/**
- * Преобразование 33 точек MediaPipe в полноценный набор 3D-суставов для Three.js
- * Координаты приводятся к реальным метрам и привязываются к полу Додзё.
- */
+// ============================================================================
+// 5. БИОМЕХАНИЧЕСКИЙ АНАЛИЗ И СТОЙКИ КАРАТЭ
+// ============================================================================
+
+export function analyzeKarateBiomechanics(landmarks, worldLandmarks) {
+  if (!landmarks || landmarks.length < 33) {
+    return {
+      detected: false,
+      stanceName: 'Ожидание стойки...',
+      stanceJp: '構え · Kamae',
+      kneeAngleL: 180,
+      kneeAngleR: 180,
+      elbowAngleL: 180,
+      elbowAngleR: 180,
+      hikiteScore: 0,
+      overallScore: 0,
+      detectedAction: 'idle',
+      actionTitle: 'Человек не обнаружен',
+    };
+  }
+
+  const pts = worldLandmarks || landmarks;
+  const ls = pts[11];
+  const rs = pts[12];
+  const le = pts[13];
+  const re = pts[14];
+  const lw = pts[15];
+  const rw = pts[16];
+  const lh = pts[23];
+  const rh = pts[24];
+  const lk = pts[25];
+  const rk = pts[26];
+  const la = pts[27];
+  const ra = pts[28];
+
+  const kneeL = calculateAngle3D(lh, lk, la);
+  const kneeR = calculateAngle3D(rh, rk, ra);
+  const elbowL = calculateAngle3D(ls, le, lw);
+  const elbowR = calculateAngle3D(rs, re, rw);
+
+  const hipWidth = Math.abs(lh.x - rh.x) || 0.3;
+  const ankleWidth = Math.abs(la.x - ra.x) || 0.3;
+  const stanceWidthRatio = ankleWidth / hipWidth;
+
+  let stanceName = 'Йой-дати (Yoi-dachi)';
+  let stanceJp = '結び立ち · Стойка готовности';
+  let detectedStance = 'ready';
+
+  const isSquatting = kneeL < 145 || kneeR < 145;
+
+  if (isSquatting) {
+    if (stanceWidthRatio > 2.1 && Math.abs(kneeL - kneeR) < 30) {
+      stanceName = 'Киба-дати (Kiba-dachi)';
+      stanceJp = '騎馬立ち · Стойка всадника';
+      detectedStance = 'kiba';
+    } else if (kneeL < 120 && kneeR > 145) {
+      stanceName = 'Левая Дзэнкуцу-дати (Zenkutsu-dachi)';
+      stanceJp = '前屈立ち · Атакующая стойка';
+      detectedStance = 'zenkutsu';
+    } else if (kneeR < 120 && kneeL > 145) {
+      stanceName = 'Правая Дзэнкуцу-дати (Zenkutsu-dachi)';
+      stanceJp = '前屈立ち · Атакующая стойка';
+      detectedStance = 'zenkutsu';
+    } else if ((kneeL < 135 && kneeR > 135) || (kneeR < 135 && kneeL > 135)) {
+      stanceName = 'Кокуцу-дати (Kokutsu-dachi)';
+      stanceJp = '後屈立ち · Защитная стойка';
+      detectedStance = 'kokutsu';
+    }
+  }
+
+  let actionTitle = 'Базовая позиция';
+  let detectedAction = detectedStance;
+
+  const isLeftHikite = elbowL < 105 && Math.abs(lw.y - lh.y) < 0.25;
+  const isRightHikite = elbowR < 105 && Math.abs(rw.y - rh.y) < 0.25;
+
+  let hikiteScore = 75;
+  if (isLeftHikite || isRightHikite) hikiteScore = 95;
+
+  if (elbowL > 155 && lw.y < lh.y && isRightHikite) {
+    actionTitle = 'Левый Ой-цуки (Oi-zuki)';
+    detectedAction = 'oi_zuki';
+  } else if (elbowR > 155 && rw.y < rh.y && isLeftHikite) {
+    actionTitle = 'Правый Гяку-цуки (Gyaku-zuki)';
+    detectedAction = 'gyaku_zuki';
+  } else if (lw.y < ls.y - 0.15 || rw.y < rs.y - 0.15) {
+    actionTitle = 'Верхний блок Агэ-укэ (Age-uke)';
+    detectedAction = 'age_uke';
+  } else if ((lw.y > lh.y && elbowL > 140) || (rw.y > rh.y && elbowR > 140)) {
+    actionTitle = 'Нижний блок Гэдан-барай (Gedan-barai)';
+    detectedAction = 'gedan_barai';
+  }
+
+  if (lk.y < lh.y + 0.1 || rk.y < rh.y + 0.1) {
+    if (kneeL > 135 && lk.y < lh.y + 0.15) {
+      actionTitle = 'Левый Маэ-гэри (Mae-geri)';
+      detectedAction = 'mae_geri';
+    } else if (kneeR > 135 && rk.y < rh.y + 0.15) {
+      actionTitle = 'Правый Маэ-гэри (Mae-geri)';
+      detectedAction = 'mae_geri';
+    }
+  }
+
+  let score = 80;
+  if (isSquatting) score += 10;
+  if (isLeftHikite || isRightHikite) score += 8;
+  score = Math.min(99, Math.max(65, score));
+
+  return {
+    detected: true,
+    stanceName,
+    stanceJp,
+    detectedStance,
+    kneeAngleL: kneeL,
+    kneeAngleR: kneeR,
+    elbowAngleL: elbowL,
+    elbowAngleR: elbowR,
+    hikiteScore,
+    overallScore: score,
+    detectedAction,
+    actionTitle,
+  };
+}
+
+// ============================================================================
+// 6. ПРЕОБРАЗОВАНИЕ ДАННЫХ В 3D ДЛЯ THREE.JS
+// ============================================================================
+
 export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
   const pts = worldLandmarks || landmarks;
   if (!pts || pts.length < 33) return null;
 
-  const scale = options.scale || 1.35; // Масштаб под человеческий рост ~1.75м
+  const scale = options.scale || 1.35;
   const mirrorX = options.mirrorX !== undefined ? options.mirrorX : false;
 
-  // Индексы точек MediaPipe
   const rawNose = pts[0];
   const rawLS = pts[11];
   const rawRS = pts[12];
@@ -378,7 +736,6 @@ export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
   const rawLToe = pts[31] || pts[27];
   const rawRToe = pts[32] || pts[28];
 
-  // Центральные суставы
   const rawHipsMid = {
     x: (rawLH.x + rawRH.x) * 0.5,
     y: (rawLH.y + rawRH.y) * 0.5,
@@ -397,7 +754,6 @@ export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
     z: (rawHipsMid.z + rawNeck.z) * 0.5,
   };
 
-  // Вычисление высоты стоп над полом для идеального выравнивания по татами
   const lowestFootY = Math.max(
     rawLA.y,
     rawRA.y,
@@ -405,12 +761,9 @@ export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
     rawRToe?.y || rawRA.y
   );
 
-  // Функция перевода координат в систему Three.js (Y — вверх, -Z — вперед, X — вправо)
   const toThreeCoords = (p) => {
     if (!p) return { x: 0, y: 0, z: 0, visibility: 0 };
-    // Привязываем Y к уровню пола (lowestFootY = 0)
     const yThree = (lowestFootY - p.y) * scale;
-    // Центрируем X и Z относительно таза
     const xMult = mirrorX ? -1 : 1;
     const xThree = -(p.x - rawHipsMid.x) * scale * xMult;
     const zThree = -((p.z || 0) - rawHipsMid.z) * scale;
@@ -446,154 +799,17 @@ export function build3DSkeletonData(worldLandmarks, landmarks, options = {}) {
     footR: toThreeCoords(rawRToe),
   };
 
-  // Центр тяжести (丹田 · Тандэн)
-  const centerOfMass = {
-    x: joints.hipsMid.x,
-    y: joints.hipsMid.y * 0.85,
-    z: joints.hipsMid.z,
-  };
-
   return {
     joints,
-    centerOfMass,
+    centerOfMass: {
+      x: joints.hipsMid.x,
+      y: joints.hipsMid.y * 0.85,
+      z: joints.hipsMid.z,
+    },
     scale,
   };
 }
 
-/**
- * Анализ биомеханики каратэ по 33 точкам MediaPipe
- */
-export function analyzeKarateBiomechanics(landmarks, worldLandmarks) {
-  if (!landmarks || landmarks.length < 33) {
-    return {
-      detected: false,
-      stanceName: 'Ожидание стойки...',
-      stanceJp: '構え · Kamae',
-      kneeAngleL: 180,
-      kneeAngleR: 180,
-      elbowAngleL: 180,
-      elbowAngleR: 180,
-      hikiteScore: 0,
-      overallScore: 0,
-      detectedAction: 'idle',
-      actionTitle: 'Человек не обнаружен',
-    };
-  }
-
-  const pts = worldLandmarks || landmarks;
-  const ls = pts[11];
-  const rs = pts[12];
-  const le = pts[13];
-  const re = pts[14];
-  const lw = pts[15];
-  const rw = pts[16];
-  const lh = pts[23];
-  const rh = pts[24];
-  const lk = pts[25];
-  const rk = pts[26];
-  const la = pts[27];
-  const ra = pts[28];
-
-  // Расчет углов в коленях и локтях
-  const kneeL = calculateAngle3D(lh, lk, la);
-  const kneeR = calculateAngle3D(rh, rk, ra);
-  const elbowL = calculateAngle3D(ls, le, lw);
-  const elbowR = calculateAngle3D(rs, re, rw);
-
-  // Расстояния
-  const hipWidth = Math.abs(lh.x - rh.x) || 0.3;
-  const ankleWidth = Math.abs(la.x - ra.x) || 0.3;
-  const stanceWidthRatio = ankleWidth / hipWidth;
-
-  // Определение стойки
-  let stanceName = 'Йой-дати (Yoi-dachi)';
-  let stanceJp = '結び立ち · Стойка готовности';
-  let detectedStance = 'ready';
-
-  const isSquatting = kneeL < 145 || kneeR < 145;
-
-  if (isSquatting) {
-    if (stanceWidthRatio > 2.1 && Math.abs(kneeL - kneeR) < 30) {
-      stanceName = 'Киба-дати (Kiba-dachi)';
-      stanceJp = '騎馬立ち · Стойка всадника';
-      detectedStance = 'kiba';
-    } else if (kneeL < 120 && kneeR > 145) {
-      stanceName = 'Левая Дзэнкуцу-дати (Zenkutsu-dachi)';
-      stanceJp = '前屈立ち · Атакующая стойка';
-      detectedStance = 'zenkutsu';
-    } else if (kneeR < 120 && kneeL > 145) {
-      stanceName = 'Правая Дзэнкуцу-дати (Zenkutsu-dachi)';
-      stanceJp = '前屈立ち · Атакующая стойка';
-      detectedStance = 'zenkutsu';
-    } else if ((kneeL < 135 && kneeR > 135) || (kneeR < 135 && kneeL > 135)) {
-      stanceName = 'Кокуцу-дати (Kokutsu-dachi)';
-      stanceJp = '後屈立ち · Защитная стойка';
-      detectedStance = 'kokutsu';
-    }
-  }
-
-  // Определение удара / блока руками
-  let actionTitle = 'Базовая позиция';
-  let detectedAction = detectedStance;
-
-  // Хикитэ (рука у бедра: локоть согнут < 105°, кисть близко к тазу)
-  const isLeftHikite = elbowL < 105 && Math.abs(lw.y - lh.y) < 0.25;
-  const isRightHikite = elbowR < 105 && Math.abs(rw.y - rh.y) < 0.25;
-
-  let hikiteScore = 75;
-  if (isLeftHikite || isRightHikite) hikiteScore = 95;
-
-  // Прямой удар рукой (Ой-цуки / Гяку-цуки)
-  if (elbowL > 155 && lw.y < lh.y && isRightHikite) {
-    actionTitle = 'Левый Ой-цуки (Oi-zuki)';
-    detectedAction = 'oi_zuki';
-  } else if (elbowR > 155 && rw.y < rh.y && isLeftHikite) {
-    actionTitle = 'Правый Гяку-цуки (Gyaku-zuki)';
-    detectedAction = 'gyaku_zuki';
-  } else if (lw.y < ls.y - 0.15 || rw.y < rs.y - 0.15) {
-    actionTitle = 'Верхний блок Агэ-укэ (Age-uke)';
-    detectedAction = 'age_uke';
-  } else if ((lw.y > lh.y && elbowL > 140) || (rw.y > rh.y && elbowR > 140)) {
-    actionTitle = 'Нижний блок Гэдан-барай (Gedan-barai)';
-    detectedAction = 'gedan_barai';
-  }
-
-  // Удары ногами (Маэ-гэри)
-  if (lk.y < lh.y + 0.1 || rk.y < rh.y + 0.1) {
-    if (kneeL > 135 && lk.y < lh.y + 0.15) {
-      actionTitle = 'Левый Маэ-гэри (Mae-geri)';
-      detectedAction = 'mae_geri';
-    } else if (kneeR > 135 && rk.y < rh.y + 0.15) {
-      actionTitle = 'Правый Маэ-гэри (Mae-geri)';
-      detectedAction = 'mae_geri';
-    }
-  }
-
-  // Расчет итогового балла Sensei Score
-  let score = 80;
-  if (isSquatting) score += 10;
-  if (isLeftHikite || isRightHikite) score += 8;
-  score = Math.min(99, Math.max(65, score));
-
-  return {
-    detected: true,
-    stanceName,
-    stanceJp,
-    detectedStance,
-    kneeAngleL: kneeL,
-    kneeAngleR: kneeR,
-    elbowAngleL: elbowL,
-    elbowAngleR: elbowR,
-    hikiteScore,
-    overallScore: score,
-    detectedAction,
-    actionTitle,
-  };
-}
-
-/**
- * Преобразование ключевых точек MediaPipe в биомеханические параметры и повороты костей
- */
 export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   if (!landmarks || landmarks.length < 33) return null;
 
@@ -611,19 +827,16 @@ export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   const la = pts[27];
   const ra = pts[28];
 
-  // 3D-углы в суставах (в градусах)
   const lElbowAngleDeg = calculateAngle3D(ls, le, lw);
   const rElbowAngleDeg = calculateAngle3D(rs, re, rw);
   const lKneeAngleDeg = calculateAngle3D(lh, lk, la);
   const rKneeAngleDeg = calculateAngle3D(rh, rk, ra);
 
-  // Сгибание суставов в радианах
   const lElbowFlex = Math.max(0, (180 - lElbowAngleDeg) * (Math.PI / 180));
   const rElbowFlex = Math.max(0, (180 - rElbowAngleDeg) * (Math.PI / 180));
   const lKneeFlex = Math.max(0, (180 - lKneeAngleDeg) * (Math.PI / 180));
   const rKneeFlex = Math.max(0, (180 - rKneeAngleDeg) * (Math.PI / 180));
 
-  // 3D векторы плеч и предплечий
   const lArmVec = { x: le.x - ls.x, y: -(le.y - ls.y), z: -((le.z || 0) - (ls.z || 0)) };
   const rArmVec = { x: re.x - rs.x, y: -(re.y - rs.y), z: -((re.z || 0) - (rs.z || 0)) };
 
@@ -632,8 +845,6 @@ export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   const lArmYaw = Math.atan2(lArmVec.z, lArmVec.x || 1e-4);
   const rArmYaw = Math.atan2(rArmVec.z, rArmVec.x || 1e-4);
 
-  // Расчет смещения таза при приседе в стойку:
-  // Значение представляет собой ДЕЛЬТУ (0..-0.35 м), а не абсолютную высоту!
   const avgKneeFlex = (lKneeFlex + rKneeFlex) * 0.5;
   const hipsDrop = Math.min(0.35, Math.max(0, avgKneeFlex * 0.22));
 
@@ -658,10 +869,6 @@ export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   };
 }
 
-/**
- * Кинематический ретаргетинг: перенос движений напрямую с 3D костяной модели
- * на скелет 3D аватара мастера (SkinnedMesh Armature).
- */
 export function retargetSkeleton3DToMasterAvatar(skeleton3DData, worldLandmarks, landmarks) {
   const mapped = mapPoseToAvatarBones(landmarks, worldLandmarks);
   if (!mapped) return null;
@@ -679,11 +886,12 @@ export function retargetSkeleton3DToMasterAvatar(skeleton3DData, worldLandmarks,
   };
 }
 
-/**
- * Точная, высококонтрастная отрисовка неонового скелета каратэ на человеке в кадре камеры.
- * Линии строятся строго по фактическим координатам суставов MediaPipe (100% совпадение с силуэтом).
- */
-export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechanics) {
+// ============================================================================
+// 7. ТОЧНАЯ ОТРИСОВКА НЕОНОВОГО СКЕЛЕТА 1:1 НА ВИДОИСКАТЕЛЕ
+// Стилистика и цветовая гамма из Karate Motion Studio (gui/video_panel.py)
+// ============================================================================
+
+export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechanics, options = {}) {
   if (!ctx || !landmarks || landmarks.length < 33) return;
 
   const w = width;
@@ -699,9 +907,9 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
   };
 
   const pts = landmarks.map(toPx);
-  const minVis = 0.22;
+  const minVis = options.minConfidence !== undefined ? options.minConfidence : 0.20;
 
-  // Отрисовка точного анатомического сегмента с неоновым свечением и белым ядром
+  // Отрисовка кости с неоновым ореолом и плотным ядром
   const drawSegment = (i1, i2, color, lineWidth = 3.5, glowColor = null) => {
     const p1 = pts[i1];
     const p2 = pts[i2];
@@ -722,7 +930,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
-    // Яркая белая сердцевина кости
+    // Белое контрастное ядро
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = Math.max(1, lineWidth * 0.35);
@@ -734,7 +942,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.restore();
   };
 
-  // Отрисовка сустава (шарнира) с двойным кольцом
+  // Отрисовка сустава (шарнира) с двойным кольцом и черным контуром
   const drawJoint = (idx, color = '#fbbf24', radius = 5, highlight = false) => {
     const p = pts[idx];
     if (!p || p.v < minVis) return;
@@ -758,14 +966,14 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.fill();
 
     // Тонкий ободок
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.restore();
   };
 
-  // 1. Торс (Плечевой и тазовый пояс, боковые линии) — цвет Золотой Янтарь
+  // 1. Торс (Плечевой и тазовый пояс) — цвет Золотой Янтарь
   drawSegment(11, 12, '#f59e0b', 4, '#d97706'); // Плечи
   drawSegment(11, 23, '#f59e0b', 3.5, '#d97706'); // Левый бок
   drawSegment(12, 24, '#f59e0b', 3.5, '#d97706'); // Правый бок
@@ -780,7 +988,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
 
     ctx.save();
     ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(midShX, midShY);
@@ -790,8 +998,8 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
   }
 
   // 2. Голова и шея
-  drawSegment(0, 11, 'rgba(240, 240, 245, 0.75)', 2);
-  drawSegment(0, 12, 'rgba(240, 240, 245, 0.75)', 2);
+  drawSegment(0, 11, 'rgba(240, 240, 245, 0.8)', 2.5);
+  drawSegment(0, 12, 'rgba(240, 240, 245, 0.8)', 2.5);
 
   // 3. Левая рука (Циан / Изумруд)
   drawSegment(11, 13, '#06b6d4', 3.5, '#0891b2');
@@ -819,7 +1027,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     drawSegment(28, 32, '#f87171', 2.5);
   }
 
-  // 7. Суставы (шарниры)
+  // 7. Суставы
   [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32].forEach((idx) => {
     const isLeft = [11, 13, 15, 23, 25, 27, 31].includes(idx);
     const isWristOrAnkle = [15, 16, 27, 28].includes(idx);
@@ -850,17 +1058,18 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
 
   // 9. Бейдж статуса биомеханики
   ctx.save();
-  ctx.fillStyle = 'rgba(15, 11, 8, 0.85)';
-  ctx.strokeStyle = 'rgba(212, 162, 76, 0.45)';
+  ctx.fillStyle = 'rgba(15, 11, 8, 0.88)';
+  ctx.strokeStyle = 'rgba(212, 162, 76, 0.55)';
   ctx.lineWidth = 1;
-  if (ctx.roundRect) ctx.roundRect(10, 10, w - 20, 26, 6);
-  else ctx.rect(10, 10, w - 20, 26);
+  const badgeH = 26;
+  if (ctx.roundRect) ctx.roundRect(10, 10, w - 20, badgeH, 6);
+  else ctx.rect(10, 10, w - 20, badgeH);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 11px sans-serif';
-  ctx.fillText('⚡ AI MOCAP SKELETON: КАЛИБРОВАН', 20, 27);
+  ctx.fillText('⚡ AI MOCAP SKELETON (1:1 АНАТОМИЯ)', 20, 27);
 
   if (biomechanics?.overallScore) {
     ctx.fillStyle = '#10b981';
@@ -872,18 +1081,18 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
   ctx.restore();
 
   // 10. Угловые бейджи коленей
-  if (biomechanics && pts[25]?.v > 0.35) {
+  if (biomechanics && pts[25]?.v > minVis) {
     const lk = pts[25];
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.88)';
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.90)';
     ctx.fillRect(lk.x + 8, lk.y - 10, 48, 18);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 10px sans-serif';
     ctx.fillText(`${biomechanics.kneeAngleL}° L`, lk.x + 12, lk.y + 3);
   }
 
-  if (biomechanics && pts[26]?.v > 0.35) {
+  if (biomechanics && pts[26]?.v > minVis) {
     const rk = pts[26];
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.88)';
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.90)';
     ctx.fillRect(rk.x + 8, rk.y - 10, 48, 18);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 10px sans-serif';

@@ -12,6 +12,7 @@ import {
   drawNeonKarateSkeleton,
   build3DSkeletonData,
   fuseMultiCameraLandmarks,
+  resetMocapFilters,
 } from '../../utils/mocapPoseTracker';
 import './MocapStudio.css';
 
@@ -49,6 +50,14 @@ export default function MocapStudio() {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+
+  // Раскладка рабочей области: 'split' (50/50), 'camFocus' (70/30), 'dojoFocus' (30/70)
+  const [workspaceLayout, setWorkspaceLayout] = useState('split');
+  const [isViewfinderFullscreen, setIsViewfinderFullscreen] = useState(false);
+
+  // Параметры видеопотока для точного 1:1 наложения холста на видео (без искажений и обрезки)
+  const [streamAspect, setStreamAspect] = useState('16 / 9');
+  const [streamResolution, setStreamResolution] = useState({ width: 1280, height: 720 });
 
   // Состояние WebRTC и подключения смартфонов (до 3 телефонов)
   const [roomId] = useState(() => 'DOJO-' + Math.floor(1000 + Math.random() * 9000));
@@ -187,10 +196,46 @@ export default function MocapStudio() {
     };
   }, []);
 
+  // Определение активного элемента <video>
+  const getActiveVideoElement = useCallback(() => {
+    if (sourceMode === 'webcam') return videoRef.current;
+    if (activeCameraSlot === 1) return phoneVideo1Ref.current;
+    if (activeCameraSlot === 2) return phoneVideo2Ref.current;
+    if (activeCameraSlot === 3) return phoneVideo3Ref.current;
+    return phoneVideo1Ref.current || videoRef.current;
+  }, [sourceMode, activeCameraSlot]);
+
+  const updateStreamDimensions = useCallback((videoElement) => {
+    if (!videoElement) return;
+    const vw = videoElement.videoWidth;
+    const vh = videoElement.videoHeight;
+    if (vw > 0 && vh > 0) {
+      setStreamResolution({ width: vw, height: vh });
+      setStreamAspect(`${vw} / ${vh}`);
+      const canvas = canvasRef.current;
+      if (canvas && (canvas.width !== vw || canvas.height !== vh)) {
+        canvas.width = vw;
+        canvas.height = vh;
+      }
+    }
+  }, []);
+
   // 2. Обработка результатов компьютерного зрения MediaPipe (1, 2 или 3 камеры)
   const onPoseResults = useCallback((results) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Синхронизируем физическое разрешение холста с активным видеопотоком
+    const v = getActiveVideoElement();
+    if (v && v.videoWidth > 0 && v.videoHeight > 0) {
+      if (canvas.width !== v.videoWidth || canvas.height !== v.videoHeight) {
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
+        setStreamResolution({ width: v.videoWidth, height: v.videoHeight });
+        setStreamAspect(`${v.videoWidth} / ${v.videoHeight}`);
+      }
+    }
+
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
@@ -216,8 +261,8 @@ export default function MocapStudio() {
         }
       }
 
-      // Выполняем адаптивное слияние камер (1, 2 или 3 камеры)
-      const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current);
+      // Выполняем адаптивное слияние камер (1, 2 или 3 камеры) с 1€ фильтром и анатомическим клиренсом
+      const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
 
       const finalLandmarks = fused?.landmarks || results.poseLandmarks;
       const finalWorldLandmarks = fused?.worldLandmarks || results.poseWorldLandmarks;
@@ -226,7 +271,7 @@ export default function MocapStudio() {
       const metrics = analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
       setKarateMetrics(metrics);
 
-      // На холсте видоискателя ПК отображаем скелет для текущего выбранного ракурса
+      // На холсте видоискателя ПК отображаем скелет для текущего выбранного ракурса (1:1 наложение)
       ctx.clearRect(0, 0, w, h);
       const displayLandmarks = (latestLandmarksBySlot.current[activeCameraSlot]?.landmarks) || finalLandmarks;
       drawNeonKarateSkeleton(ctx, displayLandmarks, w, h, metrics);
@@ -274,7 +319,7 @@ export default function MocapStudio() {
         ctx.clearRect(0, 0, w, h);
       }
     }
-  }, [isRecording, activeCameraSlot]);
+  }, [isRecording, activeCameraSlot, getActiveVideoElement]);
 
   // 3. Получение списка веб-камер ПК
   const updateDeviceList = useCallback(async () => {
@@ -750,7 +795,45 @@ export default function MocapStudio() {
         </div>
       </div>
 
-      <div className="mocap-workspace">
+      {/* ПАНЕЛЬ ПЕРЕКЛЮЧЕНИЯ РАСКЛАДКИ РАБОЧЕЙ ОБЛАСТИ (СТУДИЙНЫЙ 50/50 / ФОКУС НА КАМЕРЕ) */}
+      <div className="mocap-layout-toolbar">
+        <div className="layout-btn-group">
+          <button
+            type="button"
+            className={`layout-pill ${workspaceLayout === 'split' ? 'active' : ''}`}
+            onClick={() => setWorkspaceLayout('split')}
+            title="Студийный режим Karate Motion Studio: 50% 3D Додзё, 50% Камера"
+          >
+            ⚖️ Студия (50 / 50)
+          </button>
+          <button
+            type="button"
+            className={`layout-pill ${workspaceLayout === 'camFocus' ? 'active' : ''}`}
+            onClick={() => setWorkspaceLayout('camFocus')}
+            title="Фокус на камере: 70% ширина видоискателя для кадрирования бойца во весь рост"
+          >
+            📱 Фокус: Камера (70%)
+          </button>
+          <button
+            type="button"
+            className={`layout-pill ${workspaceLayout === 'dojoFocus' ? 'active' : ''}`}
+            onClick={() => setWorkspaceLayout('dojoFocus')}
+            title="Фокус на 3D Додзё: детальный 3D-разбор движений мастера"
+          >
+            🥋 Фокус: 3D Додзё
+          </button>
+          <button
+            type="button"
+            className={`layout-pill ${isViewfinderFullscreen ? 'active' : ''}`}
+            onClick={() => setIsViewfinderFullscreen(!isViewfinderFullscreen)}
+            title="Полноэкранный видоискатель для съемки с расстояния 2-3 метра"
+          >
+            {isViewfinderFullscreen ? '✖ Свернуть видоискатель' : '⛶ Во весь экран'}
+          </button>
+        </div>
+      </div>
+
+      <div className={`mocap-workspace layout-${workspaceLayout}`}>
         {/* ГЛАВНАЯ 3D АРЕНА (THREE.JS): ТОЛЬКО 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
         <div className="mocap-3d-stage">
           <Canvas
@@ -895,7 +978,7 @@ export default function MocapStudio() {
             </div>
           )}
 
-          <div className="viewfinder-card">
+          <div className={`viewfinder-card ${isViewfinderFullscreen ? 'is-fullscreen' : ''}`}>
             <div className="viewfinder-header">
               <div className="viewfinder-title">
                 <span className={`status-dot ${cameraActive ? (bodyDetected ? 'online' : 'standby') : 'offline'}`} />
@@ -903,88 +986,126 @@ export default function MocapStudio() {
                   {sourceMode === 'webcam'
                     ? 'Веб-камера компьютера'
                     : `Камера #${activeCameraSlot} · ${
-                        activeCameraSlot === 1 ? 'Фронт' : activeCameraSlot === 2 ? 'Бок 90°' : 'Угол 45°'
+                        activeCameraSlot === 1 ? 'Фронт (0°)' : activeCameraSlot === 2 ? 'Бок (90°)' : 'Угол (45°)'
                       }`}
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    color: 'var(--gold)',
+                    background: 'rgba(0,0,0,0.5)',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(212,162,76,0.3)',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {streamResolution.width}×{streamResolution.height}
                 </span>
               </div>
 
-              {sourceMode === 'phone' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
-                  className="btn btn-sm btn-gold"
-                  onClick={() => setShowQrModal(true)}
+                  className="btn btn-sm btn-outline"
+                  onClick={() => setIsViewfinderFullscreen((f) => !f)}
+                  title={isViewfinderFullscreen ? 'Выйти из полноэкранного режима' : 'Развернуть видоискатель во весь экран'}
+                  style={{ fontSize: '0.8rem', padding: '4px 8px' }}
                 >
-                  QR-код
+                  {isViewfinderFullscreen ? '✖ Свернуть' : '⛶ Во весь экран'}
                 </button>
-              )}
+
+                {sourceMode === 'phone' && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-gold"
+                    onClick={() => setShowQrModal(true)}
+                  >
+                    📱 QR-код
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Видеопотоки и наложение неонового холста */}
+            {/* Видеопотоки и наложение неонового холста: точное соотношение 1:1 без обрезки */}
             <div className="viewfinder-media">
-              {/* Локальная веб-камера */}
-              <video
-                ref={videoRef}
-                playsInline
-                muted
-                className={`viewfinder-video ${sourceMode === 'webcam' ? 'active' : 'hidden'}`}
-              />
+              <div
+                className="viewfinder-stream-wrapper"
+                style={{ aspectRatio: streamAspect }}
+              >
+                {/* Локальная веб-камера */}
+                <video
+                  ref={videoRef}
+                  playsInline
+                  muted
+                  onLoadedMetadata={(e) => updateStreamDimensions(e.target)}
+                  onResize={(e) => updateStreamDimensions(e.target)}
+                  className={`viewfinder-video ${sourceMode === 'webcam' ? 'active' : 'hidden'}`}
+                />
 
-              {/* Видеопоток телефона 1 (Фронт) */}
-              <video
-                ref={phoneVideo1Ref}
-                playsInline
-                autoPlay
-                muted
-                className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 1 ? 'active' : 'hidden'}`}
-              />
+                {/* Видеопоток телефона 1 (Фронт) */}
+                <video
+                  ref={phoneVideo1Ref}
+                  playsInline
+                  autoPlay
+                  muted
+                  onLoadedMetadata={(e) => updateStreamDimensions(e.target)}
+                  onResize={(e) => updateStreamDimensions(e.target)}
+                  className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 1 ? 'active' : 'hidden'}`}
+                />
 
-              {/* Видеопоток телефона 2 (Бок 90°) */}
-              <video
-                ref={phoneVideo2Ref}
-                playsInline
-                autoPlay
-                muted
-                className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 2 ? 'active' : 'hidden'}`}
-              />
+                {/* Видеопоток телефона 2 (Бок 90°) */}
+                <video
+                  ref={phoneVideo2Ref}
+                  playsInline
+                  autoPlay
+                  muted
+                  onLoadedMetadata={(e) => updateStreamDimensions(e.target)}
+                  onResize={(e) => updateStreamDimensions(e.target)}
+                  className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 2 ? 'active' : 'hidden'}`}
+                />
 
-              {/* Видеопоток телефона 3 (Угол 45°) */}
-              <video
-                ref={phoneVideo3Ref}
-                playsInline
-                autoPlay
-                muted
-                className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 3 ? 'active' : 'hidden'}`}
-              />
+                {/* Видеопоток телефона 3 (Угол 45°) */}
+                <video
+                  ref={phoneVideo3Ref}
+                  playsInline
+                  autoPlay
+                  muted
+                  onLoadedMetadata={(e) => updateStreamDimensions(e.target)}
+                  onResize={(e) => updateStreamDimensions(e.target)}
+                  className={`viewfinder-video ${sourceMode === 'phone' && activeCameraSlot === 3 ? 'active' : 'hidden'}`}
+                />
 
-              {/* Холст с неоновым скелетом каратэ */}
-              <canvas
-                ref={canvasRef}
-                width={640}
-                height={480}
-                className="viewfinder-canvas"
-              />
+                {/* Холст с неоновым скелетом каратэ — точно совпадающий по пикселям */}
+                <canvas
+                  ref={canvasRef}
+                  width={streamResolution.width}
+                  height={streamResolution.height}
+                  className="viewfinder-canvas"
+                />
 
-              {!cameraActive && (
-                <div className="viewfinder-placeholder">
-                  {sourceMode === 'webcam' ? (
-                    <div>
-                      <span className="placeholder-icon">📹</span>
-                      <p>Камера не запущена</p>
-                      <button type="button" className="btn btn-primary" onClick={startWebcam}>
-                        Включить веб-камеру
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      <span className="placeholder-icon">📱</span>
-                      <p>Подключите до 3 телефонов по QR</p>
-                      <button type="button" className="btn btn-gold" onClick={() => setShowQrModal(true)}>
-                        Открыть QR-код
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                {!cameraActive && (
+                  <div className="viewfinder-placeholder">
+                    {sourceMode === 'webcam' ? (
+                      <div>
+                        <span className="placeholder-icon">📹</span>
+                        <p>Камера не запущена</p>
+                        <button type="button" className="btn btn-primary" onClick={startWebcam}>
+                          Включить веб-камеру
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <span className="placeholder-icon">📱</span>
+                        <p>Подключите до 3 телефонов по QR</p>
+                        <button type="button" className="btn btn-gold" onClick={() => setShowQrModal(true)}>
+                          Открыть QR-код
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Селектор устройств для веб-камеры */}
