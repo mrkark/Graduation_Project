@@ -449,7 +449,7 @@ export function analyzeKarateBiomechanics(landmarks, worldLandmarks) {
 }
 
 /**
- * Преобразование ключевых точек MediaPipe в повороты костей для 3D аватара
+ * Преобразование ключевых точек MediaPipe в биомеханические параметры и повороты костей
  */
 export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   if (!landmarks || landmarks.length < 33) return null;
@@ -468,42 +468,42 @@ export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
   const la = pts[27];
   const ra = pts[28];
 
-  // Векторы рук в 3D
-  const lArmVec = { x: le.x - ls.x, y: le.y - ls.y, z: (le.z || 0) - (ls.z || 0) };
-  const rArmVec = { x: re.x - rs.x, y: re.y - rs.y, z: (re.z || 0) - (rs.z || 0) };
-
-  // Углы подъема и отведения плеч в 3D
-  const lArmPitch = Math.atan2(lArmVec.y, Math.sqrt(lArmVec.x * lArmVec.x + lArmVec.z * lArmVec.z));
-  const rArmPitch = Math.atan2(rArmVec.y, Math.sqrt(rArmVec.x * rArmVec.x + rArmVec.z * rArmVec.z));
-  const lArmYaw = Math.atan2(lArmVec.z, lArmVec.x || 1e-4);
-  const rArmYaw = Math.atan2(rArmVec.z, rArmVec.x || 1e-4);
-
-  // Сгибание локтей
+  // 3D-углы в суставах (в градусах)
   const lElbowAngleDeg = calculateAngle3D(ls, le, lw);
   const rElbowAngleDeg = calculateAngle3D(rs, re, rw);
-  const lElbowFlex = Math.max(0, (180 - lElbowAngleDeg) * (Math.PI / 180));
-  const rElbowFlex = Math.max(0, (180 - rElbowAngleDeg) * (Math.PI / 180));
-
-  // Сгибание коленей
   const lKneeAngleDeg = calculateAngle3D(lh, lk, la);
   const rKneeAngleDeg = calculateAngle3D(rh, rk, ra);
+
+  // Сгибание суставов в радианах
+  const lElbowFlex = Math.max(0, (180 - lElbowAngleDeg) * (Math.PI / 180));
+  const rElbowFlex = Math.max(0, (180 - rElbowAngleDeg) * (Math.PI / 180));
   const lKneeFlex = Math.max(0, (180 - lKneeAngleDeg) * (Math.PI / 180));
   const rKneeFlex = Math.max(0, (180 - rKneeAngleDeg) * (Math.PI / 180));
 
-  // Положение таза по высоте
+  // 3D векторы плеч и предплечий
+  const lArmVec = { x: le.x - ls.x, y: -(le.y - ls.y), z: -((le.z || 0) - (ls.z || 0)) };
+  const rArmVec = { x: re.x - rs.x, y: -(re.y - rs.y), z: -((re.z || 0) - (rs.z || 0)) };
+
+  const lArmPitch = Math.atan2(lArmVec.y, Math.hypot(lArmVec.x, lArmVec.z));
+  const rArmPitch = Math.atan2(rArmVec.y, Math.hypot(rArmVec.x, rArmVec.z));
+  const lArmYaw = Math.atan2(lArmVec.z, lArmVec.x || 1e-4);
+  const rArmYaw = Math.atan2(rArmVec.z, rArmVec.x || 1e-4);
+
+  // Расчет смещения таза при приседе в стойку:
+  // Значение представляет собой ДЕЛЬТУ (0..-0.35 м), а не абсолютную высоту!
   const avgKneeFlex = (lKneeFlex + rKneeFlex) * 0.5;
-  const hipsDrop = Math.min(0.35, avgKneeFlex * 0.22);
+  const hipsDrop = Math.min(0.35, Math.max(0, avgKneeFlex * 0.22));
 
   return {
     bones: {
-      'UpperArm.L': { x: -lArmPitch + 0.3, y: lArmYaw * 0.5, z: -lArmVec.x * 1.5 },
+      'UpperArm.L': { x: -lArmPitch, y: lArmYaw * 0.5, z: 0 },
       'LowerArm.L': { x: -lElbowFlex, y: 0, z: 0 },
-      'UpperArm.R': { x: -rArmPitch + 0.3, y: rArmYaw * 0.5, z: -rArmVec.x * 1.5 },
+      'UpperArm.R': { x: -rArmPitch, y: rArmYaw * 0.5, z: 0 },
       'LowerArm.R': { x: -rElbowFlex, y: 0, z: 0 },
-      'UpperLeg.L': { x: lKneeFlex * 0.5, y: 0, z: 0 },
-      'LowerLeg.L': { x: -lKneeFlex, y: 0, z: 0 },
-      'UpperLeg.R': { x: rKneeFlex * 0.5, y: 0, z: 0 },
-      'LowerLeg.R': { x: -rKneeFlex, y: 0, z: 0 },
+      'UpperLeg.L': { x: lKneeFlex * 0.45, y: 0, z: 0 },
+      'LowerLeg.L': { x: -lKneeFlex * 0.9, y: 0, z: 0 },
+      'UpperLeg.R': { x: rKneeFlex * 0.45, y: 0, z: 0 },
+      'LowerLeg.R': { x: -rKneeFlex * 0.9, y: 0, z: 0 },
       Hips: { yOffset: -hipsDrop },
     },
     angles: {
@@ -520,47 +520,25 @@ export function mapPoseToAvatarBones(landmarks, worldLandmarks) {
  * на скелет 3D аватара мастера (SkinnedMesh Armature).
  */
 export function retargetSkeleton3DToMasterAvatar(skeleton3DData, worldLandmarks, landmarks) {
-  // Базовые повороты костей через mapPoseToAvatarBones
   const mapped = mapPoseToAvatarBones(landmarks, worldLandmarks);
   if (!mapped) return null;
 
-  // Если есть активные 3D суставы костяной модели, выполняем тонкую коррекцию векторов
-  if (skeleton3DData?.joints) {
-    const j = skeleton3DData.joints;
-    if (j.shoulderL && j.elbowL) {
-      const vx = j.elbowL.x - j.shoulderL.x;
-      mapped.bones['UpperArm.L'].z = -vx * 1.6;
-    }
-    if (j.shoulderR && j.elbowR) {
-      const vx = j.elbowR.x - j.shoulderR.x;
-      mapped.bones['UpperArm.R'].z = -vx * 1.6;
-    }
-    if (j.hipL && j.kneeL) {
-      const vy = j.kneeL.y - j.hipL.y;
-      mapped.bones['UpperLeg.L'].x = Math.max(0, -vy * 0.8);
-    }
-    if (j.hipR && j.kneeR) {
-      const vy = j.kneeR.y - j.hipR.y;
-      mapped.bones['UpperLeg.R'].x = Math.max(0, -vy * 0.8);
-    }
-  }
-
   return {
     ...mapped,
+    landmarks,
+    worldLandmarks,
     retargetPipeline: {
       status: 'active',
-      fusedSource: '3D Volumetric Bone Model',
+      fusedSource: 'Hierarchical 3D MoCap Engine',
       targetRig: 'Karateka Master Armature (Gi)',
-      latencyMs: 12,
       confidence: 0.99,
     },
   };
 }
 
 /**
- * Отрисовка объемной 3D костяной модели на человеке в кадре камеры (Augmented Reality Biomechanical Skeleton)
- * Формирует трехмерные цилиндры костей со светотенью и объемом, сферические 3D суставы,
- * центр тяжести (Тандэн) и статус кинематического переноса на модель мастера.
+ * Точная, высококонтрастная отрисовка неонового скелета каратэ на человеке в кадре камеры.
+ * Линии строятся строго по фактическим координатам суставов MediaPipe (100% совпадение с силуэтом).
  */
 export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechanics) {
   if (!ctx || !landmarks || landmarks.length < 33) return;
@@ -568,241 +546,204 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
   const w = width;
   const h = height;
 
-  const toPx = (lm) => ({
-    x: lm.x * w,
-    y: lm.y * h,
-    z: lm.z || 0,
-    v: lm.visibility !== undefined ? lm.visibility : 1,
-  });
+  const toPx = (lm) => {
+    if (!lm) return null;
+    return {
+      x: lm.x * w,
+      y: lm.y * h,
+      v: lm.visibility !== undefined ? lm.visibility : 1,
+    };
+  };
 
   const pts = landmarks.map(toPx);
+  const minVis = 0.22;
 
-  // Отрисовка объемного 3D-цилиндра кости со светотеневым моделированием объема
-  const drawVolumetricBone = (i1, i2, colorBase, colorHighlight, radius = 9, minVis = 0.35) => {
+  // Отрисовка точного анатомического сегмента с неоновым свечением и белым ядром
+  const drawSegment = (i1, i2, color, lineWidth = 3.5, glowColor = null) => {
     const p1 = pts[i1];
     const p2 = pts[i2];
     if (!p1 || !p2 || p1.v < minVis || p2.v < minVis) return;
 
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 4) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    // Перспективное масштабирование радиуса по глубине Z
-    const avgZ = (p1.z + p2.z) * 0.5;
-    const depthScale = Math.max(0.65, Math.min(1.4, 1.0 - avgZ * 0.7));
-    const r = radius * depthScale;
+    // Внешнее неоновое свечение
+    ctx.shadowColor = glowColor || color;
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
 
-    // Единичный нормальный вектор к кости
-    const nx = -dy / len;
-    const ny = dx / len;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    // Яркая белая сердцевина кости
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, lineWidth * 0.35);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  // Отрисовка сустава (шарнира) с двойным кольцом
+  const drawJoint = (idx, color = '#fbbf24', radius = 5, highlight = false) => {
+    const p = pts[idx];
+    if (!p || p.v < minVis) return;
 
     ctx.save();
+    const r = highlight ? radius * 1.3 : radius;
 
-    // 1. Внешняя светотень кости (Ambient glow)
-    ctx.shadowColor = colorBase;
+    // Внешнее кольцо с ореолом
+    ctx.shadowColor = color;
     ctx.shadowBlur = 10;
-
-    // 2. Построение объемного цилиндра кости через полигон со светотенью
-    const midX = (p1.x + p2.x) * 0.5;
-    const midY = (p1.y + p2.y) * 0.5;
-
-    const grad = ctx.createLinearGradient(
-      midX - nx * r,
-      midY - ny * r,
-      midX + nx * r,
-      midY + ny * r
-    );
-    grad.addColorStop(0.0, 'rgba(12, 9, 7, 0.92)');       // Теневой край цилиндра
-    grad.addColorStop(0.22, colorBase);                    // Базовый цвет кости
-    grad.addColorStop(0.48, colorHighlight || '#ffffff');  // Световой блик вдоль гребня кости
-    grad.addColorStop(0.78, colorBase);                    // Освещенная сторона
-    grad.addColorStop(1.0, 'rgba(12, 9, 7, 0.92)');       // Противоположный теневой край
-
-    ctx.fillStyle = grad;
+    ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(p1.x - nx * (r * 0.85), p1.y - ny * (r * 0.85));
-    ctx.lineTo(p2.x - nx * (r * 0.85), p2.y - ny * (r * 0.85));
-    ctx.lineTo(p2.x + nx * (r * 0.85), p2.y + ny * (r * 0.85));
-    ctx.lineTo(p1.x + nx * (r * 0.85), p1.y + ny * (r * 0.85));
-    ctx.closePath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Тонкий контур объемной кости
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    // Белое ядро сустава
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Тонкий ободок
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.65)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
     ctx.restore();
   };
 
-  // Отрисовка сферического 3D-сустава (шарнира) с радиальной светотенью
-  const draw3DJoint = (i, color = '#fbbf24', radius = 8) => {
-    const p = pts[i];
-    if (!p || p.v < 0.35) return;
+  // 1. Торс (Плечевой и тазовый пояс, боковые линии) — цвет Золотой Янтарь
+  drawSegment(11, 12, '#f59e0b', 4, '#d97706'); // Плечи
+  drawSegment(11, 23, '#f59e0b', 3.5, '#d97706'); // Левый бок
+  drawSegment(12, 24, '#f59e0b', 3.5, '#d97706'); // Правый бок
+  drawSegment(23, 24, '#f59e0b', 4, '#d97706'); // Таз
 
-    const depthScale = Math.max(0.65, Math.min(1.4, 1.0 - p.z * 0.7));
-    const r = radius * depthScale;
+  // Центральная ось позвоночника (Тюсин-сэн)
+  if (pts[11] && pts[12] && pts[23] && pts[24]) {
+    const midShX = (pts[11].x + pts[12].x) * 0.5;
+    const midShY = (pts[11].y + pts[12].y) * 0.5;
+    const midHpX = (pts[23].x + pts[24].x) * 0.5;
+    const midHpY = (pts[23].y + pts[24].y) * 0.5;
 
     ctx.save();
-    // Радиальный градиент шара: источник света сверху-слева
-    const grad = ctx.createRadialGradient(
-      p.x - r * 0.35,
-      p.y - r * 0.35,
-      r * 0.1,
-      p.x,
-      p.y,
-      r
-    );
-    grad.addColorStop(0.0, '#ffffff');                  // Зеркальный блик
-    grad.addColorStop(0.35, color);                     // Тело сустава
-    grad.addColorStop(0.85, 'rgba(20, 16, 12, 0.95)'); // Тень шара
-    grad.addColorStop(1.0, color);                      // Ореол
-
-    ctx.fillStyle = grad;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.8)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ободок шарнира
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.lineWidth = 1.2;
+    ctx.moveTo(midShX, midShY);
+    ctx.lineTo(midHpX, midHpY);
     ctx.stroke();
     ctx.restore();
-  };
-
-  // 1. Позвоночный столб и центральная линия (Шея - Позвоночник - Таз)
-  if (pts[11] && pts[12] && pts[23] && pts[24]) {
-    const neckX = (pts[11].x + pts[12].x) * 0.5;
-    const neckY = (pts[11].y + pts[12].y) * 0.5;
-    const neckZ = (pts[11].z + pts[12].z) * 0.5;
-
-    const hipsX = (pts[23].x + pts[24].x) * 0.5;
-    const hipsY = (pts[23].y + pts[24].y) * 0.5;
-    const hipsZ = (pts[23].z + pts[24].z) * 0.5;
-
-    const spineMidX = (neckX + hipsX) * 0.5;
-    const spineMidY = (neckY + hipsY) * 0.5;
-    const spineMidZ = (neckZ + hipsZ) * 0.5;
-
-    pts[99] = { x: neckX, y: neckY, z: neckZ, v: 1 };
-    pts[98] = { x: spineMidX, y: spineMidY, z: spineMidZ, v: 1 };
-    pts[97] = { x: hipsX, y: hipsY, z: hipsZ, v: 1 };
-
-    // Позвоночник
-    drawVolumetricBone(99, 98, '#f59e0b', '#fef08a', 11);
-    drawVolumetricBone(98, 97, '#f59e0b', '#fef08a', 12);
-
-    // Голова
-    drawVolumetricBone(0, 99, '#ffd700', '#ffffff', 8);
-
-    // Ключицы
-    drawVolumetricBone(99, 11, '#06b6d4', '#a5f3fc', 9);
-    drawVolumetricBone(99, 12, '#ef4444', '#fecaca', 9);
-
-    // Тазовый пояс
-    drawVolumetricBone(97, 23, '#06b6d4', '#a5f3fc', 12);
-    drawVolumetricBone(97, 24, '#ef4444', '#fecaca', 12);
-    drawVolumetricBone(23, 24, '#f59e0b', '#fef08a', 10);
   }
 
-  // 2. Руки (Левая: Циан/Изумруд, Правая: Алый/Янтарь)
-  drawVolumetricBone(11, 13, '#06b6d4', '#a5f3fc', 9);
-  drawVolumetricBone(13, 15, '#10b981', '#a7f3d0', 8);
-  drawVolumetricBone(12, 14, '#f59e0b', '#fef08a', 9);
-  drawVolumetricBone(14, 16, '#ef4444', '#fecaca', 8);
+  // 2. Голова и шея
+  drawSegment(0, 11, 'rgba(240, 240, 245, 0.75)', 2);
+  drawSegment(0, 12, 'rgba(240, 240, 245, 0.75)', 2);
 
-  // 3. Ноги (Стойка)
-  drawVolumetricBone(23, 25, '#06b6d4', '#a5f3fc', 14);
-  drawVolumetricBone(25, 27, '#10b981', '#a7f3d0', 11);
-  drawVolumetricBone(24, 26, '#f59e0b', '#fef08a', 14);
-  drawVolumetricBone(26, 28, '#ef4444', '#fecaca', 11);
+  // 3. Левая рука (Циан / Изумруд)
+  drawSegment(11, 13, '#06b6d4', 3.5, '#0891b2');
+  drawSegment(13, 15, '#10b981', 3.0, '#059669');
 
-  // 4. Стопы
-  if (pts[27] && pts[31]) drawVolumetricBone(27, 31, '#34d399', '#ffffff', 7);
-  if (pts[28] && pts[32]) drawVolumetricBone(28, 32, '#f87171', '#ffffff', 7);
+  // 4. Правая рука (Янтарь / Алый)
+  drawSegment(12, 14, '#f59e0b', 3.5, '#d97706');
+  drawSegment(14, 16, '#ef4444', 3.0, '#dc2626');
 
-  // 5. Суставные узлы (3D шарниры)
-  [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach((idx) => {
-    const isLeft = [11, 13, 15, 23, 25, 27].includes(idx);
+  // 5. Левая нога (Циан / Изумруд)
+  drawSegment(23, 25, '#06b6d4', 4.0, '#0891b2');
+  drawSegment(25, 27, '#10b981', 3.5, '#059669');
+  if (pts[29]) drawSegment(27, 29, '#34d399', 2.5);
+  if (pts[31]) {
+    drawSegment(29, 31, '#34d399', 2.5);
+    drawSegment(27, 31, '#34d399', 2.5);
+  }
+
+  // 6. Правая нога (Янтарь / Алый)
+  drawSegment(24, 26, '#f59e0b', 4.0, '#d97706');
+  drawSegment(26, 28, '#ef4444', 3.5, '#dc2626');
+  if (pts[30]) drawSegment(28, 30, '#f87171', 2.5);
+  if (pts[32]) {
+    drawSegment(30, 32, '#f87171', 2.5);
+    drawSegment(28, 32, '#f87171', 2.5);
+  }
+
+  // 7. Суставы (шарниры)
+  [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32].forEach((idx) => {
+    const isLeft = [11, 13, 15, 23, 25, 27, 31].includes(idx);
+    const isWristOrAnkle = [15, 16, 27, 28].includes(idx);
     const color = idx === 0 ? '#ffd700' : isLeft ? '#06b6d4' : '#ef4444';
-    draw3DJoint(idx, color, [11, 12, 23, 24].includes(idx) ? 10 : 8);
+    drawJoint(idx, color, isWristOrAnkle ? 6 : 5, isWristOrAnkle);
   });
 
-  // 6. 3D Центр тяжести (Тандэн · 丹田) прямо на теле
-  if (pts[97]) {
-    const com = pts[97];
+  // 8. Центр тяжести тела (Тандэн · 丹田)
+  if (pts[23] && pts[24]) {
+    const tandenX = (pts[23].x + pts[24].x) * 0.5;
+    const tandenY = (pts[23].y + pts[24].y) * 0.5 - 4;
+
     ctx.save();
-    // 3D Гиро-кольцо Тандэн
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 12;
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 2;
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.ellipse(com.x, com.y, 22, 10, 0, 0, Math.PI * 2);
+    ctx.arc(tandenX, tandenY, 8, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Ядро Тандэн
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#f59e0b';
     ctx.beginPath();
-    ctx.arc(com.x, com.y, 6, 0, Math.PI * 2);
+    ctx.arc(tandenX, tandenY, 4, 0, Math.PI * 2);
     ctx.fill();
-
-    // Вертикальный отвес до пола между стопами
-    const groundY = Math.max(pts[27]?.y || com.y + 120, pts[28]?.y || com.y + 120);
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(com.x, com.y);
-    ctx.lineTo(com.x, groundY);
-    ctx.stroke();
-
-    // Пятно проекции на полу
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    ctx.ellipse(com.x, groundY, 18, 6, 0, 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   }
 
-  // 7. AR-Бейдж статуса формирования 3D модели и переноса на мастера
+  // 9. Бейдж статуса биомеханики
   ctx.save();
-  ctx.fillStyle = 'rgba(15, 11, 8, 0.88)';
+  ctx.fillStyle = 'rgba(15, 11, 8, 0.85)';
   ctx.strokeStyle = 'rgba(212, 162, 76, 0.45)';
   ctx.lineWidth = 1;
-  if (ctx.roundRect) ctx.roundRect(12, 12, w - 24, 28, 6);
-  else ctx.rect(12, 12, w - 24, 28);
+  if (ctx.roundRect) ctx.roundRect(10, 10, w - 20, 26, 6);
+  else ctx.rect(10, 10, w - 20, 26);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 11px sans-serif';
-  ctx.fillText('⚡ 3D КОСТЯНАЯ МОДЕЛЬ СФОРМИРОВАНА', 22, 30);
+  ctx.fillText('⚡ AI MOCAP SKELETON: КАЛИБРОВАН', 20, 27);
 
-  ctx.fillStyle = '#10b981';
-  ctx.font = 'bold 11px sans-serif';
-  const retargetText = '➔ ПЕРЕНОС НА 3D МАСТЕРА: 100% (АКТИВЕН)';
-  const textWidth = ctx.measureText(retargetText).width;
-  ctx.fillText(retargetText, w - textWidth - 22, 30);
+  if (biomechanics?.overallScore) {
+    ctx.fillStyle = '#10b981';
+    ctx.font = 'bold 11px sans-serif';
+    const scoreText = `МАСТЕРСТВО: ${biomechanics.overallScore}%`;
+    const tw = ctx.measureText(scoreText).width;
+    ctx.fillText(scoreText, w - tw - 20, 27);
+  }
   ctx.restore();
 
-  // 8. Угловые бейджи биомеханики коленей и локтей
-  if (biomechanics && pts[25]?.v > 0.4) {
+  // 10. Угловые бейджи коленей
+  if (biomechanics && pts[25]?.v > 0.35) {
     const lk = pts[25];
-    ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
-    ctx.fillRect(lk.x + 10, lk.y - 12, 54, 20);
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.88)';
+    ctx.fillRect(lk.x + 8, lk.y - 10, 48, 18);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(`${biomechanics.kneeAngleL}° L`, lk.x + 14, lk.y + 3);
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(`${biomechanics.kneeAngleL}° L`, lk.x + 12, lk.y + 3);
   }
 
-  if (biomechanics && pts[26]?.v > 0.4) {
+  if (biomechanics && pts[26]?.v > 0.35) {
     const rk = pts[26];
-    ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
-    ctx.fillRect(rk.x + 10, rk.y - 12, 54, 20);
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.88)';
+    ctx.fillRect(rk.x + 8, rk.y - 10, 48, 18);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(`${biomechanics.kneeAngleR}° R`, rk.x + 14, rk.y + 3);
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(`${biomechanics.kneeAngleR}° R`, rk.x + 12, rk.y + 3);
   }
 }

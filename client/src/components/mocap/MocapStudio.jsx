@@ -136,6 +136,8 @@ export default function MocapStudio() {
 
   // Повороты костей для классического SkinnedMesh аватара
   const [boneRotations, setBoneRotations] = useState(null);
+  const [mirrorMode, setMirrorMode] = useState(true);
+  const latestPoseRef = useRef(null);
 
   // Запись сессии MoCap
   const [isRecording, setIsRecording] = useState(false);
@@ -232,6 +234,12 @@ export default function MocapStudio() {
         setBoneRotations(retargeted.bones);
       }
 
+      // Сохраняем актуальные 3D координаты позы для прямого ретаргетинга аватара (60 FPS)
+      latestPoseRef.current = {
+        landmarks: finalLandmarks,
+        worldLandmarks: finalWorldLandmarks,
+      };
+
       // Сохраняем кадр в запись
       if (isRecording) {
         setRecordedFrames((prev) => [
@@ -242,13 +250,14 @@ export default function MocapStudio() {
             worldLandmarks: finalWorldLandmarks,
             skeleton3D: s3d,
             metrics,
-            bones: mappedBones?.bones || null,
+            bones: retargeted?.bones || null,
           },
         ]);
       }
     } else {
       setBodyDetected(false);
       setBoneRotations(null);
+      latestPoseRef.current = null;
     }
   }, [isRecording, activeCameraSlot, multiCameraFusion]);
 
@@ -740,6 +749,8 @@ export default function MocapStudio() {
               {/* 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
               <MocapPuppetAvatar
                 boneRotations={boneRotations}
+                poseDataRef={latestPoseRef}
+                mirrorMode={mirrorMode}
                 detectedStance={karateMetrics.detectedStance}
                 position={[0, 0, 0]}
                 rotation={[0, 0, 0]}
@@ -770,6 +781,16 @@ export default function MocapStudio() {
                 <span className="hud-badge__jp">技 · Техника</span>
                 <strong className="hud-badge__val">{karateMetrics.actionTitle}</strong>
               </div>
+
+              {/* Переключатель зеркального отображения движений */}
+              <button
+                type="button"
+                className={`hud-mode-pill ${mirrorMode ? 'is-active' : ''}`}
+                onClick={() => setMirrorMode((m) => !m)}
+                title="Переключить режим отражения аватара (зеркало Додзё)"
+              >
+                {mirrorMode ? '🪞 Зеркало (Вкл)' : '🎯 Прямой режим'}
+              </button>
             </div>
 
             <div className="hud-score-card">
