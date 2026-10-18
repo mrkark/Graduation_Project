@@ -4,8 +4,6 @@ import { OrbitControls, ContactShadows } from '@react-three/drei';
 import io from 'socket.io-client';
 import TraditionalDojo from '../../three/TraditionalDojo';
 import MocapPuppetAvatar from '../../three/MocapPuppetAvatar';
-import Mocap3DSkeleton from '../../three/Mocap3DSkeleton';
-import MocapRetargetingBeams from '../../three/MocapRetargetingBeams';
 import {
   loadMediaPipePose,
   analyzeKarateBiomechanics,
@@ -52,13 +50,6 @@ export default function MocapStudio() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
 
-  // Режим отображения 3D модели:
-  // 'retarget' — Синхронный ретаргетинг: 3D модель из костей передает движения на 3D мастера в кимоно с лучами переноса
-  // 'xray' — Скелет внутри кимоно (X-Ray / Анатомия)
-  // 'mesh' — Традиционный аватар мастера в кимоно
-  // 'skeleton3d' — Полноценная 3D модель из костей и суставов
-  const [avatarMode, setAvatarMode] = useState('retarget');
-
   // Состояние WebRTC и подключения смартфонов (до 3 телефонов)
   const [roomId] = useState(() => 'DOJO-' + Math.floor(1000 + Math.random() * 9000));
   const [connectedCameras, setConnectedCameras] = useState([]); // [{ peerId, slot, label }]
@@ -68,8 +59,8 @@ export default function MocapStudio() {
   const [selectedQrSlot, setSelectedQrSlot] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Режим подключения смартфонов: 'tunnel' (HTTPS через интернет/4G) | 'local' (локальный Wi-Fi)
-  const [connectionMode, setConnectionMode] = useState('tunnel');
+  // Режим подключения смартфонов: 'local' (локальная сеть Wi-Fi по умолчанию) | 'tunnel' (HTTPS через интернет/4G)
+  const [connectionMode, setConnectionMode] = useState('local');
   const [tunnelUrl, setTunnelUrl] = useState(() => {
     if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
       return window.location.origin;
@@ -636,7 +627,7 @@ export default function MocapStudio() {
           <div>
             <h2 className="mocap-title">AI MoCap Додзё (Aimokap)</h2>
             <p className="mocap-subtitle">
-              Захват 3D-движений · Поддержка до 3 телефонов (мульти-ракурс) · Объемная 3D-модель из костей
+              Захват 3D-движений · Поддержка до 3 телефонов (мульти-ракурс) · 3D-модель мастера в Додзё
             </p>
           </div>
         </div>
@@ -694,87 +685,39 @@ export default function MocapStudio() {
       )}
 
       {/* 2. РАБОЧАЯ ОБЛАСТЬ: 3D ДОДЗЁ + ВИДЕОИСКАТЕЛЬ */}
-      {/* ИНТЕРАКТИВНЫЙ ПАЙПЛАЙН: ТЕЛЕФОНЫ -> 3D КОСТЯНАЯ МОДЕЛЬ -> РЕТАРГЕТИНГ -> 3D МАСТЕР */}
+      {/* ПАЙПЛАЙН: ТЕЛЕФОНЫ (ЛОКАЛЬНАЯ СЕТЬ) -> AI АНАЛИЗ -> 3D МОДЕЛЬ МАСТЕРА */}
       <div className="mocap-pipeline-strip">
         <div className="pipeline-step">
           <span className="step-num">1</span>
           <span className="step-icon">📱</span>
           <div className="step-body">
             <span className="step-title">Камеры (до 3 тел.)</span>
-            <span className="step-desc">Слоты 0°, 90°, 45°</span>
+            <span className="step-desc">Локальная сеть Wi-Fi / 0°, 90°, 45°</span>
           </div>
         </div>
         <span className="pipeline-arrow">➔</span>
         <div className="pipeline-step active-gold">
           <span className="step-num">2</span>
-          <span className="step-icon">⚡</span>
+          <span className="step-icon">🧠</span>
           <div className="step-body">
-            <span className="step-title">3D Скелет из костей</span>
-            <span className="step-desc">Цилиндры костей + шарниры</span>
+            <span className="step-title">AI Анализ движений</span>
+            <span className="step-desc">MediaPipe 3D компьютерное зрение</span>
           </div>
         </div>
         <span className="pipeline-arrow">➔</span>
         <div className="pipeline-step active-emerald">
           <span className="step-num">3</span>
-          <span className="step-icon">🔄</span>
-          <div className="step-body">
-            <span className="step-title">Кинематический перенос</span>
-            <span className="step-desc">Ретаргетинг кватернионов 60 FPS</span>
-          </div>
-        </div>
-        <span className="pipeline-arrow">➔</span>
-        <div className="pipeline-step active-white">
-          <span className="step-num">4</span>
           <span className="step-icon">🥋</span>
           <div className="step-body">
             <span className="step-title">3D Модель мастера</span>
-            <span className="step-desc">Аватар в кимоно в Додзё</span>
+            <span className="step-desc">Синхронный аватар мастера в Додзё</span>
           </div>
         </div>
       </div>
 
       <div className="mocap-workspace">
-        {/* ГЛАВНАЯ 3D АРЕНА (THREE.JS): ОБЪЕМНАЯ 3D-МОДЕЛЬ ИЗ КОСТЕЙ И МАСТЕР */}
+        {/* ГЛАВНАЯ 3D АРЕНА (THREE.JS): ТОЛЬКО 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
         <div className="mocap-3d-stage">
-          {/* ПЕРЕКЛЮЧАТЕЛЬ 3D ПРЕДСТАВЛЕНИЯ МОДЕЛИ И РЕТАРГЕТИНГА */}
-          <div className="mocap-3d-mode-bar">
-            <span className="mode-bar-label">3D Режим:</span>
-            <div className="mode-bar-pills">
-              <button
-                type="button"
-                className={`mode-pill ${avatarMode === 'retarget' ? 'active' : ''}`}
-                onClick={() => setAvatarMode('retarget')}
-                title="Синхронный ретаргетинг: 3D скелет пользователя переносит движения на 3D мастера в кимоно"
-              >
-                ⚡ Ретаргетинг (Скелет ➔ Мастер)
-              </button>
-              <button
-                type="button"
-                className={`mode-pill ${avatarMode === 'xray' ? 'active' : ''}`}
-                onClick={() => setAvatarMode('xray')}
-                title="Анатомический режим: 3D кости внутри полупрозрачного кимоно мастера"
-              >
-                🌟 Скелет внутри Кимоно
-              </button>
-              <button
-                type="button"
-                className={`mode-pill ${avatarMode === 'mesh' ? 'active' : ''}`}
-                onClick={() => setAvatarMode('mesh')}
-                title="3D Мастер в традиционном кимоно"
-              >
-                🥋 3D Мастер
-              </button>
-              <button
-                type="button"
-                className={`mode-pill ${avatarMode === 'skeleton3d' ? 'active' : ''}`}
-                onClick={() => setAvatarMode('skeleton3d')}
-                title="Полноценная 3D модель из костей и суставов с центром тяжести"
-              >
-                ⚡ Только 3D Скелет
-              </button>
-            </div>
-          </div>
-
           <Canvas
             shadows
             camera={{ position: [0, 1.4, 3.4], fov: 42 }}
@@ -792,72 +735,14 @@ export default function MocapStudio() {
             <Suspense fallback={null}>
               <TraditionalDojo />
 
-              {/* 1. СИНХРОННЫЙ РЕТАРГЕТИНГ (3D Скелет пользователя слева -> 3D Мастер справа + лучи переноса) */}
-              {avatarMode === 'retarget' && (
-                <>
-                  <Mocap3DSkeleton
-                    skeleton3DData={skeleton3DData}
-                    detectedStance={karateMetrics.detectedStance}
-                    position={[-0.95, 0, 0]}
-                    rotation={[0, 0, 0]}
-                    showCenterOfMass={true}
-                  />
-                  <MocapPuppetAvatar
-                    boneRotations={boneRotations}
-                    detectedStance={karateMetrics.detectedStance}
-                    position={[0.95, 0, 0]}
-                    rotation={[0, 0, 0]}
-                    xrayMode={false}
-                  />
-                  <MocapRetargetingBeams
-                    skeleton3DData={skeleton3DData}
-                    sourcePos={[-0.95, 0, 0]}
-                    targetPos={[0.95, 0, 0]}
-                  />
-                </>
-              )}
-
-              {/* 2. РЕЖИМ X-RAY (Кости внутри кимоно) */}
-              {avatarMode === 'xray' && (
-                <>
-                  <Mocap3DSkeleton
-                    skeleton3DData={skeleton3DData}
-                    detectedStance={karateMetrics.detectedStance}
-                    position={[0, 0, 0]}
-                    rotation={[0, 0, 0]}
-                    showCenterOfMass={true}
-                  />
-                  <MocapPuppetAvatar
-                    boneRotations={boneRotations}
-                    detectedStance={karateMetrics.detectedStance}
-                    position={[0, 0, 0]}
-                    rotation={[0, 0, 0]}
-                    xrayMode={true}
-                  />
-                </>
-              )}
-
-              {/* 3. КЛАССИЧЕСКИЙ 3D АВАТАР МАСТЕРА */}
-              {avatarMode === 'mesh' && (
-                <MocapPuppetAvatar
-                  boneRotations={boneRotations}
-                  detectedStance={karateMetrics.detectedStance}
-                  position={[0, 0, 0]}
-                  rotation={[0, 0, 0]}
-                  xrayMode={false}
-                />
-              )}
-
-              {/* 4. ТОЛЬКО 3D МОДЕЛЬ ИЗ КОСТЕЙ */}
-              {avatarMode === 'skeleton3d' && (
-                <Mocap3DSkeleton
-                  skeleton3DData={skeleton3DData}
-                  detectedStance={karateMetrics.detectedStance}
-                  position={[0, 0, 0]}
-                  rotation={[0, 0, 0]}
-                  showCenterOfMass={true}
-                />
-              )}
+              {/* 3D МОДЕЛЬ МАСТЕРА В ДОДЗЁ */}
+              <MocapPuppetAvatar
+                boneRotations={boneRotations}
+                detectedStance={karateMetrics.detectedStance}
+                position={[0, 0, 0]}
+                rotation={[0, 0, 0]}
+                xrayMode={false}
+              />
 
               <ContactShadows opacity={0.7} scale={6} blur={1.5} far={4} color="#000000" />
             </Suspense>
@@ -1147,8 +1032,17 @@ export default function MocapStudio() {
               Отсканируйте QR-код смартфоном для мгновенного захвата движений. Доступно до 3 телефонов одновременно.
             </p>
 
-            {/* Переключатель режимов подключения: Внешний интернет (HTTPS) или Локальный Wi-Fi */}
+            {/* Переключатель режимов подключения: Локальная сеть (Wi-Fi) или Внешний интернет (HTTPS) */}
             <div className="qr-net-mode-switch">
+              <button
+                type="button"
+                className={`qr-net-mode-btn ${connectionMode === 'local' ? 'active' : ''}`}
+                onClick={() => setConnectionMode('local')}
+              >
+                <span className="net-mode-icon">🏠</span>
+                <span className="net-mode-title">Локальная сеть (Wi-Fi)</span>
+                <span className="net-mode-tag">Один роутер / Домашняя сеть</span>
+              </button>
               <button
                 type="button"
                 className={`qr-net-mode-btn ${connectionMode === 'tunnel' ? 'active' : ''}`}
@@ -1157,15 +1051,6 @@ export default function MocapStudio() {
                 <span className="net-mode-icon">🌍</span>
                 <span className="net-mode-title">Внешний интернет / 4G (HTTPS)</span>
                 <span className="net-mode-tag gold">Без флагов и настроек</span>
-              </button>
-              <button
-                type="button"
-                className={`qr-net-mode-btn ${connectionMode === 'local' ? 'active' : ''}`}
-                onClick={() => setConnectionMode('local')}
-              >
-                <span className="net-mode-icon">🏠</span>
-                <span className="net-mode-title">Локальная сеть (Wi-Fi)</span>
-                <span className="net-mode-tag">Один роутер</span>
               </button>
             </div>
 

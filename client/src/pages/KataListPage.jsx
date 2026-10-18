@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { listKata } from '../api/kata';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -203,6 +203,7 @@ function getKataKanji(item) {
 }
 
 export default function KataListPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'admin';
   const [params, setParams] = useSearchParams();
@@ -596,16 +597,17 @@ export default function KataListPage() {
                         className={`atlas-card ${isHero ? 'atlas-card--hero' : 'atlas-card--standard'} ${
                           isSelected ? 'active' : ''
                         }`}
-                        onClick={() => setSelectedId(item.Kata_ID)}
+                        onClick={() => navigate(`/kata/${item.Kata_ID}`)}
                         role="button"
                         tabIndex={0}
+                        title={`Открыть форму ${item.Title} в 3D Додзё`}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
-                            setSelectedId(item.Kata_ID);
+                            navigate(`/kata/${item.Kata_ID}`);
                           }
                         }}
                       >
-                        {/* Фоновое или шапочное изображение */}
+                        {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
                         <div className="atlas-card__media">
                           <img
                             src={thumbnail}
@@ -645,22 +647,17 @@ export default function KataListPage() {
                               : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
                           </p>
 
-                          {/* Нижняя панель с мета-информацией и ссылками */}
+                          {/* Нижняя панель с мета-информацией и прямым приглашением в 3D Додзё */}
                           <div className="atlas-card__footer">
                             <div className="atlas-card__meta-badges">
                               <BeltBadge belt={belt} size="sm" showKanji={false} />
                               <span className="atlas-card__steps-pill">{stepsCount} шагов</span>
                             </div>
 
-                            <Link
-                              to={`/kata/${item.Kata_ID}`}
-                              className="atlas-card__3d-btn"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Запустить 3D-аватар ката"
-                            >
-                              <span>3D Разбор</span>
-                              <span className="btn-arrow">→</span>
-                            </Link>
+                            <div className="atlas-card__dojo-tag">
+                              <span>3D Додзё</span>
+                              <span className="dojo-tag-arrow">→</span>
+                            </div>
                           </div>
                         </div>
                       </div>
