@@ -155,7 +155,9 @@ export default function MocapStudio() {
   const socketRef = useRef(null);
   const peersRef = useRef(new Map()); // peerId -> RTCPeerConnection
   const phoneStreamsRef = useRef(new Map()); // slot -> MediaStream
-  const latestLandmarksBySlot = useRef({}); // slot -> { landmarks, worldLandmarks }
+  const latestLandmarksBySlot = useRef({}); // slot -> { landmarks, worldLandmarks, timestamp }
+  const processingSlotRef = useRef(1); // Текущий слот, обрабатываемый нейросетью MediaPipe
+  const cameraCycleIndexRef = useRef(0); // Счетчик кругового переключения камер (Round-Robin)
 
   const poseInstanceRef = useRef(null);
   const animFrameIdRef = useRef(null);
@@ -185,42 +187,49 @@ export default function MocapStudio() {
     };
   }, []);
 
-  // 2. Обработка результатов компьютерного зрения MediaPipe
+  // 2. Обработка результатов компьютерного зрения MediaPipe (1, 2 или 3 камеры)
   const onPoseResults = useCallback((results) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+
+    const currentSlot = processingSlotRef.current || activeCameraSlot || 1;
 
     if (results.poseLandmarks && results.poseLandmarks.length >= 33) {
       setBodyDetected(true);
 
-      // Сохраняем последние ключевые точки активного слота
-      latestLandmarksBySlot.current[activeCameraSlot] = {
+      // Сохраняем последние ключевые точки обработанного слота
+      latestLandmarksBySlot.current[currentSlot] = {
         landmarks: results.poseLandmarks,
         worldLandmarks: results.poseWorldLandmarks,
+        slot: currentSlot,
+        timestamp: Date.now(),
       };
 
-      // Если включено мульти-камерное слияние (до 3 телефонов), выполняем триангуляцию данных
-      let finalLandmarks = results.poseLandmarks;
-      let finalWorldLandmarks = results.poseWorldLandmarks;
-
-      if (multiCameraFusion && Object.keys(latestLandmarksBySlot.current).length > 1) {
-        const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current);
-        if (fused) {
-          finalLandmarks = fused.landmarks;
-          finalWorldLandmarks = fused.worldLandmarks;
+      // Очищаем слоты, которые не обновлялись более 2.5 сек (выключенная камера)
+      const now = Date.now();
+      for (const s of Object.keys(latestLandmarksBySlot.current)) {
+        if (now - (latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
+          delete latestLandmarksBySlot.current[s];
         }
       }
+
+      // Выполняем адаптивное слияние камер (1, 2 или 3 камеры)
+      const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current);
+
+      const finalLandmarks = fused?.landmarks || results.poseLandmarks;
+      const finalWorldLandmarks = fused?.worldLandmarks || results.poseWorldLandmarks;
 
       // Анализ биомеханики каратэ
       const metrics = analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
       setKarateMetrics(metrics);
 
-      // Отрисовываем неоновый скелет на холсте видоискателя
-      drawNeonKarateSkeleton(ctx, finalLandmarks, w, h, metrics);
+      // На холсте видоискателя ПК отображаем скелет для текущего выбранного ракурса
+      ctx.clearRect(0, 0, w, h);
+      const displayLandmarks = (latestLandmarksBySlot.current[activeCameraSlot]?.landmarks) || finalLandmarks;
+      drawNeonKarateSkeleton(ctx, displayLandmarks, w, h, metrics);
 
       // 3D КОСТИ: Строим объемную трехмерную модель суставов и костей для Three.js!
       const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
@@ -255,11 +264,17 @@ export default function MocapStudio() {
         ]);
       }
     } else {
-      setBodyDetected(false);
-      setBoneRotations(null);
-      latestPoseRef.current = null;
+      if (latestLandmarksBySlot.current[currentSlot]) {
+        delete latestLandmarksBySlot.current[currentSlot];
+      }
+      if (Object.keys(latestLandmarksBySlot.current).length === 0) {
+        setBodyDetected(false);
+        setBoneRotations(null);
+        latestPoseRef.current = null;
+        ctx.clearRect(0, 0, w, h);
+      }
     }
-  }, [isRecording, activeCameraSlot, multiCameraFusion]);
+  }, [isRecording, activeCameraSlot]);
 
   // 3. Получение списка веб-камер ПК
   const updateDeviceList = useCallback(async () => {
@@ -518,7 +533,7 @@ export default function MocapStudio() {
     }
   }, [sourceMode, startWebcam, stopWebcam]);
 
-  // 7. Основной цикл захвата кадров и передачи в нейросеть MediaPipe Pose
+  // 7. Основной цикл захвата кадров и передачи в нейросеть MediaPipe Pose (1, 2 или 3 камеры)
   useEffect(() => {
     if (!cameraActive) return;
 
@@ -527,27 +542,36 @@ export default function MocapStudio() {
     const frameLoop = async () => {
       const pose = poseInstanceRef.current;
 
-      // Выбираем активное видео для обработки
-      let video = null;
+      // Собираем все готовые видеопотоки
+      const activeVideos = [];
       if (sourceMode === 'webcam') {
-        video = videoRef.current;
+        if (videoRef.current && videoRef.current.readyState >= 2) {
+          activeVideos.push({ slot: 1, video: videoRef.current });
+        }
       } else {
-        if (activeCameraSlot === 1) video = phoneVideo1Ref.current;
-        else if (activeCameraSlot === 2) video = phoneVideo2Ref.current;
-        else if (activeCameraSlot === 3) video = phoneVideo3Ref.current;
-
-        // Если выбранное видео не готово, ищем любое активное видео телефона
-        if (!video || video.readyState < 2) {
-          if (phoneVideo1Ref.current && phoneVideo1Ref.current.readyState >= 2) video = phoneVideo1Ref.current;
-          else if (phoneVideo2Ref.current && phoneVideo2Ref.current.readyState >= 2) video = phoneVideo2Ref.current;
-          else if (phoneVideo3Ref.current && phoneVideo3Ref.current.readyState >= 2) video = phoneVideo3Ref.current;
+        if (phoneVideo1Ref.current && phoneVideo1Ref.current.readyState >= 2) {
+          activeVideos.push({ slot: 1, video: phoneVideo1Ref.current });
+        }
+        if (phoneVideo2Ref.current && phoneVideo2Ref.current.readyState >= 2) {
+          activeVideos.push({ slot: 2, video: phoneVideo2Ref.current });
+        }
+        if (phoneVideo3Ref.current && phoneVideo3Ref.current.readyState >= 2) {
+          activeVideos.push({ slot: 3, video: phoneVideo3Ref.current });
         }
       }
 
-      if (video && video.readyState >= 2 && pose && !isProcessing) {
+      if (activeVideos.length > 0 && pose && !isProcessing) {
+        // Round-Robin переключение между активными камерами:
+        // Если подключена 1 камера — она обрабатывается каждый кадр (60 Гц)
+        // Если подключены 2 камеры — чередуются по кадрам (30 Гц на каждую)
+        // Если подключены 3 камеры — чередуются по кадрам (20 Гц на каждую)
+        const target = activeVideos[cameraCycleIndexRef.current % activeVideos.length];
+        cameraCycleIndexRef.current = (cameraCycleIndexRef.current + 1) % activeVideos.length;
+
         try {
           isProcessing = true;
-          await pose.send({ image: video });
+          processingSlotRef.current = target.slot;
+          await pose.send({ image: target.video });
         } catch (e) {
           // Пропуск кадра при задержке
         } finally {
@@ -565,7 +589,7 @@ export default function MocapStudio() {
         cancelAnimationFrame(animFrameIdRef.current);
       }
     };
-  }, [cameraActive, sourceMode, activeCameraSlot]);
+  }, [cameraActive, sourceMode]);
 
   // 8. Таймер записи сессии MoCap
   useEffect(() => {
@@ -846,15 +870,26 @@ export default function MocapStudio() {
                 })}
               </div>
 
-              {/* Переключатель слияния камер */}
+              {/* Индикатор и переключатель слияния камер (1, 2 или 3 смартфона) */}
               <div className="multi-cam-fusion-bar">
+                <div className="fusion-status-badge">
+                  <span className="fusion-status-text">
+                    {activePhoneCount === 1
+                      ? '🟢 1 камера (Моно-захват)'
+                      : activePhoneCount === 2
+                      ? '⚡ 2 камеры (Стерео 3D-триангуляция)'
+                      : activePhoneCount === 3
+                      ? '🔥 3 камеры (Полный MoCap 360°)'
+                      : '⚪ Ожидание подключения'}
+                  </span>
+                </div>
                 <label className="fusion-toggle-label">
                   <input
                     type="checkbox"
                     checked={multiCameraFusion}
                     onChange={(e) => setMultiCameraFusion(e.target.checked)}
                   />
-                  <span>Триангуляция и слияние 3 камер (Depth Z)</span>
+                  <span>Авто-триангуляция и слияние глубины Z</span>
                 </label>
               </div>
             </div>

@@ -123,87 +123,230 @@ export function calculateAngle3D(p1, p2, p3) {
 }
 
 /**
- * Слияние ключевых точек от до 3 смартфонов (Мульти-камерная триангуляция)
- * Камера 1 (Фронт / 0°): дает максимальную точность по осям X (ширина) и Y (высота).
- * Камера 2 (Бок / 90°): дает прямое физическое измерение глубины Z (профиль удара/стойки).
- * Камера 3 (Угол / 45°): заполняет слепые зоны при перекрытии одной руки другой.
+ * Адаптивное мульти-камерное слияние и 3D-триангуляция данных для 1, 2 или 3 камер:
+ * 
+ * 1 КАМЕРА:
+ * - Фронт (0°): точные X и Y, моно-глубина Z.
+ * - Бок (90°): разворачивает ось X в глубину Z, проецирует позу на аватар.
+ * - Угол (45°): деротирует диагональную проекцию на 45°.
+ * 
+ * 2 КАМЕРЫ (Стереоскопическая триангуляция):
+ * - Фронт (1) + Бок (2): ЗОЛОТОЙ СТАНДАРТ MoCap.
+ *   X и Y берутся с фронтальной камеры, а Z (глубина ударов и стоек) — напрямую
+ *   с боковой камеры. Устраняет погрешности монокулярной оценки глубины!
+ * - Фронт (1) + Угол (3): заполнение слепых зон перекрытия рук и ног.
+ * - Бок (2) + Угол (3): глубина с боковой камеры + восстановление ширины с угловой.
+ * 
+ * 3 КАМЕРЫ (Полный захват 360°):
+ * - Фронт (0°) + Бок (90°) + Угол (45°).
+ * - Слияние с весами достоверности видимости (visibility confidence weighting).
+ * - Устранение перекрытий конечностей (окклюзий) и физическая глубина Z.
  */
 export function fuseMultiCameraLandmarks(cameraFeeds = {}) {
-  const c1 = cameraFeeds[1]; // Фронт
-  const c2 = cameraFeeds[2]; // Бок
-  const c3 = cameraFeeds[3]; // Угол
+  const c1 = cameraFeeds[1]; // Фронт (0°)
+  const c2 = cameraFeeds[2]; // Бок (90°)
+  const c3 = cameraFeeds[3]; // Угол (45°)
 
-  const baseFeed = c1?.landmarks ? c1 : c2?.landmarks ? c2 : c3;
-  if (!baseFeed || !baseFeed.landmarks) return null;
+  const activeSlots = [1, 2, 3].filter(
+    (s) => cameraFeeds[s]?.landmarks && cameraFeeds[s].landmarks.length >= 33
+  );
 
-  const baseLms = baseFeed.landmarks;
-  const baseWorld = baseFeed.worldLandmarks || baseLms;
+  if (activeSlots.length === 0) return null;
 
-  // Если подключен только 1 телефон, возвращаем его данные
-  if (!c2?.landmarks && !c3?.landmarks) {
-    return {
-      landmarks: baseLms,
-      worldLandmarks: baseWorld,
-      fused: false,
-      activeCameras: [baseFeed.slot || 1],
-    };
+  // --- СЛУЧАЙ 1: РОВНО 1 КАМЕРА ---
+  if (activeSlots.length === 1) {
+    const slot = activeSlots[0];
+    const feed = cameraFeeds[slot];
+    const lms = feed.landmarks;
+    const wlms = feed.worldLandmarks || lms;
+
+    if (slot === 1) {
+      // Фронтальная камера (или ПК веб-камера) — прямая передача данных
+      return {
+        landmarks: lms,
+        worldLandmarks: wlms,
+        fused: false,
+        cameraMode: 'single_front',
+        activeCameras: [1],
+      };
+    }
+
+    if (slot === 2) {
+      // Только боковая камера (90°): горизонтальная ось камеры X соответствует мировой глубине Z!
+      const rotatedLms = [];
+      const rotatedWlms = [];
+      const hipX = ((wlms[23]?.x ?? 0) + (wlms[24]?.x ?? 0)) * 0.5;
+
+      for (let i = 0; i < 33; i++) {
+        const p = lms[i];
+        const w = wlms[i];
+        const depthZ = (w.x - hipX) * 1.15;
+        const lateralX = -(w.z || 0);
+
+        rotatedLms.push({
+          x: p.x,
+          y: p.y,
+          z: depthZ,
+          visibility: p.visibility ?? 1,
+        });
+
+        rotatedWlms.push({
+          x: lateralX,
+          y: w.y,
+          z: depthZ,
+          visibility: w.visibility ?? 1,
+        });
+      }
+
+      return {
+        landmarks: rotatedLms,
+        worldLandmarks: rotatedWlms,
+        fused: true,
+        cameraMode: 'single_side',
+        activeCameras: [2],
+      };
+    }
+
+    if (slot === 3) {
+      // Только угловая камера (45°): вращение вокруг Y на -45°
+      const cos45 = 0.7071;
+      const sin45 = 0.7071;
+      const rotatedLms = [];
+      const rotatedWlms = [];
+
+      for (let i = 0; i < 33; i++) {
+        const p = lms[i];
+        const w = wlms[i];
+        const rx = w.x * cos45 + (w.z || 0) * sin45;
+        const rz = -w.x * sin45 + (w.z || 0) * cos45;
+
+        rotatedLms.push({ ...p, z: rz });
+        rotatedWlms.push({ x: rx, y: w.y, z: rz, visibility: w.visibility ?? 1 });
+      }
+
+      return {
+        landmarks: rotatedLms,
+        worldLandmarks: rotatedWlms,
+        fused: true,
+        cameraMode: 'single_angle',
+        activeCameras: [3],
+      };
+    }
   }
 
+  // --- СЛУЧАЙ 2 И 3: МУЛЬТИ-КАМЕРНОЕ СЛИЯНИЕ (2 ИЛИ 3 КАМЕРЫ) ---
   const fusedLms = [];
-  const fusedWorld = [];
+  const fusedWlms = [];
+
+  const c2_w = c2?.worldLandmarks;
+  const c2_hipX = c2_w && c2_w[23] && c2_w[24]
+    ? (c2_w[23].x + c2_w[24].x) * 0.5
+    : 0;
+
+  const hasC1 = Boolean(c1?.landmarks);
+  const hasC2 = Boolean(c2?.landmarks);
+  const hasC3 = Boolean(c3?.landmarks);
 
   for (let i = 0; i < 33; i++) {
     const p1 = c1?.landmarks?.[i];
     const w1 = c1?.worldLandmarks?.[i];
+    const vis1 = p1?.visibility ?? 0;
 
     const p2 = c2?.landmarks?.[i];
     const w2 = c2?.worldLandmarks?.[i];
+    const vis2 = p2?.visibility ?? 0;
 
     const p3 = c3?.landmarks?.[i];
     const w3 = c3?.worldLandmarks?.[i];
+    const vis3 = p3?.visibility ?? 0;
 
-    // Вычисляем взвешенные координаты
-    let x = (p1 || p3 || p2)?.x ?? 0.5;
-    let y = (p1 || p2 || p3)?.y ?? 0.5;
-    let z = (w1 || p1)?.z ?? 0;
-    let vis = Math.max(p1?.visibility ?? 0, p2?.visibility ?? 0, p3?.visibility ?? 0);
+    // 1. ОПРЕДЕЛЕНИЕ X (Ширина):
+    // Приоритет отдается фронтальной камере (1). Если точка на фронте перекрыта (vis1 < 0.4),
+    // восстанавливаем X из угловой камеры (3) или боковой (2).
+    let fx = 0.5;
+    let wx = 0.0;
 
-    // Коррекция глубины Z с боковой камеры (90°):
-    // Горизонтальное смещение от таза на боковой камере напрямую соответствует оси глубины Z!
-    if (w2 && c2?.worldLandmarks?.[23]) {
-      const hipMidZ2 = ((c2.worldLandmarks[23].x + c2.worldLandmarks[24].x) * 0.5);
-      const depthFromSideCam = (w2.x - hipMidZ2) * 1.1; // Перенос боковой оси X в мировую глубину Z
-      z = depthFromSideCam;
+    if (hasC1 && vis1 >= 0.35) {
+      fx = p1.x;
+      wx = w1.x;
+    } else if (hasC3 && vis3 > 0.45) {
+      fx = p3.x;
+      wx = (w3.x + (w3.z || 0)) * 0.7071;
+    } else if (hasC2 && vis2 > 0.45) {
+      fx = (p2.z ?? 0) * 0.5 + 0.5;
+      wx = -(w2.z || 0);
+    } else {
+      fx = p1?.x ?? p3?.x ?? p2?.x ?? 0.5;
+      wx = w1?.x ?? w3?.x ?? w2?.x ?? 0.0;
     }
 
-    // Если рука перекрыта с фронта (vis < 0.4), но видна с камеры угла 45° или сбоку:
-    if (p1 && p1.visibility < 0.45 && p3 && p3.visibility > 0.6) {
-      x = p3.x;
-      y = p3.y;
+    // 2. ОПРЕДЕЛЕНИЕ Y (Высота):
+    // Взвешенное среднее по всем доступным камерам с учетом качества детекции
+    let totalVisY = 0;
+    let sumFy = 0;
+    let sumWy = 0;
+
+    if (hasC1 && p1) { sumFy += p1.y * Math.max(0.2, vis1); sumWy += w1.y * Math.max(0.2, vis1); totalVisY += Math.max(0.2, vis1); }
+    if (hasC2 && p2) { sumFy += p2.y * Math.max(0.2, vis2); sumWy += w2.y * Math.max(0.2, vis2); totalVisY += Math.max(0.2, vis2); }
+    if (hasC3 && p3) { sumFy += p3.y * Math.max(0.2, vis3); sumWy += w3.y * Math.max(0.2, vis3); totalVisY += Math.max(0.2, vis3); }
+
+    const fy = totalVisY > 0 ? sumFy / totalVisY : (p1?.y ?? p2?.y ?? p3?.y ?? 0.5);
+    const wy = totalVisY > 0 ? sumWy / totalVisY : (w1?.y ?? w2?.y ?? w3?.y ?? 0.0);
+
+    // 3. ОПРЕДЕЛЕНИЕ Z (Физическая глубина Додзё):
+    // Боковая камера (2) дает ПРЯМОЕ измерение физической глубины!
+    let fz = 0.0;
+    let wz = 0.0;
+
+    if (hasC2 && vis2 >= 0.30) {
+      const physicalDepthZ = (w2.x - c2_hipX) * 1.15;
+      fz = physicalDepthZ;
+      wz = physicalDepthZ;
+
+      if (hasC1 && vis1 > 0.5) {
+        wz = physicalDepthZ * 0.85 + w1.z * 0.15;
+        fz = wz;
+      }
+    } else if (hasC3 && vis3 >= 0.40) {
+      const angleDepthZ = (-w3.x + (w3.z || 0)) * 0.7071;
+      wz = hasC1 ? (angleDepthZ * 0.65 + w1.z * 0.35) : angleDepthZ;
+      fz = wz;
+    } else if (hasC1) {
+      fz = p1.z || 0;
+      wz = w1.z || 0;
     }
 
-    fusedLms.push({ x, y, z, visibility: vis });
+    const maxVis = Math.max(vis1, vis2, vis3);
 
-    // World landmarks в метрах
-    let wx = w1?.x ?? p1?.x ?? 0;
-    let wy = w1?.y ?? p1?.y ?? 0;
-    let wz = z;
-    if (w1 && w2) {
-      wy = (w1.y + w2.y) * 0.5;
-    }
-    fusedWorld.push({ x: wx, y: wy, z: wz, visibility: vis });
+    fusedLms.push({
+      x: fx,
+      y: fy,
+      z: fz,
+      visibility: maxVis,
+    });
+
+    fusedWlms.push({
+      x: wx,
+      y: wy,
+      z: wz,
+      visibility: maxVis,
+    });
   }
 
-  const activeCameras = [];
-  if (c1?.landmarks) activeCameras.push(1);
-  if (c2?.landmarks) activeCameras.push(2);
-  if (c3?.landmarks) activeCameras.push(3);
+  const cameraMode = activeSlots.length === 3
+    ? 'triangulation_3cam'
+    : (activeSlots.includes(1) && activeSlots.includes(2))
+      ? 'stereo_front_side'
+      : (activeSlots.includes(1) && activeSlots.includes(3))
+        ? 'stereo_front_angle'
+        : 'stereo_side_angle';
 
   return {
     landmarks: fusedLms,
-    worldLandmarks: fusedWorld,
+    worldLandmarks: fusedWlms,
     fused: true,
-    activeCameras,
+    cameraMode,
+    activeCameras: activeSlots,
   };
 }
 
