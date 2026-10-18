@@ -4,6 +4,7 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { extractHandBiomechanics, estimateHeadOrientation } from '../utils/mocapPoseTracker';
+import { applyHandRetargetingToArmature } from '../utils/mocapHandRetargeter';
 
 /**
  * MocapPuppetAvatar — 3D-аватар мастера каратэ Шотокан (Karateka lowpoly).
@@ -437,9 +438,9 @@ export default function MocapPuppetAvatar({
         }
       }
 
-      // Применение анатомических вращений фаланг (30 костей)
-      if (fR) applyFingersToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.82);
-      if (fL) applyFingersToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.82);
+      // Применение анатомических вращений фаланг (30 костей) с 1€ фильтрацией и ROM-клампингом
+      if (fR) applyHandRetargetingToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.82);
+      if (fL) applyHandRetargetingToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.82);
 
       // 4. ПРАВАЯ НОГА ЧЕЛОВЕКА
       if (pRHp && pRKn) {

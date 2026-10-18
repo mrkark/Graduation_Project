@@ -10,6 +10,8 @@
  * - Биомеханический анализ стоек каратэ (Дзэнкуцу, Киба, Кокуцу, Йой) и ударов
  */
 
+import { computePerFingerConfidence, disambiguateHandSide } from './mocapHandRetargeter.js';
+
 const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
 
 let poseInstance = null;
@@ -1515,22 +1517,11 @@ export function extractHandBiomechanics(landmarks, worldLandmarks, handsResults 
       const hClass = handednessList[hIdx]?.classification?.[0];
       const rawLabel = hClass?.label || (hIdx === 0 ? 'Right' : 'Left');
 
-      // Сопоставляем руку по положению запястья
-      const hwX = hLms[0].x;
-      const hwY = hLms[0].y;
-      const lw = landmarks[15]; // левое запястье человека
-      const rw = landmarks[16]; // правое запястье человека
-
-      let side = null;
-      if (lw && rw) {
-        const dL = Math.hypot(hwX - lw.x, hwY - lw.y);
-        const dR = Math.hypot(hwX - rw.x, hwY - rw.y);
-        side = dL < dR ? 'left' : 'right';
-      } else {
-        side = rawLabel === 'Left' ? 'right' : 'left';
-      }
+      // Сопоставляем руку по положению запястья и локтя человека с защитой от инверсии
+      const side = disambiguateHandSide(hLms[0], landmarks) || (rawLabel === 'Left' ? 'right' : 'left');
 
       const hPts = hLms.map((p) => [p.x * aspect, p.y, (p.z || 0) * aspect]);
+      const confidence = computePerFingerConfidence(hPts);
 
       const cThumb = calcThumbCurl(hPts[1], hPts[2], hPts[3], hPts[4], hPts[0], hPts[5]);
       const cIndex = calcFingerCurl(hPts[5], hPts[6], hPts[7], hPts[8], hPts[0]);
@@ -1583,6 +1574,7 @@ export function extractHandBiomechanics(landmarks, worldLandmarks, handsResults 
         ring: cRing,
         pinky: cPinky,
         general_curl: parseFloat(avgCurl.toFixed(2)),
+        confidence,
         phalanges: {
           thumb: pThb.angles,
           index: pIdx.angles,
@@ -1689,6 +1681,7 @@ export function extractHandBiomechanics(landmarks, worldLandmarks, handsResults 
       },
       palm_normal: [parseFloat(palmNormal[0].toFixed(3)), parseFloat(palmNormal[1].toFixed(3)), parseFloat(palmNormal[2].toFixed(3))],
       hand_direction: [parseFloat(vFwd[0].toFixed(3)), parseFloat(vFwd[1].toFixed(3)), parseFloat(vFwd[2].toFixed(3))],
+      confidence: { thumb: 0.65, index: 0.65, middle: 0.65, ring: 0.60, pinky: 0.60 },
       detected: true,
       isDedicatedHands: false,
       fistScore: Math.round(baseCurl * 100),
