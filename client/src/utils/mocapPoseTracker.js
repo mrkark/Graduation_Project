@@ -386,6 +386,55 @@ export function loadMediaPipePose() {
   return poseLoadPromise;
 }
 
+const MEDIAPIPE_HANDS_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js';
+let handsInstance = null;
+let handsLoadPromise = null;
+
+export function loadMediaPipeHands(options = {}) {
+  if (handsInstance) return Promise.resolve(handsInstance);
+  if (handsLoadPromise) return handsLoadPromise;
+
+  handsLoadPromise = new Promise((resolve, reject) => {
+    if (typeof window !== 'undefined' && window.Hands) {
+      initHands();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = MEDIAPIPE_HANDS_CDN;
+    script.crossOrigin = 'anonymous';
+    script.onload = () => initHands();
+    script.onerror = (err) => {
+      console.error('Ошибка загрузки MediaPipe Hands CDN:', err);
+      reject(new Error('Не удалось загрузить библиотеку MediaPipe Hands'));
+    };
+    document.head.appendChild(script);
+
+    function initHands() {
+      try {
+        const hands = new window.Hands({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`,
+        });
+
+        hands.setOptions({
+          maxNumHands: 2,
+          modelComplexity: options.modelComplexity !== undefined ? options.modelComplexity : 0,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+
+        handsInstance = hands;
+        resolve(hands);
+      } catch (err) {
+        reject(err);
+      }
+    }
+  });
+
+  return handsLoadPromise;
+}
+
+
 export function calculateAngle3D(p1, p2, p3) {
   if (!p1 || !p2 || !p3) return 180;
   const v1 = { x: p1.x - p2.x, y: p1.y - p2.y, z: (p1.z || 0) - (p2.z || 0) };
@@ -576,12 +625,47 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
   // Применяем анатомический клиренс грудины (руки не проваливаются сквозь ребра)
   const clearedWlms = applyTorsoClearanceToLandmarks(filteredWlms);
 
+  // Слияние кинематики кистей и пальцев:
+  // Если у одной камеры рука перекрыта, берем ракурс второй или третьей камеры
+  let fusedFingers = null;
+  let fusedHands = null;
+  for (const s of [1, 3, 2]) {
+    const feed = cameraFeeds[s];
+    if (feed?.fingers && (feed.fingers.left?.detected || feed.fingers.right?.detected)) {
+      if (!fusedFingers) {
+        fusedFingers = { ...feed.fingers };
+      } else {
+        if (!fusedFingers.left?.detected && feed.fingers.left?.detected) {
+          fusedFingers.left = feed.fingers.left;
+        }
+        if (!fusedFingers.right?.detected && feed.fingers.right?.detected) {
+          fusedFingers.right = feed.fingers.right;
+        }
+      }
+    }
+    if (feed?.hands && Array.isArray(feed.hands) && feed.hands.length > 0) {
+      if (!fusedHands) fusedHands = feed.hands;
+    }
+  }
+
+  // Слияние ориентации взгляда Мэцукэ
+  let fusedHead = null;
+  for (const s of [1, 3, 2]) {
+    if (cameraFeeds[s]?.head) {
+      fusedHead = cameraFeeds[s].head;
+      break;
+    }
+  }
+
   return {
     landmarks: filteredLms,
     worldLandmarks: clearedWlms,
     fused: activeSlots.length > 1,
     cameraMode,
     activeCameras: activeSlots,
+    fingers: fusedFingers,
+    hands: fusedHands,
+    head: fusedHead,
   };
 }
 
@@ -887,15 +971,151 @@ export function retargetSkeleton3DToMasterAvatar(skeleton3DData, worldLandmarks,
 }
 
 // ============================================================================
-// 7. ТОЧНАЯ ОТРИСОВКА НЕОНОВОГО СКЕЛЕТА 1:1 НА ВИДОИСКАТЕЛЕ
-// Стилистика и цветовая гамма из Karate Motion Studio (gui/video_panel.py)
+// 7. ТОЧНАЯ ОТРИСОВКА НЕОНОВОГО СКЕЛЕТА И КИСТЕЙ 1:1 НА ВИДОИСКАТЕЛЕ
+// Стилистика и цветовая гамма из Karate Motion Studio (gui/video_panel.py & draw_utils.py)
 // ============================================================================
+
+/**
+ * Отрисовка неонового скелета кисти (21 ключевая точка, 5 пальцев)
+ */
+export function drawNeonHandSkeleton(ctx, handLandmarks, handednessLabel = 'Right', width = 1280, height = 720, options = {}) {
+  if (!ctx || !handLandmarks || handLandmarks.length < 21) return;
+  const w = width;
+  const h = height;
+
+  const pts = handLandmarks.map((lm) => ({
+    x: lm.x * w,
+    y: lm.y * h,
+  }));
+
+  const FINGER_COLORS = {
+    thumb: { main: '#f59e0b', glow: '#d97706' },  // Янтарный (Большой палец)
+    index: { main: '#06b6d4', glow: '#0891b2' },  // Кибер-Циан (Указательный)
+    middle: { main: '#10b981', glow: '#059669' }, // Изумруд (Средний)
+    ring: { main: '#3b82f6', glow: '#2563eb' },   // Электрик-Синий (Безымянный)
+    pinky: { main: '#a855f7', glow: '#9333ea' },  // Неоновый Пурпур (Мизинец)
+    palm: { main: '#fbbf24', glow: '#d97706' },   // Золото (Ладонь)
+  };
+
+  const drawSegment = (i1, i2, color, glowColor, lineWidth = 2.4) => {
+    const p1 = pts[i1];
+    const p2 = pts[i2];
+    if (!p1 || !p2) return;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 6;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1, lineWidth * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  const drawJoint = (idx, color = '#fbbf24', radius = 3.5) => {
+    const p = pts[idx];
+    if (!p) return;
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  // 1. Пястье и ладонь
+  drawSegment(0, 1, FINGER_COLORS.thumb.main, FINGER_COLORS.thumb.glow, 2.6);
+  drawSegment(0, 5, FINGER_COLORS.palm.main, FINGER_COLORS.palm.glow, 2.4);
+  drawSegment(0, 17, FINGER_COLORS.palm.main, FINGER_COLORS.palm.glow, 2.4);
+  drawSegment(5, 9, FINGER_COLORS.palm.main, FINGER_COLORS.palm.glow, 2.0);
+  drawSegment(9, 13, FINGER_COLORS.palm.main, FINGER_COLORS.palm.glow, 2.0);
+  drawSegment(13, 17, FINGER_COLORS.palm.main, FINGER_COLORS.palm.glow, 2.0);
+
+  // 2. Большой палец (CMC -> MCP -> IP -> TIP)
+  drawSegment(1, 2, FINGER_COLORS.thumb.main, FINGER_COLORS.thumb.glow, 2.5);
+  drawSegment(2, 3, FINGER_COLORS.thumb.main, FINGER_COLORS.thumb.glow, 2.2);
+  drawSegment(3, 4, FINGER_COLORS.thumb.main, FINGER_COLORS.thumb.glow, 2.0);
+
+  // 3. Указательный палец
+  drawSegment(5, 6, FINGER_COLORS.index.main, FINGER_COLORS.index.glow, 2.5);
+  drawSegment(6, 7, FINGER_COLORS.index.main, FINGER_COLORS.index.glow, 2.2);
+  drawSegment(7, 8, FINGER_COLORS.index.main, FINGER_COLORS.index.glow, 2.0);
+
+  // 4. Средний палец
+  drawSegment(9, 10, FINGER_COLORS.middle.main, FINGER_COLORS.middle.glow, 2.5);
+  drawSegment(10, 11, FINGER_COLORS.middle.main, FINGER_COLORS.middle.glow, 2.2);
+  drawSegment(11, 12, FINGER_COLORS.middle.main, FINGER_COLORS.middle.glow, 2.0);
+
+  // 5. Безымянный палец
+  drawSegment(13, 14, FINGER_COLORS.ring.main, FINGER_COLORS.ring.glow, 2.5);
+  drawSegment(14, 15, FINGER_COLORS.ring.main, FINGER_COLORS.ring.glow, 2.2);
+  drawSegment(15, 16, FINGER_COLORS.ring.main, FINGER_COLORS.ring.glow, 2.0);
+
+  // 6. Мизинец
+  drawSegment(17, 18, FINGER_COLORS.pinky.main, FINGER_COLORS.pinky.glow, 2.5);
+  drawSegment(18, 19, FINGER_COLORS.pinky.main, FINGER_COLORS.pinky.glow, 2.2);
+  drawSegment(19, 20, FINGER_COLORS.pinky.main, FINGER_COLORS.pinky.glow, 2.0);
+
+  // 7. Все 21 сустав кисти
+  for (let i = 0; i <= 20; i++) {
+    const isTip = [4, 8, 12, 16, 20].includes(i);
+    const col = i === 0 ? '#ffffff' : (i <= 4 ? '#f59e0b' : i <= 8 ? '#06b6d4' : i <= 12 ? '#10b981' : i <= 16 ? '#3b82f6' : '#a855f7');
+    drawJoint(i, col, isTip ? 4.5 : 3.0);
+  }
+
+  // Бейдж кисти
+  if (pts[0]) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.strokeStyle = 'rgba(212, 162, 76, 0.65)';
+    ctx.lineWidth = 1;
+    const isL = handednessLabel === 'Left' || handednessLabel === 'left';
+    const tag = isL ? '🥋 Кисть L' : '🥋 Кисть R';
+    const tagW = ctx.measureText(tag).width + 12;
+    if (ctx.roundRect) ctx.roundRect(pts[0].x - tagW / 2, pts[0].y - 20, tagW, 16, 4);
+    else ctx.rect(pts[0].x - tagW / 2, pts[0].y - 20, tagW, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = isL ? '#06b6d4' : '#ef4444';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText(tag, pts[0].x - tagW / 2 + 6, pts[0].y - 8);
+    ctx.restore();
+  }
+}
 
 export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechanics, options = {}) {
   if (!ctx || !landmarks || landmarks.length < 33) return;
 
   const w = width;
   const h = height;
+
+  const showBody = options.showBody !== false;
+  const showHands = options.showHands !== false;
+  const showDiagnostics = options.showDiagnostics !== false;
 
   const toPx = (lm) => {
     if (!lm) return null;
@@ -919,7 +1139,6 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    // Внешнее неоновое свечение
     ctx.shadowColor = glowColor || color;
     ctx.shadowBlur = 8;
     ctx.strokeStyle = color;
@@ -930,7 +1149,6 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.lineTo(p2.x, p2.y);
     ctx.stroke();
 
-    // Белое контрастное ядро
     ctx.shadowBlur = 0;
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = Math.max(1, lineWidth * 0.35);
@@ -942,7 +1160,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.restore();
   };
 
-  // Отрисовка сустава (шарнира) с двойным кольцом и черным контуром
+  // Отрисовка сустава (шарнира) с двойным кольцом
   const drawJoint = (idx, color = '#fbbf24', radius = 5, highlight = false) => {
     const p = pts[idx];
     if (!p || p.v < minVis) return;
@@ -950,7 +1168,6 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.save();
     const r = highlight ? radius * 1.3 : radius;
 
-    // Внешнее кольцо с ореолом
     ctx.shadowColor = color;
     ctx.shadowBlur = 10;
     ctx.fillStyle = color;
@@ -958,14 +1175,12 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.fill();
 
-    // Белое ядро сустава
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2);
     ctx.fill();
 
-    // Тонкий ободок
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -973,114 +1188,145 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     ctx.restore();
   };
 
-  // 1. Торс (Плечевой и тазовый пояс) — цвет Золотой Янтарь
-  drawSegment(11, 12, '#f59e0b', 4, '#d97706'); // Плечи
-  drawSegment(11, 23, '#f59e0b', 3.5, '#d97706'); // Левый бок
-  drawSegment(12, 24, '#f59e0b', 3.5, '#d97706'); // Правый бок
-  drawSegment(23, 24, '#f59e0b', 4, '#d97706'); // Таз
+  if (showBody) {
+    // 1. Торс (Плечевой и тазовый пояс) — цвет Золотой Янтарь
+    drawSegment(11, 12, '#f59e0b', 4, '#d97706'); // Плечи
+    drawSegment(11, 23, '#f59e0b', 3.5, '#d97706'); // Левый бок
+    drawSegment(12, 24, '#f59e0b', 3.5, '#d97706'); // Правый бок
+    drawSegment(23, 24, '#f59e0b', 4, '#d97706'); // Таз
 
-  // Центральная ось позвоночника (Тюсин-сэн)
-  if (pts[11] && pts[12] && pts[23] && pts[24]) {
-    const midShX = (pts[11].x + pts[12].x) * 0.5;
-    const midShY = (pts[11].y + pts[12].y) * 0.5;
-    const midHpX = (pts[23].x + pts[24].x) * 0.5;
-    const midHpY = (pts[23].y + pts[24].y) * 0.5;
+    // Центральная ось позвоночника (Тюсин-сэн)
+    if (pts[11] && pts[12] && pts[23] && pts[24]) {
+      const midShX = (pts[11].x + pts[12].x) * 0.5;
+      const midShY = (pts[11].y + pts[12].y) * 0.5;
+      const midHpX = (pts[23].x + pts[24].x) * 0.5;
+      const midHpY = (pts[23].y + pts[24].y) * 0.5;
 
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(midShX, midShY);
+      ctx.lineTo(midHpX, midHpY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 2. Голова и шея
+    drawSegment(0, 11, 'rgba(240, 240, 245, 0.8)', 2.5);
+    drawSegment(0, 12, 'rgba(240, 240, 245, 0.8)', 2.5);
+
+    // 3. Левая рука (Циан / Изумруд)
+    drawSegment(11, 13, '#06b6d4', 3.5, '#0891b2');
+    drawSegment(13, 15, '#10b981', 3.0, '#059669');
+
+    // 4. Правая рука (Янтарь / Алый)
+    drawSegment(12, 14, '#f59e0b', 3.5, '#d97706');
+    drawSegment(14, 16, '#ef4444', 3.0, '#dc2626');
+
+    // 5. Левая нога (Циан / Изумруд)
+    drawSegment(23, 25, '#06b6d4', 4.0, '#0891b2');
+    drawSegment(25, 27, '#10b981', 3.5, '#059669');
+    if (pts[29]) drawSegment(27, 29, '#34d399', 2.5);
+    if (pts[31]) {
+      drawSegment(29, 31, '#34d399', 2.5);
+      drawSegment(27, 31, '#34d399', 2.5);
+    }
+
+    // 6. Правая нога (Янтарь / Алый)
+    drawSegment(24, 26, '#f59e0b', 4.0, '#d97706');
+    drawSegment(26, 28, '#ef4444', 3.5, '#dc2626');
+    if (pts[30]) drawSegment(28, 30, '#f87171', 2.5);
+    if (pts[32]) {
+      drawSegment(30, 32, '#f87171', 2.5);
+      drawSegment(28, 32, '#f87171', 2.5);
+    }
+
+    // 7. Суставы
+    [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32].forEach((idx) => {
+      const isLeft = [11, 13, 15, 23, 25, 27, 31].includes(idx);
+      const isWristOrAnkle = [15, 16, 27, 28].includes(idx);
+      const color = idx === 0 ? '#ffd700' : isLeft ? '#06b6d4' : '#ef4444';
+      drawJoint(idx, color, isWristOrAnkle ? 6 : 5, isWristOrAnkle);
+    });
+
+    // 8. Центр тяжести тела (Тандэн · 丹田)
+    if (pts[23] && pts[24]) {
+      const tandenX = (pts[23].x + pts[24].x) * 0.5;
+      const tandenY = (pts[23].y + pts[24].y) * 0.5 - 4;
+
+      ctx.save();
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(tandenX, tandenY, 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(tandenX, tandenY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // 9. Отрисовка кистей (если переданы)
+  if (showHands && options.hands && Array.isArray(options.hands)) {
+    options.hands.forEach((hObj) => {
+      if (hObj.landmarks) {
+        drawNeonHandSkeleton(ctx, hObj.landmarks, hObj.handedness || 'Right', w, h);
+      }
+    });
+  }
+
+  // 10. Диагностика и статус
+  if (showDiagnostics) {
     ctx.save();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.85)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(midShX, midShY);
-    ctx.lineTo(midHpX, midHpY);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // 2. Голова и шея
-  drawSegment(0, 11, 'rgba(240, 240, 245, 0.8)', 2.5);
-  drawSegment(0, 12, 'rgba(240, 240, 245, 0.8)', 2.5);
-
-  // 3. Левая рука (Циан / Изумруд)
-  drawSegment(11, 13, '#06b6d4', 3.5, '#0891b2');
-  drawSegment(13, 15, '#10b981', 3.0, '#059669');
-
-  // 4. Правая рука (Янтарь / Алый)
-  drawSegment(12, 14, '#f59e0b', 3.5, '#d97706');
-  drawSegment(14, 16, '#ef4444', 3.0, '#dc2626');
-
-  // 5. Левая нога (Циан / Изумруд)
-  drawSegment(23, 25, '#06b6d4', 4.0, '#0891b2');
-  drawSegment(25, 27, '#10b981', 3.5, '#059669');
-  if (pts[29]) drawSegment(27, 29, '#34d399', 2.5);
-  if (pts[31]) {
-    drawSegment(29, 31, '#34d399', 2.5);
-    drawSegment(27, 31, '#34d399', 2.5);
-  }
-
-  // 6. Правая нога (Янтарь / Алый)
-  drawSegment(24, 26, '#f59e0b', 4.0, '#d97706');
-  drawSegment(26, 28, '#ef4444', 3.5, '#dc2626');
-  if (pts[30]) drawSegment(28, 30, '#f87171', 2.5);
-  if (pts[32]) {
-    drawSegment(30, 32, '#f87171', 2.5);
-    drawSegment(28, 32, '#f87171', 2.5);
-  }
-
-  // 7. Суставы
-  [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 31, 32].forEach((idx) => {
-    const isLeft = [11, 13, 15, 23, 25, 27, 31].includes(idx);
-    const isWristOrAnkle = [15, 16, 27, 28].includes(idx);
-    const color = idx === 0 ? '#ffd700' : isLeft ? '#06b6d4' : '#ef4444';
-    drawJoint(idx, color, isWristOrAnkle ? 6 : 5, isWristOrAnkle);
-  });
-
-  // 8. Центр тяжести тела (Тандэн · 丹田)
-  if (pts[23] && pts[24]) {
-    const tandenX = (pts[23].x + pts[24].x) * 0.5;
-    const tandenY = (pts[23].y + pts[24].y) * 0.5 - 4;
-
-    ctx.save();
-    ctx.shadowColor = '#fbbf24';
-    ctx.shadowBlur = 12;
-    ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(tandenX, tandenY, 8, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.fillStyle = '#f59e0b';
-    ctx.beginPath();
-    ctx.arc(tandenX, tandenY, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(15, 11, 8, 0.88)';
+    ctx.strokeStyle = 'rgba(212, 162, 76, 0.55)';
+    ctx.lineWidth = 1;
+    const badgeH = 26;
+    if (ctx.roundRect) ctx.roundRect(10, 10, w - 20, badgeH, 6);
+    else ctx.rect(10, 10, w - 20, badgeH);
     ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('⚡ AI MOCAP SKELETON (1:1 АНАТОМИЯ)', 20, 27);
+
+    if (biomechanics?.overallScore) {
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 11px sans-serif';
+      const scoreText = `МАСТЕРСТВО: ${biomechanics.overallScore}%`;
+      const tw = ctx.measureText(scoreText).width;
+      ctx.fillText(scoreText, w - tw - 20, 27);
+    }
+
+    // Предупреждения о перекрытии конечностей
+    let warnY = 48;
+    const drawWarning = (text) => {
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+      ctx.fillRect(10, warnY, ctx.measureText(text).width + 16, 20);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillText(text, 18, warnY + 14);
+      warnY += 24;
+    };
+
+    if (pts[27]?.v < 0.20 && pts[28]?.v < 0.20) {
+      drawWarning('⚠ Стопы не полностью в кадре (отойдите назад)');
+    }
+    if (pts[15]?.v < 0.20 && pts[16]?.v < 0.20) {
+      drawWarning('⚠ Кисти рук вне поля зрения камеры');
+    }
     ctx.restore();
   }
 
-  // 9. Бейдж статуса биомеханики
-  ctx.save();
-  ctx.fillStyle = 'rgba(15, 11, 8, 0.88)';
-  ctx.strokeStyle = 'rgba(212, 162, 76, 0.55)';
-  ctx.lineWidth = 1;
-  const badgeH = 26;
-  if (ctx.roundRect) ctx.roundRect(10, 10, w - 20, badgeH, 6);
-  else ctx.rect(10, 10, w - 20, badgeH);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = '#fbbf24';
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillText('⚡ AI MOCAP SKELETON (1:1 АНАТОМИЯ)', 20, 27);
-
-  if (biomechanics?.overallScore) {
-    ctx.fillStyle = '#10b981';
-    ctx.font = 'bold 11px sans-serif';
-    const scoreText = `МАСТЕРСТВО: ${biomechanics.overallScore}%`;
-    const tw = ctx.measureText(scoreText).width;
-    ctx.fillText(scoreText, w - tw - 20, 27);
-  }
-  ctx.restore();
-
-  // 10. Угловые бейджи коленей
+  // 11. Угловые бейджи коленей
   if (biomechanics && pts[25]?.v > minVis) {
     const lk = pts[25];
     ctx.fillStyle = 'rgba(16, 185, 129, 0.90)';
@@ -1105,79 +1351,303 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
 // Порт кинематики из Karate Motion Studio (core/mocap_tracker.py & viewer_template.html)
 // ============================================================================
 
-/**
- * Расчет биомеханики кистей и пальцев обеих рук (Thumb, Index, Middle, Ring, Pinky 1..3)
- * Анализирует нормаль ладони, вектор направления, сжатие кулака (Сэйкэн) и раскрытие ладони (Сюто).
- */
-export function extractHandBiomechanics(landmarks, worldLandmarks) {
-  const pts = worldLandmarks || landmarks;
-  if (!pts || pts.length < 33) {
-    return {
-      left: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: false },
-      right: { thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, detected: false },
-    };
+export function calcFingerCurl(mcp, pip, dip, tip, wrist = null) {
+  if (!mcp || !pip || !dip || !tip) return 0.15;
+  const v1 = [pip[0] - mcp[0], pip[1] - mcp[1], (pip[2] || 0) - (mcp[2] || 0)];
+  const v2 = [dip[0] - pip[0], dip[1] - pip[1], (dip[2] || 0) - (pip[2] || 0)];
+  const v3 = [tip[0] - dip[0], tip[1] - dip[1], (tip[2] || 0) - (dip[2] || 0)];
+
+  const n1 = Math.hypot(v1[0], v1[1], v1[2]);
+  const n2 = Math.hypot(v2[0], v2[1], v2[2]);
+  const n3 = Math.hypot(v3[0], v3[1], v3[2]);
+  if (n1 < 1e-6 || n2 < 1e-6 || n3 < 1e-6) return 0.15;
+
+  const dot1 = Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) / (n1 * n2)));
+  const ang1 = (Math.acos(dot1) * 180) / Math.PI;
+
+  const dot2 = Math.max(-1, Math.min(1, (v2[0] * v3[0] + v2[1] * v3[1] + v2[2] * v3[2]) / (n2 * n3)));
+  const ang2 = (Math.acos(dot2) * 180) / Math.PI;
+
+  let totalAng = 0;
+  if (wrist) {
+    const v0 = [mcp[0] - wrist[0], mcp[1] - wrist[1], (mcp[2] || 0) - (wrist[2] || 0)];
+    const n0 = Math.hypot(v0[0], v0[1], v0[2]);
+    const dot0 = Math.max(-1, Math.min(1, (v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2]) / (n0 * n1 + 1e-6)));
+    const ang0 = (Math.acos(dot0) * 180) / Math.PI;
+    totalAng = ang0 * 0.40 + ang1 * 0.85 + ang2 * 0.80;
+  } else {
+    totalAng = ang1 * 0.90 + ang2 * 0.90;
   }
 
-  // Индексы точек MediaPipe Pose:
-  // Левая рука: локоть 13, запястье 15, мизинец 17, указательный 19, большой 21
-  // Правая рука: локоть 14, запястье 16, мизинец 18, указательный 20, большой 22
-  const computeHand = (idxElbow, idxWrist, idxPinky, idxIndex, idxThumb, sideKey) => {
+  const fingerLen = n1 + n2 + n3;
+  const distTipMcp = Math.hypot(tip[0] - mcp[0], tip[1] - mcp[1], (tip[2] || 0) - (mcp[2] || 0));
+  const distCurl = 1.0 - Math.max(0, Math.min(1, distTipMcp / (fingerLen * 0.82 + 1e-6)));
+
+  const angCurl = Math.max(0, Math.min(1, totalAng / 135.0));
+  const rawCurl = 0.5 * angCurl + 0.5 * distCurl;
+
+  let curl = Math.pow(rawCurl, 0.85);
+  if (curl > 0.55) {
+    curl = 0.55 + (curl - 0.55) * 1.55;
+  }
+  return parseFloat(Math.max(0.0, Math.min(1.0, curl)).toFixed(2));
+}
+
+export function calcThumbCurl(cmc, mcp, ip, tip, wrist, indexMcp = null) {
+  if (!cmc || !mcp || !ip || !tip) return 0.15;
+  const v1 = [mcp[0] - cmc[0], mcp[1] - cmc[1], (mcp[2] || 0) - (cmc[2] || 0)];
+  const v2 = [tip[0] - ip[0], tip[1] - ip[1], (tip[2] || 0) - (ip[2] || 0)];
+  const n1 = Math.hypot(v1[0], v1[1], v1[2]);
+  const n2 = Math.hypot(v2[0], v2[1], v2[2]);
+  if (n1 < 1e-6 || n2 < 1e-6) return 0.15;
+
+  const dot = Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]) / (n1 * n2)));
+  const angle = (Math.acos(dot) * 180) / Math.PI;
+  const angCurl = Math.max(0, Math.min(1, angle / 75.0));
+
+  let curl = angCurl;
+  if (indexMcp) {
+    const thumbLen = n1 + Math.hypot(ip[0] - mcp[0], ip[1] - mcp[1], (ip[2] || 0) - (mcp[2] || 0)) + n2;
+    const distToIndex = Math.hypot(tip[0] - indexMcp[0], tip[1] - indexMcp[1], (tip[2] || 0) - (indexMcp[2] || 0));
+    const adductCurl = 1.0 - Math.max(0, Math.min(1, distToIndex / (thumbLen * 1.2 + 1e-6)));
+    curl = 0.45 * angCurl + 0.55 * adductCurl;
+  }
+
+  if (curl > 0.50) {
+    curl = 0.50 + (curl - 0.50) * 1.6;
+  }
+  return parseFloat(Math.max(0.0, Math.min(1.0, curl)).toFixed(2));
+}
+
+export function calcPhalanxAngles(mcp, pip, dip, tip, wrist, uAcross) {
+  const v0 = [mcp[0] - wrist[0], mcp[1] - wrist[1], (mcp[2] || 0) - (wrist[2] || 0)];
+  const v1 = [pip[0] - mcp[0], pip[1] - mcp[1], (pip[2] || 0) - (mcp[2] || 0)];
+  const v2 = [dip[0] - pip[0], dip[1] - pip[1], (dip[2] || 0) - (pip[2] || 0)];
+  const v3 = [tip[0] - dip[0], tip[1] - dip[1], (tip[2] || 0) - (dip[2] || 0)];
+
+  const angle = (a, b) => {
+    const na = Math.hypot(a[0], a[1], a[2]);
+    const nb = Math.hypot(b[0], b[1], b[2]);
+    if (na < 1e-6 || nb < 1e-6) return 0.0;
+    const dot = Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (na * nb)));
+    return Math.acos(dot);
+  };
+
+  const flexMcp = parseFloat(angle(v0, v1).toFixed(3));
+  const flexPip = parseFloat(angle(v1, v2).toFixed(3));
+  const flexDip = parseFloat(angle(v2, v3).toFixed(3));
+
+  const nv1 = Math.hypot(v1[0], v1[1], v1[2]);
+  let abd = 0.0;
+  if (nv1 > 1e-6 && uAcross) {
+    const v1Dir = [v1[0] / nv1, v1[1] / nv1, v1[2] / nv1];
+    abd = parseFloat((v1Dir[0] * uAcross[0] + v1Dir[1] * uAcross[1] + v1Dir[2] * uAcross[2]).toFixed(3));
+  }
+
+  return { angles: [flexMcp, flexPip, flexDip], abduction: abd };
+}
+
+export function calcThumbPhalanxAngles(cmc, mcp, ip, tip, wrist, indexMcp) {
+  const v0 = [cmc[0] - wrist[0], cmc[1] - wrist[1], (cmc[2] || 0) - (wrist[2] || 0)];
+  const v1 = [mcp[0] - cmc[0], mcp[1] - cmc[1], (mcp[2] || 0) - (cmc[2] || 0)];
+  const v2 = [ip[0] - mcp[0], ip[1] - mcp[1], (ip[2] || 0) - (mcp[2] || 0)];
+  const v3 = [tip[0] - ip[0], tip[1] - ip[1], (tip[2] || 0) - (ip[2] || 0)];
+
+  const angle = (a, b) => {
+    const na = Math.hypot(a[0], a[1], a[2]);
+    const nb = Math.hypot(b[0], b[1], b[2]);
+    if (na < 1e-6 || nb < 1e-6) return 0.0;
+    const dot = Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (na * nb)));
+    return Math.acos(dot);
+  };
+
+  const flexCmc = parseFloat(angle(v0, v1).toFixed(3));
+  const flexMcp = parseFloat(angle(v1, v2).toFixed(3));
+  const flexIp = parseFloat(angle(v2, v3).toFixed(3));
+
+  let opp = 0.0;
+  if (indexMcp) {
+    const dThumbIndex = Math.hypot(tip[0] - indexMcp[0], tip[1] - indexMcp[1], (tip[2] || 0) - (indexMcp[2] || 0));
+    opp = parseFloat(Math.max(0, Math.min(1.0, 1.0 - dThumbIndex * 4.5)).toFixed(3));
+  }
+
+  return { angles: [flexCmc, flexMcp, flexIp], opposition: opp };
+}
+
+/**
+ * Расчет биомеханики кистей и пальцев обеих рук (Thumb, Index, Middle, Ring, Pinky 1..3)
+ * Поддерживает как высокоточную модель MediaPipe Hands (21 точка на кисть),
+ * так и отказоустойчивый расчет по Pose при работе на дистанции.
+ */
+export function extractHandBiomechanics(landmarks, worldLandmarks, handsResults = null, aspect = 1.0) {
+  const pts = worldLandmarks || landmarks;
+
+  const fallbackHand = (sideKey) => ({
+    thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15, general_curl: 0.15,
+    phalanges: {
+      thumb: [0.15, 0.15, 0.15],
+      index: [0.20, 0.25, 0.20],
+      middle: [0.20, 0.25, 0.20],
+      ring: [0.20, 0.25, 0.20],
+      pinky: [0.20, 0.25, 0.20],
+    },
+    abduction: { thumb: 0.05, index: 0.0, middle: 0.0, ring: 0.0, pinky: 0.0 },
+    palm_normal: [0, 0, 1],
+    hand_direction: [0, 1, 0],
+    detected: false,
+    fistScore: 15,
+  });
+
+  const res = {
+    left: fallbackHand('L'),
+    right: fallbackHand('R'),
+  };
+
+  if (!pts || pts.length < 33) return res;
+
+  // 1. Попытка высокоточного извлечения через MediaPipe Hands (21 точка)
+  if (handsResults && handsResults.multiHandLandmarks && handsResults.multiHandLandmarks.length > 0) {
+    const handsList = handsResults.multiHandLandmarks;
+    const handednessList = handsResults.multiHandedness || [];
+
+    for (let hIdx = 0; hIdx < handsList.length; hIdx++) {
+      const hLms = handsList[hIdx];
+      const hClass = handednessList[hIdx]?.classification?.[0];
+      const rawLabel = hClass?.label || (hIdx === 0 ? 'Right' : 'Left');
+
+      // Сопоставляем руку по положению запястья
+      const hwX = hLms[0].x;
+      const hwY = hLms[0].y;
+      const lw = landmarks[15]; // левое запястье человека
+      const rw = landmarks[16]; // правое запястье человека
+
+      let side = null;
+      if (lw && rw) {
+        const dL = Math.hypot(hwX - lw.x, hwY - lw.y);
+        const dR = Math.hypot(hwX - rw.x, hwY - rw.y);
+        side = dL < dR ? 'left' : 'right';
+      } else {
+        side = rawLabel === 'Left' ? 'right' : 'left';
+      }
+
+      const hPts = hLms.map((p) => [p.x * aspect, p.y, (p.z || 0) * aspect]);
+
+      const cThumb = calcThumbCurl(hPts[1], hPts[2], hPts[3], hPts[4], hPts[0], hPts[5]);
+      const cIndex = calcFingerCurl(hPts[5], hPts[6], hPts[7], hPts[8], hPts[0]);
+      const cMiddle = calcFingerCurl(hPts[9], hPts[10], hPts[11], hPts[12], hPts[0]);
+      const cRing = calcFingerCurl(hPts[13], hPts[14], hPts[15], hPts[16], hPts[0]);
+      const cPinky = calcFingerCurl(hPts[17], hPts[18], hPts[19], hPts[20], hPts[0]);
+
+      // Three.js координаты для нормалей: X вправо, Y вверх (-y), Z вперед (-z)
+      const wPt = [hPts[0][0], -hPts[0][1], -hPts[0][2]];
+      const mPt = [hPts[9][0], -hPts[9][1], -hPts[9][2]];
+      const iPt = [hPts[5][0], -hPts[5][1], -hPts[5][2]];
+      const pPt = [hPts[17][0], -hPts[17][1], -hPts[17][2]];
+
+      let vFwd = [mPt[0] - wPt[0], mPt[1] - wPt[1], mPt[2] - wPt[2]];
+      const nFwd = Math.hypot(vFwd[0], vFwd[1], vFwd[2]);
+      vFwd = nFwd > 1e-4 ? [vFwd[0] / nFwd, vFwd[1] / nFwd, vFwd[2] / nFwd] : [0, 1, 0];
+
+      let vAcross = side === 'left'
+        ? [pPt[0] - iPt[0], pPt[1] - iPt[1], pPt[2] - iPt[2]]
+        : [iPt[0] - pPt[0], iPt[1] - pPt[1], iPt[2] - pPt[2]];
+      const nAcross = Math.hypot(vAcross[0], vAcross[1], vAcross[2]);
+      vAcross = nAcross > 1e-4 ? [vAcross[0] / nAcross, vAcross[1] / nAcross, vAcross[2] / nAcross] : [1, 0, 0];
+
+      const vNorm = [
+        vAcross[1] * vFwd[2] - vAcross[2] * vFwd[1],
+        vAcross[2] * vFwd[0] - vAcross[0] * vFwd[2],
+        vAcross[0] * vFwd[1] - vAcross[1] * vFwd[0],
+      ];
+      const nNorm = Math.hypot(vNorm[0], vNorm[1], vNorm[2]);
+      const palmNormal = nNorm > 1e-4 ? [vNorm[0] / nNorm, vNorm[1] / nNorm, vNorm[2] / nNorm] : [0, 0, 1];
+
+      const uAcrossHand = side === 'left'
+        ? [hPts[17][0] - hPts[5][0], hPts[17][1] - hPts[5][1], hPts[17][2] - hPts[5][2]]
+        : [hPts[5][0] - hPts[17][0], hPts[5][1] - hPts[17][1], hPts[5][2] - hPts[17][2]];
+      const nAc = Math.hypot(uAcrossHand[0], uAcrossHand[1], uAcrossHand[2]);
+      const uAc = nAc > 1e-6 ? [uAcrossHand[0] / nAc, uAcrossHand[1] / nAc, uAcrossHand[2] / nAc] : [1, 0, 0];
+
+      const pIdx = calcPhalanxAngles(hPts[5], hPts[6], hPts[7], hPts[8], hPts[0], uAc);
+      const pMid = calcPhalanxAngles(hPts[9], hPts[10], hPts[11], hPts[12], hPts[0], uAc);
+      const pRng = calcPhalanxAngles(hPts[13], hPts[14], hPts[15], hPts[16], hPts[0], uAc);
+      const pPnk = calcPhalanxAngles(hPts[17], hPts[18], hPts[19], hPts[20], hPts[0], uAc);
+      const pThb = calcThumbPhalanxAngles(hPts[1], hPts[2], hPts[3], hPts[4], hPts[0], hPts[5]);
+
+      const avgCurl = (cThumb + cIndex + cMiddle + cRing + cPinky) / 5.0;
+
+      res[side] = {
+        thumb: cThumb,
+        index: cIndex,
+        middle: cMiddle,
+        ring: cRing,
+        pinky: cPinky,
+        general_curl: parseFloat(avgCurl.toFixed(2)),
+        phalanges: {
+          thumb: pThb.angles,
+          index: pIdx.angles,
+          middle: pMid.angles,
+          ring: pRng.angles,
+          pinky: pPnk.angles,
+        },
+        abduction: {
+          thumb: pThb.opposition,
+          index: pIdx.abduction,
+          middle: 0.0,
+          ring: pRng.abduction,
+          pinky: pPnk.abduction,
+        },
+        palm_normal: [parseFloat(palmNormal[0].toFixed(3)), parseFloat(palmNormal[1].toFixed(3)), parseFloat(palmNormal[2].toFixed(3))],
+        hand_direction: [parseFloat(vFwd[0].toFixed(3)), parseFloat(vFwd[1].toFixed(3)), parseFloat(vFwd[2].toFixed(3))],
+        detected: true,
+        isDedicatedHands: true,
+        fistScore: Math.round(avgCurl * 100),
+      };
+    }
+  }
+
+  // 2. Фолбэк на Pose-кинематику для сторон, где dedicated Hands не обнаружены
+  const computePoseHand = (idxElbow, idxWrist, idxPinky, idxIndex, idxThumb, sideKey) => {
     const el = pts[idxElbow];
     const wr = pts[idxWrist];
     const pk = pts[idxPinky];
     const ix = pts[idxIndex];
     const tb = pts[idxThumb];
 
-    if (!wr || !ix || !el) {
-      return {
-        thumb: 0.15, index: 0.15, middle: 0.15, ring: 0.15, pinky: 0.15,
-        detected: false,
-      };
-    }
+    if (!wr || !ix || !el) return fallbackHand(sideKey);
 
-    // В координатах Three.js: X вправо, Y вверх (-y), Z вперед (-z)
     const pW = [wr.x, -wr.y, -(wr.z || 0)];
     const pE = [el.x, -el.y, -(el.z || 0)];
     const pI = [ix.x, -ix.y, -(ix.z || 0)];
     const pP = pk ? [pk.x, -pk.y, -(pk.z || 0)] : [pW[0] + 0.05, pW[1], pW[2]];
     const pT = tb ? [tb.x, -tb.y, -(tb.z || 0)] : [pW[0] - 0.04, pW[1], pW[2]];
 
-    // 1. Отношение расстояния запястье-пальцы к предплечью
     const dHand = Math.hypot(pI[0] - pW[0], pI[1] - pW[1], pI[2] - pW[2]);
     const dArm = Math.max(1e-4, Math.hypot(pW[0] - pE[0], pW[1] - pE[1], pW[2] - pE[2]));
     const ratio = dHand / dArm;
 
-    // В карате: раскрытая ладонь ratio ~0.65..0.78, сжатый кулак Сэйкэн ratio ~0.35..0.45
     let rawCurl = (0.64 - ratio) / (0.64 - 0.38);
     rawCurl = Math.max(0.0, Math.min(1.0, rawCurl));
-
-    // Сглаженный кулак: в покое 0.15 (естественная расслабленная кисть Камаэ)
     const baseCurl = rawCurl > 0.40 ? rawCurl : Math.max(0.12, rawCurl);
 
-    // Палец к пальцу — оппозиция большого пальца
     const dThumbIndex = Math.hypot(pT[0] - pI[0], pT[1] - pI[1], pT[2] - pI[2]);
     const thumbCurl = Math.max(0.15, Math.min(1.0, 1.0 - (dThumbIndex / (dHand * 0.9 + 1e-4))));
-
-    // Мизинец сгибается быстрее в кулаке
     const pinkyCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.08));
     const indexCurl = baseCurl;
     const middleCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.04));
     const ringCurl = Math.max(0.15, Math.min(1.0, baseCurl * 1.06));
 
-    // Вектор направления кисти (от запястья к среднему пальцу)
     const midKnuckle = [(pI[0] + pP[0]) * 0.5, (pI[1] + pP[1]) * 0.5, (pI[2] + pP[2]) * 0.5];
     let vFwd = [midKnuckle[0] - pW[0], midKnuckle[1] - pW[1], midKnuckle[2] - pW[2]];
     const nFwd = Math.hypot(vFwd[0], vFwd[1], vFwd[2]);
     vFwd = nFwd > 1e-4 ? [vFwd[0] / nFwd, vFwd[1] / nFwd, vFwd[2] / nFwd] : [0, 1, 0];
 
-    // Вектор поперек ладони
     let vAcross = sideKey === 'L'
-      ? [pP[0] - pI[0], pP[1] - pI[1], pP[2] - pI[2]]
+      ? [pP[0] - iPt?.[0] || (pP[0] - pI[0]), pP[1] - pI[1], pP[2] - pI[2]]
       : [pI[0] - pP[0], pI[1] - pP[1], pI[2] - pP[2]];
     const nAcross = Math.hypot(vAcross[0], vAcross[1], vAcross[2]);
     vAcross = nAcross > 1e-4 ? [vAcross[0] / nAcross, vAcross[1] / nAcross, vAcross[2] / nAcross] : [1, 0, 0];
 
-    // Нормаль ладони: vNorm = vAcross x vFwd
     const vNorm = [
       vAcross[1] * vFwd[2] - vAcross[2] * vFwd[1],
       vAcross[2] * vFwd[0] - vAcross[0] * vFwd[2],
@@ -1186,7 +1656,6 @@ export function extractHandBiomechanics(landmarks, worldLandmarks) {
     const nNorm = Math.hypot(vNorm[0], vNorm[1], vNorm[2]);
     const palmNormal = nNorm > 1e-4 ? [vNorm[0] / nNorm, vNorm[1] / nNorm, vNorm[2] / nNorm] : [0, 0, 1];
 
-    // Фаланги пальцев: [MCP, PIP, DIP] в радианах
     const toPhalanges = (c) => [
       parseFloat((c * 1.40).toFixed(3)),
       parseFloat((c * 1.65).toFixed(3)),
@@ -1221,15 +1690,21 @@ export function extractHandBiomechanics(landmarks, worldLandmarks) {
       palm_normal: [parseFloat(palmNormal[0].toFixed(3)), parseFloat(palmNormal[1].toFixed(3)), parseFloat(palmNormal[2].toFixed(3))],
       hand_direction: [parseFloat(vFwd[0].toFixed(3)), parseFloat(vFwd[1].toFixed(3)), parseFloat(vFwd[2].toFixed(3))],
       detected: true,
+      isDedicatedHands: false,
       fistScore: Math.round(baseCurl * 100),
     };
   };
 
-  return {
-    left: computeHand(13, 15, 17, 19, 21, 'L'),
-    right: computeHand(14, 16, 18, 20, 22, 'R'),
-  };
+  if (!res.left.detected) {
+    res.left = computePoseHand(13, 15, 17, 19, 21, 'L');
+  }
+  if (!res.right.detected) {
+    res.right = computePoseHand(14, 16, 18, 20, 22, 'R');
+  }
+
+  return res;
 }
+
 
 /**
  * Оценка ориентации головы (Взгляд Мэцукэ)

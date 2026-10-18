@@ -104,14 +104,63 @@ function alignFoot(bone, vFoot, sideKey = 'R', alphaTarget = 0.75) {
   bone.updateMatrixWorld(true);
 }
 
+const handOrientMemory = {
+  R: { fwd: null, norm: null },
+  L: { fwd: null, norm: null },
+};
+
+function alignHand(bone, targetFwd, targetNorm, sideKey = 'R', alphaTarget = 0.70) {
+  if (!bone || !targetFwd || !targetNorm) return;
+  const mem = handOrientMemory[sideKey] || handOrientMemory.R;
+
+  let curFwd = targetFwd.clone().normalize();
+  let curNorm = targetNorm.clone().normalize();
+  if (curFwd.lengthSq() < 1e-4 || curNorm.lengthSq() < 1e-4) return;
+
+  if (!mem.fwd) {
+    mem.fwd = curFwd.clone();
+    mem.norm = curNorm.clone();
+  } else {
+    const angFwd = mem.fwd.angleTo(curFwd);
+    const angNorm = mem.norm.angleTo(curNorm);
+    const maxAng = Math.max(angFwd, angNorm);
+    const alpha = maxAng > 0.18 ? 0.70 : (maxAng > 0.06 ? 0.35 : 0.18);
+    mem.fwd.lerp(curFwd, alpha).normalize();
+    mem.norm.lerp(curNorm, alpha).normalize();
+  }
+
+  const uy = mem.fwd.clone();
+  const dorsal = mem.norm.clone().negate().normalize();
+  const dot = dorsal.dot(uy);
+  const uz = dorsal.clone().sub(uy.clone().multiplyScalar(dot)).normalize();
+  if (uz.lengthSq() < 1e-4) return;
+
+  const ux = new THREE.Vector3().crossVectors(uy, uz).normalize();
+  if (ux.lengthSq() < 1e-4) return;
+
+  const basisMat = new THREE.Matrix4().makeBasis(ux, uy, uz);
+  const targetWorldQ = new THREE.Quaternion().setFromRotationMatrix(basisMat);
+
+  const parentWorldQ = new THREE.Quaternion();
+  if (bone.parent) bone.parent.getWorldQuaternion(parentWorldQ);
+  const targetLocalQ = parentWorldQ.clone().invert().multiply(targetWorldQ);
+
+  bone.quaternion.slerp(targetLocalQ, alphaTarget);
+  bone.updateMatrixWorld(true);
+}
+
 const FINGER_TYPES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
 
 /**
  * Анатомический перенос движений пальцев на фаланги Karateka_Armature (30 костей)
+ * Точный алгоритм из Karate Motion Studio:
+ * - Большой палец: оппозиция CMC в плоскости ладони + сгибание MCP и IP
+ * - 4 пальца: MCP разведение (abduction) + фаланговое сгибание вокруг -X
  */
 function applyFingersToArmature(boneMap, fData, sideKey = 'R', alpha = 0.80) {
   if (!boneMap || !fData) return;
   const isLeft = sideKey === 'L';
+  const hasPhalanges = fData.phalanges && fData.detected;
 
   FINGER_TYPES.forEach((ftype) => {
     const fKey = ftype.toLowerCase();
@@ -124,29 +173,55 @@ function applyFingersToArmature(boneMap, fData, sideKey = 'R', alpha = 0.80) {
       const bone = boneMap.get(bname);
       if (!bone || !bone.restLocalQ) continue;
 
-      let flexAng = 0.0;
-      if (phalanges && Array.isArray(phalanges) && phalanges.length >= 3) {
-        flexAng = phalanges[ph - 1];
+      if (ftype === 'Thumb') {
+        const zSign = isLeft ? 1.0 : -1.0;
+        const flexVal = phalanges?.[ph - 1] !== undefined ? phalanges[ph - 1] : curl * 1.2;
+        let rotVec;
+        if (ph === 1) {
+          // Trapeziometacarpal / CMC: оппозиция поперек ладони и сгибание
+          const oppVal = hasPhalanges ? Math.max(0.0, abd) : curl;
+          rotVec = new THREE.Vector3(-0.35 * flexVal, 0.0, 0.80 * oppVal * zSign);
+        } else if (ph === 2) {
+          // MCP: сгибание
+          rotVec = new THREE.Vector3(-0.80 * flexVal, 0.0, 0.35 * curl * zSign);
+        } else {
+          // IP: дистальное сгибание
+          rotVec = new THREE.Vector3(-0.95 * flexVal, 0.0, 0.15 * zSign);
+        }
+        const len = rotVec.length();
+        if (len > 1e-4) {
+          const flexQ = new THREE.Quaternion().setFromAxisAngle(rotVec.clone().normalize(), len);
+          const qTarget = bone.restLocalQ.clone().multiply(flexQ);
+          bone.quaternion.slerp(qTarget, alpha);
+        } else {
+          bone.quaternion.slerp(bone.restLocalQ, alpha);
+        }
       } else {
-        const maxAng = ftype === 'Thumb' ? 0.75 : (ph === 1 ? 1.35 : 1.15);
-        flexAng = curl * maxAng;
+        // 4 пальца: индивидуальное сгибание вокруг локальной оси -X
+        const flexAng = phalanges?.[ph - 1] !== undefined ? phalanges[ph - 1] : curl * 1.4;
+        const flexQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), flexAng);
+
+        if (ph === 1) {
+          // MCP: разведение пальцев в плоскости ладони (abduction) вокруг оси Z
+          const sideSign = isLeft ? 1.0 : -1.0;
+          let abdDir = 0.0;
+          if (ftype === 'Index') abdDir = 1.0 * sideSign;
+          else if (ftype === 'Pinky') abdDir = -1.2 * sideSign;
+          else if (ftype === 'Ring') abdDir = -0.4 * sideSign;
+
+          const abdAng = abd * abdDir * 0.45;
+          const abdQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), abdAng);
+          const qTarget = bone.restLocalQ.clone().multiply(abdQ).multiply(flexQ);
+          bone.quaternion.slerp(qTarget, alpha);
+        } else {
+          const qTarget = bone.restLocalQ.clone().multiply(flexQ);
+          bone.quaternion.slerp(qTarget, alpha);
+        }
       }
-
-      // Сгибание фаланги вокруг оси +X
-      const qFlex = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), flexAng);
-
-      // Разведение / приведение (Abduction) для проксимальной фаланги (ph === 1)
-      let qTarget = bone.restLocalQ.clone().multiply(qFlex);
-      if (ph === 1 && Math.abs(abd) > 0.01) {
-        const abdSign = isLeft ? 1 : -1;
-        const qAbd = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), abd * abdSign);
-        qTarget.multiply(qAbd);
-      }
-
-      bone.quaternion.slerp(qTarget, alpha);
     }
   });
 }
+
 
 export default function MocapPuppetAvatar({
   boneRotations = null,
@@ -293,14 +368,38 @@ export default function MocapPuppetAvatar({
         if (mirrorMode) vArm.x = -vArm.x;
         if (armR_Shoulder) alignShoulder(armR_Shoulder, vArm, mirrorMode ? 'L' : 'R');
         alignBone(armR_Upper, vArm, 0.78);
+      }
 
-        if (pRWr) {
-          const vForearm = pRWr.clone().sub(pREl);
-          if (mirrorMode) vForearm.x = -vForearm.x;
-          alignBone(armR_Lower, vForearm, 0.78);
+      // 2. ЛЕВАЯ РУКА ЧЕЛОВЕКА
+      if (pLSh && pLEl) {
+        const vArm = pLEl.clone().sub(pLSh);
+        if (mirrorMode) vArm.x = -vArm.x;
+        if (armL_Shoulder) alignShoulder(armL_Shoulder, vArm, mirrorMode ? 'R' : 'L');
+        alignBone(armL_Upper, vArm, 0.78);
+      }
 
-          // Кисть правой руки
-          if (armR_Hand && (pRIdx || pRPinky)) {
+      // 3. БИОМЕХАНИКА КИСТЕЙ И ПАЛЬЦЕВ (Thumb, Index, Middle, Ring, Pinky 1..3)
+      const fingersBio = activePose.fingers || extractHandBiomechanics(ptsRaw);
+      const fR = fingersBio?.right;
+      const fL = fingersBio?.left;
+
+      if (pREl && pRWr) {
+        const vForearm = pRWr.clone().sub(pREl);
+        if (mirrorMode) vForearm.x = -vForearm.x;
+        alignBone(armR_Lower, vForearm, 0.78);
+
+        // Кисть правой руки (поворот ладони, супинация / пронация)
+        if (armR_Hand) {
+          const activeHandF = mirrorMode ? fL : fR;
+          if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
+            const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
+            const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
+            if (mirrorMode) {
+              targetFwd.x = -targetFwd.x;
+              targetNorm.x = -targetNorm.x;
+            }
+            alignHand(armR_Hand, targetFwd, targetNorm, mirrorMode ? 'L' : 'R', 0.75);
+          } else if (pRIdx || pRPinky) {
             const pKnuckles = (pRIdx && pRPinky)
               ? pRIdx.clone().add(pRPinky).multiplyScalar(0.5)
               : (pRIdx || pRPinky);
@@ -311,20 +410,23 @@ export default function MocapPuppetAvatar({
         }
       }
 
-      // 2. ЛЕВАЯ РУКА ЧЕЛОВЕКА
-      if (pLSh && pLEl) {
-        const vArm = pLEl.clone().sub(pLSh);
-        if (mirrorMode) vArm.x = -vArm.x;
-        if (armL_Shoulder) alignShoulder(armL_Shoulder, vArm, mirrorMode ? 'R' : 'L');
-        alignBone(armL_Upper, vArm, 0.78);
+      if (pLEl && pLWr) {
+        const vForearm = pLWr.clone().sub(pLEl);
+        if (mirrorMode) vForearm.x = -vForearm.x;
+        alignBone(armL_Lower, vForearm, 0.78);
 
-        if (pLWr) {
-          const vForearm = pLWr.clone().sub(pLEl);
-          if (mirrorMode) vForearm.x = -vForearm.x;
-          alignBone(armL_Lower, vForearm, 0.78);
-
-          // Кисть левой руки
-          if (armL_Hand && (pLIdx || pLPinky)) {
+        // Кисть левой руки (поворот ладони, супинация / пронация)
+        if (armL_Hand) {
+          const activeHandF = mirrorMode ? fR : fL;
+          if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
+            const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
+            const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
+            if (mirrorMode) {
+              targetFwd.x = -targetFwd.x;
+              targetNorm.x = -targetNorm.x;
+            }
+            alignHand(armL_Hand, targetFwd, targetNorm, mirrorMode ? 'R' : 'L', 0.75);
+          } else if (pLIdx || pLPinky) {
             const pKnuckles = (pLIdx && pLPinky)
               ? pLIdx.clone().add(pLPinky).multiplyScalar(0.5)
               : (pLIdx || pLPinky);
@@ -335,14 +437,9 @@ export default function MocapPuppetAvatar({
         }
       }
 
-      // 3. БИОМЕХАНИКА КИСТЕЙ И ПАЛЬЦЕВ (Thumb, Index, Middle, Ring, Pinky 1..3)
-      const fingersBio = activePose.fingers || extractHandBiomechanics(ptsRaw);
-      if (fingersBio) {
-        const fR = fingersBio.right;
-        const fL = fingersBio.left;
-        if (fR) applyFingersToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.80);
-        if (fL) applyFingersToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.80);
-      }
+      // Применение анатомических вращений фаланг (30 костей)
+      if (fR) applyFingersToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.82);
+      if (fL) applyFingersToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.82);
 
       // 4. ПРАВАЯ НОГА ЧЕЛОВЕКА
       if (pRHp && pRKn) {
@@ -432,7 +529,7 @@ export default function MocapPuppetAvatar({
           if (mirrorMode) vHipsLat.x = -vHipsLat.x;
 
           if (vHipsLat.lengthSq() > 1e-4) {
-            const hipYaw = Math.atan2(vHipsLat.z, Math.max(1e-4, vHipsLat.x));
+            const hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
             const trunkForwardPitch = Math.atan2(vSpine.z, Math.max(0.08, vSpine.y));
             const pelvicTilt = trunkForwardPitch * 0.35;
             const pelvicRoll = Math.atan2(vHipsLat.y, Math.hypot(vHipsLat.x, vHipsLat.z));

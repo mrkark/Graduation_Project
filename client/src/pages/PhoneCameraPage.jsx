@@ -3,8 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import io from 'socket.io-client';
 import {
   loadMediaPipePose,
+  loadMediaPipeHands,
   drawNeonKarateSkeleton,
+  drawNeonHandSkeleton,
   analyzeKarateBiomechanics,
+  extractHandBiomechanics,
+  estimateHeadOrientation,
 } from '../utils/mocapPoseTracker';
 import './PhoneCameraPage.css';
 
@@ -70,8 +74,15 @@ export default function PhoneCameraPage() {
   const [hostId, setHostId] = useState(null);
   const [roomCameras, setRoomCameras] = useState([]);
 
-  // Неоновый скелет на телефоне
+  // Неоновый скелет на телефоне и слои отображения
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showBody, setShowBody] = useState(true);
+  const [showHands, setShowHands] = useState(true);
+  const [showDiagnostics, setShowDiagnostics] = useState(true);
+  const [precisionHandMode, setPrecisionHandMode] = useState(true);
+  const [handsDetectedCount, setHandsDetectedCount] = useState(0);
+  const [pingMs, setPingMs] = useState(0);
+  const [limbWarnings, setLimbWarnings] = useState([]);
   const [bodyInFrame, setBodyInFrame] = useState(false);
   const [detectedStance, setDetectedStance] = useState('');
 
@@ -89,6 +100,10 @@ export default function PhoneCameraPage() {
   const socketRef = useRef(null);
   const peerRef = useRef(null);
   const poseRef = useRef(null);
+  const handsRef = useRef(null);
+  const detectedHandsRef = useRef([]);
+  const isHandsProcessingRef = useRef(false);
+  const loopFrameCountRef = useRef(0);
   const animFrameRef = useRef(null);
   const frameCountRef = useRef(0);
   const isStartingRef = useRef(false);
@@ -347,10 +362,27 @@ export default function PhoneCameraPage() {
     };
   }, [roomId, assignedSlot, setupPeerConnection]);
 
-  // 5. Инициализация и цикл трекинга MediaPipe Pose на смартфоне (Отрисовка скелета на человеке + передача на сайт)
+  // 5. Замер пинга сети (RTT) каждые 2.5 секунды
+  useEffect(() => {
+    if (!socketConnected) return;
+    const interval = setInterval(() => {
+      if (socketRef.current) {
+        const t0 = Date.now();
+        socketRef.current.emit('mocap:ping', { timestamp: t0 }, (res) => {
+          if (res?.clientTimestamp) {
+            setPingMs(Date.now() - res.clientTimestamp);
+          }
+        });
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [socketConnected]);
+
+  // 6. Инициализация и цикл трекинга MediaPipe Pose и MediaPipe Hands на смартфоне
   useEffect(() => {
     let active = true;
-    let isProcessing = false;
+    let isPoseProcessing = false;
+    let isHandsProcessing = false;
 
     loadMediaPipePose()
       .then((pose) => {
@@ -389,9 +421,43 @@ export default function PhoneCameraPage() {
             const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
             setDetectedStance(metrics.stanceName || 'Камаэ');
 
+            // Диагностика видимости конечностей
+            const warnings = [];
+            const lAnkle = results.poseLandmarks[27];
+            const rAnkle = results.poseLandmarks[28];
+            if ((lAnkle?.visibility ?? 1) < 0.25 && (rAnkle?.visibility ?? 1) < 0.25) {
+              warnings.push('⚠ Стопы не полностью в кадре (отойдите назад)');
+            }
+            const lWrist = results.poseLandmarks[15];
+            const rWrist = results.poseLandmarks[16];
+            if ((lWrist?.visibility ?? 1) < 0.25 && (rWrist?.visibility ?? 1) < 0.25) {
+              warnings.push('⚠ Кисти рук вне поля зрения камеры');
+            }
+            setLimbWarnings(warnings);
+
+            // Высокоточная биомеханика пальцев (MediaPipe Hands + Pose fallback)
+            const aspect = vw / Math.max(1, vh);
+            const handsData = detectedHandsRef.current?.length > 0 ? {
+              multiHandLandmarks: detectedHandsRef.current.map((h) => h.landmarks),
+              multiHandedness: detectedHandsRef.current.map((h) => ({ classification: [{ label: h.handedness }] })),
+            } : null;
+
+            const fingers = extractHandBiomechanics(
+              results.poseLandmarks,
+              results.poseWorldLandmarks,
+              handsData,
+              aspect
+            );
+            const head = estimateHeadOrientation(results.poseLandmarks, results.poseWorldLandmarks);
+
             // Отрисовываем неоновый скелет прямо на человеке на экране смартфона!
             if (showSkeleton) {
-              drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics);
+              drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics, {
+                showBody,
+                showHands,
+                showDiagnostics,
+                hands: detectedHandsRef.current,
+              });
             }
 
             // Отправляем поток ключевых точек на сайт / ПК Додзё
@@ -401,11 +467,16 @@ export default function PhoneCameraPage() {
                 landmarks: results.poseLandmarks,
                 worldLandmarks: results.poseWorldLandmarks,
                 metrics,
+                fingers,
+                head,
+                hands: detectedHandsRef.current,
                 slot: assignedSlot,
+                timestamp: Date.now(),
               });
             }
           } else {
             setBodyInFrame(false);
+            setLimbWarnings([]);
           }
         });
       })
@@ -413,16 +484,64 @@ export default function PhoneCameraPage() {
         console.warn('Не удалось загрузить MediaPipe Pose на смартфоне:', err);
       });
 
+    // Инициализация MediaPipe Hands для точного захвата пальцев
+    if (precisionHandMode) {
+      loadMediaPipeHands({ modelComplexity: 0 })
+        .then((hands) => {
+          if (!active) return;
+          handsRef.current = hands;
+          hands.onResults((hRes) => {
+            if (!active) return;
+            if (hRes.multiHandLandmarks && hRes.multiHandLandmarks.length > 0) {
+              const list = [];
+              hRes.multiHandLandmarks.forEach((lms, idx) => {
+                const classification = hRes.multiHandedness?.[idx]?.classification?.[0];
+                list.push({
+                  landmarks: lms,
+                  handedness: classification?.label || (idx === 0 ? 'Right' : 'Left'),
+                  score: classification?.score || 0.9,
+                });
+              });
+              detectedHandsRef.current = list;
+              setHandsDetectedCount(list.length);
+            } else {
+              detectedHandsRef.current = [];
+              setHandsDetectedCount(0);
+            }
+          });
+        })
+        .catch((err) => {
+          console.warn('MediaPipe Hands не загружен (будет использован Pose fallback):', err);
+        });
+    }
+
     const loop = async () => {
       if (!active) return;
       const v = videoRef.current;
-      if (v && v.readyState >= 2 && poseRef.current && !isProcessing) {
-        try {
-          isProcessing = true;
-          await poseRef.current.send({ image: v });
-        } catch (e) {
-        } finally {
-          isProcessing = false;
+      if (v && v.readyState >= 2) {
+        loopFrameCountRef.current++;
+        const frameIdx = loopFrameCountRef.current;
+
+        // Поток тела
+        if (poseRef.current && !isPoseProcessing) {
+          try {
+            isPoseProcessing = true;
+            await poseRef.current.send({ image: v });
+          } catch (e) {
+          } finally {
+            isPoseProcessing = false;
+          }
+        }
+
+        // Поток кистей: каждый 2-й кадр для экономии ресурсов смартфона
+        if (precisionHandMode && handsRef.current && !isHandsProcessing && frameIdx % 2 === 0) {
+          try {
+            isHandsProcessing = true;
+            await handsRef.current.send({ image: v });
+          } catch (e) {
+          } finally {
+            isHandsProcessing = false;
+          }
         }
       }
       animFrameRef.current = requestAnimationFrame(loop);
@@ -436,7 +555,7 @@ export default function PhoneCameraPage() {
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [socketConnected, roomId, assignedSlot, showSkeleton]);
+  }, [socketConnected, roomId, assignedSlot, showSkeleton, showBody, showHands, showDiagnostics, precisionHandMode]);
 
   // Запуск камеры при монтировании
   useEffect(() => {
@@ -560,6 +679,17 @@ export default function PhoneCameraPage() {
             <span>🥋 {detectedStance}</span>
           </div>
         )}
+
+        {/* Предупреждения о перекрытиях / выходе конечностей за рамки кадра */}
+        {showDiagnostics && limbWarnings.length > 0 && (
+          <div className="hud-warnings-box">
+            {limbWarnings.map((w, idx) => (
+              <div key={idx} className="hud-warning-pill">
+                {w}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 2. ВЕРХНЯЯ ПАНЕЛЬ СТАТУСА (GLASS BAR) */}
@@ -620,6 +750,45 @@ export default function PhoneCameraPage() {
               </button>
             );
           })}
+        </div>
+
+        {/* Панель слоев и режимов захвата (Тело, Пальцы, Инфо, Точные кисти, Пинг) */}
+        <div className="topbar-layers-row">
+          <button
+            type="button"
+            className={`layer-pill ${showBody ? 'active' : ''}`}
+            onClick={() => setShowBody((v) => !v)}
+            title="Отображение скелета тела"
+          >
+            🦴 Тело
+          </button>
+          <button
+            type="button"
+            className={`layer-pill ${showHands ? 'active' : ''}`}
+            onClick={() => setShowHands((v) => !v)}
+            title="Отображение кистей и пальцев"
+          >
+            🖐 Кисти {handsDetectedCount > 0 ? `(${handsDetectedCount})` : ''}
+          </button>
+          <button
+            type="button"
+            className={`layer-pill ${precisionHandMode ? 'active glow-gold' : ''}`}
+            onClick={() => setPrecisionHandMode((v) => !v)}
+            title="Высокоточное отслеживание всех 21 суставов пальцев нейросетью MediaPipe Hands"
+          >
+            ⚡ Точные кисти: {precisionHandMode ? 'ВКЛ' : 'ВЫКЛ'}
+          </button>
+          <button
+            type="button"
+            className={`layer-pill ${showDiagnostics ? 'active' : ''}`}
+            onClick={() => setShowDiagnostics((v) => !v)}
+            title="Отображение углов суставов и статуса"
+          >
+            📊 Инфо
+          </button>
+          <div className={`ping-pill ${pingMs > 0 && pingMs < 50 ? 'fast' : pingMs < 120 ? 'medium' : 'slow'}`} title="Задержка передачи данных на ПК Додзё">
+            📶 {pingMs > 0 ? `${pingMs}ms` : '< 25ms'}
+          </div>
         </div>
       </header>
 

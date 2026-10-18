@@ -489,7 +489,8 @@ export default function MocapStudio() {
     });
 
     // Прием потока ключевых точек напрямую от смартфонов
-    socket.on('mocap:landmarks-data', ({ slot, landmarks, worldLandmarks, metrics }) => {
+    socket.on('mocap:landmarks-data', (payload) => {
+      const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands } = payload || {};
       if (slot && landmarks && landmarks.length >= 33) {
         setCameraActive(true);
         setBodyDetected(true);
@@ -499,6 +500,9 @@ export default function MocapStudio() {
           worldLandmarks: worldLandmarks || landmarks,
           slot,
           timestamp: Date.now(),
+          fingers: incomingFingers,
+          head: incomingHead,
+          hands: incomingHands,
         };
 
         const now = Date.now();
@@ -515,8 +519,9 @@ export default function MocapStudio() {
         const calculatedMetrics = metrics || analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
         setKarateMetrics(calculatedMetrics);
 
-        const fingers = extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
-        const head = estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
+        const fingers = fused?.fingers || incomingFingers || extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
+        const head = fused?.head || incomingHead || estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
+        const displayHands = fused?.hands || incomingHands || (latestLandmarksBySlot.current[activeCameraSlot]?.hands);
 
         const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
         if (s3d) setSkeleton3DData(s3d);
@@ -535,7 +540,9 @@ export default function MocapStudio() {
         if (canvas) {
           const ctx = canvas.getContext('2d');
           const displayLms = (latestLandmarksBySlot.current[activeCameraSlot]?.landmarks) || finalLandmarks;
-          drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics);
+          drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics, {
+            hands: displayHands,
+          });
         }
 
         if (isRecording) {

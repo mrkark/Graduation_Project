@@ -194,17 +194,20 @@ function registerMocapSocket(mocapIo) {
     });
 
     // Потоковая передача ключевых точек / телеметрии от конкретной камеры
-    socket.on('mocap:landmarks-stream', ({ roomId, landmarks, worldLandmarks, metrics, slot }) => {
-      const room = roomId || currentRoom;
+    socket.on('mocap:landmarks-stream', (data) => {
+      const room = data?.roomId || currentRoom;
       if (room) {
         socket.to(`mocap:${room}`).emit('mocap:landmarks-data', {
-          landmarks,
-          worldLandmarks,
-          metrics,
-          slot: slot || currentSlot,
+          ...data,
+          slot: data?.slot || currentSlot,
           senderId: socket.id,
         });
       }
+    });
+
+    // Замер пинга и задержки сети
+    socket.on('mocap:ping', ({ timestamp }, cb) => {
+      cb?.({ pong: Date.now(), clientTimestamp: timestamp });
     });
 
     // Удаленное управление созданием / записью анимации с любого из телефонов
