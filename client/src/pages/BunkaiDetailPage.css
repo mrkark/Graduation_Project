@@ -1,0 +1,188 @@
+/* =========================================================
+   BUNKAIDETAILPAGE.CSS — 3D Арена Боевого Разбора Бункай
+   ========================================================= */
+
+.bunkai-detail {
+  padding-bottom: 5rem;
+}
+
+/* 1. ШАПКА РАЗБОРА БУНКАЙ */
+.bunkai-detail__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.bunkai-detail__header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 90px;
+  height: 2px;
+  background: var(--accent-red);
+}
+
+.bunkai-detail__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bunkai-detail__back-link,
+.bunkai-detail__kata-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.bunkai-detail__back-link:hover,
+.bunkai-detail__kata-link:hover {
+  color: var(--gold);
+}
+
+.bunkai-detail__sep {
+  color: var(--vector-line);
+}
+
+.bunkai-detail__difficulty {
+  color: var(--gold);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.78rem;
+}
+
+.bunkai-detail__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bunkai-detail__title {
+  margin: 0;
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.bunkai-detail__author-line {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.bunkai-detail__author-line strong {
+  color: var(--text-primary);
+}
+
+.bunkai-detail__actions {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+/* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ */
+.bunkai-detail__arena-wrap {
+  margin-bottom: 3rem;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.98) 100%);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--timber-medium);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(212, 162, 76, 0.15);
+}
+
+.bunkai-detail__arena-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 0.75rem;
+}
+
+.bunkai-detail__arena-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.bunkai-detail__arena-roles {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* 3. ПРОГРЕССИВНОЕ РАСКРЫТИЕ СМЫСЛА И ПРИМЕНЕНИЯ */
+.bunkai-detail__content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.bunkai-detail__tab-panel {
+  padding-top: 1.5rem;
+}
+
+.bunkai-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bunkai-notes__block {
+  background: linear-gradient(180deg, #181512 0%, #13110f 100%);
+  border: 1px solid rgba(212, 162, 76, 0.25);
+  border-left: 3px solid var(--accent-red);
+  border-radius: var(--radius-sm);
+  padding: 2rem;
+  box-shadow: var(--shadow-subtle);
+}
+
+.bunkai-notes__block h3 {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bunkai-notes__block h3::before {
+  content: '❖';
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+
+.bunkai-notes__block p {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.bunkai-video-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-subtle);
+}

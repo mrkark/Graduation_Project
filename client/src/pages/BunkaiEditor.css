@@ -16,8 +16,19 @@
   flex-wrap: wrap;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.bunkai-studio__header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 80px;
+  height: 2px;
+  background: var(--accent-red);
 }
 
 .bunkai-studio__title {
@@ -26,6 +37,7 @@
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: 0.02em;
 }
 
 .bunkai-studio__subtitle {
@@ -42,10 +54,11 @@
 
 /* 2. ПАНЕЛЬ ОСНОВНЫХ МЕТАДАННЫХ */
 .bunkai-studio__meta-panel {
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.95) 100%);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--timber-medium);
   border-radius: var(--radius-sm);
-  padding: 1.5rem;
+  padding: 1.75rem;
   margin-bottom: 1.5rem;
   box-shadow: var(--shadow-card);
 }
@@ -85,11 +98,11 @@
 
 .bunkai-mode-option:hover {
   background: var(--bg-subtle);
-  border-color: var(--vector-line);
+  border-color: var(--gold);
 }
 
 .bunkai-mode-option.active {
-  background: var(--bg-subtle);
+  background: rgba(184, 41, 41, 0.12);
   border-color: var(--accent-red);
   box-shadow: 0 0 0 1px var(--accent-red);
 }
@@ -107,12 +120,13 @@
 
 /* 3. 3D АРЕНА РЕДАКТИРОВАНИЯ */
 .bunkai-studio__stage-card {
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.98) 100%);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--timber-medium);
   border-radius: var(--radius-sm);
   overflow: hidden;
   margin-bottom: 1.5rem;
-  box-shadow: var(--shadow-lift);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
 }
 
 .bunkai-studio__stage-header {
@@ -120,32 +134,30 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.85rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .bunkai-studio__stage-badge {
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent-red);
+  letter-spacing: 0.1em;
+  color: var(--gold);
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .bunkai-studio__stage-badge::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-red);
+  content: '❖';
+  color: var(--accent-red);
+  font-size: 0.75rem;
 }
 
 .bunkai-studio__stage-container {
   width: 100%;
-  background: #07080a;
+  background: #060709;
 }
 
 /* 4. ТАЙМЛАЙН ЭПИЗОДОВ */
@@ -154,8 +166,8 @@
   gap: 0.75rem;
   overflow-x: auto;
   padding: 1rem 1.25rem;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid var(--border-subtle);
   align-items: center;
 }
 

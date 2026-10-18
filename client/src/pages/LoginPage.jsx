@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './AuthPages.css';
 
 export default function LoginPage() {
@@ -33,29 +34,38 @@ export default function LoginPage() {
   return (
     <div className="auth-page">
       <div className="auth-card panel">
-        <h1>入門 · Вход</h1>
-        <p className="auth-sub">Войдите, чтобы продолжить путь по каталогу ката и бункаев.</p>
+        <div className="auth-card__header">
+          <div className="auth-card__crest">
+            <ShotokanTiger size={40} color="var(--gold)" />
+          </div>
+          <div className="auth-card__title-row">
+            <h1>Вход в Додзё</h1>
+            <HankoSeal text="入門" size="md" variant="vermilion" shape="square" />
+          </div>
+          <p className="auth-sub">
+            Войдите, чтобы продолжить изучение ката, анализировать бункай и тренироваться вместе с додзё.
+          </p>
+        </div>
 
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="auth-form">
           <div className="field">
-            <label htmlFor="username">Имя пользователя</label>
+            <label htmlFor="username">Имя пользователя / Каратека</label>
             <input id="username" required value={form.username} onChange={update('username')} autoFocus />
           </div>
           <div className="field">
-            <label htmlFor="password">Пароль</label>
+            <label htmlFor="password">Секретный пароль</label>
             <input id="password" type="password" required value={form.password} onChange={update('password')} />
           </div>
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p className="auth-error">{error}</p>}
 
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
-            {loading ? 'Вход…' : 'Войти'}
+          <button className="btn btn-primary auth-submit-btn" type="submit" disabled={loading}>
+            {loading ? 'Вход…' : 'Войти в зал →'}
           </button>
         </form>
 
-        <hr className="divider" />
         <p className="auth-alt">
-          Ещё нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+          Ещё нет аккаунта ученика? <Link to="/register">Зарегистрироваться</Link>
         </p>
       </div>
     </div>

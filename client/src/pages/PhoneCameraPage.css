@@ -279,3 +279,208 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
   z-index: 10;
 }
+
+/* Баннер разрешения на камеру */
+.phone-cam-perm-banner {
+  background: linear-gradient(135deg, rgba(28, 24, 20, 0.98), rgba(40, 34, 28, 0.98));
+  border-bottom: 2px solid var(--gold, #c5a059);
+  padding: 0.75rem 1rem;
+  z-index: 50;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  animation: slide-down 0.25s ease-out;
+}
+
+.phone-cam-perm-banner.is-prompt {
+  background: linear-gradient(135deg, #2a1a0c 0%, #3d2611 100%);
+  border-bottom: 2px solid #f59e0b;
+}
+
+.phone-cam-perm-banner.is-granted {
+  background: linear-gradient(135deg, #0e2717 0%, #153c23 100%);
+  border-bottom: 2px solid #22c55e;
+}
+
+.perm-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.perm-banner-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.perm-banner-text {
+  flex: 1;
+}
+
+.perm-banner-text strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.perm-banner-text p {
+  margin: 0;
+  font-size: 0.74rem;
+  color: rgba(245, 239, 230, 0.8);
+  line-height: 1.35;
+}
+
+.perm-banner-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.perm-banner-help {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.74rem;
+  color: #fecaca;
+}
+
+.perm-banner-help .help-title {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.perm-banner-help ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.4;
+}
+
+.perm-banner-help li {
+  margin-bottom: 3px;
+}
+
+.btn-ghost-light {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-ghost-light:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Мета-информация в заголовке */
+.phone-cam-meta {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.phone-cam-slot-tag {
+  font-size: 0.72rem;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Панель выбора позиции смартфона (мульти-камера) */
+.phone-cam-slots-bar {
+  background: rgba(14, 12, 10, 0.95);
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.slots-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gold, #c5a059);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.slots-pills {
+  display: flex;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.slot-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 23, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: #d1c7b7;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  position: relative;
+}
+
+.slot-pill:hover:not(:disabled) {
+  border-color: var(--gold, #c5a059);
+  background: rgba(40, 35, 30, 0.95);
+}
+
+.slot-pill.active {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.25), rgba(138, 28, 20, 0.3));
+  border-color: var(--gold-bright, #e8c57b);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(197, 160, 89, 0.35);
+}
+
+.slot-pill.is-taken {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.slot-num {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold-bright, #e8c57b);
+}
+
+.slot-txt {
+  font-size: 0.64rem;
+  white-space: nowrap;
+}
+
+.slot-current-badge {
+  font-size: 0.58rem;
+  background: #22c55e;
+  color: #000;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 1px 3px;
+  margin-top: 2px;
+}
+
+.slot-taken-badge {
+  font-size: 0.58rem;
+  color: #ef4444;
+}
+
+.slots-info {
+  font-size: 0.68rem;
+  color: var(--text-muted, #9c8e7c);
+  white-space: nowrap;
+}
+
+@keyframes slide-down {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+

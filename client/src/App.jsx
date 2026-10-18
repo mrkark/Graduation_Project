@@ -63,6 +63,7 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/motion-lab" element={<MotionLabPage />} />
           <Route path="/aimocap" element={<MotionLabPage />} />
+          <Route path="/mocap" element={<MotionLabPage />} />
         </Route>
         <Route path="/phone-camera" element={<PhoneCameraPage />} />
 
@@ -108,8 +109,6 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/friends" element={<FriendsPage />} />
             <Route path="/chat" element={<ChatPage />} />
-            <Route path="/motion-lab" element={<MotionLabPage />} />
-            <Route path="/aimocap" element={<MotionLabPage />} />
 
             <Route element={<RequireAdminOrModerator />}>
               <Route path="/admin" element={<AdminLayout />}>

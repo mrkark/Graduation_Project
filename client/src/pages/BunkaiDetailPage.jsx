@@ -6,7 +6,9 @@ import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
+import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
+import './BunkaiDetailPage.css';
 
 const DIFFICULTY_LABELS = {
   beginner: 'Базовый уровень',
@@ -88,7 +90,10 @@ export default function BunkaiDetailPage() {
             <StatusBadge status={bunkai.Status} />
           </div>
 
-          <h1 className="bunkai-detail__title">{bunkai.Title}</h1>
+          <div className="bunkai-detail__title-wrap">
+            <h1 className="bunkai-detail__title">{bunkai.Title}</h1>
+            <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
+          </div>
 
           <p className="bunkai-detail__author-line">
             Разбор подготовил:{' '}
@@ -120,6 +125,22 @@ export default function BunkaiDetailPage() {
 
       {/* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ (ТОРИ И УКЭ) */}
       <section className="bunkai-detail__arena-wrap">
+        <div className="bunkai-detail__arena-header">
+          <div className="bunkai-detail__arena-badge">
+            <ShotokanTiger size={18} color="var(--gold)" />
+            <span>БОЕВОЙ СПАРРИНГ · КУМИТЭ БУНКАЙ</span>
+          </div>
+          <div className="bunkai-detail__arena-roles">
+            <span className="bunkai-role-tag bunkai-role-tag--uke">
+              <span className="bunkai-role-kanji">受</span> Укэ
+            </span>
+            <span className="bunkai-unit__role-arrow">⇄</span>
+            <span className="bunkai-role-tag bunkai-role-tag--tori">
+              <span className="bunkai-role-kanji">取</span> Тори
+            </span>
+          </div>
+        </div>
+
         <BunkaiMultiAvatarPlayer
           steps={bunkaiSteps}
           defaultParticipantMode={

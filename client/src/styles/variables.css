@@ -1,99 +1,127 @@
 /* =========================================================
    VARIABLES.CSS — Эстетика традиционного японского додзё
    Сочетание средневековой японской архитектуры (хиноки, кедр),
-   состаренной бумаги свитков, глубокой туши Суми и киновари печатей.
+   состаренной бумаги свитков васи, глубокой туши Суми,
+   киновари резных печатей ханко и благородной состаренной латуни.
    ========================================================= */
 
 :root {
   /* --- Поверхности средневекового Додзё (Тёмное дерево, кедр, татами) --- */
-  --bg-canvas: #0c0b0a;           /* Тёмный глубокий фон зала додзё */
-  --bg-surface: #151311;          /* Морёное тёмное дерево (хиноки) панелей */
-  --bg-subtle: #1c1916;           /* Вторичный деревянный тон */
-  --bg-hover: #26221e;            /* Наведение на деревянный элемент */
-  --bg-panel: #151311;
-  --bg-panel-light: #1c1916;
-  --bg-panel-elevated: #24201c;
-  --bg-surface-translucent: rgba(12, 11, 10, 0.94);
+  --bg-canvas: #0c0a09;           /* Тёмный глубокий фон зала додзё */
+  --bg-surface: #151310;          /* Морёное тёмное дерево (хиноки) панелей */
+  --bg-subtle: #1c1814;           /* Вторичный деревянный тон */
+  --bg-hover: #26211c;            /* Наведение на деревянный элемент */
+  --bg-panel: #151310;
+  --bg-panel-light: #1c1814;
+  --bg-panel-elevated: #241f1a;
+  --bg-surface-translucent: rgba(12, 10, 9, 0.94);
 
   /* --- Материалы традиционного японского интерьера --- */
-  --wood-dark: #120f0d;
-  --wood-medium: #1f1a16;
-  --wood-border: #322b24;
-  --wood-grain: #3d342c;
-  --tatami-border: #42392f;
-  --tatami-accent: #8c8068;
-  --paper-washi: #ede7dc;
+  --wood-dark: #120e0c;
+  --wood-medium: #1f1915;
+  --wood-border: #352b22;
+  --wood-grain: #3d3126;
+  --wood-highlight: #4a3b2f;
+  --wood-frame: #2c231c;
+  --wood-lacquer: #1c130d;
+
+  /* Татами (плетёные соломенные маты и окантовка хэри) */
+  --tatami-base: #1b1914;
+  --tatami-straw: #383226;
+  --tatami-border: #4a3e2f;
+  --tatami-accent: #96896f;
+  --tatami-heriborder: #2b261e;
+
+  /* Рисовая бумага Васи и старинный пергамент свитка (鳥の子色 / 生漉紙) */
+  --paper-washi: #f4eee2;         /* Натуральная небелистая бумага козо */
+  --paper-washi-dim: #e6ddce;
+  --paper-parchment: #ede4d3;
+  --paper-aged: #dfd4c0;
+  --paper-dark: #221d18;          /* Тёмная текстура бумаги для карточек */
+  --paper-card-bg: #181512;
+  --paper-card-border: #382e25;
+
+  /* Сёдзи (Бумажные раздвижные перегородки и решетка кумико) */
+  --shoji-frame: #36291f;
+  --shoji-grid: rgba(191, 161, 95, 0.18);
+  --shoji-paper: rgba(244, 238, 226, 0.04);
+  --shoji-paper-glow: rgba(244, 238, 226, 0.08);
 
   /* --- Типографика (Хлопок доги, состаренная бумага свитков) --- */
-  --text-primary: #f5f2eb;        /* Натуральный небелёный хлопок традиционного кимоно */
-  --text-secondary: #c9c3b6;      /* Тёплый серебристый тон бумаги */
-  --text-muted: #8c8477;          /* Приглушённая патина дерева */
-  --text-faint: #524c43;          /* Глубокий пепельный штрих */
+  --text-primary: #f6f3ec;        /* Натуральный небелёный хлопок традиционного кимоно */
+  --text-secondary: #cec7b9;      /* Тёплый серебристый тон бумаги васи */
+  --text-muted: #91897c;          /* Приглушённая патина дерева */
+  --text-faint: #564f44;          /* Глубокий пепельный штрих */
   --text-main: var(--text-primary);
   --paper: var(--bg-canvas);
-  --paper-dark: var(--bg-subtle);
   --washi: var(--text-primary);
   --washi-dim: var(--text-secondary);
   --washi-muted: var(--text-muted);
 
-  /* --- Традиционная киноварная печать (Ханко / 印鑑) --- */
-  --accent-red: #b91c1c;          /* Благородный тёмно-красный оттиск печати */
+  /* --- Традиционная киноварная печать (Ханко / 印鑑 / 朱色) --- */
+  --accent-red: #ba1d1d;          /* Благородный тёмно-красный оттиск печати */
   --accent-red-hover: #d32f2f;
-  --accent-red-subtle: rgba(185, 28, 28, 0.14);
-  --accent-red-border: rgba(185, 28, 28, 0.38);
+  --accent-red-subtle: rgba(186, 29, 29, 0.16);
+  --accent-red-border: rgba(186, 29, 29, 0.42);
   --crimson: var(--accent-red);
-  --crimson-bright: #d32f2f;
-  --crimson-glow: rgba(185, 28, 28, 0.22);
+  --crimson-bright: #d93838;
+  --crimson-glow: rgba(186, 29, 29, 0.28);
   --red: var(--accent-red);
   --red-light: #d32f2f;
-  --red-seal: #b91c1c;
+  --red-seal: #ba1d1d;
+  --hanko-bg: #a81c1c;
+  --hanko-border: #dc2626;
 
-  /* --- Благородная состаренная латунь (Орнаменты камидза) --- */
-  --vector-line: #3a3229;         /* Тонкая линия разметки пола додзё */
-  --vector-active: #b91c1c;       /* Активная ось атаки */
-  --gold: #bfa15f;                /* Состаренная латунь */
-  --gold-soft: #cfb57a;
-  --gold-bright: #dfc88f;
-  --gold-dark: #8c7339;
-  --gold-glow: rgba(191, 161, 95, 0.22);
+  /* --- Благородная состаренная латунь и старая бронза (金具 / 古銅) --- */
+  --vector-line: #3d3429;         /* Тонкая линия разметки пола додзё */
+  --vector-active: #ba1d1d;       /* Активная ось атаки */
+  --gold: #c29f55;                /* Состаренная латунь */
+  --gold-soft: #d4b778;
+  --gold-bright: #e4ce95;
+  --gold-dark: #8a6c2f;
+  --gold-border: #52432e;
+  --gold-glow: rgba(194, 159, 85, 0.25);
+  --gold-subtle: rgba(194, 159, 85, 0.1);
 
-  /* --- Архитектурные деревянные разделители --- */
-  --border: #2c251f;              /* Стык деревянных брусьев */
-  --border-subtle: #211c17;       /* Внутренняя лёгкая линия */
-  --border-faint: #1a1613;
-  --border-focus: #bfa15f;        /* Латунный фокус элементов ввода */
+  /* --- Архитектурные деревянные разделители и стыки --- */
+  --border: #2e261f;              /* Стык деревянных брусьев */
+  --border-subtle: #231c16;       /* Внутренняя лёгкая линия */
+  --border-faint: #1a1511;
+  --border-focus: #c29f55;        /* Латунный фокус элементов ввода */
+  --border-highlight: #46392c;
 
   /* --- Пояса Сётокан (Оби / 帯) --- */
-  --belt-white: #e8e4db;
-  --belt-yellow: #d4a017;
-  --belt-orange: #d96818;
-  --belt-green: #2a8747;
-  --belt-blue: #2c6eb5;
-  --belt-brown: #824d1e;
-  --belt-black: #f5f2eb;
+  --belt-white: #eae6dd;
+  --belt-yellow: #d8a51d;
+  --belt-orange: #dd6e1c;
+  --belt-green: #2c8c4a;
+  --belt-blue: #2e74bf;
+  --belt-brown: #8a5322;
+  --belt-black: #f6f3ec;
 
   /* --- Статусы --- */
-  --danger: #c53030;
-  --success: #2f855a;
-  --warning: #c05621;
+  --danger: #c93434;
+  --success: #318a5d;
+  --warning: #c75b24;
 
   /* --- Шрифты --- */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Cinzel', 'Shippori Mincho', 'Playfair Display', Georgia, serif;
   --font-display: var(--font-serif);
   --font-kanji: 'Shippori Mincho', 'Noto Serif JP', serif;
+  --font-brush: 'Yuji Boku', 'Shippori Mincho', serif;
   --font-body: var(--font-sans);
 
-  /* --- Архитектурные пропорции и мягкие тени додзё --- */
+  /* --- Архитектурные пропорции и глубокие тени додзё --- */
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-pill: 9999px;
   --shadow-subtle: 0 2px 6px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 4px 22px rgba(0, 0, 0, 0.55);
-  --shadow-lift: 0 8px 32px rgba(0, 0, 0, 0.65);
-  --shadow-dojo: 0 14px 45px rgba(0, 0, 0, 0.8);
+  --shadow-card: 0 4px 22px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-lift: 0 8px 32px rgba(0, 0, 0, 0.65), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-dojo: 0 16px 50px rgba(0, 0, 0, 0.85);
 
   /* --- Z-индексы --- */
   --z-header: 100;

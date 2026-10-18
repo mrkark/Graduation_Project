@@ -21,6 +21,7 @@ export default function MocapPuppetAvatar({
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = 1.0,
+  xrayMode = false,
 }) {
   const groupRef = useRef();
   const { scene } = useGLTF('/models/karateka_techniques_v4.glb');
@@ -36,7 +37,7 @@ export default function MocapPuppetAvatar({
       }
       if (child.isMesh) {
         child.frustumCulled = false;
-        child.castShadow = true;
+        child.castShadow = !xrayMode;
         child.receiveShadow = true;
 
         if (child.material) {
@@ -45,8 +46,17 @@ export default function MocapPuppetAvatar({
           const name = child.name || '';
           if (name.includes('Belt')) {
             mat.color = new THREE.Color('#141414'); // Черный пояс Kuro-Obi
+            if (xrayMode) {
+              mat.transparent = true;
+              mat.opacity = 0.7;
+            }
           } else if (name.includes('Gi') || name.includes('Jacket') || name.includes('Pants')) {
             mat.color = new THREE.Color('#faf9f6'); // Белое кимоно мастера
+            if (xrayMode) {
+              mat.transparent = true;
+              mat.opacity = 0.42;
+              mat.roughness = 0.5;
+            }
           }
           child.material = mat;
         }
@@ -54,7 +64,7 @@ export default function MocapPuppetAvatar({
     });
 
     return { clonedModel: clone, boneMap: map };
-  }, [scene]);
+  }, [scene, xrayMode]);
 
   // Запоминаем исходные (Rest Pose) кватернионы костей
   const restQuatsRef = useRef(new Map());

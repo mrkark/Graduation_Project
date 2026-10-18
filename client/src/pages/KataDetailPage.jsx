@@ -6,13 +6,24 @@ import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import KataSequencer, { resolveKataSlug } from '../three/KataSequencer';
+import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './KataDetailPage.css';
 
 const DIFFICULTY_LABELS = {
-  beginner: 'Начальный уровень (Сёдан)',
-  intermediate: 'Средний уровень (Тюдан)',
-  advanced: 'Продвинутый уровень (Дзёдан)',
-  master: 'Мастерский уровень (Мэнкё)',
+  beginner: 'Начальный уровень (Сёдан · 9–7 Кю)',
+  intermediate: 'Средний уровень (Тюдан · 6–4 Кю)',
+  advanced: 'Продвинутый уровень (Дзёдан · 3–1 Кю)',
+  master: 'Мастерский уровень (Мэнкё · Дан)',
+};
+
+const STANCE_KANJI = {
+  zenkutsu: '前',
+  kokutsu: '後',
+  kiba: '騎',
+  fudo: '不',
+  gankaku: '鶴',
+  heiko: '平',
+  ready: '然',
 };
 
 export default function KataDetailPage() {
@@ -60,7 +71,7 @@ export default function KataDetailPage() {
       const facingStr =
         ev.facingDeg !== undefined
           ? ev.facingDeg === 0
-            ? '0° (Север)'
+            ? '0° (Север · 正面)'
             : `${ev.facingDeg}°`
           : ev.facing
           ? `${ev.facing}`
@@ -115,6 +126,9 @@ export default function KataDetailPage() {
   const activeStep = effectiveSteps[activeStepIdx] || effectiveSteps[0] || null;
   const isKiai = Boolean(activeStep?.kiai || activeStep?.Title?.includes('КИАЙ'));
 
+  const stanceKey = (activeStep?.stance || 'zenkutsu').toLowerCase().split('_')[0];
+  const stanceKanjiChar = STANCE_KANJI[stanceKey] || '構';
+
   const isOwner = kata?.Author_ID === user?.User_ID;
   const isStaff = role === 'admin' || role === 'moderator';
   const canEdit = isOwner || isStaff;
@@ -138,12 +152,12 @@ export default function KataDetailPage() {
 
   return (
     <div className="kata-study container">
-      {/* 1. ЛАКОНИЧНАЯ ШАПКА КАТА */}
+      {/* 1. АРХИТЕКТУРНАЯ ШАПКА КАТА ДОДЗЁ */}
       <header className="kata-study__header">
         <div>
           <div className="kata-study__meta-row">
             <Link to="/kata" className="kata-study__back-link">
-              ← Каталог ката
+              ← Атлас ката (型)
             </Link>
             <span className="kata-study__sep">/</span>
             <span className="kata-study__belt-tag">
@@ -156,9 +170,17 @@ export default function KataDetailPage() {
             <StatusBadge status={kata.Status} />
           </div>
 
-          <h1 className="kata-study__title">
-            {kata.Title}
-          </h1>
+          <div className="kata-study__title-wrap">
+            <h1 className="kata-study__title">
+              {kata.Title}
+            </h1>
+            <HankoSeal
+              text={kata.Title?.match(/[\u4e00-\u9faf]{1,2}/)?.[0] || '型'}
+              size="md"
+              variant="vermilion"
+              shape="square"
+            />
+          </div>
         </div>
 
         {canEdit && (
@@ -183,8 +205,18 @@ export default function KataDetailPage() {
         )}
       </header>
 
-      {/* 2. ЦЕНТРАЛЬНЫЙ 3D-АВАТАР И СЦЕНА (ОСНОВНОЙ ФОКУС) */}
+      {/* 2. ЦЕНТРАЛЬНЫЙ 3D-АВАТАР И СЦЕНА (ОСНОВНОЙ ФОКУС БЕЗ ПЕРЕКРЫТИЙ) */}
       <section className="kata-study__stage-wrap">
+        <div className="kata-study__stage-frame-header">
+          <div className="kata-study__stage-badge">
+            <ShotokanTiger size={18} color="var(--gold)" />
+            <span>3D АРЕНА ДОДЗЁ · СЁТОКАН КАРАТЭДО</span>
+          </div>
+          <span className="kata-study__stage-slug">
+            {kataSlug ? kataSlug.toUpperCase() : 'KATA'}
+          </span>
+        </div>
+
         <div className="kata-study__canvas-container">
           <KataSequencer
             kataTitle={kata.Title}
@@ -199,7 +231,7 @@ export default function KataDetailPage() {
         <div className="kata-stepper">
           <button
             type="button"
-            className="btn kata-stepper__nav-btn"
+            className="btn btn-subtle kata-stepper__nav-btn"
             onClick={() => setActiveStepIdx((prev) => Math.max(0, prev - 1))}
             disabled={activeStepIdx === 0}
           >
@@ -209,13 +241,25 @@ export default function KataDetailPage() {
           <div className="kata-stepper__info">
             <div className="kata-stepper__step-badge">
               <span>Шаг {activeStepIdx + 1} из {stepsCount}</span>
-              {isKiai && <span className="kata-kiai-pill">КИАЙ!</span>}
+              {isKiai && (
+                <div className="kata-kiai-badge">
+                  <HankoSeal text="気合" size="sm" variant="vermilion" shape="square" />
+                  <span className="kata-kiai-text">КИАЙ!</span>
+                </div>
+              )}
             </div>
             <div className="kata-stepper__technique">
               {activeStep?.Technique || activeStep?.Title || 'Стойка готовности'}
             </div>
             <div className="kata-stepper__stance-line">
-              Стойка: <strong>{activeStep?.stance || 'Дзэнкуцу-дати'}</strong> · Направление: <strong>{activeStep?.Direction || '0°'}</strong>
+              <span className="kata-stance-pill">
+                <span className="kata-stance-kanji">{stanceKanjiChar}</span>
+                <span>Стойка: <strong>{activeStep?.stance || 'Дзэнкуцу-дати'}</strong></span>
+              </span>
+              <span className="kata-stance-sep">·</span>
+              <span className="kata-direction-pill">
+                <span>Ось: <strong>{activeStep?.Direction || '0° (Север)'}</strong></span>
+              </span>
             </div>
           </div>
 
@@ -249,7 +293,7 @@ export default function KataDetailPage() {
         </div>
       </section>
 
-      {/* 4. ПРОГРЕССИВНОЕ РАСКРЫТИЕ ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ */}
+      {/* 4. ПРОГРЕССИВНОЕ РАСКРЫТИЕ ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ (ДЭНСЁ) */}
       <section className="kata-study__details">
         <div className="tabs kata-study__tabs">
           <button
@@ -290,8 +334,11 @@ export default function KataDetailPage() {
           {activeTab === 'notes' && (
             <div className="kata-notes">
               <div className="kata-notes__main">
-                <h3>Концепция формы</h3>
-                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>
+                <div className="kata-notes__header-row">
+                  <HankoSeal text="伝" size="sm" variant="gold" shape="square" />
+                  <h3 style={{ margin: 0 }}>Каноническое наставление формы</h3>
+                </div>
+                <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.75 }}>
                   {kata.Description || 'Описание формы пока не добавлено.'}
                 </p>
 
@@ -322,7 +369,8 @@ export default function KataDetailPage() {
                     </p>
                   </div>
                   <Link to={`/bunkai/${b.Bunkai_ID}`} className="btn btn-subtle">
-                    Открыть симуляцию 3D →
+                    <span>Открыть симуляцию 3D</span>
+                    <HankoSeal text="解" size="sm" variant="vermilion" shape="square" />
                   </Link>
                 </div>
               ))}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { deleteAccount } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './ProfilePage.css';
 
 export default function ProfilePage() {
@@ -81,7 +82,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Карточка статуса ученика (Dojo Pass) */}
+      {/* Карточка статуса ученика (Dojo Pass / Menjo) */}
       <div className="profile-card">
         <div className="profile-avatar-wrap">
           {currentAvatar ? (
@@ -97,6 +98,12 @@ export default function ProfilePage() {
               <span>{roleInfo.kanji}</span>
               <span>{roleInfo.belt}</span>
             </span>
+            <HankoSeal
+              text={role === 'admin' ? '先生' : role === 'moderator' ? '先輩' : '門下'}
+              size="sm"
+              variant={role === 'admin' ? 'vermilion' : 'gold'}
+              shape="square"
+            />
           </div>
           <p className="profile-meta">
             <span>Логин: <strong>{user?.Username}</strong></span>

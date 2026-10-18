@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './AuthPages.css';
 
 export default function RegisterPage() {
@@ -31,22 +32,30 @@ export default function RegisterPage() {
   return (
     <div className="auth-page">
       <div className="auth-card panel">
-        <h1>登録 · Регистрация</h1>
-        <p className="auth-sub">
-          Создайте аккаунт, чтобы получить доступ к каталогу ката, бункаев, чатам додзё и профилю.
-        </p>
+        <div className="auth-card__header">
+          <div className="auth-card__crest">
+            <ShotokanTiger size={40} color="var(--gold)" />
+          </div>
+          <div className="auth-card__title-row">
+            <h1>Регистрация в Додзё</h1>
+            <HankoSeal text="登録" size="md" variant="gold" shape="square" />
+          </div>
+          <p className="auth-sub">
+            Создайте свиток каратека, чтобы изучать формы ката, проектировать боевые сценарии и повышать свой ранг.
+          </p>
+        </div>
 
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} className="auth-form">
           <div className="field">
-            <label htmlFor="username">Имя пользователя</label>
+            <label htmlFor="username">Имя пользователя (Логин)</label>
             <input id="username" required value={form.username} onChange={update('username')} placeholder="karateka_2026" />
           </div>
           <div className="field">
-            <label htmlFor="displayName">Отображаемое имя (необязательно)</label>
+            <label htmlFor="displayName">Отображаемое имя ученика (необязательно)</label>
             <input id="displayName" value={form.displayName} onChange={update('displayName')} placeholder="Иван Иванов" />
           </div>
           <div className="field">
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email адрес</label>
             <input id="email" type="email" required value={form.email} onChange={update('email')} placeholder="you@example.com" />
           </div>
           <div className="field">
@@ -54,16 +63,15 @@ export default function RegisterPage() {
             <input id="password" type="password" required minLength={8} value={form.password} onChange={update('password')} placeholder="Минимум 8 символов" />
           </div>
 
-          {error && <p className="error-text">{error}</p>}
+          {error && <p className="auth-error">{error}</p>}
 
-          <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%' }}>
-            {loading ? 'Регистрация…' : 'Зарегистрироваться'}
+          <button className="btn btn-primary auth-submit-btn" type="submit" disabled={loading}>
+            {loading ? 'Внесение в реестр…' : 'Вступить в Додзё →'}
           </button>
         </form>
 
-        <hr className="divider" />
         <p className="auth-alt">
-          Уже есть аккаунт? <Link to="/login">Войти</Link>
+          Уже есть учетная запись? <Link to="/login">Войти в зал</Link>
         </p>
       </div>
     </div>

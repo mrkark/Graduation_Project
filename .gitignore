@@ -38,4 +38,8 @@ __pycache__/
 # Backup models
 *_backup.glb
 
-
+# Test previews and screenshots
+test_*.png
+capture_*.js
+screenshots_*/
+client/capture_*.js

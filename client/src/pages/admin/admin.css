@@ -1,5 +1,5 @@
 /* =========================================================
-   ADMIN.CSS — Панель администрирования и модерации (Shotokan Editorial)
+   ADMIN.CSS — Панель администрирования и модерации (Honbu Dojo)
    ========================================================= */
 
 .admin-wrapper {
@@ -12,6 +12,17 @@
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.admin-page-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 80px;
+  height: 2px;
+  background: var(--accent-red);
 }
 
 .admin-page-header h1 {
@@ -20,6 +31,7 @@
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--text-primary);
+  letter-spacing: 0.02em;
 }
 
 .admin-page-header p {
@@ -45,11 +57,13 @@
 .admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  background: var(--bg-surface);
+  gap: 0.35rem;
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.95) 100%);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--timber-medium);
   border-radius: var(--radius-sm);
-  padding: 0.6rem;
+  padding: 0.75rem;
+  box-shadow: var(--shadow-card);
 }
 
 .admin-nav a {
@@ -63,24 +77,27 @@
   border-radius: var(--radius-xs);
   text-decoration: none;
   transition: all 0.16s ease;
+  border: 1px solid transparent;
 }
 
 .admin-nav a:hover {
   background: var(--bg-subtle);
   color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .admin-nav a.active {
-  background: var(--bg-subtle);
-  color: var(--text-primary);
-  border-left: 2px solid var(--accent-red);
+  background: rgba(184, 41, 41, 0.12);
+  color: var(--gold-soft);
+  border: 1px solid rgba(212, 162, 76, 0.3);
+  border-left: 3px solid var(--accent-red);
   font-weight: 600;
 }
 
 .admin-nav__kanji {
-  font-family: var(--font-kanji);
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-family: var(--font-brush);
+  font-size: 1.1rem;
+  color: var(--gold);
 }
 
 .admin-content {
@@ -96,23 +113,30 @@
 }
 
 .admin-stat-card {
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.95) 100%);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--timber-medium);
   border-radius: var(--radius-sm);
-  padding: 1.5rem;
-  box-shadow: var(--shadow-subtle);
+  padding: 1.6rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.admin-stat-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-2px);
 }
 
 .admin-stat-card__val {
   font-size: 2.2rem;
   font-family: var(--font-display);
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--gold);
   margin-bottom: 0.25rem;
 }
 
 .admin-stat-card__lbl {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -120,10 +144,12 @@
 
 /* Таблицы админки */
 .admin-table-wrap {
-  background: var(--bg-surface);
+  background: linear-gradient(180deg, var(--bg-surface) 0%, rgba(20, 18, 16, 0.95) 100%);
   border: 1px solid var(--border);
+  border-top: 2px solid var(--timber-medium);
   border-radius: var(--radius-sm);
   overflow-x: auto;
+  box-shadow: var(--shadow-card);
 }
 
 .admin-table {
@@ -135,13 +161,13 @@
 
 .admin-table th {
   padding: 0.85rem 1.2rem;
-  background: var(--bg-subtle);
+  background: rgba(0, 0, 0, 0.4);
   border-bottom: 1px solid var(--border);
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--gold);
 }
 
 .admin-table td {
@@ -151,7 +177,7 @@
 }
 
 .admin-table tr:hover td {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .admin-table tr:last-child td {
