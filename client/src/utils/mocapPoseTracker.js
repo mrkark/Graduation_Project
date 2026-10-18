@@ -30,6 +30,19 @@ export {
   sharedMultiCameraEngine,
 };
 
+export {
+  KARATEKA_BONE_HIERARCHY,
+  ANATOMICAL_JOINT_LIMITS,
+  ContinuousAzimuthTracker,
+  constrainKneeJoint,
+  constrainElbowJoint,
+  FootContactManager,
+  DynamicKimePreserver,
+  NetworkPlayoutJitterBuffer,
+  MasterBiomechanicalRetargeter,
+  evaluateThreeSkeletonUtilsRetargeting,
+} from './mocapBiomechanicalRetargeter.js';
+
 const sharedMultiCameraEngine = new MultiCameraMoCapEngine();
 
 let poseInstance = null;

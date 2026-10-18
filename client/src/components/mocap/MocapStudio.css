@@ -234,6 +234,14 @@
   border-left-color: var(--crimson-bright);
 }
 
+.hud-badge.telemetry {
+  border-left-color: #06b6d4;
+}
+
+.hud-badge.telemetry .hud-badge__jp {
+  color: #38bdf8;
+}
+
 .hud-badge__jp {
   font-family: var(--font-kanji);
   font-size: 0.76rem;

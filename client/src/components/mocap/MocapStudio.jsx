@@ -21,6 +21,7 @@ import {
   parseBunkaiMocapJson,
   calibrateCameraFromPose,
   sharedMultiCameraEngine,
+  NetworkPlayoutJitterBuffer,
 } from '../../utils/mocapPoseTracker';
 import './MocapStudio.css';
 
@@ -147,6 +148,18 @@ export default function MocapStudio() {
     syncHealth: 'perfect',
     driftMs: 0,
     reprojErr: 0,
+  });
+  const jitterBufferRef = useRef(null);
+  if (!jitterBufferRef.current) {
+    jitterBufferRef.current = new NetworkPlayoutJitterBuffer(60);
+  }
+  const [networkTelemetry, setNetworkTelemetry] = useState({
+    renderFps: 60,
+    packetRate: 30,
+    jitterMs: 0,
+    latencyMs: 60,
+    packetLossCount: 0,
+    trackingLost: false,
   });
 
   // Запись сессии MoCap
@@ -510,6 +523,11 @@ export default function MocapStudio() {
     socket.on('mocap:landmarks-data', (payload) => {
       const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands, trackingLost } = payload || {};
       
+      if (payload && jitterBufferRef.current) {
+        jitterBufferRef.current.ingestPacket(payload);
+        setNetworkTelemetry(jitterBufferRef.current.getTelemetry());
+      }
+
       if (slot && trackingLost) {
         if (latestLandmarksBySlot.current[slot]) {
           latestLandmarksBySlot.current[slot].trackingLost = true;
@@ -1099,6 +1117,15 @@ export default function MocapStudio() {
                 <span className="hud-badge__jp">技 · Техника</span>
                 <strong className="hud-badge__val">{karateMetrics.actionTitle}</strong>
               </div>
+
+              {sourceMode === 'phone' && (
+                <div className="hud-badge telemetry" title={`Джиттер: ±${networkTelemetry.jitterMs}мс, сетевая задержка: ${networkTelemetry.latencyMs}мс`}>
+                  <span className="hud-badge__jp">同期 · Синхронизация</span>
+                  <strong className="hud-badge__val">
+                    {networkTelemetry.renderFps} FPS · {networkTelemetry.latencyMs}мс (±{networkTelemetry.jitterMs}мс)
+                  </strong>
+                </div>
+              )}
 
               {/* Переключатель зеркального отображения движений */}
               <button

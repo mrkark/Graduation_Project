@@ -5,6 +5,11 @@ import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { extractHandBiomechanics, estimateHeadOrientation } from '../utils/mocapPoseTracker';
 import { applyHandRetargetingToArmature } from '../utils/mocapHandRetargeter';
+import {
+  MasterBiomechanicalRetargeter,
+  constrainKneeJoint,
+  constrainElbowJoint,
+} from '../utils/mocapBiomechanicalRetargeter';
 
 /**
  * MocapPuppetAvatar — 3D-аватар мастера каратэ Шотокан (Karateka lowpoly).
@@ -288,6 +293,11 @@ export default function MocapPuppetAvatar({
     return { clonedModel: clone, boneMap: map, modelScale: s, modelYOffset: yOff };
   }, [scene, xrayMode, role]);
 
+  const masterRetargeterRef = useRef(null);
+  if (!masterRetargeterRef.current) {
+    masterRetargeterRef.current = new MasterBiomechanicalRetargeter({ groundY: 0.0 });
+  }
+
   useEffect(() => {
     clonedModel.updateMatrixWorld(true);
     boneMap.forEach((node) => {
@@ -298,6 +308,7 @@ export default function MocapPuppetAvatar({
       node.restWorldDir = new THREE.Vector3(0, 1, 0).applyQuaternion(node.restWorldQ).normalize();
       node.restPosition = node.position.clone();
     });
+    masterRetargeterRef.current.registerRestArmature(boneMap);
   }, [boneMap, clonedModel]);
 
   const nominalLegLenRef = useRef(0.82);
@@ -364,19 +375,21 @@ export default function MocapPuppetAvatar({
       const legL_Foot = mirrorMode ? boneMap.get('Foot.R') : boneMap.get('Foot.L');
 
       // 1. ПРАВАЯ РУКА ЧЕЛОВЕКА
+      let vArmR = null;
       if (pRSh && pREl) {
-        const vArm = pREl.clone().sub(pRSh);
-        if (mirrorMode) vArm.x = -vArm.x;
-        if (armR_Shoulder) alignShoulder(armR_Shoulder, vArm, mirrorMode ? 'L' : 'R');
-        alignBone(armR_Upper, vArm, 0.78);
+        vArmR = pREl.clone().sub(pRSh);
+        if (mirrorMode) vArmR.x = -vArmR.x;
+        if (armR_Shoulder) alignShoulder(armR_Shoulder, vArmR, mirrorMode ? 'L' : 'R');
+        alignBone(armR_Upper, vArmR, 0.78);
       }
 
       // 2. ЛЕВАЯ РУКА ЧЕЛОВЕКА
+      let vArmL = null;
       if (pLSh && pLEl) {
-        const vArm = pLEl.clone().sub(pLSh);
-        if (mirrorMode) vArm.x = -vArm.x;
-        if (armL_Shoulder) alignShoulder(armL_Shoulder, vArm, mirrorMode ? 'R' : 'L');
-        alignBone(armL_Upper, vArm, 0.78);
+        vArmL = pLEl.clone().sub(pLSh);
+        if (mirrorMode) vArmL.x = -vArmL.x;
+        if (armL_Shoulder) alignShoulder(armL_Shoulder, vArmL, mirrorMode ? 'R' : 'L');
+        alignBone(armL_Upper, vArmL, 0.78);
       }
 
       // 3. БИОМЕХАНИКА КИСТЕЙ И ПАЛЬЦЕВ (Thumb, Index, Middle, Ring, Pinky 1..3)
@@ -385,8 +398,12 @@ export default function MocapPuppetAvatar({
       const fL = fingersBio?.left;
 
       if (pREl && pRWr) {
-        const vForearm = pRWr.clone().sub(pREl);
+        let vForearm = pRWr.clone().sub(pREl);
         if (mirrorMode) vForearm.x = -vForearm.x;
+        if (vArmR) {
+          const elbowChk = constrainElbowJoint(vArmR, vForearm, mirrorMode);
+          if (elbowChk.correctedForearm) vForearm.copy(elbowChk.correctedForearm);
+        }
         alignBone(armR_Lower, vForearm, 0.78);
 
         // Кисть правой руки (поворот ладони, супинация / пронация)
@@ -412,8 +429,12 @@ export default function MocapPuppetAvatar({
       }
 
       if (pLEl && pLWr) {
-        const vForearm = pLWr.clone().sub(pLEl);
+        let vForearm = pLWr.clone().sub(pLEl);
         if (mirrorMode) vForearm.x = -vForearm.x;
+        if (vArmL) {
+          const elbowChk = constrainElbowJoint(vArmL, vForearm, !mirrorMode);
+          if (elbowChk.correctedForearm) vForearm.copy(elbowChk.correctedForearm);
+        }
         alignBone(armL_Lower, vForearm, 0.78);
 
         // Кисть левой руки (поворот ладони, супинация / пронация)
@@ -449,8 +470,11 @@ export default function MocapPuppetAvatar({
         alignBone(legR_Upper, vThigh, 0.85);
 
         if (pRAn) {
-          const vShin = pRAn.clone().sub(pRKn);
+          const pRAnGrounded = masterRetargeterRef.current?.footContactManager.processFoot('R', pRAn) || pRAn;
+          let vShin = pRAnGrounded.clone().sub(pRKn);
           if (mirrorMode) vShin.x = -vShin.x;
+          const kneeChk = constrainKneeJoint(vThigh, vShin, mirrorMode);
+          if (kneeChk.correctedShin) vShin.copy(kneeChk.correctedShin);
           alignBone(legR_Lower, vShin, 0.85);
         }
 
@@ -468,8 +492,11 @@ export default function MocapPuppetAvatar({
         alignBone(legL_Upper, vThigh, 0.85);
 
         if (pLAn) {
-          const vShin = pLAn.clone().sub(pLKn);
+          const pLAnGrounded = masterRetargeterRef.current?.footContactManager.processFoot('L', pLAn) || pLAn;
+          let vShin = pLAnGrounded.clone().sub(pLKn);
           if (mirrorMode) vShin.x = -vShin.x;
+          const kneeChk = constrainKneeJoint(vThigh, vShin, !mirrorMode);
+          if (kneeChk.correctedShin) vShin.copy(kneeChk.correctedShin);
           alignBone(legL_Lower, vShin, 0.85);
         }
 
@@ -524,25 +551,30 @@ export default function MocapPuppetAvatar({
 
         torsoFwdZ = vSpine.z;
 
-        // Наклон и поворот таза (Pelvic Tilt & Yaw)
+        // Наклон и непрерывный поворот таза (Continuous 360° Azimuth & Phase Unwrapped Yaw)
         if (bHips && bHips.restWorldQ) {
           const vHipsLat = pLHp.clone().sub(pRHp);
           if (mirrorMode) vHipsLat.x = -vHipsLat.x;
 
           if (vHipsLat.lengthSq() > 1e-4) {
-            const hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
+            const headingVec = masterRetargeterRef.current.azimuthTracker.computeCompositeHeading(ptsRaw);
+            if (mirrorMode) headingVec.x = -headingVec.x;
+            const continuousYaw = masterRetargeterRef.current.azimuthTracker.updateYaw(headingVec);
+
             const trunkForwardPitch = Math.atan2(vSpine.z, Math.max(0.08, vSpine.y));
             const pelvicTilt = trunkForwardPitch * 0.35;
             const pelvicRoll = Math.atan2(vHipsLat.y, Math.hypot(vHipsLat.x, vHipsLat.z));
 
-            const eulerHips = new THREE.Euler(-pelvicTilt, hipYaw, pelvicRoll, 'YXZ');
-            const qDelta = new THREE.Quaternion().setFromEuler(eulerHips);
-            const targetWorldQHips = qDelta.clone().multiply(bHips.restWorldQ);
+            const qRotContinuous = masterRetargeterRef.current.azimuthTracker.getRootOrientationQuaternion(
+              -pelvicTilt,
+              pelvicRoll
+            );
+            const targetWorldQHips = qRotContinuous.clone().multiply(bHips.restWorldQ);
 
             const parentWorldQHips = new THREE.Quaternion();
             if (bHips.parent) bHips.parent.getWorldQuaternion(parentWorldQHips);
             const targetLocalHips = parentWorldQHips.clone().invert().multiply(targetWorldQHips);
-            bHips.quaternion.slerp(targetLocalHips, 0.75);
+            bHips.quaternion.slerp(targetLocalHips, 0.78);
           }
         }
 
