@@ -1131,61 +1131,98 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
   const pts = landmarks.map(toPx);
   const minVis = options.minConfidence !== undefined ? options.minConfidence : 0.20;
 
-  // Отрисовка кости с неоновым ореолом и плотным ядром
+  // Отрисовка кости с разделением реально обнаруженных и предсказанных сегментов
   const drawSegment = (i1, i2, color, lineWidth = 3.5, glowColor = null) => {
     const p1 = pts[i1];
     const p2 = pts[i2];
     if (!p1 || !p2 || p1.v < minVis || p2.v < minVis) return;
 
+    // Точка считается реально обнаруженной при visibility >= 0.55, иначе — предсказанная/интерполированная
+    const isPredicted = p1.v < 0.55 || p2.v < 0.55;
+
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    ctx.shadowColor = glowColor || color;
-    ctx.shadowBlur = 8;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = lineWidth;
+    if (isPredicted) {
+      // Предсказанный сегмент: пунктир и пониженная непрозрачность
+      ctx.setLineDash([5, 4]);
+      ctx.globalAlpha = 0.65;
+      ctx.shadowColor = glowColor || color;
+      ctx.shadowBlur = 4;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
 
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    } else {
+      // Реально обнаруженный сегмент: плотный неоновый луч с яркой белой сердцевиной
+      ctx.shadowColor = glowColor || color;
+      ctx.shadowBlur = 8;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
 
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = Math.max(1, lineWidth * 0.35);
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, lineWidth * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    }
 
     ctx.restore();
   };
 
-  // Отрисовка сустава (шарнира) с двойным кольцом
+  // Отрисовка сустава (шарнира) с различием: Плотный (Measured) vs Полый кольцевой (Predicted)
   const drawJoint = (idx, color = '#fbbf24', radius = 5, highlight = false) => {
     const p = pts[idx];
     if (!p || p.v < minVis) return;
 
+    const isPredicted = p.v < 0.55;
     ctx.save();
     const r = highlight ? radius * 1.3 : radius;
 
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fill();
+    if (isPredicted) {
+      // Полый шарнир (Hollow Ring) для предсказанных/перекрытых суставов
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 5;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.stroke();
 
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Реально обнаруженный сустав: яркое сплошное неоновое свечение + белая сердцевина
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
 
     ctx.restore();
   };

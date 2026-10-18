@@ -63,6 +63,10 @@ export default function PhoneCameraPage() {
   const [assignedSlot, setAssignedSlot] = useState(initialSlot);
   const [deviceLabel, setDeviceLabel] = useState(PHONE_ROLES[initialSlot - 1]?.label || 'Камера 1');
   const [facingMode, setFacingMode] = useState('environment'); // 'user' | 'environment'
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [performanceMode, setPerformanceMode] = useState('balanced'); // 'ultra' | 'balanced' | 'eco'
+  const [isCamSettingsOpen, setIsCamSettingsOpen] = useState(false);
 
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(null);
@@ -204,8 +208,58 @@ export default function PhoneCameraPage() {
       .catch((err) => console.warn('WebRTC Offer Error:', err));
   }, [roomId, assignedSlot]);
 
-  // 3. Запуск камеры смартфона
-  const startCamera = useCallback(async () => {
+  // Диагностика ошибок веб-камеры
+  const getDiagnosticErrorMsg = (err) => {
+    if (!err) return 'Не удалось включить камеру.';
+    switch (err.name) {
+      case 'NotAllowedError':
+      case 'PermissionDeniedError':
+        return '🚫 Доступ к камере отклонен. Разрешите доступ в настройках браузера (значок замка в адресной строке).';
+      case 'NotFoundError':
+      case 'DevicesNotFoundError':
+        return '📷 Камера не найдена на этом устройстве.';
+      case 'NotReadableError':
+      case 'TrackStartError':
+        return '⚠️ Камера занята другим приложением или вкладкой. Закройте другие программы камеры.';
+      case 'OverconstrainedError':
+      case 'ConstraintNotSatisfiedError':
+        return '🔄 Запрошенное разрешение или камера не поддерживается. Переключаемся на базовый режим...';
+      case 'SecurityError':
+        return '🔒 Доступ к камере блокирован политикой безопасности. Требуется защищенный шлюз HTTPS.';
+      default:
+        return `⚠️ Ошибка камеры: ${err.message || err.name || 'Сбой инициализации'}`;
+    }
+  };
+
+  // Опрос доступных видеокамер на устройстве
+  const refreshCameraDevices = useCallback(async () => {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const vDevs = devices.filter((d) => d.kind === 'videoinput');
+        setVideoDevices(vDevs);
+      } catch (e) {
+        console.warn('Не удалось получить список камер:', e);
+      }
+    }
+  }, []);
+
+  // Остановка захвата камеры
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setIsCameraActive(false);
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }, []);
+
+  // 3. Запуск камеры смартфона с выбором устройства и уровнями fallback
+  const startCamera = useCallback(async (targetDeviceId = null, targetFacing = null) => {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
     setCameraError(null);
@@ -220,11 +274,23 @@ export default function PhoneCameraPage() {
       return;
     }
 
-    const tiers = [
-      { video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-      { video: { facingMode: { ideal: facingMode } }, audio: false },
-      { video: true, audio: false },
-    ];
+    const useDeviceId = targetDeviceId !== null ? targetDeviceId : selectedDeviceId;
+    const useFacing = targetFacing !== null ? targetFacing : facingMode;
+
+    let tiers = [];
+    if (useDeviceId) {
+      tiers = [
+        { video: { deviceId: { exact: useDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+        { video: { deviceId: { exact: useDeviceId } }, audio: false },
+        { video: true, audio: false },
+      ];
+    } else {
+      tiers = [
+        { video: { facingMode: { ideal: useFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+        { video: { facingMode: { ideal: useFacing } }, audio: false },
+        { video: true, audio: false },
+      ];
+    }
 
     let stream = null;
     let lastErr = null;
@@ -242,10 +308,7 @@ export default function PhoneCameraPage() {
 
     if (!stream) {
       setIsCameraActive(false);
-      const msg = lastErr?.name === 'NotAllowedError'
-        ? 'Доступ к камере отклонен. Разрешите доступ в браузере.'
-        : `Не удалось включить камеру (${lastErr?.name || 'Сбой'}).`;
-      setCameraError(msg);
+      setCameraError(getDiagnosticErrorMsg(lastErr));
       return;
     }
 
@@ -255,11 +318,12 @@ export default function PhoneCameraPage() {
 
     streamRef.current = stream;
     bindStream(stream);
+    refreshCameraDevices();
 
     if (hostId) {
       setupPeerConnection(stream, hostId);
     }
-  }, [facingMode, bindStream, hostId, setupPeerConnection]);
+  }, [facingMode, selectedDeviceId, bindStream, hostId, setupPeerConnection, refreshCameraDevices]);
 
   // 4. Подключение к Socket.IO шлюзу (/mocap)
   useEffect(() => {
@@ -460,19 +524,35 @@ export default function PhoneCameraPage() {
               });
             }
 
-            // Отправляем поток ключевых точек на сайт / ПК Додзё
+            // Отправляем структурированный типизированный поток данных на сайт / ПК Додзё
             if (socketRef.current && socketConnected) {
-              socketRef.current.emit('mocap:landmarks-stream', {
+              const streamPacket = {
+                version: 2,
+                format: 'bunkai-stream-packet',
                 roomId,
+                slot: assignedSlot,
+                deviceId: selectedDeviceId || facingMode,
+                timestamp: Date.now(),
+                facingMode,
+                isMirrored: facingMode === 'user',
                 landmarks: results.poseLandmarks,
                 worldLandmarks: results.poseWorldLandmarks,
+                hands: detectedHandsRef.current,
+                confidence: {
+                  overall: metrics.overallScore || 85,
+                  head: parseFloat((results.poseLandmarks[0]?.visibility ?? 1.0).toFixed(2)),
+                  torso: parseFloat((((results.poseLandmarks[11]?.visibility ?? 1) + (results.poseLandmarks[12]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                  leftArm: parseFloat((((results.poseLandmarks[13]?.visibility ?? 1) + (results.poseLandmarks[15]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                  rightArm: parseFloat((((results.poseLandmarks[14]?.visibility ?? 1) + (results.poseLandmarks[16]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                  leftLeg: parseFloat((((results.poseLandmarks[25]?.visibility ?? 1) + (results.poseLandmarks[27]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                  rightLeg: parseFloat((((results.poseLandmarks[26]?.visibility ?? 1) + (results.poseLandmarks[28]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                },
                 metrics,
                 fingers,
                 head,
-                hands: detectedHandsRef.current,
-                slot: assignedSlot,
-                timestamp: Date.now(),
-              });
+                performanceMode,
+              };
+              socketRef.current.emit('mocap:landmarks-stream', streamPacket);
             }
           } else {
             setBodyInFrame(false);
@@ -522,8 +602,17 @@ export default function PhoneCameraPage() {
         loopFrameCountRef.current++;
         const frameIdx = loopFrameCountRef.current;
 
+        // Адаптивное управление частотой обработки нейросетей
+        // 'ultra': каждый кадр pose + каждый кадр hands
+        // 'balanced': каждый кадр pose + каждый 2-й кадр hands
+        // 'eco': каждый 2-й кадр pose + каждый 4-й кадр hands
+        const skipPose = performanceMode === 'eco' && frameIdx % 2 !== 0;
+        const skipHands = performanceMode === 'eco'
+          ? (frameIdx % 4 !== 0)
+          : (performanceMode === 'balanced' ? (frameIdx % 2 !== 0) : false);
+
         // Поток тела
-        if (poseRef.current && !isPoseProcessing) {
+        if (!skipPose && poseRef.current && !isPoseProcessing) {
           try {
             isPoseProcessing = true;
             await poseRef.current.send({ image: v });
@@ -533,8 +622,8 @@ export default function PhoneCameraPage() {
           }
         }
 
-        // Поток кистей: каждый 2-й кадр для экономии ресурсов смартфона
-        if (precisionHandMode && handsRef.current && !isHandsProcessing && frameIdx % 2 === 0) {
+        // Поток кистей
+        if (!skipHands && precisionHandMode && handsRef.current && !isHandsProcessing) {
           try {
             isHandsProcessing = true;
             await handsRef.current.send({ image: v });
@@ -638,7 +727,10 @@ export default function PhoneCameraPage() {
   return (
     <div className="phone-cam-root">
       {/* 1. ПОЛНОЭКРАННЫЙ ВИДОИСКАТЕЛЬ И НЕОНОВЫЙ СКЕЛЕТ НА ЧЕЛОВЕКЕ */}
-      <div className={`phone-cam-viewport ${isRecording ? 'is-recording' : ''}`} onClick={startCamera}>
+      <div
+        className={`phone-cam-viewport ${isRecording ? 'is-recording' : ''} ${facingMode === 'user' ? 'is-mirrored' : ''}`}
+        onClick={!isCameraActive ? () => startCamera() : undefined}
+      >
         <video
           ref={videoRef}
           playsInline
@@ -668,6 +760,14 @@ export default function PhoneCameraPage() {
                 {assignedSlot === 2 && 'Встаньте боком для фиксации глубины удара (Бок)'}
                 {assignedSlot === 3 && 'Диагональный угол 45° для 3D триангуляции'}
               </span>
+            </div>
+          )}
+
+          {/* Легенда: Реально обнаруженные vs Предсказанные точки */}
+          {bodyInFrame && (
+            <div className="hud-legend-pill">
+              <span className="legend-item"><span className="legend-dot solid" /> Обнаружено</span>
+              <span className="legend-item"><span className="legend-dot dashed" /> Предсказано</span>
             </div>
           )}
         </div>
@@ -724,6 +824,16 @@ export default function PhoneCameraPage() {
                   : 'Подключение...'}
               </span>
             </div>
+
+            {/* Настройки камеры и профили производительности */}
+            <button
+              type="button"
+              className="topbar-icon-btn"
+              onClick={() => { refreshCameraDevices(); setIsCamSettingsOpen(true); }}
+              title="Настройки камеры и производительности"
+            >
+              ⚙️
+            </button>
 
             <button type="button" className="topbar-icon-btn" onClick={toggleFullscreen} title="На весь экран">
               {isFullscreen ? '⤦' : '⛶'}
@@ -837,9 +947,19 @@ export default function PhoneCameraPage() {
 
       {/* 5. НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ */}
       <footer className="phone-cam-bottom-bar">
-        <button type="button" className="ctrl-side-btn" onClick={toggleFacing} title="Сменить камеру">
+        <button type="button" className="ctrl-side-btn" onClick={toggleFacing} title="Сменить камеру (Селфи / Сзади)">
           <span>🔄</span>
           <label>{facingMode === 'environment' ? 'Селфи' : 'Сзади'}</label>
+        </button>
+
+        <button
+          type="button"
+          className="ctrl-side-btn"
+          onClick={() => { refreshCameraDevices(); setIsCamSettingsOpen(true); }}
+          title="Выбор камеры и параметры"
+        >
+          <span>📷</span>
+          <label>Камеры</label>
         </button>
 
         <div className="ctrl-record-btn-wrap">
@@ -856,11 +976,126 @@ export default function PhoneCameraPage() {
           </span>
         </div>
 
-        <button type="button" className="ctrl-side-btn" onClick={startCamera} title="Обновить камеру">
-          <span>⚡</span>
-          <label>Старт</label>
+        <button
+          type="button"
+          className={`ctrl-side-btn ${isCameraActive ? 'active' : ''}`}
+          onClick={isCameraActive ? stopCamera : () => startCamera()}
+          title={isCameraActive ? 'Приостановить камеру' : 'Запустить камеру'}
+        >
+          <span>{isCameraActive ? '⏹' : '▶'}</span>
+          <label>{isCameraActive ? 'Стоп' : 'Старт'}</label>
         </button>
       </footer>
+
+      {/* 6. МОДАЛЬНОЕ ОКНО НАСТРОЕК КАМЕРЫ И ПРОИЗВОДИТЕЛЬНОСТИ */}
+      {isCamSettingsOpen && (
+        <div className="cam-settings-overlay" onClick={() => setIsCamSettingsOpen(false)}>
+          <div className="cam-settings-card" onClick={(e) => e.stopPropagation()}>
+            <div className="cam-settings-header">
+              <h3>⚙️ Настройки камеры и MoCap</h3>
+              <button
+                type="button"
+                className="cam-settings-close"
+                onClick={() => setIsCamSettingsOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Выбор видеоустройства */}
+            <div className="cam-settings-section">
+              <span className="cam-settings-label">📷 Выбор камеры</span>
+              <div className="cam-devices-list">
+                <div
+                  className={`cam-device-item ${!selectedDeviceId ? 'active' : ''}`}
+                  onClick={() => {
+                    setSelectedDeviceId('');
+                    startCamera('', facingMode);
+                  }}
+                >
+                  <span>{facingMode === 'environment' ? '🔍 Основная задняя (Авто)' : '🤳 Фронтальная селфи (Авто)'}</span>
+                  {!selectedDeviceId && <span>✔</span>}
+                </div>
+                {videoDevices.map((dev, idx) => (
+                  <div
+                    key={dev.deviceId || idx}
+                    className={`cam-device-item ${selectedDeviceId === dev.deviceId ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedDeviceId(dev.deviceId);
+                      startCamera(dev.deviceId, facingMode);
+                    }}
+                  >
+                    <span>{dev.label || `Камера #${idx + 1}`}</span>
+                    {selectedDeviceId === dev.deviceId && <span>✔</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Переключение режима ориентации */}
+            <div className="cam-settings-section">
+              <span className="cam-settings-label">🔄 Ориентация</span>
+              <button
+                type="button"
+                className="starter-btn-main"
+                style={{ padding: '8px 12px', fontSize: '0.82rem' }}
+                onClick={() => {
+                  toggleFacing();
+                }}
+              >
+                {facingMode === 'environment' ? 'Сменить на Селфи (Фронтальная)' : 'Сменить на Основную (Задняя)'}
+              </button>
+            </div>
+
+            {/* Профиль производительности */}
+            <div className="cam-settings-section">
+              <span className="cam-settings-label">⚡ Профиль производительности</span>
+              <div className="perf-tiers-grid">
+                <button
+                  type="button"
+                  className={`perf-tier-btn ${performanceMode === 'ultra' ? 'active' : ''}`}
+                  onClick={() => setPerformanceMode('ultra')}
+                >
+                  <span className="tier-icon">🚀</span>
+                  <span className="tier-name">Ультра</span>
+                  <span className="tier-desc">Тело 60, Кисти 30</span>
+                </button>
+                <button
+                  type="button"
+                  className={`perf-tier-btn ${performanceMode === 'balanced' ? 'active' : ''}`}
+                  onClick={() => setPerformanceMode('balanced')}
+                >
+                  <span className="tier-icon">⚖️</span>
+                  <span className="tier-name">Баланс</span>
+                  <span className="tier-desc">Тело 30, Кисти 15</span>
+                </button>
+                <button
+                  type="button"
+                  className={`perf-tier-btn ${performanceMode === 'eco' ? 'active' : ''}`}
+                  onClick={() => setPerformanceMode('eco')}
+                >
+                  <span className="tier-icon">🔋</span>
+                  <span className="tier-name">Эко</span>
+                  <span className="tier-desc">Энергосбережение</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Диагностика сенсора и WebRTC */}
+            <div className="cam-settings-section">
+              <span className="cam-settings-label">📊 Аппаратная диагностика</span>
+              <div className="cam-diagnostics-box">
+                <div>Разрешение сенсора: {videoDim.w} × {videoDim.h} px</div>
+                <div>Скорость обработки: {fps} FPS</div>
+                <div>Задержка сети (RTT): {pingMs > 0 ? `${pingMs} мс` : '< 25 мс'}</div>
+                <div>Человек в кадре: {bodyInFrame ? '🟢 Да' : '🔴 Нет'}</div>
+                <div>Обнаружено кистей: {handsDetectedCount}</div>
+                <div>Зеркалирование: {facingMode === 'user' ? 'ВКЛ (scaleX -1)' : 'ВЫКЛ'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
