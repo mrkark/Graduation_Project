@@ -59,8 +59,8 @@ export default function MocapStudio() {
   const [selectedQrSlot, setSelectedQrSlot] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Режим подключения смартфонов: 'local' (локальная сеть Wi-Fi по умолчанию) | 'tunnel' (HTTPS через интернет/4G)
-  const [connectionMode, setConnectionMode] = useState('local');
+  // Режим подключения смартфонов: 'tunnel' (HTTPS через интернет/4G по умолчанию) | 'local' (локальная сеть Wi-Fi)
+  const [connectionMode, setConnectionMode] = useState('tunnel');
   const [tunnelUrl, setTunnelUrl] = useState(() => {
     if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
       return window.location.origin;
@@ -1085,41 +1085,6 @@ export default function MocapStudio() {
               })}
             </div>
 
-            {/* Выделенная карточка с крупной прямой ссылкой для телефона */}
-            <div className="qr-direct-link-card">
-              <div className="direct-link-header">
-                <span className="direct-link-badge">📱 ПРЯМАЯ ССЫЛКА ДЛЯ ТЕЛЕФОНА</span>
-                <span className="direct-link-hint">Перейдите в браузере или отсканируйте QR</span>
-              </div>
-              <div className="direct-link-url-box">
-                <a
-                  href={getPhoneConnectUrl(selectedQrSlot)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="direct-link-anchor"
-                  title="Нажмите, чтобы открыть ссылку прямо сейчас"
-                >
-                  {getPhoneConnectUrl(selectedQrSlot)}
-                </a>
-              </div>
-              <div className="direct-link-btn-row">
-                <button
-                  type="button"
-                  className="btn btn-gold direct-link-copy-btn"
-                  onClick={() => copyPhoneUrl(selectedQrSlot)}
-                >
-                  {copiedLink ? '✔ ССЫЛКА СКОПИРОВАНА!' : '📋 СКОПИРОВАТЬ ССЫЛКУ'}
-                </button>
-                <a
-                  href={getPhoneConnectUrl(selectedQrSlot)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-subtle direct-link-open-btn"
-                >
-                  🔗 Открыть на ПК
-                </a>
-              </div>
-            </div>
 
             <div className="qr-image-wrap">
               <img

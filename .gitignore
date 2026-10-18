@@ -43,3 +43,5 @@ test_*.png
 capture_*.js
 screenshots_*/
 client/capture_*.js
+
+*.exe
