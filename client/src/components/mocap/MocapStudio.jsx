@@ -18,11 +18,10 @@ import {
 import './MocapStudio.css';
 
 function getSocketUrl() {
-  const envUrl = import.meta.env.VITE_SOCKET_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
-  return envUrl || 'http://localhost:5000';
+  return import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 }
 
 const SOCKET_URL = getSocketUrl();
@@ -32,6 +31,10 @@ const ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
   ],
 };
 
@@ -65,6 +68,19 @@ export default function MocapStudio() {
   const [selectedQrSlot, setSelectedQrSlot] = useState(1);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Режим подключения смартфонов: 'tunnel' (HTTPS через интернет/4G) | 'local' (локальный Wi-Fi)
+  const [connectionMode, setConnectionMode] = useState('tunnel');
+  const [tunnelUrl, setTunnelUrl] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      return window.location.origin;
+    }
+    return '';
+  });
+  const [tunnelActive, setTunnelActive] = useState(() => {
+    return typeof window !== 'undefined' && window.location.protocol === 'https:';
+  });
+  const [tunnelLoading, setTunnelLoading] = useState(false);
+
   // Настройка сетевого IP для QR-кода телефона
   const defaultNetworkHost = typeof window !== 'undefined'
     ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '192.168.100.6' : window.location.hostname)
@@ -72,6 +88,39 @@ export default function MocapStudio() {
   const [networkHost, setNetworkHost] = useState(defaultNetworkHost);
   const [networkPort, setNetworkPort] = useState(() => (typeof window !== 'undefined' ? window.location.port || '5173' : '5173'));
   const [useHttpsForPhone, setUseHttpsForPhone] = useState(false);
+
+  const fetchTunnelStatus = useCallback(async () => {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      setTunnelUrl(window.location.origin);
+      setTunnelActive(true);
+      return;
+    }
+    try {
+      setTunnelLoading(true);
+      const res = await fetch('/api/mocap/tunnel');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data?.url) {
+          setTunnelUrl(json.data.url);
+          setTunnelActive(Boolean(json.data.active));
+        }
+      }
+    } catch (e) {
+      console.warn('Не удалось запросить статус HTTPS туннеля:', e);
+    } finally {
+      setTunnelLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTunnelStatus();
+  }, [fetchTunnelStatus]);
+
+  useEffect(() => {
+    if (showQrModal) {
+      fetchTunnelStatus();
+    }
+  }, [showQrModal, fetchTunnelStatus]);
 
   // Состояние захвата движений и биомеханики
   const [isPoseModelLoading, setIsPoseModelLoading] = useState(true);
@@ -561,7 +610,11 @@ export default function MocapStudio() {
   };
 
   const getPhoneConnectUrl = (slotNum = 1) => {
-    const proto = useHttpsForPhone ? 'https:' : (typeof window !== 'undefined' ? window.location.protocol : 'https:');
+    if (connectionMode === 'tunnel' && tunnelUrl) {
+      const cleanUrl = tunnelUrl.replace(/\/+$/, '');
+      return `${cleanUrl}/phone-camera?room=${roomId}&slot=${slotNum}`;
+    }
+    const proto = useHttpsForPhone ? 'https:' : (typeof window !== 'undefined' ? window.location.protocol : 'http:');
     return `${proto}//${networkHost}:${networkPort}/phone-camera?room=${roomId}&slot=${slotNum}`;
   };
 
@@ -1091,8 +1144,30 @@ export default function MocapStudio() {
             </div>
 
             <p className="qr-modal-desc">
-              Отсканируйте QR-код каждым телефоном для одновременного многоракурсного захвата:
+              Отсканируйте QR-код смартфоном для мгновенного захвата движений. Доступно до 3 телефонов одновременно.
             </p>
+
+            {/* Переключатель режимов подключения: Внешний интернет (HTTPS) или Локальный Wi-Fi */}
+            <div className="qr-net-mode-switch">
+              <button
+                type="button"
+                className={`qr-net-mode-btn ${connectionMode === 'tunnel' ? 'active' : ''}`}
+                onClick={() => setConnectionMode('tunnel')}
+              >
+                <span className="net-mode-icon">🌍</span>
+                <span className="net-mode-title">Внешний интернет / 4G (HTTPS)</span>
+                <span className="net-mode-tag gold">Без флагов и настроек</span>
+              </button>
+              <button
+                type="button"
+                className={`qr-net-mode-btn ${connectionMode === 'local' ? 'active' : ''}`}
+                onClick={() => setConnectionMode('local')}
+              >
+                <span className="net-mode-icon">🏠</span>
+                <span className="net-mode-title">Локальная сеть (Wi-Fi)</span>
+                <span className="net-mode-tag">Один роутер</span>
+              </button>
+            </div>
 
             {/* Вкладки выбора телефона 1, 2 или 3 */}
             <div className="qr-slot-tabs">
@@ -1142,36 +1217,81 @@ export default function MocapStudio() {
               </button>
             </div>
 
-            <div className="qr-ip-config">
-              <label className="qr-ip-label">Сетевой IP компьютера (для доступа с телефона):</label>
-              <div className="qr-ip-row">
-                <input
-                  type="text"
-                  value={networkHost}
-                  onChange={(e) => setNetworkHost(e.target.value.trim())}
-                  placeholder="192.168.100.6"
-                  className="qr-ip-input"
-                />
-                <button
-                  type="button"
-                  className="btn btn-sm btn-subtle"
-                  onClick={() => setNetworkHost('192.168.100.6')}
-                >
-                  Wi-Fi IP
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-subtle"
-                  onClick={() => setNetworkHost('192.168.100.28')}
-                >
-                  Ethernet IP
-                </button>
-              </div>
-            </div>
+            {/* Конфигурация в зависимости от выбранного режима */}
+            {connectionMode === 'tunnel' ? (
+              <div className="qr-tunnel-config">
+                <div className="qr-tunnel-header">
+                  <div className="qr-tunnel-status">
+                    <span className={`status-dot ${tunnelActive ? 'online' : 'standby'}`} />
+                    <span>
+                      {tunnelActive ? 'Публичный HTTPS туннель активен' : 'Ожидание запуска туннеля...'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-subtle"
+                    onClick={fetchTunnelStatus}
+                    disabled={tunnelLoading}
+                  >
+                    {tunnelLoading ? '...' : '🔄 Обновить'}
+                  </button>
+                </div>
 
-            <div className="qr-perm-notice">
-              📱 <strong>Для Chrome на Android:</strong> Браузер требует подтвердить доверие к локальной сети. На странице телефона будет готова пошаговая подсказка из 3 пунктов с кнопками копирования флага <code>chrome://flags</code>.
-            </div>
+                <div className="qr-tunnel-input-row">
+                  <input
+                    type="text"
+                    value={tunnelUrl}
+                    onChange={(e) => {
+                      setTunnelUrl(e.target.value.trim());
+                      setTunnelActive(Boolean(e.target.value.trim()));
+                    }}
+                    placeholder="https://xxxx.lhr.life"
+                    className="qr-tunnel-input"
+                  />
+                </div>
+
+                <div className="qr-https-perks">
+                  <div className="perk-row">
+                    <span>✨</span>
+                    <span><strong>Любая сеть:</strong> Компьютер и смартфон могут быть в совершенно разных сетях (телефон на 4G/LTE/моб. интернете, ПК дома).</span>
+                  </div>
+                  <div className="perk-row">
+                    <span>🔒</span>
+                    <span><strong>Чистый HTTPS:</strong> Камера на телефоне включается сразу в 1 клик без предупреждений безопасности и флагов <code>chrome://flags</code>.</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="qr-ip-config">
+                <label className="qr-ip-label">Сетевой IP компьютера (для доступа внутри локального Wi-Fi):</label>
+                <div className="qr-ip-row">
+                  <input
+                    type="text"
+                    value={networkHost}
+                    onChange={(e) => setNetworkHost(e.target.value.trim())}
+                    placeholder="192.168.100.6"
+                    className="qr-ip-input"
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-subtle"
+                    onClick={() => setNetworkHost('192.168.100.6')}
+                  >
+                    Wi-Fi IP
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-subtle"
+                    onClick={() => setNetworkHost('192.168.100.28')}
+                  >
+                    Ethernet IP
+                  </button>
+                </div>
+                <div className="qr-perm-notice" style={{ marginTop: '8px' }}>
+                  📱 <strong>Для Chrome на Android:</strong> На странице телефона будет готова подсказка из 3 пунктов для включения доверия к локальному IP в <code>chrome://flags</code>.
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

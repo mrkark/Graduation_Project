@@ -684,4 +684,40 @@
   color: var(--gold, #c5a059);
 }
 
+/* Сообщение о включении разрешения камеры по HTTPS */
+.phone-cam-https-notice {
+  background: linear-gradient(135deg, rgba(30, 24, 18, 0.96) 0%, rgba(20, 16, 12, 0.98) 100%);
+  border-bottom: 2px solid var(--gold, #c5a059);
+  padding: 0.85rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.https-notice-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.https-notice-content {
+  flex: 1;
+}
+
+.https-notice-content strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--gold-bright, #e8c57b);
+  margin-bottom: 2px;
+}
+
+.https-notice-content p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--washi, #f5efe6);
+  line-height: 1.35;
+}
+
 

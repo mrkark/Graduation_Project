@@ -4,11 +4,10 @@ import io from 'socket.io-client';
 import './PhoneCameraPage.css';
 
 function getSocketUrl() {
-  const envUrl = import.meta.env.VITE_SOCKET_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
   }
-  return envUrl || 'http://localhost:5000';
+  return import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 }
 
 const SOCKET_URL = getSocketUrl();
@@ -18,6 +17,10 @@ const ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
   ],
 };
 
@@ -528,7 +531,23 @@ export default function PhoneCameraPage() {
 
   return (
     <div className="phone-cam-page">
-      {/* 1. ПОШАГОВОЕ РУКОВОДСТВО ДЛЯ CHROME НА АНДРОИД ПРИ ПОДКЛЮЧЕНИИ ПО HTTP */}
+      {/* 1. СООБЩЕНИЕ О ВКЛЮЧЕНИИ РАЗРЕШЕНИЯ КАМЕРЫ НА САЙТЕ (HTTPS) */}
+      {!isHttp && !isStreamFullyLive && (
+        <div className="phone-cam-https-notice">
+          <div className="https-notice-icon">📷</div>
+          <div className="https-notice-content">
+            <strong>Разрешение на использование камеры</strong>
+            <p>
+              Сайт работает по защищенному протоколу HTTPS. Нажмите кнопку ниже и выберите <strong>«Разрешить»</strong> во всплывающем окне браузера:
+            </p>
+          </div>
+          <button type="button" className="btn btn-sm btn-gold btn-pulse" onClick={handleViewportTap}>
+            🎥 Включить камеру
+          </button>
+        </div>
+      )}
+
+      {/* 2. ПОШАГОВОЕ РУКОВОДСТВО ДЛЯ CHROME НА АНДРОИД ПРИ ПОДКЛЮЧЕНИИ ПО HTTP */}
       {isHttp && !isStreamFullyLive && (
         <div className="phone-cam-insecure-guide">
           <div className="insecure-guide-head">

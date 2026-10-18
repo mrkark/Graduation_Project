@@ -57,6 +57,36 @@ app.use('/uploads', express.static(uploadsPath));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok' } }));
 
+// Получение и обновление статуса публичного HTTPS туннеля для подключения телефонов из внешней сети
+app.get('/api/mocap/tunnel', (req, res) => {
+  try {
+    const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
+    if (fs.existsSync(tunnelPath)) {
+      const data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
+      return res.json({ success: true, data });
+    }
+  } catch (e) {
+    // игнорируем ошибку чтения файла
+  }
+  return res.json({ success: true, data: { active: false, url: null } });
+});
+
+app.post('/api/mocap/tunnel', (req, res) => {
+  try {
+    const { url, active } = req.body;
+    const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
+    const data = {
+      active: active !== undefined ? Boolean(active) : Boolean(url),
+      url: url || null,
+      updatedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(tunnelPath, JSON.stringify(data, null, 2), 'utf8');
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // --- Публичные и защищённые маршруты API ---
 // /api/auth/register и /api/auth/login — единственные маршруты, доступные guest.
 // Всё остальное защищено requireAuth внутри соответствующих роутеров (раздел 2 ТЗ:
