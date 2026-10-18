@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import io from 'socket.io-client';
+import QRCode from 'qrcode';
 import TraditionalDojo from '../../three/TraditionalDojo';
 import MocapPuppetAvatar from '../../three/MocapPuppetAvatar';
 import {
@@ -86,6 +87,9 @@ export default function MocapStudio() {
   ]);
   const [networkPort, setNetworkPort] = useState('8443');
   const [useHttpsForPhone, setUseHttpsForPhone] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrGenerating, setQrGenerating] = useState(false);
+  const [qrError, setQrError] = useState(null);
 
   const fetchTunnelStatus = useCallback(async () => {
     try {
@@ -679,21 +683,64 @@ export default function MocapStudio() {
     downloadAnchor.remove();
   };
 
-  const getPhoneConnectUrl = (slotNum = 1) => {
-    if (httpsGatewayUrl) {
-      const cleanUrl = httpsGatewayUrl.replace(/\/+$/, '');
-      return `${cleanUrl}/phone-camera?room=${roomId}&slot=${slotNum}`;
-    }
+  const getPhoneConnectUrl = useCallback((slotNum = selectedQrSlot) => {
     const host = networkHost || '192.168.100.6';
-    const port = networkPort ? `:${networkPort}` : ':8443';
-    return `https://${host}${port}/phone-camera?room=${roomId}&slot=${slotNum}`;
-  };
+    if (useHttpsForPhone) {
+      const port = networkPort || '8443';
+      return `https://${host}:${port}/phone-camera?room=${roomId}&slot=${slotNum}`;
+    }
+    return `http://${host}:5173/phone-camera?room=${roomId}&slot=${slotNum}`;
+  }, [networkHost, networkPort, useHttpsForPhone, roomId, selectedQrSlot]);
 
-  const copyPhoneUrl = (slotNum = 1) => {
-    navigator.clipboard.writeText(getPhoneConnectUrl(slotNum)).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2500);
-    });
+  // Динамическая генерация QR-кода на клиенте без внешних облачных API
+  useEffect(() => {
+    let isCancelled = false;
+    const url = getPhoneConnectUrl(selectedQrSlot);
+    setQrGenerating(true);
+    setQrError(null);
+
+    QRCode.toDataURL(url, {
+      width: 260,
+      margin: 2,
+      color: {
+        dark: '#0a0a0c',
+        light: '#ffffff',
+      },
+      errorCorrectionLevel: 'M',
+    })
+      .then((dataUri) => {
+        if (!isCancelled) {
+          setQrDataUrl(dataUri);
+          setQrGenerating(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Ошибка создания динамического QR-кода:', err);
+        if (!isCancelled) {
+          setQrError('Не удалось создать QR-код');
+          setQrGenerating(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [getPhoneConnectUrl, selectedQrSlot]);
+
+  const copyPhoneUrl = (slotNum = selectedQrSlot) => {
+    const url = getPhoneConnectUrl(slotNum);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(() => {
+          setCopiedLink(true);
+          setTimeout(() => setCopiedLink(false), 2500);
+        })
+        .catch(() => {
+          prompt('Скопируйте ссылку для телефона:', url);
+        });
+    } else {
+      prompt('Скопируйте ссылку для телефона:', url);
+    }
   };
 
   const activePhoneCount = connectedCameras.length;
@@ -1232,14 +1279,82 @@ export default function MocapStudio() {
               })}
             </div>
 
+            {/* Переключатель протокола: HTTPS шлюз vs Прямой HTTP */}
+            <div className="qr-proto-switcher">
+              <button
+                type="button"
+                className={`qr-proto-btn ${useHttpsForPhone ? 'active' : ''}`}
+                onClick={() => setUseHttpsForPhone(true)}
+              >
+                <span className="proto-icon">🔒</span>
+                <span className="proto-name">HTTPS (:8443)</span>
+                <span className="proto-tag rec">Рекомендуется</span>
+              </button>
+              <button
+                type="button"
+                className={`qr-proto-btn ${!useHttpsForPhone ? 'active' : ''}`}
+                onClick={() => setUseHttpsForPhone(false)}
+              >
+                <span className="proto-icon">⚡</span>
+                <span className="proto-name">Прямой HTTP (:5173)</span>
+                <span className="proto-tag alt">Если SSL блокируется</span>
+              </button>
+            </div>
+
+            {/* Динамический QR-код, сгенерированный в памяти браузера без внешних серверов */}
             <div className="qr-image-wrap">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                  getPhoneConnectUrl(selectedQrSlot)
-                )}`}
-                alt={`QR код для подключения ${PHONE_CONFIGS[selectedQrSlot - 1].label}`}
-                className="qr-image"
-              />
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR код для подключения ${PHONE_CONFIGS[selectedQrSlot - 1].label}`}
+                  className="qr-image"
+                />
+              ) : (
+                <div className="qr-generating-box">
+                  <span className="qr-spinner" />
+                  <span>{qrError || 'Генерация динамического QR-кода...'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Карточка ссылки для удобства, проверки на ПК и копирования */}
+            <div className="qr-direct-link-card">
+              <div className="direct-link-header">
+                <span className="direct-link-badge">
+                  {useHttpsForPhone ? '🔒 БЕЗОПАСНЫЙ ШЛЮЗ HTTPS' : '⚡ ПРЯМОЙ HTTP ПОТОК'}
+                </span>
+                <span className="direct-link-hint">
+                  {useHttpsForPhone ? 'Автодоступ к камере' : 'Локальный порт Vite'}
+                </span>
+              </div>
+              <div className="direct-link-url-box">
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="direct-link-anchor"
+                  title="Нажмите, чтобы протестировать на ПК"
+                >
+                  {getPhoneConnectUrl(selectedQrSlot)}
+                </a>
+              </div>
+              <div className="direct-link-btn-row">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-gold direct-link-copy-btn"
+                  onClick={() => copyPhoneUrl(selectedQrSlot)}
+                >
+                  {copiedLink ? '✔ Ссылка скопирована!' : '📋 Скопировать ссылку'}
+                </button>
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-sm btn-subtle direct-link-open-btn"
+                >
+                  🔗 Проверить на ПК
+                </a>
+              </div>
             </div>
 
             <div className="qr-room-box">
@@ -1247,29 +1362,31 @@ export default function MocapStudio() {
               <span className="qr-target-tag">{PHONE_CONFIGS[selectedQrSlot - 1].label}</span>
             </div>
 
-            <div className="qr-gateway-status-pill">
-              <span className="status-dot online" />
-              <span>Шлюз камеры: <strong>{httpsGatewayUrl || `https://${networkHost}:8443`}</strong></span>
-            </div>
-
+            {/* Инструкция подключения */}
             <div className="qr-guide-box">
               <div className="qr-guide-step">
                 <span className="step-badge">1</span>
-                <span>Подключите телефон к тому же Wi-Fi роутеру, что и компьютер.</span>
+                <span>Подключите телефон и компьютер к <strong>одной сети Wi-Fi</strong>.</span>
               </div>
               <div className="qr-guide-step">
                 <span className="step-badge">2</span>
-                <span>Наведите камеру смартфона на QR-код и откройте страницу.</span>
+                <span>Отсканируйте динамический QR-код камерой телефона или введите ссылку выше в браузере.</span>
               </div>
               <div className="qr-guide-step">
                 <span className="step-badge">3</span>
-                <span>При первом входе нажмите <strong>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</strong>, чтобы подтвердить локальный SSL-сертификат. Камера включится автоматически!</span>
+                <span>
+                  {useHttpsForPhone ? (
+                    <>При первом открытии по HTTPS нажмите <strong>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</strong> для подтверждения локального сертификата. Камера включится сразу!</>
+                  ) : (
+                    <>Разрешите доступ к камере в браузере мобильного устройства.</>
+                  )}
+                </span>
               </div>
             </div>
 
-            {availableIps.length > 1 && (
+            {availableIps.length > 0 && (
               <div className="qr-adapter-row">
-                <span className="qr-adapter-label">IP адаптера:</span>
+                <span className="qr-adapter-label">IP компьютера в сети:</span>
                 {availableIps.map((adapter) => (
                   <button
                     key={adapter.ip}
