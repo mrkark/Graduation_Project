@@ -2,10 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import io from 'socket.io-client';
 import {
-  loadMediaPipePose,
+  createFreshPoseInstance,
   loadMediaPipeHands,
   drawNeonKarateSkeleton,
-  drawNeonHandSkeleton,
   analyzeKarateBiomechanics,
   extractHandBiomechanics,
   estimateHeadOrientation,
@@ -485,21 +484,17 @@ export default function PhoneCameraPage() {
     let active = true;
     let isPoseProcessing = false;
     let isHandsProcessing = false;
+    // Счётчик для диагностики: сколько раз onResults вернул 0 ключевых точек подряд
+    let zeroLandmarksCount = 0;
 
-    loadMediaPipePose()
+    setAiModelStatus('loading');
+
+    // Используем СВЕЖИЙ независимый экземпляр — не глобальный singleton ПК-страниц!
+    createFreshPoseInstance({ modelComplexity: 1 })
       .then((pose) => {
         if (!active) return;
         poseRef.current = pose;
         setAiModelStatus('ready');
-
-        pose.setOptions({
-          modelComplexity: 1, // Полноразмерная модель для надежного захвата человека (в полный рост и полурост)
-          smoothLandmarks: true,
-          enableSegmentation: false,
-          smoothSegmentation: false,
-          minDetectionConfidence: 0.35, // Порог 0.35 для уверенного захвата в домашних/комнатных условиях
-          minTrackingConfidence: 0.35,
-        });
 
         pose.onResults((results) => {
           if (!active) return;
@@ -518,7 +513,15 @@ export default function PhoneCameraPage() {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (results && results.poseLandmarks && results.poseLandmarks.length >= 33) {
+            const lmsCount = results?.poseLandmarks?.length || 0;
+
+            // Диагностическое логирование (каждые 30 кадров)
+            if (loopFrameCountRef.current % 30 === 0) {
+              console.log(`[MoCap Phone] onResults: lms=${lmsCount}, video=${vw}x${vh}, rs=${video.readyState}`);
+            }
+
+            if (lmsCount >= 33) {
+              zeroLandmarksCount = 0;
               setBodyInFrame(true);
 
               // Биомеханический анализ стойки каратэ
@@ -596,6 +599,13 @@ export default function PhoneCameraPage() {
                 socketRef.current.emit('mocap:landmarks-stream', streamPacket);
               }
             } else {
+              zeroLandmarksCount++;
+              // Логируем каждые 60 кадров пустых результатов
+              if (zeroLandmarksCount % 60 === 1) {
+                console.warn(`[MoCap Phone] MediaPipe вернул 0 точек ${zeroLandmarksCount} раз. ` +
+                  `Видео: ${vw}x${vh} readyState=${video.readyState}. ` +
+                  `Убедитесь что вы в кадре, освещение достаточное, лицом к фронтальной камере.`);
+              }
               setBodyInFrame(false);
               setLimbWarnings([]);
               if (socketRef.current && socketConnectedRef.current) {
@@ -658,50 +668,87 @@ export default function PhoneCameraPage() {
         });
     }
 
+    /**
+     * Ожидает, пока видео-элемент не будет готов (HAVE_ENOUGH_DATA = readyState 4).
+     * Мобильные браузеры медленно инициализируют камеру.
+     * Возвращает true когда видео готово, false если active сброшен.
+     */
+    function waitForVideoReady(videoEl, timeoutMs = 15000) {
+      return new Promise((res) => {
+        const start = Date.now();
+        function check() {
+          if (!active) { res(false); return; }
+          // readyState >= 2 (HAVE_CURRENT_DATA) с ненулевыми размерами считается достаточным
+          if (videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+            res(true);
+            return;
+          }
+          if (Date.now() - start > timeoutMs) {
+            console.warn('[MoCap Phone] Таймаут ожидания видеопотока камеры');
+            res(false);
+            return;
+          }
+          setTimeout(check, 100);
+        }
+        check();
+      });
+    }
+
     const loop = async () => {
       if (!active) return;
       const v = videoRef.current;
-      if (v && v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0) {
-        loopFrameCountRef.current++;
-        const frameIdx = loopFrameCountRef.current;
 
-        const perf = performanceModeRef.current;
-        const skipPose = perf === 'eco' && frameIdx % 2 !== 0;
-        const skipHands = perf === 'eco'
-          ? (frameIdx % 4 !== 0)
-          : (perf === 'balanced' ? (frameIdx % 2 !== 0) : false);
+      if (v && poseRef.current) {
+        // Проверяем готовность видео — ждем реальные данные пикселей
+        if (v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0 && !v.paused && !v.ended) {
+          loopFrameCountRef.current++;
+          const frameIdx = loopFrameCountRef.current;
 
-        // Поток тела
-        if (!skipPose && poseRef.current && !isPoseProcessing) {
-          try {
-            isPoseProcessing = true;
-            await poseRef.current.send({ image: v });
-          } catch (e) {
-            console.warn('MediaPipe Pose frame send error:', e);
-          } finally {
-            isPoseProcessing = false;
+          const perf = performanceModeRef.current;
+          const skipPose = perf === 'eco' && frameIdx % 2 !== 0;
+          const skipHands = perf === 'eco'
+            ? (frameIdx % 4 !== 0)
+            : (perf === 'balanced' ? (frameIdx % 2 !== 0) : false);
+
+          // Поток тела
+          if (!skipPose && !isPoseProcessing) {
+            try {
+              isPoseProcessing = true;
+              await poseRef.current.send({ image: v });
+            } catch (e) {
+              console.warn('MediaPipe Pose frame send error:', e);
+            } finally {
+              isPoseProcessing = false;
+            }
           }
-        }
 
-        // Поток кистей
-        if (!skipHands && precisionHandModeRef.current && handsRef.current && !isHandsProcessing) {
-          try {
-            isHandsProcessing = true;
-            await handsRef.current.send({ image: v });
-          } catch (e) {
-            console.warn('MediaPipe Hands frame send error:', e);
-          } finally {
-            isHandsProcessing = false;
+          // Поток кистей
+          if (!skipHands && precisionHandModeRef.current && handsRef.current && !isHandsProcessing) {
+            try {
+              isHandsProcessing = true;
+              await handsRef.current.send({ image: v });
+            } catch (e) {
+              console.warn('MediaPipe Hands frame send error:', e);
+            } finally {
+              isHandsProcessing = false;
+            }
           }
         }
       }
+
       animFrameRef.current = requestAnimationFrame(loop);
     };
 
-    animFrameRef.current = requestAnimationFrame(loop);
+    // Небольшая задержка для гарантии инициализации видео перед стартом цикла
+    const startDelay = setTimeout(() => {
+      if (active) {
+        animFrameRef.current = requestAnimationFrame(loop);
+      }
+    }, 500);
 
     return () => {
       active = false;
+      clearTimeout(startDelay);
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }

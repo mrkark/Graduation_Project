@@ -375,6 +375,10 @@ export function applyTorsoClearanceToLandmarks(worldLandmarks) {
 
 const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
 
+/**
+ * Загружает разделяемый (singleton) экземпляр MediaPipe Pose для ПК-страниц (MocapStudio webcam).
+ * НЕ используй на телефоне — там создавай независимый экземпляр через createFreshPoseInstance().
+ */
 export function loadMediaPipePose() {
   if (poseInstance) return Promise.resolve(poseInstance);
   if (poseLoadPromise) return poseLoadPromise;
@@ -421,6 +425,96 @@ export function loadMediaPipePose() {
   });
 
   return poseLoadPromise;
+}
+
+/**
+ * Создаёт СВЕЖИЙ независимый экземпляр MediaPipe Pose для страницы телефона.
+ * Гарантирует полную инициализацию WASM (.initialize()) до разрешения промиса.
+ * Использует CDN-fallback между jsDelivr и unpkg при сбое загрузки модели.
+ * НЕ сохраняет экземпляр в глобальный singleton — каждый вызов создаёт новый объект.
+ */
+export function createFreshPoseInstance(options = {}) {
+  return new Promise((resolve, reject) => {
+    const cdnBases = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/',
+      'https://unpkg.com/@mediapipe/pose@0.5.1675469404/',
+    ];
+
+    function tryLoadScript(cdnIndex) {
+      if (cdnIndex >= cdnBases.length) {
+        reject(new Error('Все CDN-источники MediaPipe Pose недоступны на этом устройстве'));
+        return;
+      }
+
+      const baseUrl = cdnBases[cdnIndex];
+
+      // Если Pose уже загружен глобально другим источником — используем
+      if (typeof window !== 'undefined' && window.Pose) {
+        initPose(baseUrl);
+        return;
+      }
+
+      // Удаляем устаревший тег скрипта того же CDN если есть
+      const existingScript = document.querySelector(`script[src="${baseUrl}pose.js"]`);
+      if (existingScript) {
+        if (window.Pose) {
+          initPose(baseUrl);
+        } else {
+          existingScript.addEventListener('load', () => initPose(baseUrl), { once: true });
+          existingScript.addEventListener('error', () => tryLoadScript(cdnIndex + 1), { once: true });
+        }
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `${baseUrl}pose.js`;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => initPose(baseUrl);
+      script.onerror = () => {
+        console.warn(`[MoCap Phone] CDN ${cdnIndex + 1} недоступен, пробуем следующий...`);
+        tryLoadScript(cdnIndex + 1);
+      };
+      document.head.appendChild(script);
+    }
+
+    function initPose(baseUrl) {
+      try {
+        const pose = new window.Pose({
+          locateFile: (file) => `${baseUrl}${file}`,
+        });
+
+        const modelComplexity = options.modelComplexity !== undefined ? options.modelComplexity : 1;
+        pose.setOptions({
+          modelComplexity,
+          smoothLandmarks: true,
+          enableSegmentation: false,
+          smoothSegmentation: false,
+          minDetectionConfidence: options.minDetectionConfidence || 0.35,
+          minTrackingConfidence: options.minTrackingConfidence || 0.35,
+        });
+
+        // Предварительная инициализация WASM-модели и TFLite-файлов.
+        // Без вызова initialize() первый pose.send() выполняется вхолостую:
+        // onResults срабатывает с пустым poseLandmarks === null.
+        console.log('[MoCap Phone] Инициализация WASM MediaPipe Pose...');
+        pose.initialize()
+          .then(() => {
+            console.log('[MoCap Phone] MediaPipe Pose WASM готов!');
+            resolve(pose);
+          })
+          .catch((initErr) => {
+            console.warn('[MoCap Phone] pose.initialize() сбой (продолжаем без него):', initErr);
+            // Некоторые версии не поддерживают initialize() — игнорируем и резолвим
+            resolve(pose);
+          });
+      } catch (err) {
+        console.error('[MoCap Phone] Ошибка создания Pose:', err);
+        reject(err);
+      }
+    }
+
+    tryLoadScript(0);
+  });
 }
 
 const MEDIAPIPE_HANDS_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js';
