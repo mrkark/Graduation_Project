@@ -184,29 +184,25 @@ export class ContinuousAzimuthTracker {
   }
 
   /**
-   * Обновляет непрерывный угол рыскания с 2π-фазовым развертыванием
+   * Обновляет непрерывный угол рыскания с 2π-фазовым развертыванием напрямую по углу
    */
-  updateYaw(headingVector, timestamp = null) {
-    if (!headingVector || headingVector.lengthSq() < 1e-4) {
-      return this.smoothYaw;
-    }
-
-    const rawYaw = Math.atan2(headingVector.x, headingVector.z);
+  updateContinuousYaw(rawAngle, timestamp = null) {
+    if (typeof rawAngle !== 'number' || Number.isNaN(rawAngle)) return this.smoothYaw;
 
     if (this.previousRawYaw === null) {
-      this.previousRawYaw = rawYaw;
-      this.unwrappedYaw = rawYaw;
-      this.smoothYaw = rawYaw;
+      this.previousRawYaw = rawAngle;
+      this.unwrappedYaw = rawAngle;
+      this.smoothYaw = rawAngle;
       return this.smoothYaw;
     }
 
     // Развертывание фазы (Phase Unwrapping): устранение скачков на границе ±π
-    let delta = rawYaw - this.previousRawYaw;
+    let delta = rawAngle - this.previousRawYaw;
     while (delta > Math.PI) delta -= 2 * Math.PI;
     while (delta < -Math.PI) delta += 2 * Math.PI;
 
     this.unwrappedYaw += delta;
-    this.previousRawYaw = rawYaw;
+    this.previousRawYaw = rawAngle;
 
     // Подсчет полных оборотов
     this.totalRotations = this.unwrappedYaw / (2 * Math.PI);
@@ -216,6 +212,18 @@ export class ContinuousAzimuthTracker {
     this.smoothYaw = this.yawFilter.filter(this.unwrappedYaw, t);
 
     return this.smoothYaw;
+  }
+
+  /**
+   * Обновляет непрерывный угол рыскания с 2π-фазовым развертыванием
+   */
+  updateYaw(headingVector, timestamp = null) {
+    if (!headingVector || headingVector.lengthSq() < 1e-4) {
+      return this.smoothYaw;
+    }
+
+    const rawYaw = Math.atan2(headingVector.x, headingVector.z);
+    return this.updateContinuousYaw(rawYaw, timestamp);
   }
 
   /**
@@ -271,7 +279,7 @@ export function constrainKneeJoint(vThigh, vShin, isLeft = false) {
 
   // 1. Проверка на неестественное переразгибание колена вперед (< 0°)
   // В декартовой системе нормальное сгибание направляет голень назад (Z > 0)
-  const isHyperextended = uShin.z < -0.04 && flexDeg > limits.maxHyperextDeg;
+  const isHyperextended = uShin.z < -0.18 && flexDeg > 20.0;
 
   if (isHyperextended) {
     // Выравниваем голень строго вдоль направления бедра (прямая нога)
@@ -379,18 +387,19 @@ export class FootContactManager {
   /**
    * Обновляет состояние заземления стопы и предотвращает скольжение
    */
-  processFoot(sideKey, rawFootPos, timestamp = null) {
+  processFoot(sideKey, rawFootPos, timestamp = null, customGroundY = null) {
     if (!rawFootPos) return rawFootPos;
     const foot = this.feet[sideKey];
     const now = timestamp || Date.now();
     const dt = foot.lastTime > 0 ? Math.max(0.005, (now - foot.lastTime) / 1000.0) : 0.033;
+    const gY = customGroundY !== null && customGroundY !== undefined ? customGroundY : this.groundY;
 
     // Скорость перемещения стопы
     const vSpeed = foot.lastTime > 0
       ? foot.lastPos.distanceTo(rawFootPos) / dt
       : 0.0;
 
-    const heightAboveGround = rawFootPos.y - this.groundY;
+    const heightAboveGround = rawFootPos.y - gY;
     const meetsGroundCriteria = heightAboveGround < this.contactThresholdH && vSpeed < this.velocityThreshold;
 
     if (foot.isGrounded) {
@@ -406,7 +415,7 @@ export class FootContactManager {
           // Фиксируем якорь заземления
           foot.isGrounded = true;
           foot.anchorPos.copy(rawFootPos);
-          foot.anchorPos.y = Math.max(this.groundY, foot.anchorPos.y);
+          foot.anchorPos.y = Math.max(gY, foot.anchorPos.y);
         }
       } else {
         foot.groundTimer = 0;
@@ -421,7 +430,7 @@ export class FootContactManager {
       const clamped = rawFootPos.clone();
       clamped.x = foot.anchorPos.x * 0.90 + rawFootPos.x * 0.10;
       clamped.z = foot.anchorPos.z * 0.90 + rawFootPos.z * 0.10;
-      clamped.y = Math.max(this.groundY, foot.anchorPos.y);
+      clamped.y = Math.max(gY, foot.anchorPos.y);
       return clamped;
     }
 

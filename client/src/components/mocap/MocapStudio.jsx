@@ -69,7 +69,13 @@ export default function MocapStudio() {
   const [streamResolution, setStreamResolution] = useState({ width: 1280, height: 720 });
 
   // Состояние WebRTC и подключения смартфонов (до 3 телефонов)
-  const [roomId] = useState(() => 'DOJO-' + Math.floor(1000 + Math.random() * 9000));
+  const [roomId, setRoomId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('room') || 'MOCAP-DOJO';
+    }
+    return 'MOCAP-DOJO';
+  });
   const [connectedCameras, setConnectedCameras] = useState([]); // [{ peerId, slot, label }]
   const [activeCameraSlot, setActiveCameraSlot] = useState(1); // 1, 2, 3 или 'fusion'
   const [multiCameraFusion, setMultiCameraFusion] = useState(true);
@@ -1601,6 +1607,111 @@ export default function MocapStudio() {
               <span className="qr-target-tag">{PHONE_CONFIGS[selectedQrSlot - 1].label}</span>
             </div>
 
+            {/* Выделенный блок прямой ссылки для перехода на телефоне */}
+            <div className="qr-direct-link-card">
+              <div className="direct-link-header">
+                <span className="direct-link-badge">
+                  {useHttpsForPhone ? '🔒 HTTPS ШЛЮЗ (SSL)' : '🌐 HTTP ПРЯМОЙ'}
+                </span>
+                <span className="direct-link-hint">Порт: {useHttpsForPhone ? networkPort : '5173'}</span>
+              </div>
+              <div className="direct-link-url-box">
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="direct-link-anchor"
+                >
+                  {getPhoneConnectUrl(selectedQrSlot)}
+                </a>
+              </div>
+              <div className="direct-link-btn-row">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-gold direct-link-copy-btn"
+                  onClick={() => {
+                    const url = getPhoneConnectUrl(selectedQrSlot);
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(url);
+                      alert('Ссылка скопирована в буфер обмена:\n' + url);
+                    } else {
+                      prompt('Скопируйте ссылку:', url);
+                    }
+                  }}
+                >
+                  📋 Скопировать ссылку
+                </button>
+                <a
+                  href={getPhoneConnectUrl(selectedQrSlot)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-subtle direct-link-open-btn"
+                >
+                  ↗ Открыть
+                </a>
+              </div>
+            </div>
+
+            {/* Переключатель режимов подключения (HTTPS / HTTP) */}
+            <div className="qr-net-mode-switch">
+              <button
+                type="button"
+                className={`qr-net-mode-btn ${useHttpsForPhone ? 'active' : ''}`}
+                style={useHttpsForPhone ? { borderColor: '#d4af37', background: 'rgba(212, 175, 55, 0.18)', color: '#fff' } : {}}
+                onClick={() => setUseHttpsForPhone(true)}
+              >
+                <span>🔒 HTTPS (8443)</span>
+                <small style={{ fontSize: '0.72rem', opacity: 0.85 }}>Включает камеру смартфона</small>
+              </button>
+              <button
+                type="button"
+                className={`qr-net-mode-btn ${!useHttpsForPhone ? 'active' : ''}`}
+                style={!useHttpsForPhone ? { borderColor: '#d4af37', background: 'rgba(212, 175, 55, 0.18)', color: '#fff' } : {}}
+                onClick={() => setUseHttpsForPhone(false)}
+              >
+                <span>🌐 HTTP (5173)</span>
+                <small style={{ fontSize: '0.72rem', opacity: 0.85 }}>Прямое подключение к UI</small>
+              </button>
+            </div>
+
+            {/* Ручной ввод и селектор сетевого IP */}
+            <div style={{ width: '100%', marginBottom: '1rem', textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.82rem', color: 'var(--washi-dim)', whiteSpace: 'nowrap' }}>IP компьютера:</span>
+                <input
+                  type="text"
+                  value={networkHost}
+                  onChange={(e) => setNetworkHost(e.target.value.trim())}
+                  style={{
+                    flex: 1,
+                    background: '#0e1015',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '0.88rem'
+                  }}
+                  placeholder="192.168.x.x"
+                />
+              </div>
+              {availableIps.length > 0 && (
+                <div className="qr-adapter-row" style={{ marginTop: '4px' }}>
+                  {availableIps.map((adapter) => (
+                    <button
+                      key={adapter.ip}
+                      type="button"
+                      className={`btn btn-xs ${networkHost === adapter.ip ? 'btn-gold' : 'btn-subtle'}`}
+                      onClick={() => setNetworkHost(adapter.ip)}
+                      title={`Выбрать IP ${adapter.ip}`}
+                    >
+                      {adapter.isPrimary ? '★ ' : ''}{adapter.name}: {adapter.ip}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="qr-guide-box">
               <div className="qr-guide-step">
                 <span className="step-badge">1</span>
@@ -1614,30 +1725,13 @@ export default function MocapStudio() {
                 <span className="step-badge">3</span>
                 <span>
                   {useHttpsForPhone ? (
-                    <>При первом открытии по HTTPS нажмите <strong>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</strong>. Камера запустится сразу!</>
+                    <>При открытии нажмите <strong>«Дополнительно» ➔ «Перейти на сайт (небезопасно)»</strong>. Камера запустится сразу!</>
                   ) : (
                     <>Разрешите доступ к камере в браузере смартфона.</>
                   )}
                 </span>
               </div>
             </div>
-
-            {availableIps.length > 0 && (
-              <div className="qr-adapter-row">
-                <span className="qr-adapter-label">IP компьютера в сети:</span>
-                {availableIps.map((adapter) => (
-                  <button
-                    key={adapter.ip}
-                    type="button"
-                    className={`btn btn-xs ${networkHost === adapter.ip ? 'btn-gold' : 'btn-subtle'}`}
-                    onClick={() => setNetworkHost(adapter.ip)}
-                    title={`Выбрать IP ${adapter.ip}`}
-                  >
-                    {adapter.isPrimary ? '★ ' : ''}{adapter.name}: {adapter.ip}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}

@@ -76,6 +76,33 @@ services:
     networks:
       - bunkai-network
 
+  # 4. Контейнер защищенного локального HTTPS шлюза для мобильных камер AI MoCap
+  gateway:
+    image: node:20-alpine
+    container_name: bunkai-explorer-gateway
+    restart: unless-stopped
+    depends_on:
+      - client
+      - server
+    environment:
+      TARGET_HOST: client
+      VITE_PORT: 5173
+      BACKEND_HOST: server
+      BACKEND_PORT: 5000
+      MOCAP_HTTPS_PORT: 8443
+      HOST_IP: ${HOST_IP:-192.168.100.6}
+    ports:
+      - '8443:8443'
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./ssl:/app/ssl:ro
+      - ./uploads:/app/uploads
+    working_dir: /app
+    command: ["node", "scripts/start-mocap-gateway.js"]
+    networks:
+      - bunkai-network
+
 networks:
   bunkai-network:
     driver: bridge
+

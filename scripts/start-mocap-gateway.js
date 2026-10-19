@@ -3,7 +3,7 @@
  * 
  * Provides rock-solid, zero-internet local HTTPS for smartphone cameras
  * matching the proven architecture of Karate Motion Studio:
- * 1. Automatically detects active Wi-Fi LAN IP (e.g. 192.168.100.6)
+ * 1. Automatically detects active Wi-Fi LAN IP (or uses HOST_IP env)
  * 2. Uses SSL certificate with Subject Alternative Names (SAN) for the IP
  * 3. Proxies HTTPS and WebSockets to Vite (port 5173) and backend API (port 5000)
  * 4. Enables phone cameras in 1 tap over local Wi-Fi without chrome://flags!
@@ -18,7 +18,9 @@ const dgram = require('dgram');
 
 const HTTPS_PORT = process.env.MOCAP_HTTPS_PORT ? parseInt(process.env.MOCAP_HTTPS_PORT, 10) : 8443;
 const VITE_PORT = process.env.VITE_PORT ? parseInt(process.env.VITE_PORT, 10) : 5173;
-const TARGET_HOST = '127.0.0.1';
+const TARGET_HOST = process.env.TARGET_HOST || '127.0.0.1';
+const BACKEND_HOST = process.env.BACKEND_HOST || TARGET_HOST;
+const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT, 10) : 5000;
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SSL_DIR = path.join(ROOT_DIR, 'ssl');
@@ -30,20 +32,37 @@ const KEY_PATH = path.join(SSL_DIR, 'ssl_key.pem');
 
 // 1. Динамическое определение активного локального IP-адреса Wi-Fi / LAN
 function detectLocalIp() {
+  if (process.env.HOST_IP && process.env.HOST_IP.trim() && process.env.HOST_IP !== '127.0.0.1') {
+    return Promise.resolve(process.env.HOST_IP.trim());
+  }
+
+  try {
+    if (fs.existsSync(STATUS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
+      if (data?.localIp && !data.localIp.startsWith('172.') && !data.localIp.startsWith('127.')) {
+        return Promise.resolve(data.localIp);
+      }
+    }
+  } catch (e) {}
+
   return new Promise((resolve) => {
     try {
       const socket = dgram.createSocket('udp4');
       socket.connect(80, '8.8.8.8', () => {
         const ip = socket.address().address;
         socket.close();
-        resolve(ip);
+        if (ip.startsWith('172.') || ip.startsWith('127.')) {
+          resolve('192.168.100.6');
+        } else {
+          resolve(ip);
+        }
       });
       socket.on('error', () => {
         try { socket.close(); } catch (e) {}
-        resolve('127.0.0.1');
+        resolve('192.168.100.6');
       });
     } catch (e) {
-      resolve('127.0.0.1');
+      resolve('192.168.100.6');
     }
   });
 }
@@ -75,12 +94,12 @@ function updateGatewayStatus(info) {
     console.warn('[!] Не удалось сохранить tunnel-info.json:', e.message);
   }
 
-  // Оповещаем бэкенд на порту 5000
+  // Оповещаем бэкенд
   const postData = JSON.stringify(payload);
   const req = http.request(
     {
-      hostname: '127.0.0.1',
-      port: 5000,
+      hostname: BACKEND_HOST,
+      port: BACKEND_PORT,
       path: '/api/mocap/tunnel',
       method: 'POST',
       headers: {
@@ -112,14 +131,18 @@ async function main() {
 
   // HTTPS Прокси для HTTP запросов
   const server = https.createServer(sslOptions, (clientReq, clientRes) => {
+    const isBackend = clientReq.url.startsWith('/api') || clientReq.url.startsWith('/socket.io');
+    const destHost = isBackend ? BACKEND_HOST : TARGET_HOST;
+    const destPort = isBackend ? BACKEND_PORT : VITE_PORT;
+
     const options = {
-      hostname: TARGET_HOST,
-      port: VITE_PORT,
+      hostname: destHost,
+      port: destPort,
       path: clientReq.url,
       method: clientReq.method,
       headers: {
         ...clientReq.headers,
-        host: `${TARGET_HOST}:${VITE_PORT}`,
+        host: `${destHost}:${destPort}`,
         'x-forwarded-proto': 'https',
         'x-forwarded-host': clientReq.headers.host || `${localIp}:${HTTPS_PORT}`,
       },
@@ -134,8 +157,8 @@ async function main() {
       clientRes.writeHead(502, { 'Content-Type': 'text/html; charset=utf-8' });
       clientRes.end(`
         <div style="font-family: sans-serif; padding: 24px; text-align: center; color: #fff; background: #121214; min-height: 100vh;">
-          <h2 style="color: #ef4444;">⚠️ Ошибка соединения с Vite (порт ${VITE_PORT})</h2>
-          <p>Убедитесь, что клиентское приложение Bunkai Explorer запущено на порту ${VITE_PORT}.</p>
+          <h2 style="color: #ef4444;">⚠️ Ошибка соединения с ${destHost}:${destPort}</h2>
+          <p>Убедитесь, что контейнеры Bunkai Explorer запущены.</p>
           <p style="color: #888;">${err.message}</p>
         </div>
       `);
@@ -144,9 +167,13 @@ async function main() {
     clientReq.pipe(proxyReq);
   });
 
-  // WebSocket Upgrade Прокси для Socket.IO и HMR
+  // WebSocket Upgrade Прокси для Socket.IO и Vite HMR
   server.on('upgrade', (req, clientSocket, head) => {
-    const proxySocket = net.connect(VITE_PORT, TARGET_HOST, () => {
+    const isBackend = req.url.startsWith('/socket.io');
+    const destHost = isBackend ? BACKEND_HOST : TARGET_HOST;
+    const destPort = isBackend ? BACKEND_PORT : VITE_PORT;
+
+    const proxySocket = net.connect(destPort, destHost, () => {
       proxySocket.write(
         `${req.method} ${req.url} HTTP/${req.httpVersion}\r\n` +
           Object.entries(req.headers)
@@ -174,7 +201,8 @@ async function main() {
     console.log('🥋 Karate Bunkai Explorer — Local HTTPS Gateway (AI MoCap)');
     console.log('========================================================');
     console.log(`[+] Локальный IP компьютера в сети Wi-Fi: ${localIp}`);
-    console.log(`[+] Внутренний порт Vite:                  ${VITE_PORT}`);
+    console.log(`[+] Проксирование фронтенда (Vite):         ${TARGET_HOST}:${VITE_PORT}`);
+    console.log(`[+] Проксирование бэкенда (API/Socket):    ${BACKEND_HOST}:${BACKEND_PORT}`);
     console.log(`[+] Защищенный порт шлюза (SSL):           ${HTTPS_PORT}`);
     console.log('--------------------------------------------------------');
     console.log(`✔ ШЛЮЗ АКТИВЕН: https://${localIp}:${HTTPS_PORT}`);
