@@ -373,6 +373,8 @@ export function applyTorsoClearanceToLandmarks(worldLandmarks) {
 // 3. ЗАГРУЗКА MEDIAPIPE POSE
 // ============================================================================
 
+const MEDIAPIPE_POSE_CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js';
+
 export function loadMediaPipePose() {
   if (poseInstance) return Promise.resolve(poseInstance);
   if (poseLoadPromise) return poseLoadPromise;
@@ -389,6 +391,7 @@ export function loadMediaPipePose() {
     script.onload = () => initPose();
     script.onerror = (err) => {
       console.error('Ошибка загрузки MediaPipe Pose CDN:', err);
+      poseLoadPromise = null;
       reject(new Error('Не удалось загрузить библиотеку MediaPipe Pose'));
     };
     document.head.appendChild(script);
@@ -411,6 +414,7 @@ export function loadMediaPipePose() {
         poseInstance = pose;
         resolve(pose);
       } catch (err) {
+        poseLoadPromise = null;
         reject(err);
       }
     }
@@ -439,6 +443,7 @@ export function loadMediaPipeHands(options = {}) {
     script.onload = () => initHands();
     script.onerror = (err) => {
       console.error('Ошибка загрузки MediaPipe Hands CDN:', err);
+      handsLoadPromise = null;
       reject(new Error('Не удалось загрузить библиотеку MediaPipe Hands'));
     };
     document.head.appendChild(script);
@@ -459,6 +464,7 @@ export function loadMediaPipeHands(options = {}) {
         handsInstance = hands;
         resolve(hands);
       } catch (err) {
+        handsLoadPromise = null;
         reject(err);
       }
     }
