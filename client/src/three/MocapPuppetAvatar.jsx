@@ -325,7 +325,8 @@ export default function MocapPuppetAvatar({
     const ptsRaw = activePose?.worldLandmarks || activePose?.landmarks;
 
     if (ptsRaw && ptsRaw.length >= 33) {
-      const toVec = (idx) => {
+      try {
+        const toVec = (idx) => {
         const p = ptsRaw[idx];
         if (!p) return null;
         if (activePose.worldLandmarks) {
@@ -677,7 +678,10 @@ export default function MocapPuppetAvatar({
           bHips.position.z = bHips.restPosition.z + rootZ + smoothRootZRef.current;
         }
       }
-    } else if (boneRotations) {
+    } catch (err) {
+      console.warn('Avatar retargeting frame error:', err);
+    }
+  } else if (boneRotations) {
       // Фолбэк на подготовленный объект boneRotations
       boneMap.forEach((bone, name) => {
         const restQ = bone.restLocalQ;

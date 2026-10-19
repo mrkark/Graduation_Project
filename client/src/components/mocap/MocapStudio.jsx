@@ -534,100 +534,104 @@ export default function MocapStudio() {
 
     // Прием потока ключевых точек напрямую от смартфонов
     socket.on('mocap:landmarks-data', (payload) => {
-      const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands, trackingLost } = payload || {};
-      
-      if (payload && jitterBufferRef.current) {
-        jitterBufferRef.current.ingestPacket(payload);
-        setNetworkTelemetry(jitterBufferRef.current.getTelemetry());
-      }
-
-      if (slot && trackingLost) {
-        if (latestLandmarksBySlot.current[slot]) {
-          latestLandmarksBySlot.current[slot].trackingLost = true;
+      try {
+        const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands, trackingLost } = payload || {};
+        
+        if (payload && jitterBufferRef.current) {
+          jitterBufferRef.current.ingestPacket(payload);
+          setNetworkTelemetry(jitterBufferRef.current.getTelemetry());
         }
-        return;
-      }
 
-      if (slot && landmarks && landmarks.length >= 33) {
-        setCameraActive(true);
-        setBodyDetected(true);
+        if (slot && trackingLost) {
+          if (latestLandmarksBySlot.current[slot]) {
+            latestLandmarksBySlot.current[slot].trackingLost = true;
+          }
+          return;
+        }
 
-        latestLandmarksBySlot.current[slot] = {
-          landmarks,
-          worldLandmarks: worldLandmarks || landmarks,
-          slot,
-          timestamp: Date.now(),
-          fingers: incomingFingers,
-          head: incomingHead,
-          hands: incomingHands,
-          trackingLost: false,
-        };
+        if (slot && landmarks && landmarks.length >= 33) {
+          setCameraActive(true);
+          setBodyDetected(true);
 
-        const now = Date.now();
-        for (const s of Object.keys(latestLandmarksBySlot.current)) {
-          if (now - (latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
-            delete latestLandmarksBySlot.current[s];
+          latestLandmarksBySlot.current[slot] = {
+            landmarks,
+            worldLandmarks: worldLandmarks || landmarks,
+            slot,
+            timestamp: Date.now(),
+            fingers: incomingFingers,
+            head: incomingHead,
+            hands: incomingHands,
+            trackingLost: false,
+          };
+
+          const now = Date.now();
+          for (const s of Object.keys(latestLandmarksBySlot.current)) {
+            if (now - (latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
+              delete latestLandmarksBySlot.current[s];
+            }
+          }
+
+          const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
+          if (fused) {
+            setMultiCamStats({
+              mode: fused.cameraMode || 'single',
+              activeCount: fused.activeCameras?.length || 1,
+              syncHealth: fused.syncHealth || 'perfect',
+              driftMs: fused.maxDriftMs || 0,
+              reprojErr: fused.reprojectionErrorAvg || 0,
+            });
+          }
+          const finalLandmarks = fused?.landmarks || landmarks;
+          const finalWorldLandmarks = fused?.worldLandmarks || worldLandmarks || landmarks;
+
+          const calculatedMetrics = metrics || analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
+          setKarateMetrics(calculatedMetrics);
+
+          const fingers = fused?.fingers || incomingFingers || extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
+          const head = fused?.head || incomingHead || estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
+          const displayHands = fused?.hands || incomingHands || (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.hands);
+
+          const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
+          if (s3d) setSkeleton3DData(s3d);
+
+          const retargeted = retargetSkeleton3DToMasterAvatar(s3d, finalWorldLandmarks, finalLandmarks);
+          if (retargeted) setBoneRotations(retargeted.bones);
+
+          latestPoseRef.current = {
+            landmarks: finalLandmarks,
+            worldLandmarks: finalWorldLandmarks,
+            fingers,
+            head,
+          };
+
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const ctx = canvas.getContext('2d');
+            const displayLms = (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.landmarks) || finalLandmarks;
+            drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics, {
+              hands: displayHands,
+            });
+          }
+
+          if (isRecordingRef.current) {
+            setRecordedFrames((prev) => [
+              ...prev,
+              {
+                timestamp: Date.now(),
+                frame: prev.length,
+                landmarks: finalLandmarks,
+                worldLandmarks: finalWorldLandmarks,
+                fingers,
+                head,
+                skeleton3D: s3d,
+                metrics: calculatedMetrics,
+                bones: retargeted?.bones || null,
+              },
+            ]);
           }
         }
-
-        const fused = fuseMultiCameraLandmarks(latestLandmarksBySlot.current, now);
-        if (fused) {
-          setMultiCamStats({
-            mode: fused.cameraMode || 'single',
-            activeCount: fused.activeCameras?.length || 1,
-            syncHealth: fused.syncHealth || 'perfect',
-            driftMs: fused.maxDriftMs || 0,
-            reprojErr: fused.reprojectionErrorAvg || 0,
-          });
-        }
-        const finalLandmarks = fused?.landmarks || landmarks;
-        const finalWorldLandmarks = fused?.worldLandmarks || worldLandmarks || landmarks;
-
-        const calculatedMetrics = metrics || analyzeKarateBiomechanics(finalLandmarks, finalWorldLandmarks);
-        setKarateMetrics(calculatedMetrics);
-
-        const fingers = fused?.fingers || incomingFingers || extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
-        const head = fused?.head || incomingHead || estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
-        const displayHands = fused?.hands || incomingHands || (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.hands);
-
-        const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
-        if (s3d) setSkeleton3DData(s3d);
-
-        const retargeted = retargetSkeleton3DToMasterAvatar(s3d, finalWorldLandmarks, finalLandmarks);
-        if (retargeted) setBoneRotations(retargeted.bones);
-
-        latestPoseRef.current = {
-          landmarks: finalLandmarks,
-          worldLandmarks: finalWorldLandmarks,
-          fingers,
-          head,
-        };
-
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          const displayLms = (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.landmarks) || finalLandmarks;
-          drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics, {
-            hands: displayHands,
-          });
-        }
-
-        if (isRecordingRef.current) {
-          setRecordedFrames((prev) => [
-            ...prev,
-            {
-              timestamp: Date.now(),
-              frame: prev.length,
-              landmarks: finalLandmarks,
-              worldLandmarks: finalWorldLandmarks,
-              fingers,
-              head,
-              skeleton3D: s3d,
-              metrics: calculatedMetrics,
-              bones: retargeted?.bones || null,
-            },
-          ]);
-        }
+      } catch (err) {
+        console.error('Ошибка обработки mocap:landmarks-data:', err);
       }
     });
 

@@ -82,16 +82,17 @@ function registerMocapSocket(mocapIo) {
       }
 
       // Роль: camera (смартфон)
-      // Очищаем неактивные сокеты из предыдущих подключений
+      // Очищаем неактивные сокеты из предыдущих подключений или сокеты с тем же слотом
       room.cameras.forEach((cam, peerId) => {
         const activeSock = mocapIo.sockets?.get ? mocapIo.sockets.get(peerId) : null;
-        if (!activeSock || !activeSock.connected) {
+        if (!activeSock || !activeSock.connected || (preferredSlot && cam.slot === Number(preferredSlot) && peerId !== socket.id)) {
           room.cameras.delete(peerId);
         }
       });
 
       const slot = getAvailableSlot(room.cameras, preferredSlot ? Number(preferredSlot) : null);
       if (!slot) {
+        console.warn(`[MoCap Socket] Room ${roomId} full, rejecting camera ${socket.id}`);
         return cb?.({
           ok: false,
           error: 'MAX_CAMERAS_REACHED',
@@ -111,6 +112,7 @@ function registerMocapSocket(mocapIo) {
       room.cameras.set(socket.id, cameraInfo);
 
       const updatedCameraList = Array.from(room.cameras.values());
+      console.log(`[MoCap Socket] Camera connected: socket=${socket.id}, slot=${slot}, room=${roomId}, total=${updatedCameraList.length}`);
 
       // Оповещаем ПК-хост о подключении конкретного телефона
       if (room.hostId) {
@@ -205,6 +207,10 @@ function registerMocapSocket(mocapIo) {
     socket.on('mocap:landmarks-stream', (data) => {
       const room = data?.roomId || currentRoom;
       if (room) {
+        if (!socket._streamLogCount) socket._streamLogCount = 0;
+        if (socket._streamLogCount++ % 60 === 0) {
+          console.log(`[MoCap Stream] ${socket.id} -> room ${room}, slot ${data?.slot || currentSlot}, lms: ${data?.landmarks?.length || 0}`);
+        }
         socket.to(`mocap:${room}`).emit('mocap:landmarks-data', {
           ...data,
           slot: data?.slot || currentSlot,

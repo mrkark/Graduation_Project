@@ -83,12 +83,14 @@ export default function PhoneCameraPage() {
   const [showBody, setShowBody] = useState(true);
   const [showHands, setShowHands] = useState(true);
   const [showDiagnostics, setShowDiagnostics] = useState(true);
-  const [precisionHandMode, setPrecisionHandMode] = useState(true);
+  const [precisionHandMode, setPrecisionHandMode] = useState(false); // По умолчанию выключено для 30+ FPS и стабильности WebGL
   const [handsDetectedCount, setHandsDetectedCount] = useState(0);
   const [pingMs, setPingMs] = useState(0);
   const [limbWarnings, setLimbWarnings] = useState([]);
   const [bodyInFrame, setBodyInFrame] = useState(false);
   const [detectedStance, setDetectedStance] = useState('');
+  const [aiModelStatus, setAiModelStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+  const [aiModelError, setAiModelError] = useState(null);
 
   // Запись сессии MoCap
   const [isRecording, setIsRecording] = useState(false);
@@ -113,6 +115,24 @@ export default function PhoneCameraPage() {
 
   const assignedSlotRef = useRef(assignedSlot);
   useEffect(() => { assignedSlotRef.current = assignedSlot; }, [assignedSlot]);
+  const socketConnectedRef = useRef(socketConnected);
+  useEffect(() => { socketConnectedRef.current = socketConnected; }, [socketConnected]);
+  const hostIdRef = useRef(hostId);
+  useEffect(() => { hostIdRef.current = hostId; }, [hostId]);
+  const roomIdRef = useRef(roomId);
+  useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
+  const showSkeletonRef = useRef(showSkeleton);
+  useEffect(() => { showSkeletonRef.current = showSkeleton; }, [showSkeleton]);
+  const showBodyRef = useRef(showBody);
+  useEffect(() => { showBodyRef.current = showBody; }, [showBody]);
+  const showHandsRef = useRef(showHands);
+  useEffect(() => { showHandsRef.current = showHands; }, [showHands]);
+  const showDiagnosticsRef = useRef(showDiagnostics);
+  useEffect(() => { showDiagnosticsRef.current = showDiagnostics; }, [showDiagnostics]);
+  const precisionHandModeRef = useRef(precisionHandMode);
+  useEffect(() => { precisionHandModeRef.current = precisionHandMode; }, [precisionHandMode]);
+  const performanceModeRef = useRef(performanceMode);
+  useEffect(() => { performanceModeRef.current = performanceMode; }, [performanceMode]);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -338,10 +358,10 @@ export default function PhoneCameraPage() {
     bindStream(stream);
     refreshCameraDevices();
 
-    if (hostId) {
-      setupPeerConnection(stream, hostId);
+    if (hostIdRef.current) {
+      setupPeerConnection(stream, hostIdRef.current);
     }
-  }, [facingMode, selectedDeviceId, bindStream, hostId, setupPeerConnection, refreshCameraDevices]);
+  }, [facingMode, selectedDeviceId, bindStream, refreshCameraDevices, setupPeerConnection]);
 
   // 4. Подключение к Socket.IO шлюзу (/mocap)
   useEffect(() => {
@@ -470,6 +490,7 @@ export default function PhoneCameraPage() {
       .then((pose) => {
         if (!active) return;
         poseRef.current = pose;
+        setAiModelStatus('ready');
 
         pose.setOptions({
           modelComplexity: 0, // Ультра-легкая модель для мобильных браузеров (высокий FPS без лагов)
@@ -482,124 +503,132 @@ export default function PhoneCameraPage() {
 
         pose.onResults((results) => {
           if (!active) return;
-          const canvas = canvasRef.current;
-          const video = videoRef.current;
-          if (!canvas || !video) return;
+          try {
+            const canvas = canvasRef.current;
+            const video = videoRef.current;
+            if (!canvas || !video) return;
 
-          const vw = video.videoWidth || 1280;
-          const vh = video.videoHeight || 720;
-          if (canvas.width !== vw || canvas.height !== vh) {
-            canvas.width = vw;
-            canvas.height = vh;
-          }
-
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          if (results.poseLandmarks && results.poseLandmarks.length >= 33) {
-            setBodyInFrame(true);
-
-            // Биомеханический анализ стойки каратэ
-            const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
-            setDetectedStance(metrics.stanceName || 'Камаэ');
-
-            // Диагностика видимости конечностей
-            const warnings = [];
-            const lAnkle = results.poseLandmarks[27];
-            const rAnkle = results.poseLandmarks[28];
-            if ((lAnkle?.visibility ?? 1) < 0.25 && (rAnkle?.visibility ?? 1) < 0.25) {
-              warnings.push('⚠ Стопы не полностью в кадре (отойдите назад)');
-            }
-            const lWrist = results.poseLandmarks[15];
-            const rWrist = results.poseLandmarks[16];
-            if ((lWrist?.visibility ?? 1) < 0.25 && (rWrist?.visibility ?? 1) < 0.25) {
-              warnings.push('⚠ Кисти рук вне поля зрения камеры');
-            }
-            setLimbWarnings(warnings);
-
-            // Высокоточная биомеханика пальцев (MediaPipe Hands + Pose fallback)
-            const aspect = vw / Math.max(1, vh);
-            const handsData = detectedHandsRef.current?.length > 0 ? {
-              multiHandLandmarks: detectedHandsRef.current.map((h) => h.landmarks),
-              multiHandedness: detectedHandsRef.current.map((h) => ({ classification: [{ label: h.handedness }] })),
-            } : null;
-
-            const fingers = extractHandBiomechanics(
-              results.poseLandmarks,
-              results.poseWorldLandmarks,
-              handsData,
-              aspect
-            );
-            const head = estimateHeadOrientation(results.poseLandmarks, results.poseWorldLandmarks);
-
-            // Отрисовываем неоновый скелет прямо на человеке на экране смартфона!
-            if (showSkeleton) {
-              drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics, {
-                showBody,
-                showHands,
-                showDiagnostics,
-                hands: detectedHandsRef.current,
-              });
+            const vw = video.videoWidth || 1280;
+            const vh = video.videoHeight || 720;
+            if (canvas.width !== vw || canvas.height !== vh) {
+              canvas.width = vw;
+              canvas.height = vh;
             }
 
-            // Отправляем структурированный типизированный поток данных на сайт / ПК Додзё
-            if (socketRef.current && socketConnected) {
-              const streamPacket = {
-                version: 2,
-                format: 'bunkai-stream-packet',
-                roomId,
-                slot: assignedSlot,
-                deviceId: selectedDeviceId || facingMode,
-                timestamp: Date.now(),
-                trackingLost: false,
-                facingMode,
-                isMirrored: facingMode === 'user',
-                landmarks: results.poseLandmarks,
-                worldLandmarks: results.poseWorldLandmarks,
-                hands: detectedHandsRef.current,
-                confidence: {
-                  overall: metrics.overallScore || 85,
-                  head: parseFloat((results.poseLandmarks[0]?.visibility ?? 1.0).toFixed(2)),
-                  torso: parseFloat((((results.poseLandmarks[11]?.visibility ?? 1) + (results.poseLandmarks[12]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                  leftArm: parseFloat((((results.poseLandmarks[13]?.visibility ?? 1) + (results.poseLandmarks[15]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                  rightArm: parseFloat((((results.poseLandmarks[14]?.visibility ?? 1) + (results.poseLandmarks[16]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                  leftLeg: parseFloat((((results.poseLandmarks[25]?.visibility ?? 1) + (results.poseLandmarks[27]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                  rightLeg: parseFloat((((results.poseLandmarks[26]?.visibility ?? 1) + (results.poseLandmarks[28]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                },
-                metrics,
-                fingers,
-                head,
-                performanceMode,
-              };
-              socketRef.current.emit('mocap:landmarks-stream', streamPacket);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (results && results.poseLandmarks && results.poseLandmarks.length >= 33) {
+              setBodyInFrame(true);
+
+              // Биомеханический анализ стойки каратэ
+              const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
+              if (metrics.stanceName) setDetectedStance(metrics.stanceName);
+
+              // Диагностика видимости конечностей
+              const warnings = [];
+              const lAnkle = results.poseLandmarks[27];
+              const rAnkle = results.poseLandmarks[28];
+              if ((lAnkle?.visibility ?? 1) < 0.25 && (rAnkle?.visibility ?? 1) < 0.25) {
+                warnings.push('⚠ Стопы не полностью в кадре (отойдите назад)');
+              }
+              const lWrist = results.poseLandmarks[15];
+              const rWrist = results.poseLandmarks[16];
+              if ((lWrist?.visibility ?? 1) < 0.25 && (rWrist?.visibility ?? 1) < 0.25) {
+                warnings.push('⚠ Кисти рук вне поля зрения камеры');
+              }
+              setLimbWarnings(warnings);
+
+              // Высокоточная биомеханика пальцев (MediaPipe Hands + Pose fallback)
+              const aspect = vw / Math.max(1, vh);
+              const handsData = detectedHandsRef.current?.length > 0 ? {
+                multiHandLandmarks: detectedHandsRef.current.map((h) => h.landmarks),
+                multiHandedness: detectedHandsRef.current.map((h) => ({ classification: [{ label: h.handedness }] })),
+              } : null;
+
+              const fingers = extractHandBiomechanics(
+                results.poseLandmarks,
+                results.poseWorldLandmarks,
+                handsData,
+                aspect
+              );
+              const head = estimateHeadOrientation(results.poseLandmarks, results.poseWorldLandmarks);
+
+              // Отрисовываем неоновый скелет прямо на человеке на экране смартфона!
+              if (showSkeletonRef.current) {
+                drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics, {
+                  showBody: showBodyRef.current,
+                  showHands: showHandsRef.current,
+                  showDiagnostics: showDiagnosticsRef.current,
+                  hands: detectedHandsRef.current,
+                });
+              }
+
+              // Отправляем структурированный типизированный поток данных на сайт / ПК Додзё
+              if (socketRef.current && socketConnectedRef.current) {
+                const streamPacket = {
+                  version: 2,
+                  format: 'bunkai-stream-packet',
+                  roomId: roomIdRef.current,
+                  slot: assignedSlotRef.current,
+                  deviceId: selectedDeviceId || facingMode,
+                  timestamp: Date.now(),
+                  trackingLost: false,
+                  facingMode,
+                  isMirrored: facingMode === 'user',
+                  landmarks: results.poseLandmarks,
+                  worldLandmarks: results.poseWorldLandmarks,
+                  hands: detectedHandsRef.current,
+                  confidence: {
+                    overall: metrics.overallScore || 85,
+                    head: parseFloat((results.poseLandmarks[0]?.visibility ?? 1.0).toFixed(2)),
+                    torso: parseFloat((((results.poseLandmarks[11]?.visibility ?? 1) + (results.poseLandmarks[12]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    leftArm: parseFloat((((results.poseLandmarks[13]?.visibility ?? 1) + (results.poseLandmarks[15]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    rightArm: parseFloat((((results.poseLandmarks[14]?.visibility ?? 1) + (results.poseLandmarks[16]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    leftLeg: parseFloat((((results.poseLandmarks[25]?.visibility ?? 1) + (results.poseLandmarks[27]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    rightLeg: parseFloat((((results.poseLandmarks[26]?.visibility ?? 1) + (results.poseLandmarks[28]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                  },
+                  metrics,
+                  fingers,
+                  head,
+                  performanceMode: performanceModeRef.current,
+                };
+                socketRef.current.emit('mocap:landmarks-stream', streamPacket);
+              }
+            } else {
+              setBodyInFrame(false);
+              setLimbWarnings([]);
+              if (socketRef.current && socketConnectedRef.current) {
+                socketRef.current.emit('mocap:landmarks-stream', {
+                  version: 2,
+                  format: 'bunkai-stream-packet',
+                  roomId: roomIdRef.current,
+                  slot: assignedSlotRef.current,
+                  deviceId: selectedDeviceId || facingMode,
+                  timestamp: Date.now(),
+                  trackingLost: true,
+                  landmarks: null,
+                  worldLandmarks: null,
+                  confidence: { overall: 0 },
+                  performanceMode: performanceModeRef.current,
+                });
+              }
             }
-          } else {
-            setBodyInFrame(false);
-            setLimbWarnings([]);
-            if (socketRef.current && socketConnected) {
-              socketRef.current.emit('mocap:landmarks-stream', {
-                version: 2,
-                format: 'bunkai-stream-packet',
-                roomId,
-                slot: assignedSlot,
-                deviceId: selectedDeviceId || facingMode,
-                timestamp: Date.now(),
-                trackingLost: true,
-                landmarks: null,
-                worldLandmarks: null,
-                confidence: { overall: 0 },
-                performanceMode,
-              });
-            }
+          } catch (err) {
+            console.error('Ошибка в pose.onResults:', err);
           }
         });
       })
       .catch((err) => {
         console.warn('Не удалось загрузить MediaPipe Pose на смартфоне:', err);
+        if (active) {
+          setAiModelStatus('error');
+          setAiModelError(err.message || 'Ошибка сети при загрузке модели');
+        }
       });
 
     // Инициализация MediaPipe Hands для точного захвата пальцев
-    if (precisionHandMode) {
+    if (precisionHandModeRef.current) {
       loadMediaPipeHands({ modelComplexity: 0 })
         .then((hands) => {
           if (!active) return;
@@ -632,18 +661,15 @@ export default function PhoneCameraPage() {
     const loop = async () => {
       if (!active) return;
       const v = videoRef.current;
-      if (v && v.readyState >= 2) {
+      if (v && v.readyState >= 2 && v.videoWidth > 0 && v.videoHeight > 0) {
         loopFrameCountRef.current++;
         const frameIdx = loopFrameCountRef.current;
 
-        // Адаптивное управление частотой обработки нейросетей
-        // 'ultra': каждый кадр pose + каждый кадр hands
-        // 'balanced': каждый кадр pose + каждый 2-й кадр hands
-        // 'eco': каждый 2-й кадр pose + каждый 4-й кадр hands
-        const skipPose = performanceMode === 'eco' && frameIdx % 2 !== 0;
-        const skipHands = performanceMode === 'eco'
+        const perf = performanceModeRef.current;
+        const skipPose = perf === 'eco' && frameIdx % 2 !== 0;
+        const skipHands = perf === 'eco'
           ? (frameIdx % 4 !== 0)
-          : (performanceMode === 'balanced' ? (frameIdx % 2 !== 0) : false);
+          : (perf === 'balanced' ? (frameIdx % 2 !== 0) : false);
 
         // Поток тела
         if (!skipPose && poseRef.current && !isPoseProcessing) {
@@ -651,17 +677,19 @@ export default function PhoneCameraPage() {
             isPoseProcessing = true;
             await poseRef.current.send({ image: v });
           } catch (e) {
+            console.warn('MediaPipe Pose frame send error:', e);
           } finally {
             isPoseProcessing = false;
           }
         }
 
         // Поток кистей
-        if (!skipHands && precisionHandMode && handsRef.current && !isHandsProcessing) {
+        if (!skipHands && precisionHandModeRef.current && handsRef.current && !isHandsProcessing) {
           try {
             isHandsProcessing = true;
             await handsRef.current.send({ image: v });
           } catch (e) {
+            console.warn('MediaPipe Hands frame send error:', e);
           } finally {
             isHandsProcessing = false;
           }
@@ -678,22 +706,19 @@ export default function PhoneCameraPage() {
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [socketConnected, roomId, assignedSlot, showSkeleton, showBody, showHands, showDiagnostics, precisionHandMode]);
+  }, []);
 
-  // Запуск камеры при монтировании
+  // Запуск камеры при монтировании или смене объектива
   useEffect(() => {
     startCamera();
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      }
+      stopCamera();
       if (peerRef.current) {
-        peerRef.current.close();
+        try { peerRef.current.close(); } catch (e) {}
         peerRef.current = null;
       }
     };
-  }, [startCamera]);
+  }, [facingMode, selectedDeviceId]);
 
   // Подсчет FPS
   useEffect(() => {
@@ -794,6 +819,11 @@ export default function PhoneCameraPage() {
                 {assignedSlot === 2 && 'Встаньте боком для фиксации глубины удара (Бок)'}
                 {assignedSlot === 3 && 'Диагональный угол 45° для 3D триангуляции'}
               </span>
+              {facingMode === 'environment' && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: '#fbbf24' }}>
+                  📷 Основная (задняя) камера. Если смотрите на экран — переключите на Селфи (кнопка 🔄 внизу).
+                </div>
+              )}
             </div>
           )}
 
@@ -847,6 +877,20 @@ export default function PhoneCameraPage() {
             >
               🦴 {showSkeleton ? 'Скелет: ВКЛ' : 'Скелет: ВЫКЛ'}
             </button>
+
+            <div
+              className={`topbar-status-pill ${aiModelStatus === 'ready' ? 'online' : aiModelStatus === 'loading' ? 'standby' : 'offline'}`}
+              title={aiModelError ? `Ошибка нейросети: ${aiModelError}` : 'Статус нейросети MediaPipe Pose'}
+            >
+              <span className="topbar-status-dot" />
+              <span>
+                {aiModelStatus === 'ready'
+                  ? '🧠 AI: Готов'
+                  : aiModelStatus === 'loading'
+                  ? '⏳ AI: Загрузка...'
+                  : '❌ AI: Ошибка'}
+              </span>
+            </div>
 
             <div className={`topbar-status-pill ${peerConnected ? 'online' : socketConnected ? 'standby' : 'offline'}`}>
               <span className="topbar-status-dot" />
