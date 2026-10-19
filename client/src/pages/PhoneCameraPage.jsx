@@ -62,7 +62,7 @@ export default function PhoneCameraPage() {
 
   const [assignedSlot, setAssignedSlot] = useState(initialSlot);
   const [deviceLabel, setDeviceLabel] = useState(PHONE_ROLES[initialSlot - 1]?.label || 'Камера 1');
-  const [facingMode, setFacingMode] = useState('environment'); // 'user' | 'environment'
+  const [facingMode, setFacingMode] = useState('user'); // 'user' (селфи по умолчанию) | 'environment'
   const [videoDevices, setVideoDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [performanceMode, setPerformanceMode] = useState('balanced'); // 'ultra' | 'balanced' | 'eco'
@@ -318,14 +318,14 @@ export default function PhoneCameraPage() {
     let tiers = [];
     if (useDeviceId) {
       tiers = [
-        { video: { deviceId: { exact: useDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+        { video: { deviceId: { exact: useDeviceId }, width: { ideal: 1280 } }, audio: false },
         { video: { deviceId: { exact: useDeviceId } }, audio: false },
         { video: true, audio: false },
       ];
     } else {
       tiers = [
-        { video: { facingMode: { ideal: useFacing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-        { video: { facingMode: { ideal: useFacing } }, audio: false },
+        { video: { facingMode: useFacing ? { ideal: useFacing } : 'user', width: { ideal: 1280 } }, audio: false },
+        { video: { facingMode: useFacing ? { ideal: useFacing } : 'user' }, audio: false },
         { video: true, audio: false },
       ];
     }
@@ -493,12 +493,12 @@ export default function PhoneCameraPage() {
         setAiModelStatus('ready');
 
         pose.setOptions({
-          modelComplexity: 0, // Ультра-легкая модель для мобильных браузеров (высокий FPS без лагов)
+          modelComplexity: 1, // Полноразмерная модель для надежного захвата человека (в полный рост и полурост)
           smoothLandmarks: true,
           enableSegmentation: false,
           smoothSegmentation: false,
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5,
+          minDetectionConfidence: 0.35, // Порог 0.35 для уверенного захвата в домашних/комнатных условиях
+          minTrackingConfidence: 0.35,
         });
 
         pose.onResults((results) => {
@@ -890,6 +890,14 @@ export default function PhoneCameraPage() {
                   ? '⏳ AI: Загрузка...'
                   : '❌ AI: Ошибка'}
               </span>
+            </div>
+
+            <div
+              className={`topbar-status-pill ${bodyInFrame ? 'online' : 'standby'}`}
+              title="Статус обнаружения человека в кадре камеры"
+            >
+              <span className="topbar-status-dot" />
+              <span>{bodyInFrame ? '🟢 Тело в кадре' : '🟡 Поиск тела'}</span>
             </div>
 
             <div className={`topbar-status-pill ${peerConnected ? 'online' : socketConnected ? 'standby' : 'offline'}`}>

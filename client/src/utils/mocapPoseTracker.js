@@ -407,8 +407,8 @@ export function loadMediaPipePose() {
           smoothLandmarks: true,
           enableSegmentation: false,
           smoothSegmentation: false,
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5,
+          minDetectionConfidence: 0.35,
+          minTrackingConfidence: 0.35,
         });
 
         poseInstance = pose;
