@@ -96,6 +96,24 @@ export default function PhoneCameraPage() {
   const [recordFrames, setRecordFrames] = useState(0);
   const [showSavedToast, setShowSavedToast] = useState(false);
 
+  // Локальный таймер отсчета записи на телефоне
+  useEffect(() => {
+    let timer = null;
+    if (isRecording) {
+      timer = setInterval(() => {
+        setRecordSeconds((s) => s + 1);
+      }, 1000);
+    } else {
+      setRecordSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isRecording]);
+
+  const assignedSlotRef = useRef(assignedSlot);
+  useEffect(() => { assignedSlotRef.current = assignedSlot; }, [assignedSlot]);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const videoRef = useRef(null);
@@ -179,7 +197,7 @@ export default function PhoneCameraPage() {
           roomId,
           candidate: event.candidate,
           targetId: targetHostId,
-          slot: assignedSlot,
+          slot: assignedSlotRef.current,
         });
       }
     };
@@ -201,12 +219,12 @@ export default function PhoneCameraPage() {
             roomId,
             sdp: peer.localDescription,
             targetId: targetHostId,
-            slot: assignedSlot,
+            slot: assignedSlotRef.current,
           });
         }
       })
       .catch((err) => console.warn('WebRTC Offer Error:', err));
-  }, [roomId, assignedSlot]);
+  }, [roomId]);
 
   // Диагностика ошибок веб-камеры
   const getDiagnosticErrorMsg = (err) => {
@@ -340,8 +358,8 @@ export default function PhoneCameraPage() {
         {
           roomId,
           role: 'camera',
-          preferredSlot: assignedSlot,
-          label: PHONE_ROLES[assignedSlot - 1]?.label || `Камера ${assignedSlot}`,
+          preferredSlot: assignedSlotRef.current,
+          label: PHONE_ROLES[(assignedSlotRef.current || 1) - 1]?.label || `Камера ${assignedSlotRef.current || 1}`,
         },
         (res) => {
           if (res?.ok) {
@@ -400,7 +418,7 @@ export default function PhoneCameraPage() {
           roomId,
           sdp: answer,
           targetId: senderId,
-          slot: assignedSlot,
+          slot: assignedSlotRef.current,
         });
       } catch (e) {}
     });
@@ -424,7 +442,7 @@ export default function PhoneCameraPage() {
     return () => {
       socket.disconnect();
     };
-  }, [roomId, assignedSlot, setupPeerConnection]);
+  }, [roomId]);
 
   // 5. Замер пинга сети (RTT) каждые 2.5 секунды
   useEffect(() => {

@@ -82,6 +82,14 @@ function registerMocapSocket(mocapIo) {
       }
 
       // Роль: camera (смартфон)
+      // Очищаем неактивные сокеты из предыдущих подключений
+      room.cameras.forEach((cam, peerId) => {
+        const activeSock = mocapIo.sockets?.get ? mocapIo.sockets.get(peerId) : null;
+        if (!activeSock || !activeSock.connected) {
+          room.cameras.delete(peerId);
+        }
+      });
+
       const slot = getAvailableSlot(room.cameras, preferredSlot ? Number(preferredSlot) : null);
       if (!slot) {
         return cb?.({

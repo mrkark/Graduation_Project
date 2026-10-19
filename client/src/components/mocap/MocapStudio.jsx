@@ -173,6 +173,13 @@ export default function MocapStudio() {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordedFrames, setRecordedFrames] = useState([]);
 
+  const activeCameraSlotRef = useRef(activeCameraSlot);
+  useEffect(() => { activeCameraSlotRef.current = activeCameraSlot; }, [activeCameraSlot]);
+  const isRecordingRef = useRef(isRecording);
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  const recordedFramesRef = useRef(recordedFrames);
+  useEffect(() => { recordedFramesRef.current = recordedFrames; }, [recordedFrames]);
+
   // Ссылки на элементы DOM и WebRTC
   const videoRef = useRef(null);
   const phoneVideo1Ref = useRef(null);
@@ -581,7 +588,7 @@ export default function MocapStudio() {
 
         const fingers = fused?.fingers || incomingFingers || extractHandBiomechanics(finalLandmarks, finalWorldLandmarks);
         const head = fused?.head || incomingHead || estimateHeadOrientation(finalLandmarks, finalWorldLandmarks);
-        const displayHands = fused?.hands || incomingHands || (latestLandmarksBySlot.current[activeCameraSlot]?.hands);
+        const displayHands = fused?.hands || incomingHands || (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.hands);
 
         const s3d = build3DSkeletonData(finalWorldLandmarks, finalLandmarks, { scale: 1.35 });
         if (s3d) setSkeleton3DData(s3d);
@@ -599,13 +606,13 @@ export default function MocapStudio() {
         const canvas = canvasRef.current;
         if (canvas) {
           const ctx = canvas.getContext('2d');
-          const displayLms = (latestLandmarksBySlot.current[activeCameraSlot]?.landmarks) || finalLandmarks;
+          const displayLms = (latestLandmarksBySlot.current[activeCameraSlotRef.current]?.landmarks) || finalLandmarks;
           drawNeonKarateSkeleton(ctx, displayLms, canvas.width, canvas.height, calculatedMetrics, {
             hands: displayHands,
           });
         }
 
-        if (isRecording) {
+        if (isRecordingRef.current) {
           setRecordedFrames((prev) => [
             ...prev,
             {
@@ -675,7 +682,7 @@ export default function MocapStudio() {
       });
       peersRef.current.clear();
     };
-  }, [sourceMode, roomId, getOrCreateHostPeer, activeCameraSlot, isRecording]);
+  }, [sourceMode, roomId, getOrCreateHostPeer]);
 
   // Переключение источников
   useEffect(() => {
@@ -919,16 +926,43 @@ export default function MocapStudio() {
     if (isRecording) {
       setRecordSeconds(0);
       setRecordedFrames([]);
+      if (socketRef.current) {
+        socketRef.current.emit('mocap:recording-state', {
+          roomId,
+          isRecording: true,
+          duration: 0,
+          frameCount: 0,
+        });
+      }
       recordTimerRef.current = setInterval(() => {
-        setRecordSeconds((s) => s + 1);
+        setRecordSeconds((s) => {
+          const nextSec = s + 1;
+          if (socketRef.current) {
+            socketRef.current.emit('mocap:recording-state', {
+              roomId,
+              isRecording: true,
+              duration: nextSec,
+              frameCount: recordedFramesRef.current ? recordedFramesRef.current.length : 0,
+            });
+          }
+          return nextSec;
+        });
       }, 1000);
     } else {
       if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      if (socketRef.current) {
+        socketRef.current.emit('mocap:recording-state', {
+          roomId,
+          isRecording: false,
+          duration: 0,
+          frameCount: recordedFramesRef.current ? recordedFramesRef.current.length : 0,
+        });
+      }
     }
     return () => {
       if (recordTimerRef.current) clearInterval(recordTimerRef.current);
     };
-  }, [isRecording]);
+  }, [isRecording, roomId]);
 
   const getPhoneConnectUrl = useCallback((slotNum = selectedQrSlot) => {
     const host = networkHost || '192.168.100.6';
