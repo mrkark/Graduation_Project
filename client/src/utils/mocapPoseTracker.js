@@ -507,6 +507,7 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
   let fusedLmsRaw = [];
   let fusedWlmsRaw = [];
   let cameraMode = 'single_front';
+  let engineTriangulated = null;
 
   // --- СЛУЧАЙ 1: РОВНО 1 КАМЕРА ---
   if (activeSlots.length === 1) {
@@ -567,7 +568,7 @@ export function fuseMultiCameraLandmarks(cameraFeeds = {}, timestamp = null) {
       });
     }
 
-    let engineTriangulated = null;
+    engineTriangulated = null;
     try {
       engineTriangulated = sharedMultiCameraEngine.reconstructFrame(curTime);
     } catch (e) {
