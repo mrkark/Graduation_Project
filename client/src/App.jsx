@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { AuthGate, RequireAuth, RedirectIfAuthenticated, RequireAdmin, RequireAdminOrModerator } from './layouts/RouteGuards';
 import MainLayout from './layouts/MainLayout';
@@ -16,10 +16,7 @@ import BunkaiFormPage from './pages/BunkaiFormPage';
 import ProfilePage from './pages/ProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import ChatPage from './pages/ChatPage';
-import MotionLabPage from './pages/MotionLabPage';
 import KarateStudioPage from './pages/KarateStudioPage';
-
-import PhoneCameraPage from './pages/PhoneCameraPage';
 
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -62,13 +59,13 @@ export default function App() {
           }
         />
         <Route element={<MainLayout />}>
-          <Route path="/motion-lab" element={<MotionLabPage />} />
-          <Route path="/aimocap" element={<MotionLabPage />} />
-          <Route path="/mocap" element={<MotionLabPage />} />
           <Route path="/karate-studio" element={<KarateStudioPage />} />
+          <Route path="/motion-lab" element={<Navigate to="/karate-studio" replace />} />
+          <Route path="/aimocap" element={<Navigate to="/karate-studio" replace />} />
+          <Route path="/mocap" element={<Navigate to="/karate-studio" replace />} />
           <Route path="/studio" element={<KarateStudioPage />} />
         </Route>
-        <Route path="/phone-camera" element={<PhoneCameraPage />} />
+        <Route path="/phone-camera" element={<Navigate to="/karate-studio" replace />} />
 
         {/* Все остальные маршруты требуют авторизации — иначе редирект на /register */}
         <Route element={<RequireAuth />}>

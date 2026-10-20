@@ -70,13 +70,9 @@ export default function MainLayout() {
               <span className="navbar__link-title">Бункай</span>
               <span className="navbar__link-kanji">分解</span>
             </NavLink>
-            <NavLink to="/motion-lab" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
-              <span className="navbar__link-title">Aimokap</span>
-              <span className="navbar__link-kanji">動</span>
-            </NavLink>
             <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Мокап 3D</span>
-              <span className="navbar__link-kanji">撮</span>
+              <span className="navbar__link-kanji">動</span>
             </NavLink>
             <NavLink to="/bunkai/new" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Студия</span>
@@ -187,13 +183,9 @@ export default function MainLayout() {
                 <span>Разборы бункай</span>
                 <span className="mobile-drawer__kanji">分解</span>
               </NavLink>
-              <NavLink to="/motion-lab" className="mobile-drawer__link">
-                <span>Aimokap (AI Камера)</span>
-                <span className="mobile-drawer__kanji">動態</span>
-              </NavLink>
               <NavLink to="/karate-studio" className="mobile-drawer__link">
-                <span>Karate Motion Studio 3D</span>
-                <span className="mobile-drawer__kanji">撮像</span>
+                <span>Мокап 3D (Каратэ Студия)</span>
+                <span className="mobile-drawer__kanji">動態</span>
               </NavLink>
               <NavLink to="/bunkai/new" className="mobile-drawer__link">
                 <span>Студия бункай</span>
@@ -285,7 +277,7 @@ export default function MainLayout() {
               <ul className="dojo-footer__list">
                 <li><Link to="/kata">Атлас 26 Ката (型)</Link></li>
                 <li><Link to="/bunkai">Боевые сценарии Бункай (分解)</Link></li>
-                <li><Link to="/motion-lab">AI Мокап Лаборатория (Aimokap)</Link></li>
+                <li><Link to="/karate-studio">Мокап 3D (Каратэ Студия)</Link></li>
                 <li><Link to="/bunkai/new">Мастерская симуляции боя</Link></li>
               </ul>
             </div>
@@ -300,7 +292,7 @@ export default function MainLayout() {
                 <li><Link to="/kata/1">Школа Хэйан (Базовые формы)</Link></li>
                 <li><Link to="/kata">Мастерские ката (Дан)</Link></li>
                 <li><Link to="/bunkai">Контроль дистанции Ма-ай</Link></li>
-                <li><Link to="/motion-lab">Анализ биомеханики Кимэ</Link></li>
+                <li><Link to="/karate-studio">Анализ биомеханики Кимэ</Link></li>
               </ul>
             </div>
 

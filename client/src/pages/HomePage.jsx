@@ -132,8 +132,8 @@ export default function HomePage() {
                 Динамический контроль боевой дистанции между Тори и Укэ. Анализ дистанций
                 Тика-ма (ближняя), Иссоку-итто (шаг-удар) и То-ма (дальняя).
               </p>
-              <Link to="/motion-lab" className="pillar-link">
-                <span>Лаборатория Aimokap</span>
+              <Link to="/karate-studio" className="pillar-link">
+                <span>3D Мокап Студия</span>
                 <span className="pillar-link-arr">→</span>
               </Link>
             </div>

@@ -127,8 +127,8 @@ export default function KarateStudioPage() {
         zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <Link to="/motion-lab" style={{ color: 'var(--color-gold, #f59e0b)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-            <span>←</span> <span>В Додзё Aimokap</span>
+          <Link to="/kata" style={{ color: 'var(--color-gold, #f59e0b)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+            <span>←</span> <span>В каталог Ката</span>
           </Link>
           <span style={{ color: '#4b5563' }}>|</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -432,14 +432,11 @@ export default function KarateStudioPage() {
             Для работы захвата движений через Python-движок запустите файл <code>start_python_mocap.bat</code> в корне проекта или скрипт <code>karate_motion_studio/run_web_studio.bat</code>.
           </p>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <Link to="/motion-lab" className="btn btn-primary" style={{ padding: '10px 20px', textDecoration: 'none' }}>
-              Перейти в Web Mocap Studio
-            </Link>
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-primary"
               onClick={() => window.location.reload()}
-              style={{ padding: '10px 20px' }}
+              style={{ padding: '10px 24px' }}
             >
               🔄 Проверить подключение
             </button>
