@@ -258,9 +258,25 @@ export default function MocapPuppetAvatar({
     const s = size.y > 0 ? 1.78 / size.y : 1.0;
     const yOff = -bbox.min.y * s;
 
+    clone.updateMatrixWorld(true);
     clone.traverse((child) => {
       if (child.isBone) {
-        map.set(child.name, child);
+        const raw = child.name;
+        map.set(raw, child);
+        map.set(raw.replace(/\./g, ''), child);
+        if (raw.endsWith('L') && !raw.includes('.')) {
+          map.set(raw.slice(0, -1) + '.L', child);
+        } else if (raw.endsWith('R') && !raw.includes('.')) {
+          map.set(raw.slice(0, -1) + '.R', child);
+        } else if (raw.includes('.')) {
+          map.set(raw.replace('.', '_'), child);
+        }
+
+        child.restLocalQ = child.quaternion.clone();
+        child.restWorldQ = new THREE.Quaternion();
+        child.getWorldQuaternion(child.restWorldQ);
+        child.restWorldDir = new THREE.Vector3(0, 1, 0).applyQuaternion(child.restWorldQ).normalize();
+        child.restPosition = child.position.clone();
       }
       if (child.isMesh) {
         child.frustumCulled = false;
@@ -301,12 +317,13 @@ export default function MocapPuppetAvatar({
   useEffect(() => {
     clonedModel.updateMatrixWorld(true);
     boneMap.forEach((node) => {
-      node.restLocalQ = node.quaternion.clone();
-      node.restWorldQ = new THREE.Quaternion();
-      node.getWorldQuaternion(node.restWorldQ);
-      // Динамическое вычисление оси покоя каждой кости armature в мировом пространстве:
-      node.restWorldDir = new THREE.Vector3(0, 1, 0).applyQuaternion(node.restWorldQ).normalize();
-      node.restPosition = node.position.clone();
+      if (!node.restWorldQ) {
+        node.restLocalQ = node.quaternion.clone();
+        node.restWorldQ = new THREE.Quaternion();
+        node.getWorldQuaternion(node.restWorldQ);
+        node.restWorldDir = new THREE.Vector3(0, 1, 0).applyQuaternion(node.restWorldQ).normalize();
+        node.restPosition = node.position.clone();
+      }
     });
     masterRetargeterRef.current.registerRestArmature(boneMap);
   }, [boneMap, clonedModel]);
@@ -327,13 +344,17 @@ export default function MocapPuppetAvatar({
     if (ptsRaw && ptsRaw.length >= 33) {
       try {
         const toVec = (idx) => {
-        const p = ptsRaw[idx];
-        if (!p) return null;
-        if (activePose.worldLandmarks) {
-          return new THREE.Vector3(p.x, -p.y, -p.z);
-        }
-        return new THREE.Vector3((p.x - 0.5) * 1.5, -(p.y - 0.5) * 1.8, -((p.z || 0) * 1.5));
-      };
+          const p = ptsRaw[idx];
+          if (!p) return null;
+          const px = typeof p.x === 'number' ? p.x : (Array.isArray(p) ? p[0] : undefined);
+          const py = typeof p.y === 'number' ? p.y : (Array.isArray(p) ? p[1] : undefined);
+          const pz = typeof p.z === 'number' ? p.z : (Array.isArray(p) ? p[2] : 0);
+          if (px === undefined || py === undefined) return null;
+          if (activePose.worldLandmarks) {
+            return new THREE.Vector3(px, -py, -pz);
+          }
+          return new THREE.Vector3((px - 0.5) * 1.5, -(py - 0.5) * 1.8, -(pz * 1.5));
+        };
 
       const pLSh = toVec(11);
       const pRSh = toVec(12);

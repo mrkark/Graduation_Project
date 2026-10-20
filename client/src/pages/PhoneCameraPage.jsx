@@ -148,6 +148,10 @@ export default function PhoneCameraPage() {
   const animFrameRef = useRef(null);
   const frameCountRef = useRef(0);
   const isStartingRef = useRef(false);
+  const offscreenCanvasRef = useRef(null);
+  const letterboxParamsRef = useRef(null);
+  const localRecTimerRef = useRef(null);
+  const recStartTimeRef = useRef(0);
 
   // 1. Привязка видеопотока к элементу <video>
   const bindStream = useCallback((stream) => {
@@ -489,8 +493,8 @@ export default function PhoneCameraPage() {
 
     setAiModelStatus('loading');
 
-    // Используем СВЕЖИЙ независимый экземпляр — не глобальный singleton ПК-страниц!
-    createFreshPoseInstance({ modelComplexity: 1 })
+    // Используем легковесный мобильный профиль (modelComplexity: 0) — исключает WebGL сбои на смартфонах
+    createFreshPoseInstance({ modelComplexity: 0, minDetectionConfidence: 0.25, minTrackingConfidence: 0.25 })
       .then((pose) => {
         if (!active) return;
         poseRef.current = pose;
@@ -513,7 +517,9 @@ export default function PhoneCameraPage() {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const lmsCount = results?.poseLandmarks?.length || 0;
+            const lb = letterboxParamsRef.current;
+            const rawLms = results?.poseLandmarks;
+            const lmsCount = rawLms?.length || 0;
 
             // Диагностическое логирование (каждые 30 кадров)
             if (loopFrameCountRef.current % 30 === 0) {
@@ -524,19 +530,29 @@ export default function PhoneCameraPage() {
               zeroLandmarksCount = 0;
               setBodyInFrame(true);
 
+              // Де-нормализация из 1:1 letterbox квадрата обратно в оригинальные пропорции видео
+              const unmappedLandmarks = lb ? rawLms.map((p) => ({
+                x: ((p.x * lb.targetDim) - lb.padX) / lb.drawW,
+                y: ((p.y * lb.targetDim) - lb.padY) / lb.drawH,
+                z: p.z * (lb.targetDim / lb.drawW),
+                visibility: p.visibility ?? 1.0,
+              })) : rawLms;
+
+              const worldLms = results.poseWorldLandmarks || unmappedLandmarks;
+
               // Биомеханический анализ стойки каратэ
-              const metrics = analyzeKarateBiomechanics(results.poseLandmarks, results.poseWorldLandmarks);
+              const metrics = analyzeKarateBiomechanics(unmappedLandmarks, worldLms);
               if (metrics.stanceName) setDetectedStance(metrics.stanceName);
 
               // Диагностика видимости конечностей
               const warnings = [];
-              const lAnkle = results.poseLandmarks[27];
-              const rAnkle = results.poseLandmarks[28];
+              const lAnkle = unmappedLandmarks[27];
+              const rAnkle = unmappedLandmarks[28];
               if ((lAnkle?.visibility ?? 1) < 0.25 && (rAnkle?.visibility ?? 1) < 0.25) {
                 warnings.push('⚠ Стопы не полностью в кадре (отойдите назад)');
               }
-              const lWrist = results.poseLandmarks[15];
-              const rWrist = results.poseLandmarks[16];
+              const lWrist = unmappedLandmarks[15];
+              const rWrist = unmappedLandmarks[16];
               if ((lWrist?.visibility ?? 1) < 0.25 && (rWrist?.visibility ?? 1) < 0.25) {
                 warnings.push('⚠ Кисти рук вне поля зрения камеры');
               }
@@ -550,16 +566,16 @@ export default function PhoneCameraPage() {
               } : null;
 
               const fingers = extractHandBiomechanics(
-                results.poseLandmarks,
-                results.poseWorldLandmarks,
+                unmappedLandmarks,
+                worldLms,
                 handsData,
                 aspect
               );
-              const head = estimateHeadOrientation(results.poseLandmarks, results.poseWorldLandmarks);
+              const head = estimateHeadOrientation(unmappedLandmarks, worldLms);
 
               // Отрисовываем неоновый скелет прямо на человеке на экране смартфона!
               if (showSkeletonRef.current) {
-                drawNeonKarateSkeleton(ctx, results.poseLandmarks, canvas.width, canvas.height, metrics, {
+                drawNeonKarateSkeleton(ctx, unmappedLandmarks, canvas.width, canvas.height, metrics, {
                   showBody: showBodyRef.current,
                   showHands: showHandsRef.current,
                   showDiagnostics: showDiagnosticsRef.current,
@@ -579,17 +595,17 @@ export default function PhoneCameraPage() {
                   trackingLost: false,
                   facingMode,
                   isMirrored: facingMode === 'user',
-                  landmarks: results.poseLandmarks,
-                  worldLandmarks: results.poseWorldLandmarks,
+                  landmarks: unmappedLandmarks,
+                  worldLandmarks: worldLms,
                   hands: detectedHandsRef.current,
                   confidence: {
                     overall: metrics.overallScore || 85,
-                    head: parseFloat((results.poseLandmarks[0]?.visibility ?? 1.0).toFixed(2)),
-                    torso: parseFloat((((results.poseLandmarks[11]?.visibility ?? 1) + (results.poseLandmarks[12]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                    leftArm: parseFloat((((results.poseLandmarks[13]?.visibility ?? 1) + (results.poseLandmarks[15]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                    rightArm: parseFloat((((results.poseLandmarks[14]?.visibility ?? 1) + (results.poseLandmarks[16]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                    leftLeg: parseFloat((((results.poseLandmarks[25]?.visibility ?? 1) + (results.poseLandmarks[27]?.visibility ?? 1)) * 0.5).toFixed(2)),
-                    rightLeg: parseFloat((((results.poseLandmarks[26]?.visibility ?? 1) + (results.poseLandmarks[28]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    head: parseFloat((unmappedLandmarks[0]?.visibility ?? 1.0).toFixed(2)),
+                    torso: parseFloat((((unmappedLandmarks[11]?.visibility ?? 1) + (unmappedLandmarks[12]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    leftArm: parseFloat((((unmappedLandmarks[13]?.visibility ?? 1) + (unmappedLandmarks[15]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    rightArm: parseFloat((((unmappedLandmarks[14]?.visibility ?? 1) + (unmappedLandmarks[16]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    leftLeg: parseFloat((((unmappedLandmarks[25]?.visibility ?? 1) + (unmappedLandmarks[27]?.visibility ?? 1)) * 0.5).toFixed(2)),
+                    rightLeg: parseFloat((((unmappedLandmarks[26]?.visibility ?? 1) + (unmappedLandmarks[28]?.visibility ?? 1)) * 0.5).toFixed(2)),
                   },
                   metrics,
                   fingers,
@@ -597,6 +613,7 @@ export default function PhoneCameraPage() {
                   performanceMode: performanceModeRef.current,
                 };
                 socketRef.current.emit('mocap:landmarks-stream', streamPacket);
+                socketRef.current.emit('mocap:landmarks-data', streamPacket);
               }
             } else {
               zeroLandmarksCount++;
@@ -608,8 +625,9 @@ export default function PhoneCameraPage() {
               }
               setBodyInFrame(false);
               setLimbWarnings([]);
-              if (socketRef.current && socketConnectedRef.current) {
-                socketRef.current.emit('mocap:landmarks-stream', {
+              // Отправляем trackingLost только если потеря трекинга продолжается более 12 кадров (400мс)
+              if (zeroLandmarksCount > 12 && socketRef.current && socketConnectedRef.current) {
+                const lostPacket = {
                   version: 2,
                   format: 'bunkai-stream-packet',
                   roomId: roomIdRef.current,
@@ -621,7 +639,9 @@ export default function PhoneCameraPage() {
                   worldLandmarks: null,
                   confidence: { overall: 0 },
                   performanceMode: performanceModeRef.current,
-                });
+                };
+                socketRef.current.emit('mocap:landmarks-stream', lostPacket);
+                socketRef.current.emit('mocap:landmarks-data', lostPacket);
               }
             }
           } catch (err) {
@@ -710,11 +730,38 @@ export default function PhoneCameraPage() {
             ? (frameIdx % 4 !== 0)
             : (perf === 'balanced' ? (frameIdx % 2 !== 0) : false);
 
-          // Поток тела
+          // Поток тела: используем 1:1 letterbox оффскрин-холст для максимальной точности анкеров нейросети
           if (!skipPose && !isPoseProcessing) {
             try {
               isPoseProcessing = true;
-              await poseRef.current.send({ image: v });
+
+              if (!offscreenCanvasRef.current) {
+                offscreenCanvasRef.current = document.createElement('canvas');
+              }
+              const offCanvas = offscreenCanvasRef.current;
+              const targetDim = 512;
+              if (offCanvas.width !== targetDim || offCanvas.height !== targetDim) {
+                offCanvas.width = targetDim;
+                offCanvas.height = targetDim;
+              }
+              const offCtx = offCanvas.getContext('2d', { willReadFrequently: false });
+
+              const vw = v.videoWidth;
+              const vh = v.videoHeight;
+              const maxDim = Math.max(vw, vh);
+              const scale = targetDim / maxDim;
+              const drawW = vw * scale;
+              const drawH = vh * scale;
+              const padX = (targetDim - drawW) / 2;
+              const padY = (targetDim - drawH) / 2;
+
+              letterboxParamsRef.current = { targetDim, padX, padY, drawW, drawH, vw, vh };
+
+              offCtx.fillStyle = '#000000';
+              offCtx.fillRect(0, 0, targetDim, targetDim);
+              offCtx.drawImage(v, padX, padY, drawW, drawH);
+
+              await poseRef.current.send({ image: offCanvas });
             } catch (e) {
               console.warn('MediaPipe Pose frame send error:', e);
             } finally {
@@ -726,7 +773,8 @@ export default function PhoneCameraPage() {
           if (!skipHands && precisionHandModeRef.current && handsRef.current && !isHandsProcessing) {
             try {
               isHandsProcessing = true;
-              await handsRef.current.send({ image: v });
+              const sendImg = offscreenCanvasRef.current || v;
+              await handsRef.current.send({ image: sendImg });
             } catch (e) {
               console.warn('MediaPipe Hands frame send error:', e);
             } finally {
@@ -807,13 +855,29 @@ export default function PhoneCameraPage() {
     if ('vibrate' in navigator) navigator.vibrate([100]);
     playBeep(isRecording ? 440 : 880, 0.15);
 
+    const willRecord = !isRecording;
+    if (willRecord) {
+      recStartTimeRef.current = performance.now();
+      setRecordSeconds(0);
+      if (localRecTimerRef.current) clearInterval(localRecTimerRef.current);
+      localRecTimerRef.current = setInterval(() => {
+        const elapsed = Math.floor((performance.now() - recStartTimeRef.current) / 1000);
+        setRecordSeconds(elapsed);
+      }, 500);
+    } else {
+      if (localRecTimerRef.current) {
+        clearInterval(localRecTimerRef.current);
+        localRecTimerRef.current = null;
+      }
+    }
+
     if (socketRef.current && socketConnected) {
       socketRef.current.emit('mocap:record-command', {
         roomId,
-        action: isRecording ? 'stop' : 'start',
+        action: willRecord ? 'start' : 'stop',
       });
     }
-    setIsRecording((prev) => !prev);
+    setIsRecording(willRecord);
   };
 
   const toggleFullscreen = () => {

@@ -87,7 +87,7 @@ app.get('/api/mocap/tunnel', (req, res) => {
 
 app.post('/api/mocap/tunnel', (req, res) => {
   try {
-    const { url, active, localIp, localIps, httpsPort, httpsUrl } = req.body;
+    const { url, active, localIp, localIps, httpsPort, httpsUrl, publicUrl, tunnelUrl, tunnelActive } = req.body;
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     let existing = {};
     if (fs.existsSync(tunnelPath)) {
@@ -95,14 +95,19 @@ app.post('/api/mocap/tunnel', (req, res) => {
         existing = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
       } catch (e) {}
     }
+    const finalPublicUrl = publicUrl !== undefined ? publicUrl : (tunnelUrl !== undefined ? tunnelUrl : (existing.publicUrl || existing.tunnelUrl || null));
+    const finalTunnelActive = tunnelActive !== undefined ? Boolean(tunnelActive) : (existing.tunnelActive !== undefined ? existing.tunnelActive : false);
     const data = {
       ...existing,
-      active: active !== undefined ? Boolean(active) : true,
-      url: url || httpsUrl || existing.url || 'https://192.168.100.6:8443',
-      httpsUrl: httpsUrl || url || existing.httpsUrl || 'https://192.168.100.6:8443',
+      active: active !== undefined ? Boolean(active) : existing.active,
+      publicUrl: finalPublicUrl,
+      tunnelUrl: finalPublicUrl,
+      tunnelActive: finalTunnelActive,
+      url: httpsUrl || existing.url || (localIp ? `https://${localIp}:8443` : existing.httpsUrl),
+      httpsUrl: httpsUrl || existing.httpsUrl,
       httpsPort: httpsPort || existing.httpsPort || 8443,
-      localIp: localIp || existing.localIp || '192.168.100.6',
-      localIps: localIps || existing.localIps || [{ name: 'Wi-Fi', ip: '192.168.100.6', isPrimary: true }],
+      localIp: localIp || existing.localIp,
+      localIps: localIps || existing.localIps,
       updatedAt: new Date().toISOString(),
     };
     fs.writeFileSync(tunnelPath, JSON.stringify(data, null, 2), 'utf8');

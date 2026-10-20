@@ -519,8 +519,11 @@ export default function MocapStudio() {
     socket.on('mocap:cameras-updated', ({ cameras }) => {
       if (Array.isArray(cameras)) {
         setConnectedCameras(cameras);
-        if (cameras.length > 0 && !cameras.some((c) => c.slot === activeCameraSlot)) {
-          setActiveCameraSlot(cameras[0].slot);
+        if (cameras.length > 0) {
+          if (sourceMode === 'phone') setCameraActive(true);
+          if (!cameras.some((c) => c.slot === activeCameraSlot)) {
+            setActiveCameraSlot(cameras[0].slot);
+          }
         }
       }
     });
@@ -530,10 +533,11 @@ export default function MocapStudio() {
         const filtered = prev.filter((c) => c.slot !== cameraInfo.slot && c.peerId !== cameraInfo.peerId);
         return [...filtered, cameraInfo];
       });
+      if (sourceMode === 'phone') setCameraActive(true);
     });
 
-    // Прием потока ключевых точек напрямую от смартфонов
-    socket.on('mocap:landmarks-data', (payload) => {
+    // Прием потока ключевых точек напрямую от смартфонов (поддержка обоих имён событий)
+    const handleIncomingLandmarks = (payload) => {
       try {
         const { slot, landmarks, worldLandmarks, metrics, fingers: incomingFingers, head: incomingHead, hands: incomingHands, trackingLost } = payload || {};
         
@@ -543,8 +547,16 @@ export default function MocapStudio() {
         }
 
         if (slot && trackingLost) {
-          if (latestLandmarksBySlot.current[slot]) {
-            latestLandmarksBySlot.current[slot].trackingLost = true;
+          const prev = latestLandmarksBySlot.current[slot];
+          if (prev) {
+            prev.trackingLost = true;
+            // Удержание позы в течение 800мс при временной потере детектора (предотвращает мигание T-pose)
+            if (Date.now() - (prev.lastValidTimestamp || prev.timestamp || 0) > 800) {
+              delete latestLandmarksBySlot.current[slot];
+              if (Object.keys(latestLandmarksBySlot.current).length === 0) {
+                setBodyDetected(false);
+              }
+            }
           }
           return;
         }
@@ -558,6 +570,7 @@ export default function MocapStudio() {
             worldLandmarks: worldLandmarks || landmarks,
             slot,
             timestamp: Date.now(),
+            lastValidTimestamp: Date.now(),
             fingers: incomingFingers,
             head: incomingHead,
             hands: incomingHands,
@@ -566,7 +579,7 @@ export default function MocapStudio() {
 
           const now = Date.now();
           for (const s of Object.keys(latestLandmarksBySlot.current)) {
-            if (now - (latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
+            if (now - (latestLandmarksBySlot.current[s]?.lastValidTimestamp || latestLandmarksBySlot.current[s]?.timestamp || 0) > 2500) {
               delete latestLandmarksBySlot.current[s];
             }
           }
@@ -633,7 +646,10 @@ export default function MocapStudio() {
       } catch (err) {
         console.error('Ошибка обработки mocap:landmarks-data:', err);
       }
-    });
+    };
+
+    socket.on('mocap:landmarks-data', handleIncomingLandmarks);
+    socket.on('mocap:landmarks-stream', handleIncomingLandmarks);
 
     socket.on('mocap:offer', async ({ sdp, senderId, slot }) => {
       try {

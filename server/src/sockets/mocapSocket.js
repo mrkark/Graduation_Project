@@ -204,20 +204,25 @@ function registerMocapSocket(mocapIo) {
     });
 
     // Потоковая передача ключевых точек / телеметрии от конкретной камеры
-    socket.on('mocap:landmarks-stream', (data) => {
+    const handleLandmarksBroadcast = (data) => {
       const room = data?.roomId || currentRoom;
       if (room) {
         if (!socket._streamLogCount) socket._streamLogCount = 0;
         if (socket._streamLogCount++ % 60 === 0) {
           console.log(`[MoCap Stream] ${socket.id} -> room ${room}, slot ${data?.slot || currentSlot}, lms: ${data?.landmarks?.length || 0}`);
         }
-        socket.to(`mocap:${room}`).emit('mocap:landmarks-data', {
+        const packet = {
           ...data,
           slot: data?.slot || currentSlot,
           senderId: socket.id,
-        });
+        };
+        socket.to(`mocap:${room}`).emit('mocap:landmarks-data', packet);
+        socket.to(`mocap:${room}`).emit('mocap:landmarks-stream', packet);
       }
-    });
+    };
+
+    socket.on('mocap:landmarks-stream', handleLandmarksBroadcast);
+    socket.on('mocap:landmarks-data', handleLandmarksBroadcast);
 
     // Замер пинга и задержки сети
     socket.on('mocap:ping', ({ timestamp }, cb) => {

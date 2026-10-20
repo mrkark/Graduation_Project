@@ -17,6 +17,7 @@ import ProfilePage from './pages/ProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import ChatPage from './pages/ChatPage';
 import MotionLabPage from './pages/MotionLabPage';
+import KarateStudioPage from './pages/KarateStudioPage';
 
 import PhoneCameraPage from './pages/PhoneCameraPage';
 
@@ -64,6 +65,8 @@ export default function App() {
           <Route path="/motion-lab" element={<MotionLabPage />} />
           <Route path="/aimocap" element={<MotionLabPage />} />
           <Route path="/mocap" element={<MotionLabPage />} />
+          <Route path="/karate-studio" element={<KarateStudioPage />} />
+          <Route path="/studio" element={<KarateStudioPage />} />
         </Route>
         <Route path="/phone-camera" element={<PhoneCameraPage />} />
 

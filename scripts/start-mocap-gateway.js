@@ -73,7 +73,15 @@ function updateGatewayStatus(info) {
     fs.mkdirSync(UPLOADS_DIR, { recursive: true });
   }
 
+  let existing = {};
+  try {
+    if (fs.existsSync(STATUS_FILE)) {
+      existing = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
+    }
+  } catch (e) {}
+
   const payload = {
+    ...existing,
     active: true,
     localIp: info.localIp,
     httpsPort: HTTPS_PORT,

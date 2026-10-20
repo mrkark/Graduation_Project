@@ -416,7 +416,13 @@ export function loadMediaPipePose() {
         });
 
         poseInstance = pose;
-        resolve(pose);
+        if (typeof pose.initialize === 'function') {
+          pose.initialize()
+            .then(() => resolve(pose))
+            .catch(() => resolve(pose));
+        } else {
+          resolve(pose);
+        }
       } catch (err) {
         poseLoadPromise = null;
         reject(err);

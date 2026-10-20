@@ -1,4 +1,5 @@
-import { useState, useRef, useMemo, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import QRCode from 'qrcode';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import KarateMasterModel from '../three/KarateMasterModel';
@@ -412,7 +413,105 @@ const STANCES_DECK = [
 ];
 
 export default function MotionLabPage() {
-  const [activeTab, setActiveTab] = useState('mocap'); // 'mocap' | 'dojo'
+  const [activeTab, setActiveTab] = useState('karate_studio'); // 'karate_studio' | 'mocap' | 'dojo'
+  const [showStudioQr, setShowStudioQr] = useState(false);
+  const [selectedStudioCam, setSelectedStudioCam] = useState('cam1');
+  const [studioOnline, setStudioOnline] = useState(true);
+  const [availableIps, setAvailableIps] = useState([]);
+  const [publicTunnelUrl, setPublicTunnelUrl] = useState('');
+  const [tunnelActive, setTunnelActive] = useState(false);
+  const [networkMode, setNetworkMode] = useState('tunnel'); // 'tunnel' | 'local'
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [realIp, setRealIp] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const h = window.location.hostname;
+      if (h && h !== 'localhost' && h !== '127.0.0.1') {
+        return h;
+      }
+    }
+    return '';
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    const checkStatus = async () => {
+      // 1. Если фронтенд открыт по сетевому IP (не localhost), используем его
+      if (typeof window !== 'undefined') {
+        const h = window.location.hostname;
+        if (h && h !== 'localhost' && h !== '127.0.0.1') {
+          if (mounted) setRealIp((prev) => prev || h);
+        }
+      }
+
+      // 2. Опрашиваем Python MoCap сервер (/status)
+      try {
+        const res = await fetch('/status');
+        if (res.ok) {
+          const data = await res.json();
+          if (mounted) {
+            if (data?.ip && data.ip !== '127.0.0.1') {
+              setRealIp((prev) => prev || data.ip);
+            }
+            setStudioOnline(true);
+          }
+        } else if (mounted) {
+          setStudioOnline(false);
+        }
+      } catch {
+        if (mounted) setStudioOnline(false);
+      }
+
+      // 3. Запрос к шлюзу/бэкенду (/api/mocap/tunnel) для получения списка сетевых адаптеров и туннеля
+      try {
+        const r = await fetch('/api/mocap/tunnel');
+        if (r.ok) {
+          const j = await r.json();
+          if (mounted) {
+            if (j?.data?.localIp && j.data.localIp !== '127.0.0.1') {
+              setRealIp((prev) => prev || j.data.localIp);
+            }
+            if (Array.isArray(j?.data?.localIps) && j.data.localIps.length > 0) {
+              setAvailableIps(j.data.localIps);
+            }
+            if (j?.data?.publicUrl) {
+              setPublicTunnelUrl(j.data.publicUrl);
+              setTunnelActive(Boolean(j.data.tunnelActive));
+            }
+          }
+        }
+      } catch {}
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 3500);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const displayHost = realIp || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : '127.0.0.1');
+
+  const isTunnelAvailable = Boolean(publicTunnelUrl && tunnelActive);
+  const activeMode = (networkMode === 'tunnel' && isTunnelAvailable) ? 'tunnel' : (isTunnelAvailable ? networkMode : 'local');
+
+  const activeCamUrl = (activeMode === 'tunnel' && publicTunnelUrl)
+    ? `${publicTunnelUrl}/${selectedStudioCam}`
+    : `https://${displayHost}:8088/${selectedStudioCam}`;
+
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(activeCamUrl, { width: 256, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+      .then((url) => {
+        if (active) setQrDataUrl(url);
+      })
+      .catch(() => {
+        if (active) setQrDataUrl(`/qr/${selectedStudioCam}.png`);
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeCamUrl, selectedStudioCam]);
   const [mode, setMode] = useState('bunkai-2'); // 'kata' | 'bunkai-2' | 'bunkai-3'
   const [masterStance, setMasterStance] = useState('ready');
   const [activeClip, setActiveClip] = useState(null);
@@ -500,8 +599,17 @@ export default function MotionLabPage() {
         </div>
       </div>
 
-      {/* Главные вкладки модуля: Mocap Studio vs 3D Додзё Ката */}
+      {/* Главные вкладки модуля: Karate Motion Studio vs Mocap Studio vs 3D Додзё Ката */}
       <div style={{ display: 'flex', gap: '0.85rem', marginBottom: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.85rem', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className={`btn ${activeTab === 'karate_studio' ? 'btn-primary' : ''}`}
+          onClick={() => setActiveTab('karate_studio')}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '1rem', fontWeight: 800 }}
+        >
+          <span>🥋</span>
+          <span>Karate Motion Studio (Python AI Захват)</span>
+        </button>
         <button
           type="button"
           className={`btn ${activeTab === 'mocap' ? 'btn-primary' : ''}`}
@@ -509,7 +617,7 @@ export default function MotionLabPage() {
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '1rem', fontWeight: 800 }}
         >
           <span>📹</span>
-          <span>AI Захват движений с камеры (Mocap Studio)</span>
+          <span>Web Mocap Studio (Встроенный AI)</span>
         </button>
         <button
           type="button"
@@ -517,12 +625,261 @@ export default function MotionLabPage() {
           onClick={() => setActiveTab('dojo')}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 22px', fontSize: '1rem', fontWeight: 800 }}
         >
-          <span>🥋</span>
+          <span>🏯</span>
           <span>3D Додзё Ката & Техники (Библиотека 87 приёмов)</span>
         </button>
       </div>
 
-      {activeTab === 'mocap' ? (
+      {activeTab === 'karate_studio' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%' }}>
+          {/* Quick Toolbar for Karate Studio */}
+          <div style={{
+            background: 'var(--color-bg-card, #1c1d24)',
+            border: '1px solid var(--color-border, #2d303e)',
+            borderRadius: 10,
+            padding: '12px 18px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {studioOnline ? (
+                <span style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid #10b981',
+                  color: '#10b981',
+                  padding: '4px 10px',
+                  borderRadius: 16,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                }}>
+                  🟢 AI Python Сервер: http://{displayHost}:8000
+                </span>
+              ) : (
+                <span style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  padding: '4px 10px',
+                  borderRadius: 16,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                }}>
+                  🔴 AI Сервер оффлайн (запустите start_python_mocap.bat)
+                </span>
+              )}
+              {availableIps.length > 1 && (
+                <select
+                  value={realIp}
+                  onChange={(e) => setRealIp(e.target.value)}
+                  title="Выберите сетевой IP для подключения телефона"
+                  style={{
+                    background: '#1f2430',
+                    color: '#6ee7b7',
+                    border: '1px solid #374151',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {availableIps.map((item) => (
+                    <option key={item.ip} value={item.ip}>
+                      {item.name}: {item.ip}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '0.88rem' }}>
+                Камера смартфона ({activeMode === 'tunnel' ? '🌐 4G/LTE' : '🏠 Wi-Fi'}):{' '}
+                <a
+                  href={activeCamUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#10b981', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  {activeCamUrl}
+                </a>
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setShowStudioQr(!showStudioQr)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: '0.9rem' }}
+              >
+                <span>📱</span>
+                <span>{showStudioQr ? 'Скрыть QR' : 'QR-код для телефона'}</span>
+              </button>
+              <a
+                href="/studio"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', fontSize: '0.9rem', textDecoration: 'none' }}
+              >
+                <span>🚀</span>
+                <span>Открыть во весь экран</span>
+              </a>
+            </div>
+          </div>
+
+          {/* QR Code flyout if toggled */}
+          {showStudioQr && (
+            <div style={{
+              background: '#151720',
+              border: '1px solid #374151',
+              borderRadius: 10,
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 12,
+            }}>
+              {/* Network Mode Switcher: 4G/LTE Global vs Local Wi-Fi */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#0e1017', padding: '4px', borderRadius: '8px', border: '1px solid #2d3345' }}>
+                <button
+                  type="button"
+                  onClick={() => setNetworkMode('tunnel')}
+                  style={{
+                    background: activeMode === 'tunnel' ? '#2563eb' : 'transparent',
+                    color: activeMode === 'tunnel' ? '#ffffff' : '#9ca3af',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <span>🌐</span>
+                  <span>4G / LTE (Любая сеть / Интернет)</span>
+                  {isTunnelAvailable ? (
+                    <span style={{ fontSize: '10px', background: '#10b981', color: '#000', padding: '1px 5px', borderRadius: '4px' }}>АКТИВЕН</span>
+                  ) : (
+                    <span style={{ fontSize: '10px', background: '#eab308', color: '#000', padding: '1px 5px', borderRadius: '4px' }}>ОФФЛАЙН</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNetworkMode('local')}
+                  style={{
+                    background: activeMode === 'local' ? '#10b981' : 'transparent',
+                    color: activeMode === 'local' ? '#000000' : '#9ca3af',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <span>🏠</span>
+                  <span>Локальный Wi-Fi (В одной сети с ПК)</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudioCam('cam1')}
+                  className={`btn ${selectedStudioCam === 'cam1' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                >
+                  🟢 Камера 1 (Фронт)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudioCam('cam2')}
+                  className={`btn ${selectedStudioCam === 'cam2' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                >
+                  🔵 Камера 2 (Сбоку 90°)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedStudioCam('cam3')}
+                  className={`btn ${selectedStudioCam === 'cam3' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ padding: '5px 12px', fontSize: '0.82rem' }}
+                >
+                  🟣 Камера 3 (Диагональ 45°)
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap', maxWidth: 720 }}>
+                <img
+                  src={qrDataUrl || `/qr/${selectedStudioCam}.png`}
+                  onError={(e) => { e.currentTarget.src = `http://${displayHost}:8000/qr/${selectedStudioCam}.png`; }}
+                  alt="QR для камеры смартфона"
+                  style={{ width: 128, height: 128, background: '#fff', padding: 4, borderRadius: 8, border: '2px solid #10b981' }}
+                />
+                <div style={{ maxWidth: 440 }}>
+                  <h4 style={{ color: '#fff', fontSize: '1rem', marginBottom: 4 }}>
+                    {selectedStudioCam === 'cam1' && 'Камера 1 (Фронтальная, 0°)'}
+                    {selectedStudioCam === 'cam2' && 'Камера 2 (Боковая, 90°)'}
+                    {selectedStudioCam === 'cam3' && 'Камера 3 (Диагональная, 45°)'}
+                  </h4>
+                  <p style={{ color: '#9ca3af', fontSize: '0.86rem', lineHeight: 1.4, marginBottom: 6 }}>
+                    {selectedStudioCam === 'cam1' && 'Основная фронтальная плоскость: ширина X, высота Y, осанка и руки.'}
+                    {selectedStudioCam === 'cam2' && 'Боковой ракурс: вычисляет физическую глубину Z и длину стоек в пространстве.'}
+                    {selectedStudioCam === 'cam3' && 'Диагональный ракурс 45°: компенсирует перекрытия рук при скручиваниях.'}
+                  </p>
+                  <div style={{ fontSize: '0.82rem', color: '#f59e0b', marginBottom: 6 }}>
+                    🥋 <i>Все подключенные камеры передают данные в <b>одну общую 3D-модель</b> каратиста.</i>
+                  </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#10b981', marginBottom: 4, wordBreak: 'break-all' }}>
+                    {activeMode === 'tunnel' ? '🌐 Глобальная ссылка (4G / Интернет): ' : '🏠 Локальная ссылка (Wi-Fi): '}
+                    <a href={activeCamUrl} target="_blank" rel="noreferrer" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'underline' }}>
+                      {activeCamUrl}
+                    </a>
+                  </div>
+                  {activeMode === 'tunnel' ? (
+                    <div style={{ fontSize: '0.78rem', color: isTunnelAvailable ? '#10b981' : '#f59e0b', marginTop: '4px' }}>
+                      {isTunnelAvailable ? (
+                        '✅ Телефон может быть в ЛЮБОЙ сети (4G/5G/LTE/другой Wi-Fi). Доступно отовсюду!'
+                      ) : (
+                        '⚠️ Туннель не запущен. Для удаленного захвата запустите start_mocap_tunnel.bat'
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '0.78rem', color: '#6b7280', marginTop: '4px' }}>
+                      (При первом переходе на телефоне нажмите «Дополнительно» → «Перейти на сайт»)
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Embedded Karate Motion Studio iframe */}
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            height: '740px',
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: '1px solid var(--color-border, #2d303e)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          }}>
+            <iframe
+              src="/studio"
+              title="Karate Motion Studio Live"
+              style={{ width: '100%', height: '100%', border: 'none', background: '#0d0e12' }}
+              allow="camera; microphone; accelerometer; gyroscope"
+            />
+          </div>
+        </div>
+      ) : activeTab === 'mocap' ? (
         <MocapStudio />
       ) : (
         <>

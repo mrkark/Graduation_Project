@@ -71,7 +71,19 @@ if (-not (Test-Path $uploadsDir)) {
     New-Item -ItemType Directory -Path $uploadsDir -Force | Out-Null
 }
 $tunnelJsonPath = Join-Path $uploadsDir "tunnel-info.json"
-$tunnelPayload = @{
+$existingPublicUrl = $null
+$existingTunnelActive = $false
+if (Test-Path $tunnelJsonPath) {
+    try {
+        $existingData = Get-Content $tunnelJsonPath -Raw | ConvertFrom-Json
+        if ($existingData.publicUrl) {
+            $existingPublicUrl = $existingData.publicUrl
+            $existingTunnelActive = [bool]$existingData.tunnelActive
+        }
+    } catch {}
+}
+
+$tunnelPayloadObj = [ordered]@{
     active = $true
     localIp = $activeIp
     httpsPort = 8443
@@ -80,8 +92,12 @@ $tunnelPayload = @{
     httpUrl = "http://$activeIp:5173"
     url = "https://$activeIp:8443"
     localIps = $candidateIps
+    publicUrl = $existingPublicUrl
+    tunnelUrl = $existingPublicUrl
+    tunnelActive = $existingTunnelActive
     updatedAt = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-} | ConvertTo-Json -Depth 4
+}
+$tunnelPayload = $tunnelPayloadObj | ConvertTo-Json -Depth 4
 Set-Content -Path $tunnelJsonPath -Value $tunnelPayload -Encoding utf8
 
 # 4. Проверка доступности Docker
@@ -95,20 +111,37 @@ Write-Host "[+] Запуск 4 контейнеров (docker compose up -d --bu
 docker compose up -d --build
 
 if ($LASTEXITCODE -eq 0) {
+    # 5. Проверка и автоматический запуск Python AI MoCap сервера (порты 8000 и 8088)
+    $port8000Active = (Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' })
+    if (-not $port8000Active) {
+        Write-Host "[+] Запуск Python AI MoCap сервера (web_studio_server.py)..." -ForegroundColor Cyan
+        $pythonExe = "C:\Users\user\Downloads\bunkai_explorer_karate_motion_capture\bunkai_explorer_karate_motion_capture\.venv\Scripts\python.exe"
+        if (-not (Test-Path $pythonExe)) {
+            $pythonExe = "python"
+        }
+        $studioScript = Join-Path $CurrentDir "karate_motion_studio\web_studio_server.py"
+        if (Test-Path $studioScript) {
+            Start-Process -FilePath $pythonExe -ArgumentList "`"$studioScript`"" -WorkingDirectory (Split-Path $studioScript) -WindowStyle Minimized
+            Start-Sleep -Seconds 3
+        }
+    }
+
     Write-Host ""
-    Write-Host "[✔] Все 4 контейнера успешно запущены и работают!" -ForegroundColor Green
-    Write-Host "  💻 Фронтенд (ПК):          http://localhost:5173" -ForegroundColor Cyan
-    Write-Host "  ⚙️  Бэкенд API:             http://localhost:5000/api" -ForegroundColor Cyan
-    Write-Host "  🗄️  База данных:           localhost:1433" -ForegroundColor Cyan
-    Write-Host "  📱 AI MoCap Шлюз (QR-код): https://${activeIp}:8443/phone-camera" -ForegroundColor Yellow
+    Write-Host "[✔] Все сервисы и контейнеры успешно запущены и работают!" -ForegroundColor Green
+    Write-Host "  💻 Фронтенд Додзё (ПК):       http://localhost:5173/motion-lab" -ForegroundColor Cyan
+    Write-Host "  🥋 Python AI MoCap (Порт 8000): http://localhost:8000/studio" -ForegroundColor Green
+    Write-Host "  📱 Камера смартфона (HTTPS Wi-Fi): https://${activeIp}:8088/cam1" -ForegroundColor Yellow
+    Write-Host "  🌐 Подключение через 4G/LTE (чужая сеть): запустите start_mocap_tunnel.bat" -ForegroundColor Magenta
+    Write-Host "  ⚙️  Бэкенд API:                http://localhost:5000/api" -ForegroundColor Cyan
+    Write-Host "  🗄️  База данных:              localhost:1433" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Для подключения смартфона:" -ForegroundColor White
-    Write-Host "  1. Убедитесь, что телефон подключен к той же сети Wi-Fi ($activeIp)" -ForegroundColor Gray
-    Write-Host "  2. Откройте веб-интерфейс http://localhost:5173 и нажмите '📱 QR-код'" -ForegroundColor Gray
-    Write-Host "  3. Отсканируйте QR-код и нажмите в браузере телефона:" -ForegroundColor Gray
-    Write-Host "     'Дополнительно' -> 'Перейти на сайт (небезопасно)'" -ForegroundColor Gray
+    Write-Host "Для подключения смартфона (Камера 1 / 2 / 3):" -ForegroundColor White
+    Write-Host "  1. Убедитесь, что телефон подключен к тому же Wi-Fi (IP ПК: $activeIp)" -ForegroundColor Gray
+    Write-Host "  2. Откройте в браузере телефона: https://${activeIp}:8088/cam1" -ForegroundColor Yellow
+    Write-Host "  3. Подтвердите локальный сертификат: 'Дополнительно' -> 'Перейти на сайт'" -ForegroundColor Gray
+    Write-Host "  4. В браузере ПК на http://localhost:5173/motion-lab сразу появится 3D-аватар!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Для просмотра логов выполните: docker compose logs -f" -ForegroundColor Gray
+    Write-Host "Для просмотра логов контейнеров выполните: docker compose logs -f" -ForegroundColor Gray
 } else {
     Write-Host "[!] Ошибка при запуске контейнеров." -ForegroundColor Red
 }

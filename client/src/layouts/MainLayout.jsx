@@ -74,6 +74,10 @@ export default function MainLayout() {
               <span className="navbar__link-title">Aimokap</span>
               <span className="navbar__link-kanji">動</span>
             </NavLink>
+            <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
+              <span className="navbar__link-title">Мокап 3D</span>
+              <span className="navbar__link-kanji">撮</span>
+            </NavLink>
             <NavLink to="/bunkai/new" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Студия</span>
               <span className="navbar__link-kanji">創</span>
@@ -186,6 +190,10 @@ export default function MainLayout() {
               <NavLink to="/motion-lab" className="mobile-drawer__link">
                 <span>Aimokap (AI Камера)</span>
                 <span className="mobile-drawer__kanji">動態</span>
+              </NavLink>
+              <NavLink to="/karate-studio" className="mobile-drawer__link">
+                <span>Karate Motion Studio 3D</span>
+                <span className="mobile-drawer__kanji">撮像</span>
               </NavLink>
               <NavLink to="/bunkai/new" className="mobile-drawer__link">
                 <span>Студия бункай</span>

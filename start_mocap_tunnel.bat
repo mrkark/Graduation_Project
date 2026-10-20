@@ -1,9 +1,15 @@
 @echo off
-title AI MoCap HTTPS Gateway - Karate Bunkai Explorer
+chcp 65001 >nul
+title Karate Bunkai Explorer - AI MoCap Global Internet Tunnel (4G/5G/LTE)
+color 0b
+
 echo ========================================================
-echo   Karate Bunkai Explorer - AI MoCap HTTPS Gateway
+echo  🥋 Karate Bunkai Explorer — AI MoCap Global Tunnel
+echo  Подключение мобильных телефонов через 4G/5G/LTE
 echo ========================================================
-echo Starting local secure HTTPS gateway for phone cameras...
+echo.
+
 cd /d "%~dp0"
-node scripts\start-mocap-gateway.js
+node scripts\start-mocap-tunnel.js
+
 pause
