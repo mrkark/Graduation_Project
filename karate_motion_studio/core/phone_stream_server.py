@@ -867,9 +867,9 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
       <div class="select-wrapper">
         <select id="resSelect">
-          <option value="540p" selected>⚡ Турбо 540p (Мин. задержка)</option>
-          <option value="720p">HD 720p (Баланс)</option>
-          <option value="480p">SD 480p (Макс. FPS)</option>
+          <option value="480p" selected>⚡ Турбо 480p (Мин. задержка, рекомендуем)</option>
+          <option value="540p">540p (Баланс)</option>
+          <option value="720p">HD 720p (Детализация)</option>
           <option value="1080p">Full HD 1080p</option>
         </select>
         <div class="select-arrow">▼</div>

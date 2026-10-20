@@ -45,6 +45,12 @@ from core.retargeter import Retargeter
 from core.project_schema import FrameData
 
 try:
+    from gui.draw_utils import draw_badge_utf8, draw_text_utf8
+except Exception:
+    draw_badge_utf8 = None
+    draw_text_utf8 = None
+
+try:
     import qrcode
     HAS_QRCODE = True
 except ImportError:
@@ -113,8 +119,8 @@ HTTPS_PORT = 8088
 USE_SSL = (ASSETS_DIR / "ssl_cert.pem").exists() and (ASSETS_DIR / "ssl_key.pem").exists()
 
 # Dedicated Multi-Camera Trackers
-# Cam 1 (Front): fast complexity 0 with hands enabled
-tracker_cam1 = MocapTracker(track_hands=True, model_complexity=0)
+# Cam 1 (Front): ultra-fast complexity 0 pose (track_hands=False for zero latency)
+tracker_cam1 = MocapTracker(track_hands=False, model_complexity=0)
 # Cam 2 (Side - Profile Depth): ultra-fast complexity 0 pose
 tracker_cam2 = MocapTracker(track_hands=False, model_complexity=0)
 # Cam 3 (Diagonal - Occlusion Recovery): ultra-fast complexity 0 pose
@@ -355,10 +361,14 @@ def process_multicam_worker(
             pr = tile_w - scaled.shape[1] - pl
             scaled = cv2.copyMakeBorder(scaled, 0, 0, pl, pr, cv2.BORDER_CONSTANT, value=[0, 0, 0])
 
-        # Overlay title badge
-        cv2.rectangle(scaled, (10, 10), (min(scaled.shape[1]-10, 240), 40), (15, 20, 28), -1)
-        cv2.rectangle(scaled, (10, 10), (min(scaled.shape[1]-10, 240), 40), badge_col, 2)
-        cv2.putText(scaled, badge_title, (18, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.55, badge_col, 2)
+        # Overlay title badge (Supports Cyrillic without ???)
+        if draw_badge_utf8 is not None:
+            draw_badge_utf8(scaled, badge_title, top_left=(12, 12), badge_color=badge_col, font_size=13)
+        else:
+            ascii_title = {"cam1": "CAM 1 (FRONT)", "cam2": "CAM 2 (SIDE 90)", "cam3": "CAM 3 (DIAG 45)"}.get(cid, cid.upper())
+            cv2.rectangle(scaled, (10, 10), (min(scaled.shape[1]-10, 240), 40), (15, 20, 28), -1)
+            cv2.rectangle(scaled, (10, 10), (min(scaled.shape[1]-10, 240), 40), badge_col, 2)
+            cv2.putText(scaled, ascii_title, (18, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.55, badge_col, 2)
         proc_tiles.append(scaled)
 
     if not proc_tiles:
