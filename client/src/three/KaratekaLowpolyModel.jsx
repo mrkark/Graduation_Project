@@ -476,30 +476,31 @@ export default function KaratekaLowpolyModel({
     });
   }, [animations]);
 
-  // Переключение стойки (stance) — только если НЕ активен kataMode
+  // Переключение стойки (stance) — только если НЕ активен kataMode (стойка Йой)
   useEffect(() => {
     if (kataMode || !clipsLoaded || !mixer) return;
 
-    const clipName = getStanceClipName(stance);
+    const clipName = getStanceClipName(stance || 'ready');
     const rawClip = resolveClip(clipName) || globalClipCache.get(clipName);
     if (!rawClip) return;
     const clip = getFilteredClip(rawClip);
     if (!clip || clip.tracks.length === 0) return;
 
-    // Если сейчас не проигрывается динамический приём
-    if (!activeClipRef.current) {
-      const newAction = mixer.clipAction(clip);
-      newAction.setLoop(THREE.LoopRepeat);
-      newAction.timeScale = speed;
+    // Полная остановка предыдущих действий (включая ката-клипы) для гарантированного перехода в стойку (Задача 12)
+    mixer.stopAllAction();
+    activeClipRef.current = null;
 
-      if (currentActionRef.current && currentActionRef.current !== newAction) {
-        newAction.reset();
-        newAction.crossFadeFrom(currentActionRef.current, 0.35, true);
-        newAction.play();
-      } else {
-        newAction.play();
-      }
-      currentActionRef.current = newAction;
+    const newAction = mixer.clipAction(clip);
+    newAction.reset();
+    newAction.setLoop(THREE.LoopRepeat);
+    newAction.timeScale = speed;
+    newAction.paused = false;
+    newAction.play();
+    currentActionRef.current = newAction;
+
+    if (groupRef.current) {
+      groupRef.current.position.set(0, 0, 0);
+      groupRef.current.rotation.set(0, 0, 0);
     }
   }, [kataMode, stance, clipsLoaded, mixer, speed, getFilteredClip]);
 

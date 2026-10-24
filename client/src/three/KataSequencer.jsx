@@ -98,48 +98,66 @@ function EmbusenTrajectory({ points = [], currentIdx = 0, onSelectStep = null, e
 }
 
 /**
- * Плавный кинематографический риг камеры:
- * Исключает рывки, резкие скачки и непроизвольные сбросы ракурса при переключении шагов.
- * При включенном следовании (Follow) камера плавно скользит за мастером по татами,
- * синхронно перемещая фокус и позицию, благодаря чему угол поворота и зум пользователя сохраняются.
- * В статическом режиме камера полностью неподвижна, позволяя изучать форму из одной точки.
+ * Плавный кинематографический риг камеры с физическими границами Додзё:
+ * - Исключает рывки, резкие скачки и непроизвольные сбросы ракурса.
+ * - Ограничивает перемещение камеры (clamping): камера НЕ может вылететь за пределы додзё
+ *   ни при автоматическом следовании, ни при ручном вращении/панорамировании (Задача 11).
  */
+const DOJO_LIMITS = {
+  minX: -7.2,
+  maxX: 7.2,
+  minZ: -7.2,
+  maxZ: 7.2,
+  minY: 0.25,
+  maxY: 3.8,
+  targetMinX: -4.8,
+  targetMaxX: 4.8,
+  targetMinZ: -4.8,
+  targetMaxZ: 4.8,
+  targetMinY: 0.4,
+  targetMaxY: 1.8,
+};
+
 function SmoothCameraRig({ targetPosition, avatarRealPosRef, isFullMode, follow, hasStarted, controlsRef }) {
   useFrame((state, delta) => {
     if (!controlsRef.current) return;
     const controls = controlsRef.current;
 
-    if (!hasStarted) return;
-
-    if (follow) {
-      // В режиме полной демонстрации камера плавно следует за ТОЧНЫМ физическим положением аватара
-      // (Hips/Root в мировом пространстве Three.js), благодаря чему камера никогда не опережает мастера!
+    if (hasStarted && follow) {
       const currentPos = (isFullMode && avatarRealPosRef?.current)
         ? avatarRealPosRef.current
         : targetPosition;
 
-      if (!currentPos) return;
+      if (currentPos) {
+        const tx = currentPos[0];
+        const tz = currentPos[2];
+        const ty = 0.95;
 
-      const tx = currentPos[0];
-      const tz = currentPos[2];
-      const ty = 0.95;
+        const factor = 1.0 - Math.exp(-3.5 * Math.min(delta, 0.1));
+        const dx = (tx - controls.target.x) * factor;
+        const dy = (ty - controls.target.y) * factor;
+        const dz = (tz - controls.target.z) * factor;
 
-      const factor = 1.0 - Math.exp(-3.5 * Math.min(delta, 0.1));
-      const dx = (tx - controls.target.x) * factor;
-      const dy = (ty - controls.target.y) * factor;
-      const dz = (tz - controls.target.z) * factor;
+        controls.target.x += dx;
+        controls.target.y += dy;
+        controls.target.z += dz;
 
-      // Синхронно смещаем и target, и camera.position, чтобы ориентация орбиты пользователя не нарушалась
-      controls.target.x += dx;
-      controls.target.y += dy;
-      controls.target.z += dz;
-
-      state.camera.position.x += dx;
-      state.camera.position.y += dy;
-      state.camera.position.z += dz;
-
-      controls.update();
+        state.camera.position.x += dx;
+        state.camera.position.y += dy;
+        state.camera.position.z += dz;
+      }
     }
+
+    // Задача 11: жестко ограничиваем координаты камеры и фокуса в пределах стен и потолка Додзё
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, DOJO_LIMITS.targetMinX, DOJO_LIMITS.targetMaxX);
+    controls.target.y = THREE.MathUtils.clamp(controls.target.y, DOJO_LIMITS.targetMinY, DOJO_LIMITS.targetMaxY);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, DOJO_LIMITS.targetMinZ, DOJO_LIMITS.targetMaxZ);
+
+    state.camera.position.x = THREE.MathUtils.clamp(state.camera.position.x, DOJO_LIMITS.minX, DOJO_LIMITS.maxX);
+    state.camera.position.y = THREE.MathUtils.clamp(state.camera.position.y, DOJO_LIMITS.minY, DOJO_LIMITS.maxY);
+    state.camera.position.z = THREE.MathUtils.clamp(state.camera.position.z, DOJO_LIMITS.minZ, DOJO_LIMITS.maxZ);
+
+    controls.update();
   });
 
   return null;
@@ -330,12 +348,12 @@ export default function KataSequencer({
           {/* Традиционное деревянное додзё и татами */}
           <TraditionalDojo />
 
-          {/* Аватар мастера Шотокан: составление ката из переиспользуемых клипов v4 либо MoCap мастер */}
+          {/* Аватар мастера Шотокан: в стойке Йой до старта (Задача 9), далее клиповая композиция/MoCap */}
           <KaratekaLowpolyModel
             role="tori"
             kataMode={hasStarted}
-            stance={currentStep.stance || 'ready'}
-            stepClip={playbackMode === 'full' ? null : (executionMethod === 'composed' ? currentStep.clipName : null)}
+            stance={!hasStarted ? 'ready' : (currentStep.stance || 'ready')}
+            stepClip={!hasStarted ? null : (playbackMode === 'full' ? null : (executionMethod === 'composed' ? currentStep.clipName : null))}
             blendDuration={currentStep.blendDuration || 0.14}
             kataExecutionMode={playbackMode === 'full' ? 'full' : executionMethod}
             kataClipName={kataSlug}
@@ -347,8 +365,8 @@ export default function KataSequencer({
             replayTrigger={replayTrigger}
             currentStep={currentStep}
             prevStep={composedSteps[currentIdx - 1] || null}
-            position={playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.position : [0, 0, 0])}
-            rotation={playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.rotation : [0, 0, 0])}
+            position={!hasStarted ? [0, 0, 0] : (playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.position : [0, 0, 0]))}
+            rotation={!hasStarted ? [0, 0, 0] : (playbackMode === 'full' ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.rotation : [0, 0, 0]))}
             onStepEnd={handleStepEnd}
             onTimeUpdate={handleTimeUpdate}
           />
@@ -373,8 +391,9 @@ export default function KataSequencer({
           <OrbitControls
             ref={controlsRef}
             minDistance={1.2}
-            maxDistance={7.5}
-            maxPolarAngle={Math.PI / 2 - 0.04}
+            maxDistance={6.4}
+            maxPolarAngle={Math.PI / 2 - 0.06}
+            minPolarAngle={0.12}
             enablePan
             enableDamping
             dampingFactor={0.08}
@@ -677,21 +696,34 @@ export default function KataSequencer({
             >
               🔄 С начала
             </button>
-            {hasStarted && (
-              <button
-                className="btn"
-                style={{ padding: '6px 12px', fontSize: '0.85rem', color: 'var(--color-gold, #c5a059)' }}
-                onClick={() => {
-                  setHasStarted(false);
-                  setIsPlaying(false);
-                  setCurrentIdx(0);
-                  if (onStepChange) onStepChange(0);
-                }}
-                title="Вернуться в исходную стойку Йой"
-              >
-                🥋 В стойку Йой
-              </button>
-            )}
+            {/* Кнопка "В стойку Йой" (Задача 12) — стабильно присутствует, исключая скачки верстки (Задача 13) */}
+            <button
+              type="button"
+              className="btn"
+              style={{
+                padding: '6px 12px',
+                fontSize: '0.85rem',
+                color: hasStarted ? '#c5a059' : 'rgba(197, 160, 89, 0.4)',
+                borderColor: hasStarted ? 'rgba(197, 160, 89, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+                opacity: hasStarted ? 1 : 0.45,
+                pointerEvents: hasStarted ? 'auto' : 'none',
+              }}
+              onClick={() => {
+                setHasStarted(false);
+                setIsPlaying(false);
+                setCurrentIdx(0);
+                setScrubProgress(null);
+                setCurrentTime(0);
+                if (onStepChange) onStepChange(0);
+                if (controlsRef.current) {
+                  controlsRef.current.target.set(0, 0.95, 0);
+                  controlsRef.current.update();
+                }
+              }}
+              title="Вернуться в исходную стойку Йой"
+            >
+              🥋 В стойку Йой
+            </button>
             {playbackMode === 'steps' && (
               <button
                 className="btn"
@@ -709,24 +741,33 @@ export default function KataSequencer({
             )}
           </div>
 
-          {/* Селектор скорости (Slow-Mo) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted, #a0a0a0)', marginRight: 2 }}>Скорость:</span>
-            {[0.5, 1.0, 1.5].map((s) => (
-              <button
-                key={s}
-                className="btn"
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.76rem',
-                  borderColor: speed === s ? 'var(--color-gold, #c5a059)' : undefined,
-                  background: speed === s ? 'rgba(197, 160, 89, 0.2)' : undefined,
-                }}
-                onClick={() => setSpeed(s)}
-              >
-                {s}x
-              </button>
-            ))}
+          {/* Селектор скорости (Slow-Mo) — Задача 10: четкий контрастный дизайн, без "черного на черном" */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.8rem', color: '#cbd5e1', marginRight: 2, fontWeight: 600 }}>Скорость:</span>
+            {[0.5, 1.0, 1.5].map((s) => {
+              const isActive = speed === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    border: isActive ? '1px solid #ffd700' : '1px solid rgba(255, 255, 255, 0.2)',
+                    background: isActive ? '#c5a059' : 'rgba(255, 255, 255, 0.08)',
+                    color: isActive ? '#14110b' : '#f1f5f9',
+                    boxShadow: isActive ? '0 0 10px rgba(197, 160, 89, 0.5)' : 'none',
+                  }}
+                  onClick={() => setSpeed(s)}
+                >
+                  {s}x
+                </button>
+              );
+            })}
           </div>
         </div>
 
