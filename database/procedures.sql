@@ -1715,5 +1715,137 @@ BEGIN
 END;
 GO
 
+-- ============================================================
+-- УВЕДОМЛЕНИЯ (Персистентные и оффлайн-уведомления)
+-- ============================================================
+
+-- Создание уведомления для пользователя
+CREATE OR ALTER PROCEDURE dbo.sp_Notification_Create
+    @UserId INT,
+    @Type NVARCHAR(50),
+    @Title NVARCHAR(200),
+    @Message NVARCHAR(MAX),
+    @TargetURL NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.Notifications (User_ID, Type, Title, Message, Target_URL, Is_Read, Created_At)
+    VALUES (@UserId, @Type, @Title, @Message, @TargetURL, 0, SYSUTCDATETIME());
+
+    DECLARE @NewId INT = SCOPE_IDENTITY();
+
+    SELECT Notification_ID, User_ID, Type, Title, Message, Target_URL, Is_Read, Created_At
+    FROM dbo.Notifications
+    WHERE Notification_ID = @NewId;
+END;
+GO
+
+-- Список уведомлений пользователя
+CREATE OR ALTER PROCEDURE dbo.sp_Notification_List
+    @UserId INT,
+    @Limit INT = 30
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP (@Limit) Notification_ID, User_ID, Type, Title, Message, Target_URL, Is_Read, Created_At
+    FROM dbo.Notifications
+    WHERE User_ID = @UserId
+    ORDER BY Created_At DESC;
+END;
+GO
+
+-- Отметка уведомления (или всех) как прочитанных
+CREATE OR ALTER PROCEDURE dbo.sp_Notification_MarkRead
+    @UserId INT,
+    @NotificationId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @NotificationId IS NOT NULL
+    BEGIN
+        UPDATE dbo.Notifications
+        SET Is_Read = 1
+        WHERE Notification_ID = @NotificationId AND User_ID = @UserId;
+    END
+    ELSE
+    BEGIN
+        UPDATE dbo.Notifications
+        SET Is_Read = 1
+        WHERE User_ID = @UserId AND Is_Read = 0;
+    END;
+
+    SELECT @@ROWCOUNT AS UpdatedCount;
+END;
+GO
+
+-- Получение количества непрочитанных уведомлений
+CREATE OR ALTER PROCEDURE dbo.sp_Notification_GetUnreadCount
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT COUNT(*) AS UnreadCount
+    FROM dbo.Notifications
+    WHERE User_ID = @UserId AND Is_Read = 0;
+END;
+GO
+
+-- ============================================================
+-- ИЗБРАННОЕ (Ката и Бункай)
+-- ============================================================
+
+-- Переключение статуса "избранное" (toggle)
+CREATE OR ALTER PROCEDURE dbo.sp_Favorite_Toggle
+    @UserId INT,
+    @ItemType NVARCHAR(20),
+    @ItemId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @ItemType NOT IN (N'kata', N'bunkai')
+        THROW 50000, N'ERR|400|INVALID_ITEM_TYPE|Недопустимый тип избранного', 1;
+
+    IF EXISTS (SELECT 1 FROM dbo.Favorites WHERE User_ID = @UserId AND Item_Type = @ItemType AND Item_ID = @ItemId)
+    BEGIN
+        DELETE FROM dbo.Favorites
+        WHERE User_ID = @UserId AND Item_Type = @ItemType AND Item_ID = @ItemId;
+
+        SELECT 0 AS Is_Favorite, @ItemType AS Item_Type, @ItemId AS Item_ID;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.Favorites (User_ID, Item_Type, Item_ID, Created_At)
+        VALUES (@UserId, @ItemType, @ItemId, SYSUTCDATETIME());
+
+        SELECT 1 AS Is_Favorite, @ItemType AS Item_Type, @ItemId AS Item_ID;
+    END;
+END;
+GO
+
+-- Список всех избранных сущностей пользователя
+CREATE OR ALTER PROCEDURE dbo.sp_Favorite_List
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT Favorite_ID, User_ID, Item_Type, Item_ID, Created_At
+    FROM dbo.Favorites
+    WHERE User_ID = @UserId
+    ORDER BY Created_At DESC;
+END;
+GO
+
+-- Получение списка User_ID, добавивших ката в избранное
+CREATE OR ALTER PROCEDURE dbo.sp_Favorite_GetUsersForKata
+    @KataId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT DISTINCT User_ID
+    FROM dbo.Favorites
+    WHERE Item_Type = N'kata' AND Item_ID = @KataId;
+END;
+GO
+
 PRINT N'Процедуры и функции Bunkai Explorer созданы успешно.';
 GO

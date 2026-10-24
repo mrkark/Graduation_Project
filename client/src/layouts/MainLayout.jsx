@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { listFriendRequests } from '../api/friends';
+import { listNotifications, markNotificationRead } from '../api/notifications';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './MainLayout.css';
@@ -20,13 +21,30 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const { socket } = useChatSocket();
 
-  // Первичная подгрузка заявок в соратники при авторизации (Задача 39)
+  // Первичная подгрузка заявок в соратники и оффлайн/персистентных уведомлений (Задачи 6, 7, 39)
   useEffect(() => {
     if (!user) return;
     listFriendRequests('incoming')
       .then((reqs) => {
         if (Array.isArray(reqs)) {
           setIncomingRequestsCount(reqs.length);
+        }
+      })
+      .catch(() => {});
+
+    listNotifications(30)
+      .then((data) => {
+        if (data && Array.isArray(data.items)) {
+          const loaded = data.items.map((item) => ({
+            id: item.Notification_ID,
+            type: item.Type,
+            title: item.Title,
+            message: item.Message,
+            targetUrl: item.Target_URL,
+            isRead: item.Is_Read,
+            time: item.Created_At ? new Date(item.Created_At).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          }));
+          setNotifications(loaded);
         }
       })
       .catch(() => {});
@@ -74,30 +92,54 @@ export default function MainLayout() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Обработка real-time уведомлений через сокет (Задачи 39, 44)
+  // Клик по уведомлению: переброс на нужную страницу (чат, прием в друзья, бункай, додзё) + отметка о прочтении (Задачи 6, 7)
+  const handleNotificationClick = (n) => {
+    setNotificationsOpen(false);
+    if (n.id && !n.isRead) {
+      markNotificationRead(n.id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, isRead: true } : item))
+      );
+    }
+    const target = n.targetUrl || (n.type === 'message' ? '/chat' : n.type === 'dojo_invite' ? '/dojos' : '/friends?tab=incoming');
+    navigate(target);
+  };
+
+  const handleClearNotifications = () => {
+    markNotificationRead(null).catch(() => {});
+    setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+    setIncomingRequestsCount(0);
+  };
+
+  // Обработка real-time уведомлений через сокет (Задачи 6, 7, 39, 44)
   useEffect(() => {
     if (!socket?.current || !user) return;
     const s = socket.current;
 
     function handleNotification(notif) {
-      setIncomingRequestsCount((prev) => prev + 1);
+      if (notif.type === 'friend_request') {
+        setIncomingRequestsCount((prev) => prev + 1);
+      }
       const notifItem = {
-        id: Date.now() + Math.random(),
-        type: 'friend_request',
-        title: 'Заявка в соратники',
-        message: notif.message || `${notif.senderName || 'Пользователь'} отправил вам заявку в соратники`,
+        id: notif.id || Date.now() + Math.random(),
+        type: notif.type || 'friend_request',
+        title: notif.title || 'Уведомление Додзё',
+        message: notif.message || 'Новое событие',
+        targetUrl: notif.targetUrl || (notif.type === 'dojo_invite' ? '/dojos' : notif.type === 'bunkai_new' ? notif.targetUrl : '/friends?tab=incoming'),
+        isRead: false,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setNotifications((prev) => [notifItem, ...prev.slice(0, 14)]);
+      setNotifications((prev) => [notifItem, ...prev.slice(0, 29)]);
 
+      const icon = notif.type === 'dojo_invite' ? '⛩️' : notif.type === 'bunkai_new' ? '🥋' : '🤝';
       setToast({
         id: notifItem.id,
-        icon: '🥋',
-        title: 'Новая заявка в соратники',
-        message: notif.message || `${notif.senderName || 'Пользователь'} хочет добавить вас в соратники`,
-        actionText: 'Посмотреть заявки →',
+        icon,
+        title: notifItem.title,
+        message: notifItem.message,
+        actionText: 'Перейти к событию →',
         onClick: () => {
-          navigate('/friends?tab=incoming');
+          handleNotificationClick(notifItem);
           setToast(null);
         },
       });
@@ -106,14 +148,16 @@ export default function MainLayout() {
     function handleChatNotification(notif) {
       if (notif.authorId === user.User_ID) return;
       const notifItem = {
-        id: Date.now() + Math.random(),
+        id: notif.id || Date.now() + Math.random(),
         type: 'message',
         title: `Сообщение от ${notif.authorName || 'соратника'}`,
         message: notif.snippet || 'Новое сообщение',
         roomId: notif.roomId,
+        targetUrl: notif.targetUrl || '/chat',
+        isRead: false,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setNotifications((prev) => [notifItem, ...prev.slice(0, 14)]);
+      setNotifications((prev) => [notifItem, ...prev.slice(0, 29)]);
 
       // Если пользователь не в данном чате, показать всплывающий интерактивный тост
       if (location.pathname !== '/chat') {
@@ -124,7 +168,7 @@ export default function MainLayout() {
           message: notif.snippet || 'Новое сообщение в чате',
           actionText: 'Открыть беседу →',
           onClick: () => {
-            navigate('/chat');
+            handleNotificationClick(notifItem);
             setToast(null);
           },
         });
@@ -141,7 +185,8 @@ export default function MainLayout() {
   }, [socket, user, location.pathname, navigate]);
 
   const isStaff = role === 'admin' || role === 'moderator';
-  const totalUnreadCount = incomingRequestsCount + notifications.length;
+  const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
+  const totalUnreadCount = incomingRequestsCount + unreadNotificationsCount;
 
   return (
     <div className="site-shell">
@@ -227,10 +272,7 @@ export default function MainLayout() {
                           <button
                             type="button"
                             className="navbar__notifications-clear"
-                            onClick={() => {
-                              setNotifications([]);
-                              setIncomingRequestsCount(0);
-                            }}
+                            onClick={handleClearNotifications}
                           >
                             Сбросить
                           </button>
@@ -246,7 +288,7 @@ export default function MainLayout() {
                               navigate('/friends?tab=incoming');
                             }}
                           >
-                            <span className="navbar__notification-item-icon">🥋</span>
+                            <span className="navbar__notification-item-icon">🤝</span>
                             <div className="navbar__notification-body">
                               <div className="navbar__notification-item-title">Заявки в соратники</div>
                               <div className="navbar__notification-item-text">
@@ -259,21 +301,17 @@ export default function MainLayout() {
                         {notifications.map((n) => (
                           <div
                             key={n.id}
-                            className="navbar__notification-item"
-                            onClick={() => {
-                              setNotificationsOpen(false);
-                              if (n.type === 'message') {
-                                navigate('/chat');
-                              } else {
-                                navigate('/friends?tab=incoming');
-                              }
-                            }}
+                            className={`navbar__notification-item ${!n.isRead ? 'navbar__notification-item--unread' : ''}`}
+                            onClick={() => handleNotificationClick(n)}
                           >
                             <span className="navbar__notification-item-icon">
-                              {n.type === 'message' ? '💬' : '🥋'}
+                              {n.type === 'message' ? '💬' : n.type === 'dojo_invite' ? '⛩️' : n.type === 'bunkai_new' ? '🥋' : '🤝'}
                             </span>
                             <div className="navbar__notification-body">
-                              <div className="navbar__notification-item-title">{n.title}</div>
+                              <div className="navbar__notification-item-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span>{n.title}</span>
+                                {!n.isRead && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: 'var(--vermilion, #e53935)' }} />}
+                              </div>
                               <div className="navbar__notification-item-text">{n.message}</div>
                               {n.time && <div className="navbar__notification-item-time">{n.time}</div>}
                             </div>

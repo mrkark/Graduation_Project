@@ -1,6 +1,7 @@
 const { verifyAccessToken } = require('../utils/jwt');
 const authRepo = require('../db/authRepo');
 const chatRepo = require('../db/chatRepo');
+const notificationRepo = require('../db/notificationRepo');
 const { callScalarFunction } = require('../db/execProc');
 const { logActivity } = require('../utils/activityLogger');
 
@@ -83,14 +84,34 @@ function registerChatSocket(io) {
 
         io.to(`room:${roomId}`).emit('message:new', message);
 
+        const authorName = socket.user.Display_Name || socket.user.Username;
+        const snippet = trimmed.slice(0, 80);
+
+        // Сохраняем персистентное уведомление в БД для соратников (Задачи 6 и 7)
+        try {
+          const recipients = await chatRepo.getRoomRecipients(roomId, socket.user.User_ID);
+          for (const recipientId of recipients) {
+            await notificationRepo.createNotification(
+              recipientId,
+              'message',
+              `Сообщение от ${authorName}`,
+              snippet,
+              '/chat'
+            );
+          }
+        } catch (e) {
+          console.error('Failed to create persistent chat notification:', e);
+        }
+
         // Задача 44: мгновенное всплывающее уведомление для соратников в сети
         socket.broadcast.emit('chat:notification', {
           type: 'message',
           roomId,
           messageId: message.Message_ID,
-          authorName: socket.user.Display_Name || socket.user.Username,
+          authorName,
           authorId: socket.user.User_ID,
-          snippet: trimmed.slice(0, 60),
+          snippet,
+          targetUrl: '/chat',
         });
 
         cb?.({ ok: true, message });

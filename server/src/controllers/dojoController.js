@@ -1,4 +1,5 @@
 const dojoRepo = require('../db/dojoRepo');
+const notificationRepo = require('../db/notificationRepo');
 const { ok, created, fail } = require('../utils/apiResponse');
 const { logActivity } = require('../utils/activityLogger');
 
@@ -57,13 +58,25 @@ async function inviteUser(req, res, next) {
       ip: req.ip,
     });
 
+    // Персистентное уведомление в БД (Задачи 6 и 7)
+    const dojoMsg = `${req.user.Display_Name || req.user.Username} пригласил вас в Додзё «${result.Dojo_Name}»`;
+    const savedNotif = await notificationRepo.createNotification(
+      targetUserId,
+      'dojo_invite',
+      'Приглашение в Додзё',
+      dojoMsg,
+      '/dojos'
+    );
+
     // Оповещение в реальном времени через Socket.IO
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${targetUserId}`).emit('notification', {
+        id: savedNotif.Notification_ID,
         type: 'dojo_invite',
         title: 'Приглашение в Додзё',
-        message: `${req.user.Display_Name || req.user.Username} пригласил вас в Додзё «${result.Dojo_Name}»`,
+        message: dojoMsg,
+        targetUrl: '/dojos',
         data: { dojoId, dojoName: result.Dojo_Name },
       });
     }

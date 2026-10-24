@@ -14,6 +14,8 @@ const friendRoutes = require('./routes/friendRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const dojoRoutes = require('./routes/dojoRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
 
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
 
@@ -130,6 +132,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dojos', dojoRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/favorites', favoriteRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/animations', require('./routes/animationRoutes'));
 

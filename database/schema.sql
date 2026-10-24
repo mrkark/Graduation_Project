@@ -322,5 +322,43 @@ GO
 CREATE INDEX IX_DojoMembers_User ON dbo.DojoMembers(User_ID, Status);
 GO
 
+-- =========================================================
+-- 13. Notifications (Оффлайн и персистентные уведомления)
+-- =========================================================
+IF OBJECT_ID('dbo.Notifications', 'U') IS NOT NULL DROP TABLE dbo.Notifications;
+GO
+CREATE TABLE dbo.Notifications (
+    Notification_ID INT IDENTITY(1,1) PRIMARY KEY,
+    User_ID         INT NOT NULL,
+    Type            NVARCHAR(50) NOT NULL, -- 'friend_request', 'message', 'dojo_invite', 'bunkai_new'
+    Title           NVARCHAR(200) NOT NULL,
+    Message         NVARCHAR(MAX) NOT NULL,
+    Target_URL      NVARCHAR(500) NULL,    -- '/chat', '/friends?tab=incoming', '/bunkai/5', '/dojos'
+    Is_Read         BIT NOT NULL DEFAULT 0,
+    Created_At      DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Notifications_Users FOREIGN KEY (User_ID) REFERENCES dbo.Users(User_ID) ON DELETE CASCADE
+);
+GO
+CREATE INDEX IX_Notifications_User_Read ON dbo.Notifications(User_ID, Is_Read, Created_At DESC);
+GO
+
+-- =========================================================
+-- 14. Favorites (Избранные ката и бункай)
+-- =========================================================
+IF OBJECT_ID('dbo.Favorites', 'U') IS NOT NULL DROP TABLE dbo.Favorites;
+GO
+CREATE TABLE dbo.Favorites (
+    Favorite_ID INT IDENTITY(1,1) PRIMARY KEY,
+    User_ID     INT NOT NULL,
+    Item_Type   NVARCHAR(20) NOT NULL, -- 'kata' or 'bunkai'
+    Item_ID     INT NOT NULL,
+    Created_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Favorites_Users FOREIGN KEY (User_ID) REFERENCES dbo.Users(User_ID) ON DELETE CASCADE,
+    CONSTRAINT UQ_Favorites_User_Item UNIQUE (User_ID, Item_Type, Item_ID)
+);
+GO
+CREATE INDEX IX_Favorites_User ON dbo.Favorites(User_ID, Item_Type);
+GO
+
 PRINT 'Схема Bunkai Explorer успешно создана.';
 GO

@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
+import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import { HankoSeal, ShotokanTiger, DojoDivider, SearchIcon } from '../components/ui/JapaneseDecor';
 import './BunkaiListPage.css';
@@ -45,6 +46,14 @@ export default function BunkaiListPage() {
   const [loading, setLoading] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchBoxRef = useRef(null);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+
+  // Избранные бункай (Задача 8)
+  const { bunkaiFavorites, isBunkaiFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
+
+  useEffect(() => {
+    if (!favsLoaded) fetchFavorites();
+  }, [favsLoaded, fetchFavorites]);
 
   const search = params.get('search') || '';
   const sort = params.get('sort') || 'newest';
@@ -97,15 +106,18 @@ export default function BunkaiListPage() {
     setShowSuggestions(false);
   }
 
-  // Задача 15: поиск только по названию бункай
+  // Задача 15: поиск только по названию бункай + фильтр избранного (Задача 8)
   const filteredItems = useMemo(() => {
     const q = (search || '').trim().toLowerCase();
     return items.filter((b) => {
+      if (onlyFavorites && !bunkaiFavorites.includes(Number(b.Bunkai_ID))) {
+        return false;
+      }
       if (!q) return true;
       const title = (b.Title || '').toLowerCase();
       return title.includes(q);
     });
-  }, [items, search]);
+  }, [items, search, onlyFavorites, bunkaiFavorites]);
 
   return (
     <div className="container bunkai-catalog">
@@ -194,6 +206,15 @@ export default function BunkaiListPage() {
           </div>
 
           <div className="atlas-search-meta-group">
+            <button
+              type="button"
+              className={`btn ${onlyFavorites ? 'btn-primary' : 'btn-subtle'}`}
+              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+              onClick={() => setOnlyFavorites(!onlyFavorites)}
+            >
+              <span>{onlyFavorites ? '❤️ Только избранные' : '🤍 Избранное'} ({bunkaiFavorites.length})</span>
+            </button>
+
             <span className="atlas-found-badge">
               Найдено: <strong>{filteredItems.length}</strong> сценариев
             </span>
@@ -238,7 +259,22 @@ export default function BunkaiListPage() {
                         <span>Тори</span>
                       </span>
                     </span>
-                    <span className={`bunkai-unit__difficulty bunkai-unit__difficulty--${diffKey}`}>{diffLabel}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className={`bunkai-unit__difficulty bunkai-unit__difficulty--${diffKey}`}>{diffLabel}</span>
+                      <button
+                        type="button"
+                        className={`bunkai-fav-btn ${isBunkaiFavorite(b.Bunkai_ID) ? 'active' : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleFavorite('bunkai', b.Bunkai_ID);
+                        }}
+                        title={isBunkaiFavorite(b.Bunkai_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                        aria-label="Избранное"
+                      >
+                        {isBunkaiFavorite(b.Bunkai_ID) ? '❤️' : '🤍'}
+                      </button>
+                    </div>
                   </div>
 
                   <h3 className="bunkai-unit__title">{b.Title}</h3>

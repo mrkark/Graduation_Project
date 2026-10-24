@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { listKata } from '../api/kata';
 import { useAuthStore } from '../store/authStore';
+import { useFavoritesStore } from '../store/favoritesStore';
 import {
   HankoSeal,
   ShotokanTiger,
@@ -211,6 +212,13 @@ export default function KataListPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchBoxRef = useRef(null);
 
+  // Избранные ката (Задача 8)
+  const { kataFavorites, isKataFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
+
+  useEffect(() => {
+    if (!favsLoaded) fetchFavorites();
+  }, [favsLoaded, fetchFavorites]);
+
   const search = params.get('search') || '';
   const sort = params.get('sort') || 'oldest';
 
@@ -349,7 +357,9 @@ export default function KataListPage() {
 
     // 2. Если поиска нет: основной раздел (павильон) имеет ПЕРВЫЙ приоритет
     let pavilionList = sortedItems;
-    if (selectedPavilion !== 'all') {
+    if (selectedPavilion === 'favorites') {
+      pavilionList = sortedItems.filter((item) => kataFavorites.includes(Number(item.Kata_ID)));
+    } else if (selectedPavilion !== 'all') {
       const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
       if (pav) {
         pavilionList = sortedItems.filter(pav.matcher);
@@ -567,6 +577,16 @@ export default function KataListPage() {
             </button>
           );
         })}
+        <button
+          type="button"
+          className={`pavilion-tab ${selectedPavilion === 'favorites' ? 'active' : ''}`}
+          onClick={() => handleSelectPavilion('favorites')}
+          title="Только избранные ката"
+        >
+          <span className="tab-seal">❤️</span>
+          <span className="tab-title">Избранное</span>
+          <span className="tab-count">({kataFavorites.length})</span>
+        </button>
       </div>
 
       {/* 4. ПАНЕЛЬ ГРАДАЦИИ ПОЯСОВ (КЮ И ДАНЫ) */}
@@ -668,6 +688,14 @@ export default function KataListPage() {
                       <span>Запустить 3D-разбор формы</span>
                       <span className="btn-arrow">→</span>
                     </Link>
+                    <button
+                      type="button"
+                      className={`btn ${isKataFavorite(activeKata.Kata_ID) ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => toggleFavorite('kata', activeKata.Kata_ID)}
+                      title={isKataFavorite(activeKata.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                    >
+                      {isKataFavorite(activeKata.Kata_ID) ? '❤️ В избранном' : '🤍 В избранное'}
+                    </button>
                     <Link
                       to={`/bunkai?search=${encodeURIComponent(activeKata.Title?.split(' ')[0] || '')}`}
                       className="btn btn-subtle"
@@ -741,6 +769,20 @@ export default function KataListPage() {
                           }
                         }}
                       >
+                        {/* Кнопка добавления в избранное (Задача 8) */}
+                        <button
+                          type="button"
+                          className={`atlas-fav-btn ${isKataFavorite(item.Kata_ID) ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite('kata', item.Kata_ID);
+                          }}
+                          title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                          aria-label="Избранное"
+                        >
+                          {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                        </button>
+
                         {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
                         <div className="atlas-card__media">
                           <img
@@ -835,6 +877,15 @@ export default function KataListPage() {
                   <td>{item.Style || 'Сётокан'}</td>
                   <td>{item.Steps?.length || (item.Difficulty === 'beginner' ? 21 : 34)}</td>
                   <td>
+                    <button
+                      type="button"
+                      className="btn btn-subtle"
+                      style={{ padding: '0.4rem 0.6rem', marginRight: '0.4rem' }}
+                      onClick={() => toggleFavorite('kata', item.Kata_ID)}
+                      title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'В избранное'}
+                    >
+                      {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                    </button>
                     <Link
                       to={`/kata/${item.Kata_ID}`}
                       className="btn btn-subtle"

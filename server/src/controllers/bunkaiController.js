@@ -1,6 +1,42 @@
 const bunkaiRepo = require('../db/bunkaiRepo');
+const kataRepo = require('../db/kataRepo');
+const favoriteRepo = require('../db/favoriteRepo');
+const notificationRepo = require('../db/notificationRepo');
 const { ok, created, fail } = require('../utils/apiResponse');
 const { logActivity } = require('../utils/activityLogger');
+
+async function notifyFavoriteKataFollowers(bunkai, io) {
+  try {
+    if (!bunkai || !bunkai.Kata_ID) return;
+    const kata = await kataRepo.getById(bunkai.Kata_ID);
+    const kataTitle = kata?.Title || 'ката';
+    const followerUserIds = await favoriteRepo.getUsersFavoritedKata(bunkai.Kata_ID);
+
+    for (const followerId of followerUserIds) {
+      if (followerId === bunkai.Author_ID) continue;
+      const notifMsg = `Опубликован новый бункай «${bunkai.Title}» для ката «${kataTitle}»`;
+      const savedNotif = await notificationRepo.createNotification(
+        followerId,
+        'bunkai_new',
+        `Новый бункай: ${kataTitle}`,
+        notifMsg,
+        `/bunkai/${bunkai.Bunkai_ID}`
+      );
+
+      if (io) {
+        io.to(`user:${followerId}`).emit('notification', {
+          id: savedNotif.Notification_ID,
+          type: 'bunkai_new',
+          title: `Новый бункай: ${kataTitle}`,
+          message: notifMsg,
+          targetUrl: `/bunkai/${bunkai.Bunkai_ID}`,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error notifying favorite kata followers:', err);
+  }
+}
 
 function handleError(err, next, res) {
   if (err.status) return fail(res, err.status, err.message, err.code);
@@ -58,6 +94,9 @@ async function create(req, res, next) {
       thumbnailUrl,
     });
     await logActivity({ userId: req.user.User_ID, action: 'create_bunkai', entityType: 'Bunkai', entityId: bunkai.Bunkai_ID, ip: req.ip });
+    // Задача 9: уведомляем пользователей, добавивших ката в избранное
+    const io = req.app.get('io');
+    notifyFavoriteKataFollowers(bunkai, io);
     return created(res, bunkai);
   } catch (err) {
     return handleError(err, next, res);
@@ -91,6 +130,9 @@ async function approve(req, res, next) {
   try {
     const bunkai = await bunkaiRepo.setStatus(req.params.id, 'approved', { userId: req.user.User_ID, userRole: req.userRole });
     await logActivity({ userId: req.user.User_ID, action: 'approve_bunkai', entityType: 'Bunkai', entityId: bunkai.Bunkai_ID, ip: req.ip });
+    // Задача 9: уведомляем пользователей, добавивших ката в избранное
+    const io = req.app.get('io');
+    notifyFavoriteKataFollowers(bunkai, io);
     return ok(res, bunkai);
   } catch (err) {
     return handleError(err, next, res);

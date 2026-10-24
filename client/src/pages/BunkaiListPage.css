@@ -344,3 +344,31 @@
   color: var(--gold);
 }
 
+/* Кнопка добавления в избранное (Задача 8) */
+.bunkai-fav-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.bunkai-fav-btn:hover {
+  transform: scale(1.15);
+  border-color: var(--gold-border);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.bunkai-fav-btn.active {
+  border-color: #e53935;
+  background: rgba(229, 57, 53, 0.2);
+}
+

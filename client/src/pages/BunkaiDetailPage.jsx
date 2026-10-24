@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getBunkai, getBunkaiSteps, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
 import { useAuthStore } from '../store/authStore';
+import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
@@ -26,6 +27,12 @@ export default function BunkaiDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('application'); // 'application' | 'video' | 'comments'
+
+  const { isBunkaiFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
+
+  useEffect(() => {
+    if (!favsLoaded) fetchFavorites();
+  }, [favsLoaded, fetchFavorites]);
 
   useEffect(() => {
     if (!id || id === 'new' || id === 'create' || id === 'studio') {
@@ -92,6 +99,14 @@ export default function BunkaiDetailPage() {
 
           <div className="bunkai-detail__title-wrap">
             <h1 className="bunkai-detail__title">{bunkai.Title}</h1>
+            <button
+              type="button"
+              className={`btn ${isBunkaiFavorite(id) ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => toggleFavorite('bunkai', id)}
+              style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
+            >
+              {isBunkaiFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
+            </button>
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>
 

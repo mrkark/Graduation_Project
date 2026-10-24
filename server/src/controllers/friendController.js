@@ -1,4 +1,5 @@
 const friendRepo = require('../db/friendRepo');
+const notificationRepo = require('../db/notificationRepo');
 const { ok, created, fail } = require('../utils/apiResponse');
 const { logActivity } = require('../utils/activityLogger');
 
@@ -26,14 +27,28 @@ async function sendRequest(req, res, next) {
     const request = await friendRepo.sendRequest(req.user.User_ID, receiverId);
     await logActivity({ userId: req.user.User_ID, action: 'send_friend_request', entityType: 'FriendRequest', entityId: request.Request_ID, ip: req.ip });
 
-    // Задача 44: мгновенное оповещение пользователя в сети о новой заявке в друзья
+    // Персистентное уведомление в БД (работает даже если пользователь оффлайн — Задачи 6 и 7)
+    const senderName = req.user.Display_Name || req.user.Username;
+    const notifMsg = `${senderName} отправил вам заявку в соратники Додзё!`;
+    const savedNotif = await notificationRepo.createNotification(
+      receiverId,
+      'friend_request',
+      'Новая заявка в соратники',
+      notifMsg,
+      '/friends?tab=incoming'
+    );
+
+    // Мгновенное оповещение пользователя в сети (Socket.IO)
     const io = req.app.get('io');
     if (io) {
       io.to(`user:${receiverId}`).emit('notification', {
+        id: savedNotif.Notification_ID,
         type: 'friend_request',
+        title: 'Новая заявка в соратники',
         senderId: req.user.User_ID,
-        senderName: req.user.Display_Name || req.user.Username,
-        message: `${req.user.Display_Name || req.user.Username} отправил вам заявку в соратники Додзё!`,
+        senderName,
+        message: notifMsg,
+        targetUrl: '/friends?tab=incoming',
       });
     }
 

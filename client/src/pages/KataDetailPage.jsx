@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getKata, deleteKata, approveKata, rejectKata } from '../api/kata';
 import { useAuthStore } from '../store/authStore';
+import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
@@ -36,6 +37,12 @@ export default function KataDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' | 'video' | 'bunkai' | 'comments'
+
+  const { isKataFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
+
+  useEffect(() => {
+    if (!favsLoaded) fetchFavorites();
+  }, [favsLoaded, fetchFavorites]);
 
   useEffect(() => {
     setLoading(true);
@@ -174,6 +181,14 @@ export default function KataDetailPage() {
             <h1 className="kata-study__title">
               {kata.Title}
             </h1>
+            <button
+              type="button"
+              className={`btn ${isKataFavorite(id) ? 'btn-primary' : 'btn-secondary'}`}
+              onClick={() => toggleFavorite('kata', id)}
+              style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
+            >
+              {isKataFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
+            </button>
             <HankoSeal
               text={kata.Title?.match(/[\u4e00-\u9faf]{1,2}/)?.[0] || '型'}
               size="md"

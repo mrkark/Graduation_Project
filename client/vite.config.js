@@ -153,4 +153,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('three')) return 'vendor-three';
+            if (id.includes('socket.io-client')) return 'vendor-socket';
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
 });

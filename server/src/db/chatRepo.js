@@ -64,4 +64,9 @@ async function deleteMessage(messageId, userId, userRole) {
   return rows[0]; // { ChatRoom_ID, Message_ID }
 }
 
-module.exports = { getOrCreateGeneralRoom, listRoomsForUser, createPrivateRoom, listMessages, createMessage, deleteMessage };
+async function getRoomRecipients(roomId, excludeUserId) {
+  const rows = await callProcedure('sp_Chat_GetRoomRecipients', { RoomId: roomId, ExcludeUserId: excludeUserId });
+  return (rows || []).map((r) => r.User_ID);
+}
+
+module.exports = { getOrCreateGeneralRoom, listRoomsForUser, createPrivateRoom, listMessages, createMessage, deleteMessage, getRoomRecipients };

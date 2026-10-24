@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const dojoController = require('../controllers/dojoController');
-const { requireAuth } = require('../middlewares/auth');
+const { requireAuth } = require('../middlewares/authMiddleware');
 
 router.use(requireAuth);
 
