@@ -287,5 +287,40 @@ GO
 CREATE INDEX IX_Backups_Status ON dbo.Backups(Status);
 GO
 
+-- =========================================================
+-- 13. Dojos & DojoMembers (Задача 5: Создание Додзё и приглашения)
+-- =========================================================
+IF OBJECT_ID('dbo.DojoMembers', 'U') IS NOT NULL DROP TABLE dbo.DojoMembers;
+IF OBJECT_ID('dbo.Dojos', 'U') IS NOT NULL DROP TABLE dbo.Dojos;
+GO
+CREATE TABLE dbo.Dojos (
+    Dojo_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    Name        NVARCHAR(150) NOT NULL,
+    Kanji       NVARCHAR(50) NULL,
+    Description NVARCHAR(MAX) NULL,
+    Creator_ID  INT NOT NULL,
+    Avatar_URL  NVARCHAR(500) NULL,
+    Created_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    Updated_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Dojos_Creator FOREIGN KEY (Creator_ID) REFERENCES dbo.Users(User_ID)
+);
+GO
+CREATE INDEX IX_Dojos_Creator_ID ON dbo.Dojos(Creator_ID);
+GO
+
+CREATE TABLE dbo.DojoMembers (
+    Dojo_ID    INT NOT NULL,
+    User_ID    INT NOT NULL,
+    Role       NVARCHAR(30) NOT NULL DEFAULT 'student', -- 'sensei', 'sempai', 'student'
+    Status     NVARCHAR(20) NOT NULL DEFAULT 'active',  -- 'active', 'invited', 'pending'
+    Joined_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    PRIMARY KEY (Dojo_ID, User_ID),
+    CONSTRAINT FK_DM_Dojo FOREIGN KEY (Dojo_ID) REFERENCES dbo.Dojos(Dojo_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_DM_User FOREIGN KEY (User_ID) REFERENCES dbo.Users(User_ID) ON DELETE NO ACTION
+);
+GO
+CREATE INDEX IX_DojoMembers_User ON dbo.DojoMembers(User_ID, Status);
+GO
+
 PRINT 'Схема Bunkai Explorer успешно создана.';
 GO

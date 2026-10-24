@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
 import StatusBadge from '../components/StatusBadge';
@@ -43,6 +43,8 @@ export default function BunkaiListPage() {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 12 });
   const [loading, setLoading] = useState(true);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchBoxRef = useRef(null);
 
   const search = params.get('search') || '';
   const sort = params.get('sort') || 'newest';
@@ -64,11 +66,35 @@ export default function BunkaiListPage() {
     };
   }, [sort]);
 
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   function updateParam(key, value) {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next);
+  }
+
+  // Задача 2: Динамические подсказки в поиске бункай
+  const suggestions = useMemo(() => {
+    const q = (search || '').trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    return items
+      .filter((b) => (b.Title || '').toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [items, search]);
+
+  function handleSelectSuggestion(bunkai) {
+    updateParam('search', bunkai.Title);
+    setShowSuggestions(false);
   }
 
   // Задача 15: поиск только по названию бункай
@@ -112,7 +138,7 @@ export default function BunkaiListPage() {
       {/* 2. ПОИСК И СОРТИРОВКА В ДИЗАЙНЕ СТРАНИЦЫ КАТА (Задача 15) */}
       <div className="atlas-search-section" style={{ marginBottom: '2rem' }}>
         <div className="atlas-search-strip">
-          <div className="atlas-search-box">
+          <div className="atlas-search-box" ref={searchBoxRef}>
             <div className="atlas-search-icon-badge">
               <SearchIcon size={19} color="#d4a24c" className="atlas-search-icon" />
             </div>
@@ -121,18 +147,49 @@ export default function BunkaiListPage() {
               className="atlas-search-input"
               value={search}
               style={{ paddingLeft: '3.8rem' }}
-              onChange={(e) => updateParam('search', e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                updateParam('search', e.target.value);
+                setShowSuggestions(true);
+              }}
               placeholder="Поиск по названию бункай (Хэйан, Бассай-дай, Канку-дай, Унсу)…"
             />
             {search && (
               <button
                 type="button"
                 className="atlas-search-clear-btn"
-                onClick={() => updateParam('search', '')}
+                onClick={() => {
+                  updateParam('search', '');
+                  setShowSuggestions(false);
+                }}
                 title="Очистить поиск"
               >
                 ✕
               </button>
+            )}
+
+            {/* Задача 2: Выпадающие динамические подсказки в поиске бункай */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="atlas-search-suggestions">
+                <div className="atlas-search-suggestions-header">
+                  Подходящие сценарии бункай ({suggestions.length}):
+                </div>
+                {suggestions.map((b) => (
+                  <div
+                    key={b.Bunkai_ID}
+                    className="atlas-suggestion-item"
+                    onMouseDown={() => handleSelectSuggestion(b)}
+                  >
+                    <span className="atlas-suggestion-icon">⚔️</span>
+                    <div className="atlas-suggestion-text">
+                      <span className="atlas-suggestion-title">{b.Title}</span>
+                      <span className="atlas-suggestion-meta">
+                        {b.Difficulty ? `Сложность: ${b.Difficulty}` : 'Канонический разбор'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

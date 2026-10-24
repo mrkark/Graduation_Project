@@ -13,6 +13,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const dojoRoutes = require('./routes/dojoRoutes');
 
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler');
 
@@ -128,6 +129,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/dojos', dojoRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/animations', require('./routes/animationRoutes'));
 

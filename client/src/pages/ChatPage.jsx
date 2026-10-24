@@ -202,33 +202,39 @@ export default function ChatPage() {
             </button>
           </div>
 
-          {/* Быстрый выбор соратника для нового чата */}
+          {/* Задача 4 & 43: Быстрый выбор соратника для нового чата без сдвига вверх при наведении */}
           {showNewChatModal && (
-            <div style={{
-              background: 'rgba(0, 0, 0, 0.4)',
-              border: '1px solid rgba(212, 162, 76, 0.3)',
-              borderRadius: '6px',
-              padding: '8px',
-              marginBottom: '8px',
-            }}>
-              <div style={{ fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px' }}>
-                Выберите соратника:
+            <div className="chat-new-modal">
+              <div className="chat-new-modal__header">
+                <span>Выберите соратника:</span>
+                <button
+                  type="button"
+                  className="chat-new-modal__close"
+                  onClick={() => setShowNewChatModal(false)}
+                >
+                  ✕
+                </button>
               </div>
               {friendsList.length === 0 ? (
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                <div className="chat-new-modal__empty">
                   Нет соратников. Добавьте их во вкладке «Соратники».
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
+                <div className="chat-new-user-list">
                   {friendsList.map((f) => (
                     <button
                       key={f.User_ID}
                       type="button"
-                      className="btn btn-subtle"
-                      style={{ padding: '4px 8px', fontSize: '0.78rem', justifyContent: 'flex-start', textAlign: 'left' }}
+                      className="chat-new-user-card"
                       onClick={() => handleStartFriendChat(f.User_ID)}
                     >
-                      🥋 {f.Display_Name || f.Username}
+                      <span className="chat-new-user-avatar">
+                        {(f.Display_Name || f.Username || 'K')[0].toUpperCase()}
+                      </span>
+                      <div className="chat-new-user-meta">
+                        <span className="chat-new-user-name">{f.Display_Name || f.Username}</span>
+                        <span className="chat-new-user-handle">@{f.Username}</span>
+                      </div>
                     </button>
                   ))}
                 </div>

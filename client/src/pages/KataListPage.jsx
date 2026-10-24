@@ -208,6 +208,8 @@ export default function KataListPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedBelt, setSelectedBelt] = useState('all');
   const [selectedPavilion, setSelectedPavilion] = useState('all');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchBoxRef = useRef(null);
 
   const search = params.get('search') || '';
   const sort = params.get('sort') || 'oldest';
@@ -234,11 +236,49 @@ export default function KataListPage() {
     };
   }, [sort]);
 
+  // Закрывать выпадающие подсказки при клике вне поля поиска
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   function updateParam(key, value) {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
     else next.delete(key);
     setParams(next);
+  }
+
+  // Задача 1: установка приоритета фильтрации павильонов и поясов
+  function handleSelectPavilion(pavId) {
+    const nextPav = selectedPavilion === pavId ? 'all' : pavId;
+    setSelectedPavilion(nextPav);
+    // Приоритет основного раздела над поясом: сбрасываем пояс, если в павильоне нет такого ранга
+    if (nextPav !== 'all' && selectedBelt !== 'all') {
+      const pav = CANON_PAVILIONS.find((p) => p.id === nextPav);
+      const hasBelt = items.some((item) => pav?.matcher(item) && getKataBeltInfo(item).id === selectedBelt);
+      if (!hasBelt) {
+        setSelectedBelt('all');
+      }
+    }
+  }
+
+  function handleSelectBelt(beltId) {
+    const nextBelt = selectedBelt === beltId ? 'all' : beltId;
+    setSelectedBelt(nextBelt);
+    // Если выбран пояс, отсутствующий в выбранном павильоне, переключаем павильон на 'Все 26 Ката'
+    if (nextBelt !== 'all' && selectedPavilion !== 'all') {
+      const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
+      const hasBelt = items.some((item) => pav?.matcher(item) && getKataBeltInfo(item).id === nextBelt);
+      if (!hasBelt) {
+        setSelectedPavilion('all');
+      }
+    }
   }
 
   // Клиентская сортировка для идеального канонического порядка ката
@@ -254,44 +294,77 @@ export default function KataListPage() {
     return list.sort((a, b) => (Number(a.Kata_ID) || 0) - (Number(b.Kata_ID) || 0));
   }, [items, sort]);
 
-  // Фильтрация ката с учетом выбранного пояса, павильона и строки поиска
-  // Задача 8: поиск работает не в выбранном разделе, а вообще по всем ката
+  // Задача 2: Динамические подсказки в строке поиска
+  const suggestions = useMemo(() => {
+    const q = (search || '').trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    const normQ = q.replace(/[-–—]/g, ' ');
+    return items
+      .filter((k) => {
+        const title = (k.Title || '').toLowerCase().replace(/[-–—]/g, ' ');
+        const kanji = (getKataKanji(k) || '').toLowerCase();
+        return title.includes(normQ) || kanji.includes(normQ);
+      })
+      .slice(0, 6);
+  }, [items, search]);
+
+  function handleSelectSuggestion(kata) {
+    const mainTitle = (kata.Title || '').split('(')[0].trim();
+    updateParam('search', mainTitle);
+    setSelectedId(kata.Kata_ID);
+    setShowSuggestions(false);
+  }
+
+  // Фильтрация ката с учетом приоритетов (Задачи 1, 3, 8)
   const filteredItems = useMemo(() => {
     const rawQ = (search || '').trim().toLowerCase();
     const normalizedQ = rawQ.replace(/[-–—]/g, ' ');
     const searchWords = normalizedQ.split(/\s+/).filter(Boolean);
 
-    return sortedItems.filter((item) => {
-      // Если введен поисковый запрос (или нажат быстрый тег) — ищем по всем ката
-      if (searchWords.length > 0) {
+    // 1. Если введен поиск (или нажат быстрый тег)
+    if (searchWords.length > 0) {
+      // Задача 3: Строгий приоритет поиска по названию ката и кандзи.
+      // Исключает ложное попадание Хэйан Сандан при поиске «Эмпи».
+      const titleMatches = sortedItems.filter((item) => {
+        const titleNorm = (item.Title || '').toLowerCase().replace(/[-–—]/g, ' ');
+        const kanji = (getKataKanji(item) || '').toLowerCase();
+        return searchWords.every((word) => titleNorm.includes(word) || kanji.includes(word));
+      });
+
+      let baseList = titleMatches.length > 0 ? titleMatches : sortedItems.filter((item) => {
         const titleNorm = (item.Title || '').toLowerCase().replace(/[-–—]/g, ' ');
         const descNorm = (item.Description || '').toLowerCase().replace(/[-–—]/g, ' ');
         const kanji = (getKataKanji(item) || '').toLowerCase();
-
-        const matches = searchWords.every(
+        return searchWords.every(
           (word) => titleNorm.includes(word) || descNorm.includes(word) || kanji.includes(word)
         );
-        if (!matches) return false;
+      });
 
-        // Фильтр по поясу применяется только если выбран конкретный пояс
-        if (selectedBelt !== 'all') {
-          const belt = getKataBeltInfo(item);
-          if (belt.id !== selectedBelt) return false;
-        }
-        return true;
-      }
-
-      // Если поиска нет — действует фильтрация по поясам и разделам
       if (selectedBelt !== 'all') {
-        const belt = getKataBeltInfo(item);
-        if (belt.id !== selectedBelt) return false;
+        const withBelt = baseList.filter((item) => getKataBeltInfo(item).id === selectedBelt);
+        if (withBelt.length > 0) baseList = withBelt;
       }
-      if (selectedPavilion !== 'all') {
-        const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
-        if (pav && !pav.matcher(item)) return false;
+      return baseList;
+    }
+
+    // 2. Если поиска нет: основной раздел (павильон) имеет ПЕРВЫЙ приоритет
+    let pavilionList = sortedItems;
+    if (selectedPavilion !== 'all') {
+      const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
+      if (pav) {
+        pavilionList = sortedItems.filter(pav.matcher);
       }
-      return true;
-    });
+    }
+
+    // Приоритет 2: пояс внутри павильона (если пояс есть в выбранном павильоне)
+    if (selectedBelt !== 'all') {
+      const beltMatches = pavilionList.filter((item) => getKataBeltInfo(item).id === selectedBelt);
+      if (beltMatches.length > 0) {
+        return beltMatches;
+      }
+    }
+
+    return pavilionList;
   }, [sortedItems, selectedBelt, selectedPavilion, search]);
 
   // Активная выбранная ката для блока Spotlight
@@ -300,7 +373,7 @@ export default function KataListPage() {
     return filteredItems.find((k) => k.Kata_ID === selectedId) || filteredItems[0];
   }, [filteredItems, selectedId]);
 
-  // Группировка ката по точной градации поясов (для счетчиков поясов)
+  // Группировка ката по точной градации поясов с учетом активного павильона
   const groupedKataByBelt = useMemo(() => {
     const groups = {
       white: [],
@@ -372,7 +445,7 @@ export default function KataListPage() {
       {/* 2. ПАНЕЛЬ ПОИСКА И СОРТИРОВКИ С АУТЕНТИЧНЫМ ДИЗАЙНОМ */}
       <div className="atlas-search-section">
         <div className="atlas-search-strip">
-          <div className="atlas-search-box">
+          <div className="atlas-search-box" ref={searchBoxRef}>
             <div className="atlas-search-icon-badge">
               <SearchIcon size={19} color="#d4a24c" className="atlas-search-icon" />
             </div>
@@ -381,18 +454,49 @@ export default function KataListPage() {
               className="atlas-search-input"
               value={search}
               style={{ paddingLeft: '3.8rem' }}
-              onChange={(e) => updateParam('search', e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => {
+                updateParam('search', e.target.value);
+                setShowSuggestions(true);
+              }}
               placeholder="Поиск по названию ката (Хэйан, Бассай-дай, Канку-дай, Эмпи, Унсу)…"
             />
             {search && (
               <button
                 type="button"
                 className="atlas-search-clear-btn"
-                onClick={() => updateParam('search', '')}
+                onClick={() => {
+                  updateParam('search', '');
+                  setShowSuggestions(false);
+                }}
                 title="Очистить поиск"
               >
                 ✕
               </button>
+            )}
+
+            {/* Задача 2: Выпадающие динамические подсказки */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="atlas-search-suggestions">
+                <div className="atlas-search-suggestions-header">
+                  Рекомендуемые формы ({suggestions.length}):
+                </div>
+                {suggestions.map((k) => (
+                  <div
+                    key={k.Kata_ID}
+                    className="atlas-suggestion-item"
+                    onMouseDown={() => handleSelectSuggestion(k)}
+                  >
+                    <span className="atlas-suggestion-icon">🥋</span>
+                    <div className="atlas-suggestion-text">
+                      <span className="atlas-suggestion-title">{k.Title}</span>
+                      <span className="atlas-suggestion-meta">
+                        {getKataBeltInfo(k).kyu} · {getKataBeltInfo(k).name} · {getKataKanji(k)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
@@ -427,6 +531,7 @@ export default function KataListPage() {
                 className={`quick-tag-chip ${isActive ? 'active' : ''}`}
                 onClick={() => {
                   setSelectedPavilion('all');
+                  setSelectedBelt('all');
                   updateParam('search', isActive ? '' : tag);
                 }}
               >
@@ -442,7 +547,7 @@ export default function KataListPage() {
         <button
           type="button"
           className={`pavilion-tab ${selectedPavilion === 'all' ? 'active' : ''}`}
-          onClick={() => setSelectedPavilion('all')}
+          onClick={() => handleSelectPavilion('all')}
         >
           <span className="tab-title">Все 26 Ката Сётокан</span>
           <span className="tab-count">26 форм</span>
@@ -454,7 +559,7 @@ export default function KataListPage() {
               key={pav.id}
               type="button"
               className={`pavilion-tab ${selectedPavilion === pav.id ? 'active' : ''}`}
-              onClick={() => setSelectedPavilion(selectedPavilion === pav.id ? 'all' : pav.id)}
+              onClick={() => handleSelectPavilion(pav.id)}
             >
               <span className="tab-seal">{pav.seal}</span>
               <span className="tab-title">{pav.badgeText}</span>
@@ -469,7 +574,7 @@ export default function KataListPage() {
         <button
           type="button"
           className={`atlas-belt-pill ${selectedBelt === 'all' ? 'active' : ''}`}
-          onClick={() => setSelectedBelt('all')}
+          onClick={() => handleSelectBelt('all')}
         >
           <span>Все пояса ({items.length})</span>
         </button>
@@ -480,7 +585,7 @@ export default function KataListPage() {
               key={b.id}
               type="button"
               className={`atlas-belt-pill atlas-belt-pill--${b.id} ${selectedBelt === b.id ? 'active' : ''}`}
-              onClick={() => setSelectedBelt(selectedBelt === b.id ? 'all' : b.id)}
+              onClick={() => handleSelectBelt(b.id)}
             >
               <span className="atlas-belt-dot" style={{ backgroundColor: b.colorHex, borderColor: b.borderColor }} />
               <span className="atlas-belt-kyu">{b.kyu}</span>

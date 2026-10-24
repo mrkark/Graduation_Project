@@ -1544,5 +1544,176 @@ BEGIN
 END
 GO
 
+-- ============================================================
+-- ДОДЗЁ (Задача 5: Создание Додзё и приглашения)
+-- ============================================================
+
+-- Создание нового Додзё
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_Create
+    @CreatorId   INT,
+    @Name        NVARCHAR(150),
+    @Kanji       NVARCHAR(50) = NULL,
+    @Description NVARCHAR(MAX) = NULL,
+    @AvatarUrl   NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @CreatorId IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.Users WHERE User_ID = @CreatorId AND Is_Blocked = 0)
+        THROW 50000, N'ERR|401|UNAUTHORIZED|Пользователь не найден или заблокирован', 1;
+
+    SET @Name = LTRIM(RTRIM(@Name));
+    IF @Name IS NULL OR LEN(@Name) < 3
+        THROW 50000, N'ERR|400|VALIDATION_ERROR|Название Додзё должно содержать минимум 3 символа', 1;
+
+    IF @Kanji IS NULL OR LEN(@Kanji) = 0
+        SET @Kanji = N'道場';
+
+    DECLARE @DojoId INT;
+
+    BEGIN TRANSACTION;
+    BEGIN TRY
+        INSERT INTO dbo.Dojos (Name, Kanji, Description, Creator_ID, Avatar_URL)
+        VALUES (@Name, @Kanji, @Description, @CreatorId, @AvatarUrl);
+
+        SET @DojoId = SCOPE_IDENTITY();
+
+        -- Создатель становится сэнсэем Додзё
+        INSERT INTO dbo.DojoMembers (Dojo_ID, User_ID, Role, Status)
+        VALUES (@DojoId, @CreatorId, 'sensei', 'active');
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH;
+
+    SELECT d.Dojo_ID, d.Name, d.Kanji, d.Description, d.Creator_ID, d.Avatar_URL, d.Created_At,
+           (SELECT COUNT(*) FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.Status = 'active') AS MembersCount
+    FROM dbo.Dojos d
+    WHERE d.Dojo_ID = @DojoId;
+END;
+GO
+
+-- Приглашение пользователя в Додзё
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_InviteUser
+    @DojoId       INT,
+    @InviterId    INT,
+    @TargetUserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId)
+        THROW 50000, N'ERR|404|DOJO_NOT_FOUND|Додзё не найдено', 1;
+
+    -- Проверяем, что приглашающий — активный участник
+    IF NOT EXISTS (
+        SELECT 1 FROM dbo.DojoMembers 
+        WHERE Dojo_ID = @DojoId AND User_ID = @InviterId AND Status = 'active'
+    )
+        THROW 50000, N'ERR|403|FORBIDDEN|Только участники Додзё могут отправлять приглашения', 1;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE User_ID = @TargetUserId AND Is_Blocked = 0)
+        THROW 50000, N'ERR|404|USER_NOT_FOUND|Приглашаемый пользователь не найден', 1;
+
+    IF EXISTS (SELECT 1 FROM dbo.DojoMembers WHERE Dojo_ID = @DojoId AND User_ID = @TargetUserId)
+    BEGIN
+        DECLARE @existingStatus NVARCHAR(20);
+        SELECT @existingStatus = Status FROM dbo.DojoMembers WHERE Dojo_ID = @DojoId AND User_ID = @TargetUserId;
+        IF @existingStatus = 'active'
+            THROW 50000, N'ERR|400|ALREADY_MEMBER|Пользователь уже состоит в этом Додзё', 1;
+        ELSE
+            THROW 50000, N'ERR|400|ALREADY_INVITED|Приглашение пользователю уже отправлено', 1;
+    END;
+
+    INSERT INTO dbo.DojoMembers (Dojo_ID, User_ID, Role, Status)
+    VALUES (@DojoId, @TargetUserId, 'student', 'invited');
+
+    SELECT dm.Dojo_ID, dm.User_ID, dm.Role, dm.Status, dm.Joined_At,
+           u.Username, u.Display_Name, u.Avatar_URL,
+           d.Name AS Dojo_Name, d.Kanji AS Dojo_Kanji
+    FROM dbo.DojoMembers dm
+    JOIN dbo.Users u ON u.User_ID = dm.User_ID
+    JOIN dbo.Dojos d ON d.Dojo_ID = dm.Dojo_ID
+    WHERE dm.Dojo_ID = @DojoId AND dm.User_ID = @TargetUserId;
+END;
+GO
+
+-- Список Додзё пользователя (активные и приглашения)
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_ListMy
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT d.Dojo_ID, d.Name, d.Kanji, d.Description, d.Creator_ID, d.Avatar_URL, d.Created_At,
+           dm.Role AS MyRole, dm.Status AS MyStatus, dm.Joined_At,
+           u.Display_Name AS Sensei_Name, u.Username AS Sensei_Username,
+           (SELECT COUNT(*) FROM dbo.DojoMembers sub WHERE sub.Dojo_ID = d.Dojo_ID AND sub.Status = 'active') AS MembersCount
+    FROM dbo.DojoMembers dm
+    JOIN dbo.Dojos d ON d.Dojo_ID = dm.Dojo_ID
+    JOIN dbo.Users u ON u.User_ID = d.Creator_ID
+    WHERE dm.User_ID = @UserId
+    ORDER BY d.Created_At DESC;
+END;
+GO
+
+-- Детали Додзё и список его участников
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_GetDetails
+    @DojoId INT,
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId)
+        THROW 50000, N'ERR|404|DOJO_NOT_FOUND|Додзё не найдено', 1;
+
+    -- 1. Информация о Додзё
+    SELECT d.Dojo_ID, d.Name, d.Kanji, d.Description, d.Creator_ID, d.Avatar_URL, d.Created_At,
+           u.Display_Name AS Sensei_Name, u.Username AS Sensei_Username,
+           (SELECT dm.Role FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.User_ID = @UserId) AS MyRole,
+           (SELECT dm.Status FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.User_ID = @UserId) AS MyStatus,
+           (SELECT COUNT(*) FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.Status = 'active') AS MembersCount
+    FROM dbo.Dojos d
+    JOIN dbo.Users u ON u.User_ID = d.Creator_ID
+    WHERE d.Dojo_ID = @DojoId;
+
+    -- 2. Участники Додзё
+    SELECT dm.User_ID, dm.Role, dm.Status, dm.Joined_At,
+           u.Username, u.Display_Name, u.Avatar_URL, u.Bio
+    FROM dbo.DojoMembers dm
+    JOIN dbo.Users u ON u.User_ID = dm.User_ID
+    WHERE dm.Dojo_ID = @DojoId
+    ORDER BY CASE dm.Role WHEN 'sensei' THEN 1 WHEN 'sempai' THEN 2 ELSE 3 END, dm.Joined_At ASC;
+END;
+GO
+
+-- Ответ на приглашение в Додзё (принять или отклонить)
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_RespondInvite
+    @DojoId INT,
+    @UserId INT,
+    @Accept BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.DojoMembers WHERE Dojo_ID = @DojoId AND User_ID = @UserId AND Status = 'invited')
+        THROW 50000, N'ERR|404|INVITE_NOT_FOUND|Приглашение не найдено или уже обработано', 1;
+
+    IF @Accept = 1
+    BEGIN
+        UPDATE dbo.DojoMembers
+        SET Status = 'active', Joined_At = SYSUTCDATETIME()
+        WHERE Dojo_ID = @DojoId AND User_ID = @UserId;
+    END
+    ELSE
+    BEGIN
+        DELETE FROM dbo.DojoMembers
+        WHERE Dojo_ID = @DojoId AND User_ID = @UserId;
+    END;
+
+    SELECT @DojoId AS Dojo_ID, @UserId AS User_ID, @Accept AS Accepted;
+END;
+GO
+
 PRINT N'Процедуры и функции Bunkai Explorer созданы успешно.';
 GO

@@ -16,6 +16,7 @@ import BunkaiFormPage from './pages/BunkaiFormPage';
 import ProfilePage from './pages/ProfilePage';
 import FriendsPage from './pages/FriendsPage';
 import ChatPage from './pages/ChatPage';
+import DojoPage from './pages/DojoPage';
 import KarateStudioPage from './pages/KarateStudioPage';
 
 import AdminLayout from './pages/admin/AdminLayout';
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/friends" element={<FriendsPage />} />
             <Route path="/chat" element={<ChatPage />} />
+            <Route path="/dojos" element={<DojoPage />} />
 
             <Route element={<RequireAdminOrModerator />}>
               <Route path="/admin" element={<AdminLayout />}>

@@ -1,0 +1,209 @@
+.dojo-page {
+  padding-bottom: 4rem;
+}
+
+.dojo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.dojo-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dojo-card:hover {
+  border-color: var(--gold-border);
+  background: #191512;
+  box-shadow: var(--shadow-lift);
+}
+
+.dojo-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dojo-card__seal {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, rgba(212, 162, 76, 0.15) 0%, rgba(212, 162, 76, 0.05) 100%);
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-kanji);
+  font-size: 1.6rem;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.dojo-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dojo-card__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.dojo-card__sensei {
+  font-size: 0.8rem;
+  color: var(--gold-soft);
+}
+
+.dojo-card__desc {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 1.25rem;
+  flex: 1;
+}
+
+.dojo-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.dojo-card__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Модальное окно участников Додзё */
+.dojo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.dojo-modal {
+  background: #171310;
+  border: 1px solid var(--gold-border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+  animation: dojoFadeIn 0.2s ease forwards;
+}
+
+.dojo-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dojo-modal__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.dojo-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.dojo-modal__body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dojo-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.dojo-member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.dojo-member-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dojo-member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-canvas);
+  border: 1px solid var(--gold-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.dojo-member-role {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.dojo-member-role--sensei {
+  background: rgba(229, 57, 53, 0.15);
+  border: 1px solid #e53935;
+  color: #ff8888;
+}
+
+.dojo-member-role--student {
+  background: rgba(212, 162, 76, 0.12);
+  border: 1px solid var(--gold-border);
+  color: var(--gold-soft);
+}
+
+.dojo-member-status--invited {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}

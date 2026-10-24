@@ -172,6 +172,9 @@ export default function MainLayout() {
             <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Мокап 3D</span>
             </NavLink>
+            <NavLink to="/dojos" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
+              <span className="navbar__link-title">Додзё</span>
+            </NavLink>
             <NavLink to="/bunkai/new" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Студия</span>
             </NavLink>
@@ -338,6 +341,9 @@ export default function MainLayout() {
                       <Link to="/friends" className="navbar__dropdown-item">
                         <span>Соратники (Друзья)</span>
                       </Link>
+                      <Link to="/dojos" className="navbar__dropdown-item">
+                        <span>Мои Додзё (Школы)</span>
+                      </Link>
                       {isStaff && (
                         <Link to="/admin" className="navbar__dropdown-item navbar__dropdown-item--admin">
                           <span>Панель управления</span>
@@ -408,6 +414,9 @@ export default function MainLayout() {
                   </NavLink>
                   <NavLink to="/friends" className="mobile-drawer__link">
                     <span>Соратники</span>
+                  </NavLink>
+                  <NavLink to="/dojos" className="mobile-drawer__link">
+                    <span>Додзё</span>
                   </NavLink>
                   {isStaff && (
                     <NavLink to="/admin" className="mobile-drawer__link mobile-drawer__link--admin">
@@ -535,6 +544,7 @@ export default function MainLayout() {
                     <li><Link to="/profile">Личный профиль ученика</Link></li>
                     <li><Link to="/chat">Сообщения Додзё</Link></li>
                     <li><Link to="/friends">Соратники (Друзья)</Link></li>
+                    <li><Link to="/dojos">Залы Додзё</Link></li>
                     {isStaff && <li><Link to="/admin">Панель управления</Link></li>}
                   </>
                 ) : (
