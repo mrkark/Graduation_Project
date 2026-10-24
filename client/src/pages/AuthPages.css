@@ -118,3 +118,20 @@
   text-decoration: underline;
 }
 
+@media (max-width: 520px) {
+  .auth-page {
+    padding: 1.5rem 0.85rem;
+  }
+  .auth-card {
+    padding: 1.8rem 1.25rem;
+    border-radius: var(--radius-xs);
+  }
+  .auth-card h1 {
+    font-size: 1.5rem;
+  }
+  .auth-sub {
+    font-size: 0.85rem;
+  }
+}
+
+

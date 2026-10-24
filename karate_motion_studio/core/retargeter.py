@@ -80,11 +80,14 @@ def quat_from_unit_vectors(v_from: np.ndarray, v_to: np.ndarray) -> np.ndarray:
 
     if dot > 0.999999:
         return np.array([0.0, 0.0, 0.0, 1.0])
-    if dot < -0.92:
-        # Singularity protection: prevent antiparallel gimbal flips when limbs cross the torso
-        v2 = np.array([v2[0], v2[1], max(float(v2[2]), 0.35)])
-        v2 /= np.linalg.norm(v2)
-        dot = float(np.dot(v1, v2))
+    if dot < -0.999999:
+        # Задача 31: Корректная обработка противоположного вектора без искусственного смещения limbs от корпуса
+        ortho = np.array([0.0, 1.0, 0.0])
+        if abs(np.dot(v1, ortho)) > 0.9:
+            ortho = np.array([0.0, 0.0, 1.0])
+        axis = np.cross(v1, ortho)
+        axis /= np.linalg.norm(axis)
+        return np.array([axis[0], axis[1], axis[2], 0.0])
 
     cross = np.cross(v1, v2)
     w = 1.0 + dot

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
@@ -10,6 +10,11 @@ export default function RegisterPage() {
   const [form, setForm] = useState({ username: '', email: '', password: '', displayName: '' });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Задача 35: гарантированная очистка всех полей регистрации при входе на страницу
+  useEffect(() => {
+    setForm({ username: '', email: '', password: '', displayName: '' });
+  }, []);
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -45,22 +50,36 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="auth-form">
+        <form onSubmit={onSubmit} className="auth-form" autoComplete="off">
           <div className="field">
             <label htmlFor="username">Имя пользователя (Логин)</label>
-            <input id="username" required value={form.username} onChange={update('username')} placeholder="karateka_2026" />
+            <input id="username" required value={form.username} onChange={update('username')} placeholder="karateka_2026" autoComplete="off" />
           </div>
           <div className="field">
             <label htmlFor="displayName">Отображаемое имя ученика (необязательно)</label>
-            <input id="displayName" value={form.displayName} onChange={update('displayName')} placeholder="Иван Иванов" />
+            <input id="displayName" value={form.displayName} onChange={update('displayName')} placeholder="Иван Иванов" autoComplete="off" />
           </div>
           <div className="field">
             <label htmlFor="email">Email адрес</label>
-            <input id="email" type="email" required value={form.email} onChange={update('email')} placeholder="you@example.com" />
+            <input id="email" type="email" required value={form.email} onChange={update('email')} placeholder="you@example.com" autoComplete="off" />
           </div>
           <div className="field">
             <label htmlFor="password">Пароль</label>
-            <input id="password" type="password" required minLength={8} value={form.password} onChange={update('password')} placeholder="Минимум 8 символов" />
+            <input
+              id="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={form.password}
+              onChange={update('password')}
+              onFocus={() => {
+                if (form.password) {
+                  setForm((f) => ({ ...f, password: '' }));
+                }
+              }}
+              placeholder="Минимум 8 символов"
+            />
           </div>
 
           {error && <p className="auth-error">{error}</p>}
