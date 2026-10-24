@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import MultiAvatarModel from './MultiAvatarModel';
@@ -13,6 +13,40 @@ import {
   resolveBunkaiClip,
 } from './bunkaiScenarioEngine';
 import { animationRegistry } from './animationRegistry';
+
+// Задача 21: Физические границы Додзё в симуляции бункай
+const BUNKAI_DOJO_LIMITS = {
+  minX: -7.2,
+  maxX: 7.2,
+  minZ: -7.2,
+  maxZ: 7.2,
+  minY: 0.25,
+  maxY: 3.8,
+  targetMinX: -4.8,
+  targetMaxX: 4.8,
+  targetMinZ: -4.8,
+  targetMaxZ: 4.8,
+  targetMinY: 0.4,
+  targetMaxY: 1.8,
+};
+
+function BunkaiCameraBounds({ controlsRef }) {
+  useFrame((state) => {
+    if (!controlsRef.current) return;
+    const controls = controlsRef.current;
+
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, BUNKAI_DOJO_LIMITS.targetMinX, BUNKAI_DOJO_LIMITS.targetMaxX);
+    controls.target.y = THREE.MathUtils.clamp(controls.target.y, BUNKAI_DOJO_LIMITS.targetMinY, BUNKAI_DOJO_LIMITS.targetMaxY);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, BUNKAI_DOJO_LIMITS.targetMinZ, BUNKAI_DOJO_LIMITS.targetMaxZ);
+
+    state.camera.position.x = THREE.MathUtils.clamp(state.camera.position.x, BUNKAI_DOJO_LIMITS.minX, BUNKAI_DOJO_LIMITS.maxX);
+    state.camera.position.y = THREE.MathUtils.clamp(state.camera.position.y, BUNKAI_DOJO_LIMITS.minY, BUNKAI_DOJO_LIMITS.maxY);
+    state.camera.position.z = THREE.MathUtils.clamp(state.camera.position.z, BUNKAI_DOJO_LIMITS.minZ, BUNKAI_DOJO_LIMITS.maxZ);
+
+    controls.update();
+  });
+  return null;
+}
 
 /**
  * Универсальный плеер боевого применения (Бункай) Шотокан с поддержкой 2 и 3 аватаров.
@@ -284,12 +318,16 @@ export default function BunkaiMultiAvatarPlayer({
 
           <ContactShadows position={[0, 0, 0]} opacity={0.65} scale={10} blur={1.5} far={4} />
 
+          {/* Задача 21: Предотвращение вылета камеры за пределы Додзё */}
+          <BunkaiCameraBounds controlsRef={controlsRef} />
+
           <OrbitControls
             ref={controlsRef}
             target={[placement.posTori[0], 0.95, placement.posTori[2]]}
             minDistance={1.2}
-            maxDistance={8.0}
-            maxPolarAngle={Math.PI / 2 - 0.04}
+            maxDistance={6.4}
+            maxPolarAngle={Math.PI / 2 - 0.06}
+            minPolarAngle={0.12}
             enablePan
             enableDamping
             dampingFactor={0.08}
@@ -506,24 +544,33 @@ export default function BunkaiMultiAvatarPlayer({
             </button>
           </div>
 
-          {/* Скорость воспроизведения */}
+          {/* Скорость воспроизведения — Задача 20: четкий контрастный дизайн, без "черного на черном" */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>Скорость:</span>
-            {[0.25, 0.5, 1.0].map((s) => (
-              <button
-                key={s}
-                className="btn"
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '0.78rem',
-                  borderColor: speed === s ? 'var(--color-gold)' : undefined,
-                  background: speed === s ? 'rgba(197, 155, 39, 0.2)' : undefined,
-                }}
-                onClick={() => setSpeed(s)}
-              >
-                {s}x
-              </button>
-            ))}
+            <span style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600 }}>Скорость:</span>
+            {[0.25, 0.5, 1.0].map((s) => {
+              const isActive = speed === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    border: isActive ? '1px solid #ffd700' : '1px solid rgba(255, 255, 255, 0.2)',
+                    background: isActive ? '#c5a059' : 'rgba(255, 255, 255, 0.08)',
+                    color: isActive ? '#14110b' : '#f1f5f9',
+                    boxShadow: isActive ? '0 0 10px rgba(197, 160, 89, 0.5)' : 'none',
+                  }}
+                  onClick={() => setSpeed(s)}
+                >
+                  {s}x
+                </button>
+              );
+            })}
           </div>
         </div>
 
