@@ -1,7 +1,7 @@
-const { execProc } = require('./execProc');
+const { callProcedure } = require('./execProc');
 
 async function createNotification(userId, type, title, message, targetUrl = null) {
-  const result = await execProc('sp_Notification_Create', {
+  const result = await callProcedure('sp_Notification_Create', {
     UserId: userId,
     Type: type,
     Title: title,
@@ -12,7 +12,7 @@ async function createNotification(userId, type, title, message, targetUrl = null
 }
 
 async function listNotifications(userId, limit = 30) {
-  const result = await execProc('sp_Notification_List', {
+  const result = await callProcedure('sp_Notification_List', {
     UserId: userId,
     Limit: limit,
   });
@@ -20,7 +20,7 @@ async function listNotifications(userId, limit = 30) {
 }
 
 async function markRead(userId, notificationId = null) {
-  const result = await execProc('sp_Notification_MarkRead', {
+  const result = await callProcedure('sp_Notification_MarkRead', {
     UserId: userId,
     NotificationId: notificationId,
   });
@@ -28,7 +28,7 @@ async function markRead(userId, notificationId = null) {
 }
 
 async function getUnreadCount(userId) {
-  const result = await execProc('sp_Notification_GetUnreadCount', {
+  const result = await callProcedure('sp_Notification_GetUnreadCount', {
     UserId: userId,
   });
   return result[0]?.UnreadCount || 0;

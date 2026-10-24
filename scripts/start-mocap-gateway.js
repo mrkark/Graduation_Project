@@ -54,17 +54,17 @@ function detectLocalIp() {
         const ip = socket.address().address;
         socket.close();
         if (ip.startsWith('172.') || ip.startsWith('127.') || ip.startsWith('10.131.')) {
-          resolve('192.168.100.28');
+          resolve('192.168.100.6');
         } else {
           resolve(ip);
         }
       });
       socket.on('error', () => {
         try { socket.close(); } catch (e) {}
-        resolve('192.168.100.28');
+        resolve('192.168.100.6');
       });
     } catch (e) {
-      resolve('192.168.100.28');
+      resolve('192.168.100.6');
     }
   });
 }

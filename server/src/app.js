@@ -62,7 +62,7 @@ app.get('/api/health', (req, res) => res.json({ success: true, data: { status: '
 
 // Получение и обновление статуса локального HTTPS шлюза для подключения телефонов
 app.get('/api/mocap/tunnel', (req, res) => {
-  const defaultHost = process.env.HOST_IP || '192.168.100.28';
+  const defaultHost = process.env.HOST_IP || '192.168.100.6';
   try {
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     if (fs.existsSync(tunnelPath)) {
@@ -86,7 +86,8 @@ app.get('/api/mocap/tunnel', (req, res) => {
       httpsPort: 8088,
       localIp: defaultHost,
       localIps: [
-        { name: 'Основной LAN (Wi-Fi / Ethernet)', ip: defaultHost, isPrimary: true },
+        { name: 'Wi-Fi (192.168.100.6)', ip: '192.168.100.6', isPrimary: true },
+        { name: 'Ethernet (192.168.100.28)', ip: '192.168.100.28', isPrimary: false },
         { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
       ],
     },

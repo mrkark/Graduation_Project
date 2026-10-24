@@ -105,13 +105,25 @@ async def get_root_model():
 
 # Network ports
 def get_current_host_ip() -> str:
+    try:
+        tunnel_file = Path("/app/uploads/tunnel-info.json")
+        if not tunnel_file.exists():
+            tunnel_file = PROJECT_ROOT.parent / "uploads" / "tunnel-info.json"
+        if tunnel_file.exists():
+            data = json.loads(tunnel_file.read_text(encoding="utf-8"))
+            lip = data.get("localIp")
+            if lip and lip != "127.0.0.1" and lip != "10.131.233.47" and not lip.startswith("172.") and not lip.startswith("169.254"):
+                return lip
+    except Exception:
+        pass
+
     env_ip = os.environ.get("HOST_IP", "").strip()
-    if env_ip and env_ip != "127.0.0.1" and not env_ip.startswith("169.254"):
+    if env_ip and env_ip != "127.0.0.1" and env_ip != "10.131.233.47" and not env_ip.startswith("169.254") and not env_ip.startswith("172."):
         return env_ip
     detected = get_local_ip()
-    if detected and detected != "127.0.0.1" and not detected.startswith("169.254"):
+    if detected and detected != "127.0.0.1" and detected != "10.131.233.47" and not detected.startswith("169.254") and not detected.startswith("172."):
         return detected
-    return "127.0.0.1"
+    return "192.168.100.6"
 
 HOST_IP = get_current_host_ip()
 HTTP_PORT = 8000

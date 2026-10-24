@@ -14,6 +14,15 @@ function getSealFontSize(kanji) {
   return '0.75rem';
 }
 
+function extractErrorMessage(err, fallback = 'Произошла ошибка') {
+  if (!err) return fallback;
+  const apiError = err?.response?.data?.error;
+  if (typeof apiError === 'string') return apiError;
+  if (apiError && typeof apiError === 'object' && apiError.message) return apiError.message;
+  if (err.message && typeof err.message === 'string') return err.message;
+  return fallback;
+}
+
 export default function DojoPage() {
   const { user } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -70,7 +79,7 @@ export default function DojoPage() {
       const data = await listMyDojos();
       setDojos(data || []);
     } catch (err) {
-      setError(err?.response?.data?.error || err.message || 'Ошибка загрузки Додзё');
+      setError(extractErrorMessage(err, 'Ошибка загрузки Додзё'));
     } finally {
       setLoading(false);
     }
@@ -95,7 +104,7 @@ export default function DojoPage() {
       setSelectedDojoData(details);
       setFriendsList(friends || []);
     } catch (err) {
-      alert(err?.response?.data?.error || 'Не удалось открыть информацию о Додзё');
+      alert(extractErrorMessage(err, 'Не удалось открыть информацию о Додзё'));
       setSelectedDojoId(null);
     } finally {
       setLoadingModal(false);
@@ -126,7 +135,7 @@ export default function DojoPage() {
       await loadDojos();
       setActiveTab('my');
     } catch (err) {
-      setError(err?.response?.data?.error || 'Не удалось создать Додзё');
+      setError(extractErrorMessage(err, 'Не удалось создать Додзё'));
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +165,7 @@ export default function DojoPage() {
         setSelectedDojoData(refreshed);
       }
     } catch (err) {
-      alert(err?.response?.data?.error || 'Не удалось обновить Додзё');
+      alert(extractErrorMessage(err, 'Не удалось обновить Додзё'));
     } finally {
       setUpdating(false);
     }
@@ -173,7 +182,7 @@ export default function DojoPage() {
       }
       await loadDojos();
     } catch (err) {
-      alert(err?.response?.data?.error || 'Не удалось распустить Додзё');
+      alert(extractErrorMessage(err, 'Не удалось распустить Додзё'));
     }
   };
 
@@ -182,7 +191,7 @@ export default function DojoPage() {
       await respondDojoInvite(dojoId, accept);
       await loadDojos();
     } catch (err) {
-      alert(err?.response?.data?.error || 'Ошибка при ответе на приглашение');
+      alert(extractErrorMessage(err, 'Ошибка при ответе на приглашение'));
     }
   };
 
@@ -210,7 +219,7 @@ export default function DojoPage() {
       setSelectedDojoData(refreshed);
     } catch (err) {
       setInviteStatus((prev) => ({ ...prev, [targetUserId]: 'error' }));
-      alert(err?.response?.data?.error || 'Не удалось пригласить пользователя');
+      alert(extractErrorMessage(err, 'Не удалось пригласить пользователя'));
     }
   };
 
@@ -263,7 +272,7 @@ export default function DojoPage() {
 
       {error && (
         <div className="alert alert-danger" style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: '4px' }}>
-          {error}
+          {typeof error === 'object' ? (error?.message || JSON.stringify(error)) : String(error)}
         </div>
       )}
 

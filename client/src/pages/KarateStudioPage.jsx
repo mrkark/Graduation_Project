@@ -18,20 +18,20 @@ export default function KarateStudioPage() {
   const [publicTunnelUrl, setPublicTunnelUrl] = useState('');
   const [tunnelActive, setTunnelActive] = useState(false);
   const [networkMode, setNetworkMode] = useState('local'); // 'local' по умолчанию для домашнего Wi-Fi
-  const [selectedPort, setSelectedPort] = useState('8088'); // '8088' | '8443' | '8000'
+  const [selectedPort, setSelectedPort] = useState('8088'); // '8088' | '8443' | '5173' | '8000'
   const [copied, setCopied] = useState(false);
   const [isEditingIp, setIsEditingIp] = useState(false);
   const [customIpInput, setCustomIpInput] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [realIp, setRealIp] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('mocap_user_ip');
-      if (saved && saved !== '127.0.0.1' && saved !== '10.131.233.47') return saved;
       if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         return window.location.hostname;
       }
+      const saved = localStorage.getItem('mocap_user_ip');
+      if (saved && saved !== '127.0.0.1' && saved !== '10.131.233.47' && saved !== '192.168.100.28') return saved;
     }
-    return '192.168.100.28';
+    return '192.168.100.6';
   });
 
   useEffect(() => {
@@ -42,10 +42,6 @@ export default function KarateStudioPage() {
         if (res.ok) {
           const data = await res.json();
           if (mounted) {
-            const ip = data?.ip;
-            if (ip && ip !== '127.0.0.1' && ip !== '10.131.233.47' && !ip.startsWith('172.')) {
-              setRealIp((prev) => (prev && prev !== '10.131.233.47' && prev !== '127.0.0.1' ? prev : ip));
-            }
             setStudioOnline(true);
           }
         } else if (mounted) {
@@ -62,7 +58,7 @@ export default function KarateStudioPage() {
           if (mounted) {
             const lIp = j?.data?.localIp;
             if (lIp && lIp !== '127.0.0.1' && lIp !== '10.131.233.47' && !lIp.startsWith('172.')) {
-              setRealIp((prev) => (prev && prev !== '10.131.233.47' && prev !== '127.0.0.1' ? prev : lIp));
+              setRealIp(lIp);
             }
             if (Array.isArray(j?.data?.localIps) && j.data.localIps.length > 0) {
               const filtered = j.data.localIps.filter((item) => item.ip !== '10.131.233.47');
@@ -89,14 +85,14 @@ export default function KarateStudioPage() {
     ? realIp
     : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
         ? window.location.hostname
-        : '192.168.100.28');
+        : '192.168.100.6');
 
   const studioUrl = '/studio';
 
   const isTunnelAvailable = Boolean(publicTunnelUrl && tunnelActive);
   const activeMode = (networkMode === 'tunnel' && isTunnelAvailable) ? 'tunnel' : (isTunnelAvailable ? networkMode : 'local');
 
-  const portProtocol = selectedPort === '8000' ? 'http' : 'https';
+  const portProtocol = (selectedPort === '8000' || selectedPort === '5173') ? 'http' : 'https';
   const activeCamUrl = (activeMode === 'tunnel' && publicTunnelUrl)
     ? `${publicTunnelUrl}/${selectedCam}`
     : `${portProtocol}://${displayHost}:${selectedPort}/${selectedCam}`;
@@ -441,6 +437,22 @@ export default function KarateStudioPage() {
             </button>
             <button
               type="button"
+              onClick={() => setSelectedPort('5173')}
+              style={{
+                background: selectedPort === '5173' ? '#8b5cf6' : '#1e2230',
+                color: selectedPort === '5173' ? '#fff' : '#d1d5db',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              ⚡ Web (5173)
+            </button>
+            <button
+              type="button"
               onClick={() => setSelectedPort('8000')}
               style={{
                 background: selectedPort === '8000' ? '#f59e0b' : '#1e2230',
@@ -458,11 +470,35 @@ export default function KarateStudioPage() {
 
             <span style={{ color: '#4b5563', margin: '0 4px' }}>|</span>
 
+            {availableIps.length > 0 && !isEditingIp && (
+              <select
+                value={displayHost}
+                onChange={(e) => handleSaveCustomIp(e.target.value)}
+                style={{
+                  background: '#0d0e14',
+                  border: '1px solid #374151',
+                  color: '#6ee7b7',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                  cursor: 'pointer',
+                  marginRight: '4px',
+                }}
+              >
+                {availableIps.map((it) => (
+                  <option key={it.ip} value={it.ip}>
+                    {it.name || it.ip}
+                  </option>
+                ))}
+              </select>
+            )}
+
             {isEditingIp ? (
               <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                 <input
                   type="text"
-                  placeholder="192.168.100.28"
+                  placeholder="192.168.100.6"
                   value={customIpInput}
                   onChange={(e) => setCustomIpInput(e.target.value)}
                   style={{

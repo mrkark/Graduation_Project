@@ -82,4 +82,10 @@ async function callProcedureWithRecordsets(procName, params = {}) {
   }
 }
 
-module.exports = { callProcedure, callProcedureWithRecordsets, callScalarFunction, ApiError };
+module.exports = {
+  callProcedure,
+  execProc: callProcedure,
+  callProcedureWithRecordsets,
+  callScalarFunction,
+  ApiError,
+};

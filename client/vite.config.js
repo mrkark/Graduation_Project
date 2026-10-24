@@ -145,6 +145,31 @@ export default defineConfig({
         secure: false,
         configure: handleProxyError,
       },
+      '/cam1': {
+        target: studioTarget,
+        changeOrigin: true,
+        secure: false,
+        configure: handleProxyError,
+      },
+      '/cam2': {
+        target: studioTarget,
+        changeOrigin: true,
+        secure: false,
+        configure: handleProxyError,
+      },
+      '/cam3': {
+        target: studioTarget,
+        changeOrigin: true,
+        secure: false,
+        configure: handleProxyError,
+      },
+      '/ws/stream': {
+        target: studioTarget,
+        ws: true,
+        changeOrigin: true,
+        secure: false,
+        configure: handleProxyError,
+      },
       '/ws': {
         target: studioTarget,
         ws: true,
