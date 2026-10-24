@@ -42,14 +42,14 @@ const KATA_KANJI_MAP = {
   'chinte': '珍手',
 };
 
-// 4 канонических павильона Сётокан для гармоничной динамической верстки
+// Канонические павильоны Сётокан
 const CANON_PAVILIONS = [
   {
     id: 'heian',
     title: 'Ступень Хэйан · Базовые Формы Спокойствия',
     kanji: '平安 · 9–4 Кю',
     seal: '平',
-    badgeText: '5 Форм Фундамента',
+    badgeText: '5 Базовых Ката',
     description: 'Основа каратэдо мастера Гитина Фунакоси: постановка равновесия, базовые блоки и удары. 5 ступеней от белого до красного пояса.',
     matcher: (item) => {
       const t = (item.Title || '').toLowerCase();
@@ -57,37 +57,22 @@ const CANON_PAVILIONS = [
     },
   },
   {
-    id: 'tekki',
-    title: 'Школа Тэкки · «Железный Всадник» (Найханчи)',
-    kanji: '鉄騎 · 3–1 Кю / 1 Дан',
-    seal: '騎',
-    badgeText: '3 Формы Киба-дати',
-    description: 'Бой на узкой тропе исключительно в укорененной стойке Киба-дати без разворотов корпуса. Мощные сбивы локтями и удары уракэн.',
-    matcher: (item) => {
-      const t = (item.Title || '').toLowerCase();
-      return t.includes('tekki') || t.includes('тэкки');
-    },
-  },
-  {
     id: 'sentei',
-    title: 'Фундаментальные Сэнтэй-Ката (Коричневые Пояса и 1 Дан)',
+    title: '4 Главных Ката (Сэнтэй-Ката)',
     kanji: '選定形 · 3–1 Кю / 1 Дан',
     seal: '選',
-    badgeText: '5 Главных Ката',
-    description: 'Обязательные классические формы канона Сётокан: Бассай-дай («Взятие крепости»), Канку-дай («Взгляд в небеса»), Дзион, Эмпи, Хангэцу.',
+    badgeText: '4 Главных Ката',
+    description: 'Обязательные классические формы канона Сётокан: Бассай-дай («Взятие крепости»), Дзион, Эмпи, Канку-дай («Взгляд в небеса»).',
     matcher: (item) => {
       const t = (item.Title || '').toLowerCase();
       return (
-        t.includes('bassai-dai') ||
-        t.includes('бассай-дай') ||
-        t.includes('kanku-dai') ||
-        t.includes('канку-дай') ||
+        (t.includes('bassai') && (t.includes('dai') || t.includes('дай'))) ||
+        (t.includes('kanku') && (t.includes('dai') || t.includes('дай'))) ||
         t.includes('jion') ||
         t.includes('дзион') ||
+        t.includes('джион') ||
         t.includes('empi') ||
-        t.includes('эмпи') ||
-        t.includes('hangetsu') ||
-        t.includes('хангэцу')
+        t.includes('эмпи')
       );
     },
   },
@@ -96,26 +81,25 @@ const CANON_PAVILIONS = [
     title: 'Высшие Мастерские Формы (Юданся · Даны)',
     kanji: '有段者 · 1–5 Даны',
     seal: '極',
-    badgeText: '13 Высших Форм',
-    description: 'Сложнейшие формы высших поясов: Унсу («Облачные руки» с прыжком 360°), Ганкаку («Журавль на скале»), Сочин, Нидзюсихо, Годзюсихо и другие.',
+    badgeText: '21 Высшее Ката',
+    description: 'Все 21 высшие формы канона Сётокан (все ката кроме Хэйан 1–5): Тэкки, Бассай-дай, Канку-дай, Дзион, Эмпи, Хангэцу, Ганкаку, Сочин, Нидзюсихо, Унсу и другие.',
     matcher: (item) => {
       const t = (item.Title || '').toLowerCase();
-      return (
-        !t.includes('heian') &&
-        !t.includes('хэйан') &&
-        !t.includes('tekki') &&
-        !t.includes('тэкки') &&
-        !t.includes('bassai-dai') &&
-        !t.includes('бассай-дай') &&
-        !t.includes('kanku-dai') &&
-        !t.includes('канку-дай') &&
-        !t.includes('jion') &&
-        !t.includes('дзион') &&
-        !t.includes('empi') &&
-        !t.includes('эмпи') &&
-        !t.includes('hangetsu') &&
-        !t.includes('хангэцу')
-      );
+      return !t.includes('heian') && !t.includes('хэйан');
+    },
+    // В сводном режиме "Все 26 Ката" отображает остальные высшие формы без дублирования 4 главных
+    sectionMatcher: (item) => {
+      const t = (item.Title || '').toLowerCase();
+      const isHeian = t.includes('heian') || t.includes('хэйан');
+      const isSentei =
+        (t.includes('bassai') && (t.includes('dai') || t.includes('дай'))) ||
+        (t.includes('kanku') && (t.includes('dai') || t.includes('дай'))) ||
+        t.includes('jion') ||
+        t.includes('дзион') ||
+        t.includes('джион') ||
+        t.includes('empi') ||
+        t.includes('эмпи');
+      return !isHeian && !isSentei;
     },
   },
 ];
@@ -202,6 +186,17 @@ function getKataKanji(item) {
   return item?.Title?.match(/[\u4e00-\u9faf]{1,4}/)?.[0] || '型';
 }
 
+// Склонение слова "шаг" для правильного русского языка (1 шаг, 2 шага, 5 шагов, 21 шаг, 34 шага)
+function formatSteps(count) {
+  const c = Number(count) || 0;
+  const n = Math.abs(c) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return `${c} шагов`;
+  if (n1 > 1 && n1 < 5) return `${c} шага`;
+  if (n1 === 1) return `${c} шаг`;
+  return `${c} шагов`;
+}
+
 export default function KataListPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -220,8 +215,8 @@ export default function KataListPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    // Загружаем полный реестр 26 ката за один раз через pageSize: 40
-    listKata({ search, sort, page: 1, pageSize: 40 })
+    // Загружаем полный реестр 26 ката (поиск выполняется мгновенно на клиенте)
+    listKata({ sort, page: 1, pageSize: 40 })
       .then((res) => {
         if (cancelled) return;
         const kataList = res.data || [];
@@ -237,7 +232,7 @@ export default function KataListPage() {
     return () => {
       cancelled = true;
     };
-  }, [search, sort]);
+  }, [sort]);
 
   function updateParam(key, value) {
     const next = new URLSearchParams(params);
@@ -259,9 +254,34 @@ export default function KataListPage() {
     return list.sort((a, b) => (Number(a.Kata_ID) || 0) - (Number(b.Kata_ID) || 0));
   }, [items, sort]);
 
-  // Фильтрация ката с учетом выбранного пояса и павильона
+  // Фильтрация ката с учетом выбранного пояса, павильона и строки поиска
+  // Задача 8: поиск работает не в выбранном разделе, а вообще по всем ката
   const filteredItems = useMemo(() => {
+    const rawQ = (search || '').trim().toLowerCase();
+    const normalizedQ = rawQ.replace(/[-–—]/g, ' ');
+    const searchWords = normalizedQ.split(/\s+/).filter(Boolean);
+
     return sortedItems.filter((item) => {
+      // Если введен поисковый запрос (или нажат быстрый тег) — ищем по всем ката
+      if (searchWords.length > 0) {
+        const titleNorm = (item.Title || '').toLowerCase().replace(/[-–—]/g, ' ');
+        const descNorm = (item.Description || '').toLowerCase().replace(/[-–—]/g, ' ');
+        const kanji = (getKataKanji(item) || '').toLowerCase();
+
+        const matches = searchWords.every(
+          (word) => titleNorm.includes(word) || descNorm.includes(word) || kanji.includes(word)
+        );
+        if (!matches) return false;
+
+        // Фильтр по поясу применяется только если выбран конкретный пояс
+        if (selectedBelt !== 'all') {
+          const belt = getKataBeltInfo(item);
+          if (belt.id !== selectedBelt) return false;
+        }
+        return true;
+      }
+
+      // Если поиска нет — действует фильтрация по поясам и разделам
       if (selectedBelt !== 'all') {
         const belt = getKataBeltInfo(item);
         if (belt.id !== selectedBelt) return false;
@@ -272,7 +292,7 @@ export default function KataListPage() {
       }
       return true;
     });
-  }, [sortedItems, selectedBelt, selectedPavilion]);
+  }, [sortedItems, selectedBelt, selectedPavilion, search]);
 
   // Активная выбранная ката для блока Spotlight
   const activeKata = useMemo(() => {
@@ -302,7 +322,7 @@ export default function KataListPage() {
     return groups;
   }, [items]);
 
-  const quickSearchTags = ['Хэйан Шодан', 'Бассай-дай', 'Канку-дай', 'Эмпи', 'Унсу'];
+  const quickSearchTags = ['Хэйан Шодан', 'Бассай Дай', 'Канку Дай', 'Эмпи', 'Унсу'];
 
   return (
     <div className="container kata-atlas">
@@ -396,16 +416,24 @@ export default function KataListPage() {
         {/* Быстрые теги подсказок */}
         <div className="atlas-quick-tags">
           <span className="quick-tags-label">Быстрый выбор:</span>
-          {quickSearchTags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className={`quick-tag-chip ${search === tag ? 'active' : ''}`}
-              onClick={() => updateParam('search', search === tag ? '' : tag)}
-            >
-              {tag}
-            </button>
-          ))}
+          {quickSearchTags.map((tag) => {
+            const normSearch = search.toLowerCase().replace(/[-–—]/g, ' ').trim();
+            const normTag = tag.toLowerCase().replace(/[-–—]/g, ' ').trim();
+            const isActive = normSearch === normTag;
+            return (
+              <button
+                key={tag}
+                type="button"
+                className={`quick-tag-chip ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedPavilion('all');
+                  updateParam('search', isActive ? '' : tag);
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -560,8 +588,9 @@ export default function KataListPage() {
           )}
 
           {/* 6. ДИНАМИЧЕСКИЙ BENTO-АТЛАС КАТА: БОЛЬШИЕ HERO КАРТОЧКИ + СТАНДАРТНЫЕ */}
-          {CANON_PAVILIONS.filter((pav) => selectedPavilion === 'all' || pav.id === selectedPavilion).map((pav) => {
-            const pavItems = filteredItems.filter(pav.matcher);
+          {CANON_PAVILIONS.filter((pav) => (!search.trim() ? (selectedPavilion === 'all' || pav.id === selectedPavilion) : true)).map((pav) => {
+            const matcherFn = selectedPavilion === pav.id ? pav.matcher : (pav.sectionMatcher || pav.matcher);
+            const pavItems = filteredItems.filter(matcherFn);
             if (pavItems.length === 0) return null;
 
             return (
@@ -600,7 +629,7 @@ export default function KataListPage() {
                         onClick={() => navigate(`/kata/${item.Kata_ID}`)}
                         role="button"
                         tabIndex={0}
-                        title={`Открыть форму ${item.Title} в 3D Додзё`}
+                        title={`Открыть форму ${item.Title} в 3D`}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             navigate(`/kata/${item.Kata_ID}`);
@@ -647,16 +676,11 @@ export default function KataListPage() {
                               : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
                           </p>
 
-                          {/* Нижняя панель с мета-информацией и прямым приглашением в 3D Додзё */}
+                          {/* Нижняя панель с мета-информацией */}
                           <div className="atlas-card__footer">
                             <div className="atlas-card__meta-badges">
                               <BeltBadge belt={belt} size="sm" showKanji={false} />
-                              <span className="atlas-card__steps-pill">{stepsCount} шагов</span>
-                            </div>
-
-                            <div className="atlas-card__dojo-tag">
-                              <span>3D Додзё</span>
-                              <span className="dojo-tag-arrow">→</span>
+                              <span className="atlas-card__steps-pill">{formatSteps(stepsCount)}</span>
                             </div>
                           </div>
                         </div>

@@ -787,7 +787,8 @@ input.atlas-search-input {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .atlas-card__steps-pill {
@@ -797,6 +798,8 @@ input.atlas-search-input {
   border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 2px 6px;
   border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .atlas-card__dojo-tag {

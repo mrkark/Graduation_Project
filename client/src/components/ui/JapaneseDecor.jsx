@@ -399,6 +399,8 @@ export function BeltBadge({ belt, size = 'md', showKanji = true, className = '' 
     ? (BELT_GRADATION.find((b) => b.id === belt || b.kyu.includes(belt)) || BELT_GRADATION[0])
     : (belt || BELT_GRADATION[0]);
 
+  const displayName = info.name.replace(/\s*пояс\s*/i, '').trim();
+
   return (
     <span
       className={`dojo-belt-badge dojo-belt-badge--${info.id} dojo-belt-badge--${size} ${className}`}
@@ -411,7 +413,7 @@ export function BeltBadge({ belt, size = 'md', showKanji = true, className = '' 
     >
       <span className="dojo-belt-badge__knot" style={{ backgroundColor: info.borderColor }} />
       <span className="dojo-belt-badge__kyu">{info.kyu}</span>
-      <span className="dojo-belt-badge__name">{info.name}</span>
+      <span className="dojo-belt-badge__name">{displayName}</span>
       {showKanji && <span className="dojo-belt-badge__kanji">{info.kanji}</span>}
     </span>
   );
