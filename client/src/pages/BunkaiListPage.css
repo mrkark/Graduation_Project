@@ -265,18 +265,24 @@
   flex: 1;
 }
 
-/* Индикатор дистанции Ма-ай */
+/* Индикатор дистанции Ма-ай — Задача 17: без переносов */
 .bunkai-unit__maai-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid var(--border-subtle);
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
+.bunkai-unit__maai-badge strong,
+.bunkai-unit__maai-badge span {
+  white-space: nowrap;
 }
 
 .bunkai-maai-kanji {
@@ -290,19 +296,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding-top: 1rem;
   border-top: 1px solid var(--border-subtle);
+  flex-wrap: nowrap;
 }
 
 .bunkai-unit__author {
   font-size: 0.82rem;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bunkai-canonical-tag {
+  font-size: 0.76rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .bunkai-author-label {
   color: var(--text-muted);
 }
 
+/* Задача 19: кнопка "Симуляция 3D" строго в 1 строку */
 .bunkai-unit__action {
   font-size: 0.88rem;
   font-weight: 600;
@@ -311,6 +332,12 @@
   align-items: center;
   gap: 0.5rem;
   transition: color 0.16s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.bunkai-unit__action span {
+  white-space: nowrap;
 }
 
 .bunkai-unit:hover .bunkai-unit__action {

@@ -142,36 +142,46 @@
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* 3. КОМПАКТНЫЙ СТЕППЕР УПРАВЛЕНИЯ */
+/* 3. КОМПАКТНЫЙ СТЕППЕР УПРАВЛЕНИЯ — Задача 13: залоченное положение навигации шагов */
 .kata-stepper {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1rem 0.75rem;
+  padding: 0.85rem 1rem;
   gap: 1.5rem;
   background: rgba(0, 0, 0, 0.25);
   border-radius: var(--radius-xs);
   margin-top: 0.75rem;
   border: 1px solid rgba(255, 255, 255, 0.03);
+  min-height: 112px;
 }
 
 @media (max-width: 640px) {
   .kata-stepper {
     flex-direction: column;
     text-align: center;
+    min-height: auto;
   }
 }
 
 .kata-stepper__nav-btn {
-  min-width: 130px;
+  min-width: 140px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .kata-stepper__info {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: center;
+  gap: 0.3rem;
   text-align: center;
+  flex: 1;
+  min-height: 80px;
 }
 
 .kata-stepper__step-badge {
@@ -183,6 +193,7 @@
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  min-height: 22px;
 }
 
 .kata-kiai-badge {
@@ -209,11 +220,15 @@
 }
 
 .kata-stepper__technique {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-family: var(--font-display);
   font-weight: 600;
   color: var(--text-primary);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 580px;
 }
 
 .kata-stepper__stance-line {
