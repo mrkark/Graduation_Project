@@ -38,6 +38,7 @@ async function getDojoDetails(dojoId, userId) {
 
   return {
     ...dojo,
+    dojo,
     members,
   };
 }

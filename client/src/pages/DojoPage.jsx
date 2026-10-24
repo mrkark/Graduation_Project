@@ -129,8 +129,8 @@ export default function DojoPage() {
     }
   };
 
-  const activeDojos = dojos.filter((d) => d.Status === 'active');
-  const invitedDojos = dojos.filter((d) => d.Status === 'invited');
+  const activeDojos = dojos.filter((d) => (d.Status || d.MyStatus) === 'active');
+  const invitedDojos = dojos.filter((d) => (d.Status || d.MyStatus) === 'invited');
 
   return (
     <div className="container dojo-page" style={{ paddingTop: '2rem' }}>
@@ -211,7 +211,7 @@ export default function DojoPage() {
                         <div className="dojo-card__info">
                           <div className="dojo-card__name">{d.Name}</div>
                           <div className="dojo-card__sensei">
-                            Сэнсэй: <strong>{d.SenseiName || 'Мастер'}</strong>
+                            Сэнсэй: <strong>{d.SenseiName || d.Sensei_Name || d.Sensei_Username || 'Мастер'}</strong>
                           </div>
                         </div>
                       </div>
@@ -221,9 +221,9 @@ export default function DojoPage() {
                       </div>
 
                       <div className="dojo-card__meta">
-                        <span>Участников: <strong>{d.MemberCount || 1}</strong></span>
+                        <span>Участников: <strong>{d.MemberCount || d.MembersCount || 1}</strong></span>
                         <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--gold)' }}>
-                          {d.Role === 'sensei' ? '🥋 Сэнсэй' : '🥋 Ученик'}
+                          {(d.Role || d.MyRole) === 'sensei' ? '🥋 Сэнсэй' : '🥋 Ученик'}
                         </span>
                       </div>
 
@@ -264,7 +264,7 @@ export default function DojoPage() {
                         <div className="dojo-card__info">
                           <div className="dojo-card__name">{d.Name}</div>
                           <div className="dojo-card__sensei">
-                            Приглашает Сэнсэй: <strong>{d.SenseiName || 'Мастер'}</strong>
+                            Приглашает Сэнсэй: <strong>{d.SenseiName || d.Sensei_Name || d.Sensei_Username || 'Мастер'}</strong>
                           </div>
                         </div>
                       </div>
@@ -371,7 +371,7 @@ export default function DojoPage() {
           <div className="dojo-modal" onClick={(e) => e.stopPropagation()}>
             <div className="dojo-modal__header">
               <div className="dojo-modal__title">
-                ⛩️ {selectedDojoData?.dojo?.Name || 'Додзё'}
+                ⛩️ {selectedDojoData?.Name || selectedDojoData?.dojo?.Name || 'Додзё'}
               </div>
               <button type="button" className="dojo-modal__close" onClick={closeDojoModal}>✕</button>
             </div>
@@ -382,7 +382,7 @@ export default function DojoPage() {
               ) : selectedDojoData ? (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                    {selectedDojoData.dojo.Description || 'Совместные тренировки и изучение традиционного Сётокан.'}
+                    {selectedDojoData?.Description || selectedDojoData?.dojo?.Description || 'Совместные тренировки и изучение традиционного Сётокан.'}
                   </p>
 
                   <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem' }}>🥋 Участники школы ({selectedDojoData.members?.length || 0})</h4>

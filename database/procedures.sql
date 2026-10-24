@@ -1647,8 +1647,12 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SELECT d.Dojo_ID, d.Name, d.Kanji, d.Description, d.Creator_ID, d.Avatar_URL, d.Created_At,
-           dm.Role AS MyRole, dm.Status AS MyStatus, dm.Joined_At,
-           u.Display_Name AS Sensei_Name, u.Username AS Sensei_Username,
+           dm.Role AS Role, dm.Role AS MyRole,
+           dm.Status AS Status, dm.Status AS MyStatus,
+           dm.Joined_At,
+           u.Display_Name AS SenseiName, u.Display_Name AS Sensei_Name,
+           u.Username AS Sensei_Username,
+           (SELECT COUNT(*) FROM dbo.DojoMembers sub WHERE sub.Dojo_ID = d.Dojo_ID AND sub.Status = 'active') AS MemberCount,
            (SELECT COUNT(*) FROM dbo.DojoMembers sub WHERE sub.Dojo_ID = d.Dojo_ID AND sub.Status = 'active') AS MembersCount
     FROM dbo.DojoMembers dm
     JOIN dbo.Dojos d ON d.Dojo_ID = dm.Dojo_ID
