@@ -26,6 +26,8 @@ export default function FriendsPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sentIds, setSentIds] = useState(new Set());
+  const [noticeMessage, setNoticeMessage] = useState(null);
 
   async function loadAll() {
     setLoading(true);
@@ -52,8 +54,16 @@ export default function FriendsPage() {
   }, [tab, query]);
 
   async function onSend(userId) {
-    await sendFriendRequest(userId);
-    await loadAll();
+    try {
+      await sendFriendRequest(userId);
+      setSentIds((prev) => new Set([...prev, userId]));
+      setNoticeMessage('Заявка в соратники успешно отправлена!');
+      setTimeout(() => setNoticeMessage(null), 4000);
+      await loadAll();
+    } catch (err) {
+      setNoticeMessage(err.response?.data?.error?.message || 'Не удалось отправить заявку');
+      setTimeout(() => setNoticeMessage(null), 4000);
+    }
   }
   async function onAccept(requestId) {
     await acceptFriendRequest(requestId);
@@ -198,6 +208,24 @@ export default function FriendsPage() {
 
           {tab === 'search' && (
             <div>
+              {noticeMessage && (
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid #10b981',
+                  color: '#6ee7b7',
+                  padding: '0.65rem 1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                }}>
+                  <span>✓</span> <span>{noticeMessage}</span>
+                </div>
+              )}
+
               <div className="friend-search-bar">
                 <input
                   className="friend-search-input"
@@ -216,22 +244,37 @@ export default function FriendsPage() {
               )}
 
               <div className="friends-list">
-                {results.map((u) => (
-                  <div className="friend-card" key={u.User_ID}>
-                    <div className="friend-card__identity">
-                      <div className="friend-card__avatar">
-                        {(u.Display_Name || u.Username || 'K')[0].toUpperCase()}
+                {results.map((u) => {
+                  const isSent = sentIds.has(u.User_ID) || outgoing.some((r) => r.Receiver_ID === u.User_ID || r.Receiver?.User_ID === u.User_ID);
+                  const isAlreadyFriend = friends.some((f) => f.User_ID === u.User_ID);
+
+                  return (
+                    <div className="friend-card" key={u.User_ID}>
+                      <div className="friend-card__identity">
+                        <div className="friend-card__avatar">
+                          {(u.Display_Name || u.Username || 'K')[0].toUpperCase()}
+                        </div>
+                        <div className="friend-card__meta">
+                          <span className="friend-card__name">{u.Display_Name || u.Username}</span>
+                          <span className="friend-card__role">@{u.Username}</span>
+                        </div>
                       </div>
-                      <div className="friend-card__meta">
-                        <span className="friend-card__name">{u.Display_Name || u.Username}</span>
-                        <span className="friend-card__role">@{u.Username}</span>
-                      </div>
+                      {isAlreadyFriend ? (
+                        <span className="btn btn-subtle" style={{ pointerEvents: 'none', opacity: 0.85, fontSize: '0.82rem' }}>
+                          ✓ В соратниках
+                        </span>
+                      ) : isSent ? (
+                        <span className="btn" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', pointerEvents: 'none', fontSize: '0.82rem' }}>
+                          ✓ Заявка отправлена
+                        </span>
+                      ) : (
+                        <button className="btn btn-gold" onClick={() => onSend(u.User_ID)} style={{ fontSize: '0.82rem' }}>
+                          + Пригласить в соратники
+                        </button>
+                      )}
                     </div>
-                    <button className="btn btn-gold" onClick={() => onSend(u.User_ID)}>
-                      + Пригласить в соратники
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

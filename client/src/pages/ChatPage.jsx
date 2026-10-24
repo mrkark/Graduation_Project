@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { getGeneralRoom, listRooms, listMessages, createPrivateRoom } from '../api/chat';
+import { listFriends } from '../api/friends';
 import { useAuthStore } from '../store/authStore';
 import './ChatPage.css';
 
@@ -16,8 +17,33 @@ export default function ChatPage() {
   const [text, setText] = useState('');
   const [typingUser, setTypingUser] = useState(null);
   const [error, setError] = useState(null);
-  const messagesEndRef = useRef(null);
+  const [friendsList, setFriendsList] = useState([]);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+
+  // Задача 40: закрепление чатов в локальном хранилище
+  const [pinnedRoomIds, setPinnedRoomIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`pinned_rooms_${user?.User_ID || 'current'}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const messagesBoxRef = useRef(null);
   const typingTimeout = useRef(null);
+
+  function togglePinRoom(roomId, e) {
+    e.stopPropagation();
+    setPinnedRoomIds((prev) => {
+      const isPinned = prev.includes(roomId);
+      const next = isPinned ? prev.filter((id) => id !== roomId) : [roomId, ...prev];
+      try {
+        localStorage.setItem(`pinned_rooms_${user?.User_ID || 'current'}`, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }
 
   // Первичная загрузка комнат + разрешение friendId из query-параметров
   useEffect(() => {
@@ -41,6 +67,7 @@ export default function ChatPage() {
       setActiveRoomId(general.ChatRoom_ID);
     }
     init();
+    listFriends().then((f) => setFriendsList(f || [])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -83,8 +110,11 @@ export default function ChatPage() {
     };
   }, [activeRoomId, socket, user]);
 
+  // Задача 38: прокрутка только внутри блока сообщений без пролистывания экрана вниз
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesBoxRef.current) {
+      messagesBoxRef.current.scrollTop = messagesBoxRef.current.scrollHeight;
+    }
   }, [messages]);
 
   function roomLabel(room) {
@@ -94,6 +124,19 @@ export default function ChatPage() {
       return `🥋 ${room.Friend.Display_Name || room.Friend.Username}`;
     }
     return 'Личный диалог';
+  }
+
+  async function handleStartFriendChat(friendId) {
+    try {
+      const room = await createPrivateRoom(Number(friendId));
+      if (!rooms.find((r) => r.ChatRoom_ID === room.ChatRoom_ID)) {
+        setRooms((prev) => [room, ...prev]);
+      }
+      setActiveRoomId(room.ChatRoom_ID);
+      setShowNewChatModal(false);
+    } catch (err) {
+      setError('Не удалось начать чат с выбранным соратником');
+    }
   }
 
   function onSend(e) {
@@ -117,6 +160,17 @@ export default function ChatPage() {
     socket.current?.emit('typing', { roomId: activeRoomId, isTyping: true });
   }
 
+  // Задача 40: закрепленные диалоги первыми в списке
+  const sortedRooms = useMemo(() => {
+    return [...rooms].sort((a, b) => {
+      const aPinned = pinnedRoomIds.includes(a.ChatRoom_ID);
+      const bPinned = pinnedRoomIds.includes(b.ChatRoom_ID);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+  }, [rooms, pinnedRoomIds]);
+
   const activeRoom = useMemo(() => rooms.find((r) => r.ChatRoom_ID === activeRoomId), [rooms, activeRoomId]);
 
   return (
@@ -131,19 +185,91 @@ export default function ChatPage() {
 
       <div className="chat-page">
         <div className="chat-rooms">
-          <div className="chat-rooms__heading">
-            <span>⛩️</span>
-            <span>Залы и беседы</span>
-          </div>
-          {rooms.map((room) => (
+          <div className="chat-rooms__heading" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <span>⛩️</span>
+              <span>Беседы</span>
+            </div>
+            {/* Задача 43: Быстрое создание чата */}
             <button
-              key={room.ChatRoom_ID}
-              className={`chat-rooms__item ${room.ChatRoom_ID === activeRoomId ? 'active' : ''}`}
-              onClick={() => setActiveRoomId(room.ChatRoom_ID)}
+              type="button"
+              className="btn btn-subtle"
+              style={{ padding: '2px 8px', fontSize: '0.74rem' }}
+              onClick={() => setShowNewChatModal(!showNewChatModal)}
+              title="Создать чат с соратником"
             >
-              {roomLabel(room)}
+              + Чат
             </button>
-          ))}
+          </div>
+
+          {/* Быстрый выбор соратника для нового чата */}
+          {showNewChatModal && (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid rgba(212, 162, 76, 0.3)',
+              borderRadius: '6px',
+              padding: '8px',
+              marginBottom: '8px',
+            }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '6px' }}>
+                Выберите соратника:
+              </div>
+              {friendsList.length === 0 ? (
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                  Нет соратников. Добавьте их во вкладке «Соратники».
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '140px', overflowY: 'auto' }}>
+                  {friendsList.map((f) => (
+                    <button
+                      key={f.User_ID}
+                      type="button"
+                      className="btn btn-subtle"
+                      style={{ padding: '4px 8px', fontSize: '0.78rem', justifyContent: 'flex-start', textAlign: 'left' }}
+                      onClick={() => handleStartFriendChat(f.User_ID)}
+                    >
+                      🥋 {f.Display_Name || f.Username}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {sortedRooms.map((room) => {
+            const isPinned = pinnedRoomIds.includes(room.ChatRoom_ID);
+            return (
+              <div
+                key={room.ChatRoom_ID}
+                className={`chat-rooms__item ${room.ChatRoom_ID === activeRoomId ? 'active' : ''}`}
+                onClick={() => setActiveRoomId(room.ChatRoom_ID)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {roomLabel(room)}
+                </span>
+                {/* Задача 40: кнопка закрепления */}
+                <button
+                  type="button"
+                  onClick={(e) => togglePinRoom(room.ChatRoom_ID, e)}
+                  title={isPinned ? 'Открепить' : 'Закрепить'}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    padding: '2px 4px',
+                    opacity: isPinned ? 1 : 0.3,
+                    transition: 'opacity 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = isPinned ? '1' : '0.3'; }}
+                >
+                  📌
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         <div className="chat-window">
@@ -155,7 +281,8 @@ export default function ChatPage() {
             )}
           </div>
 
-          <div className="chat-window__messages">
+          {/* Задача 38: скролл внутри контейнера сообщений */}
+          <div className="chat-window__messages" ref={messagesBoxRef}>
             {messages.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto', fontSize: '0.9rem' }}>
                 <p style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🍵</p>
@@ -179,7 +306,6 @@ export default function ChatPage() {
                 </div>
               ))
             )}
-            <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-window__typing">{typingUser ? `✍️ ${typingUser} пишет свиток…` : ''}</div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Задача 36: поля должны быть пустыми при входе пока пользователь не начнет вводить текст
+  useEffect(() => {
+    setForm({ username: '', password: '' });
+  }, []);
 
   function update(field) {
     return (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -47,14 +52,29 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="auth-form">
+        <form onSubmit={onSubmit} className="auth-form" autoComplete="off">
           <div className="field">
             <label htmlFor="username">Имя пользователя / Каратека</label>
-            <input id="username" required value={form.username} onChange={update('username')} autoFocus />
+            <input
+              id="username"
+              required
+              value={form.username}
+              onChange={update('username')}
+              autoComplete="off"
+              placeholder="Введите имя пользователя"
+            />
           </div>
           <div className="field">
             <label htmlFor="password">Секретный пароль</label>
-            <input id="password" type="password" required value={form.password} onChange={update('password')} />
+            <input
+              id="password"
+              type="password"
+              required
+              value={form.password}
+              onChange={update('password')}
+              autoComplete="new-password"
+              placeholder="Введите пароль"
+            />
           </div>
 
           {error && <p className="auth-error">{error}</p>}

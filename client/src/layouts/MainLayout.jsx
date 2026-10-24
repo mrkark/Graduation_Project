@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { listFriendRequests } from '../api/friends';
+import { useChatSocket } from '../hooks/useChatSocket';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import './MainLayout.css';
 
@@ -8,20 +10,43 @@ export default function MainLayout() {
   const { user, role, logout } = useAuthStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [incomingRequestsCount, setIncomingRequestsCount] = useState(0);
+  const [toast, setToast] = useState(null);
   const dropdownRef = useRef(null);
+  const notificationsRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { socket } = useChatSocket();
+
+  // Первичная подгрузка заявок в соратники при авторизации (Задача 39)
+  useEffect(() => {
+    if (!user) return;
+    listFriendRequests('incoming')
+      .then((reqs) => {
+        if (Array.isArray(reqs)) {
+          setIncomingRequestsCount(reqs.length);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
 
   // Закрывать мобильное меню и выпадающие списки при смене роута
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
+    setNotificationsOpen(false);
   }, [location.pathname]);
 
-  // Закрывать выпадающий список при клике вне его
+  // Закрывать выпадающие списки при клике вне их
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setUserDropdownOpen(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setNotificationsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -40,7 +65,83 @@ export default function MainLayout() {
     };
   }, [mobileMenuOpen]);
 
+  // Автозакрытие всплывающего уведомления через 6 секунд (Задача 44)
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  // Обработка real-time уведомлений через сокет (Задачи 39, 44)
+  useEffect(() => {
+    if (!socket?.current || !user) return;
+    const s = socket.current;
+
+    function handleNotification(notif) {
+      setIncomingRequestsCount((prev) => prev + 1);
+      const notifItem = {
+        id: Date.now() + Math.random(),
+        type: 'friend_request',
+        title: 'Заявка в соратники',
+        message: notif.message || `${notif.senderName || 'Пользователь'} отправил вам заявку в соратники`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setNotifications((prev) => [notifItem, ...prev.slice(0, 14)]);
+
+      setToast({
+        id: notifItem.id,
+        icon: '🥋',
+        title: 'Новая заявка в соратники',
+        message: notif.message || `${notif.senderName || 'Пользователь'} хочет добавить вас в соратники`,
+        actionText: 'Посмотреть заявки →',
+        onClick: () => {
+          navigate('/friends?tab=incoming');
+          setToast(null);
+        },
+      });
+    }
+
+    function handleChatNotification(notif) {
+      if (notif.authorId === user.User_ID) return;
+      const notifItem = {
+        id: Date.now() + Math.random(),
+        type: 'message',
+        title: `Сообщение от ${notif.authorName || 'соратника'}`,
+        message: notif.snippet || 'Новое сообщение',
+        roomId: notif.roomId,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setNotifications((prev) => [notifItem, ...prev.slice(0, 14)]);
+
+      // Если пользователь не в данном чате, показать всплывающий интерактивный тост
+      if (location.pathname !== '/chat') {
+        setToast({
+          id: notifItem.id,
+          icon: '💬',
+          title: `Сообщение от ${notif.authorName || 'соратника'}`,
+          message: notif.snippet || 'Новое сообщение в чате',
+          actionText: 'Открыть беседу →',
+          onClick: () => {
+            navigate('/chat');
+            setToast(null);
+          },
+        });
+      }
+    }
+
+    s.on('notification', handleNotification);
+    s.on('chat:notification', handleChatNotification);
+
+    return () => {
+      s.off('notification', handleNotification);
+      s.off('chat:notification', handleChatNotification);
+    };
+  }, [socket, user, location.pathname, navigate]);
+
   const isStaff = role === 'admin' || role === 'moderator';
+  const totalUnreadCount = incomingRequestsCount + notifications.length;
 
   return (
     <div className="site-shell">
@@ -60,86 +161,196 @@ export default function MainLayout() {
             <HankoSeal text="分解" size="sm" variant="vermilion" shape="square" className="navbar__logo-seal" />
           </Link>
 
-          {/* Основная навигация по залам Додзё */}
+          {/* Основная навигация по залам Додзё (Задача 42: убраны лишние иероглифы) */}
           <nav className="navbar__menu" aria-label="Основное меню">
             <NavLink to="/kata" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Ката</span>
-              <span className="navbar__link-kanji">型</span>
             </NavLink>
             <NavLink to="/bunkai" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Бункай</span>
-              <span className="navbar__link-kanji">分解</span>
             </NavLink>
             <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Мокап 3D</span>
-              <span className="navbar__link-kanji">動</span>
             </NavLink>
             <NavLink to="/bunkai/new" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Студия</span>
-              <span className="navbar__link-kanji">創</span>
+            </NavLink>
+            {/* Задача 41: Удобный прямой переход в чаты */}
+            <NavLink to="/chat" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
+              <span className="navbar__link-title">Чат</span>
             </NavLink>
           </nav>
 
           {/* Действия пользователя справа */}
           <div className="navbar__actions">
             {user ? (
-              <div className="navbar__user-menu" ref={dropdownRef}>
-                <button
-                  type="button"
-                  className="navbar__user-btn"
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  aria-expanded={userDropdownOpen}
+              <>
+                {/* Задача 41: быстрый переход в чаты в блоке действий */}
+                <Link
+                  to="/chat"
+                  className="navbar__chat-quick-btn"
+                  title="Перейти в сообщения Додзё"
+                  aria-label="Сообщения Додзё"
                 >
-                  <span className="navbar__user-avatar-mini">
-                    {user.Avatar_URL ? (
-                      <img src={user.Avatar_URL} alt="" className="navbar__user-img" />
-                    ) : (
-                      <span>{(user.Display_Name || user.Username)[0].toUpperCase()}</span>
-                    )}
-                  </span>
-                  <span className="navbar__user-name">{user.Display_Name || user.Username}</span>
-                  {isStaff && (
-                    <span className="navbar__staff-pill">
-                      <span className="navbar__staff-kanji">{role === 'admin' ? '師範' : '先輩'}</span>
-                      <span>{role === 'admin' ? 'Сэнсэй' : 'Сэмпай'}</span>
-                    </span>
-                  )}
-                  <span className="navbar__chevron">{userDropdownOpen ? '▴' : '▾'}</span>
-                </button>
+                  <span className="navbar__chat-quick-icon">💬</span>
+                </Link>
 
-                {userDropdownOpen && (
-                  <div className="navbar__dropdown">
-                    <div className="navbar__dropdown-header">
-                      <div className="navbar__dropdown-user">{user.Display_Name || user.Username}</div>
-                      <div className="navbar__dropdown-email">{user.Email}</div>
-                    </div>
-                    <div className="navbar__dropdown-divider" />
-                    <Link to="/profile" className="navbar__dropdown-item">
-                      <span>Личный профиль</span>
-                      <span className="navbar__dropdown-kanji">門下生</span>
-                    </Link>
-                    <Link to="/chat" className="navbar__dropdown-item">
-                      <span>Сообщения Додзё</span>
-                      <span className="navbar__dropdown-kanji">通信</span>
-                    </Link>
-                    <Link to="/friends" className="navbar__dropdown-item">
-                      <span>Соратники (Друзья)</span>
-                      <span className="navbar__dropdown-kanji">仲間</span>
-                    </Link>
-                    {isStaff && (
-                      <Link to="/admin" className="navbar__dropdown-item navbar__dropdown-item--admin">
-                        <span>Панель управления</span>
-                        <span className="navbar__dropdown-kanji">管理</span>
-                      </Link>
+                {/* Задача 39: Иконка уведомлений у иконки профиля */}
+                <div className="navbar__notifications-wrap" ref={notificationsRef}>
+                  <button
+                    type="button"
+                    className={`navbar__bell-btn ${totalUnreadCount > 0 ? 'has-unread' : ''}`}
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    aria-expanded={notificationsOpen}
+                    aria-label="Уведомления"
+                    title="Уведомления Додзё"
+                  >
+                    <svg className="navbar__bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {totalUnreadCount > 0 && (
+                      <span className="navbar__bell-badge">
+                        {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                      </span>
                     )}
-                    <div className="navbar__dropdown-divider" />
-                    <button type="button" className="navbar__dropdown-item navbar__dropdown-item--logout" onClick={logout}>
-                      <span>Выйти из профиля</span>
-                      <span className="navbar__dropdown-kanji">退堂</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                  </button>
+
+                  {notificationsOpen && (
+                    <div className="navbar__notifications-dropdown">
+                      <div className="navbar__notifications-header">
+                        <span className="navbar__notifications-title">🔔 Уведомления</span>
+                        {totalUnreadCount > 0 && (
+                          <button
+                            type="button"
+                            className="navbar__notifications-clear"
+                            onClick={() => {
+                              setNotifications([]);
+                              setIncomingRequestsCount(0);
+                            }}
+                          >
+                            Сбросить
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="navbar__notifications-list">
+                        {incomingRequestsCount > 0 && (
+                          <div
+                            className="navbar__notification-item navbar__notification-item--highlight"
+                            onClick={() => {
+                              setNotificationsOpen(false);
+                              navigate('/friends?tab=incoming');
+                            }}
+                          >
+                            <span className="navbar__notification-item-icon">🥋</span>
+                            <div className="navbar__notification-body">
+                              <div className="navbar__notification-item-title">Заявки в соратники</div>
+                              <div className="navbar__notification-item-text">
+                                Ожидают вашего ответа: {incomingRequestsCount}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {notifications.map((n) => (
+                          <div
+                            key={n.id}
+                            className="navbar__notification-item"
+                            onClick={() => {
+                              setNotificationsOpen(false);
+                              if (n.type === 'message') {
+                                navigate('/chat');
+                              } else {
+                                navigate('/friends?tab=incoming');
+                              }
+                            }}
+                          >
+                            <span className="navbar__notification-item-icon">
+                              {n.type === 'message' ? '💬' : '🥋'}
+                            </span>
+                            <div className="navbar__notification-body">
+                              <div className="navbar__notification-item-title">{n.title}</div>
+                              <div className="navbar__notification-item-text">{n.message}</div>
+                              {n.time && <div className="navbar__notification-item-time">{n.time}</div>}
+                            </div>
+                          </div>
+                        ))}
+
+                        {notifications.length === 0 && incomingRequestsCount === 0 && (
+                          <div className="navbar__notifications-empty">
+                            <span style={{ fontSize: '1.4rem' }}>📭</span>
+                            <div>Новых уведомлений нет</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="navbar__notifications-footer">
+                        <Link to="/friends?tab=incoming" onClick={() => setNotificationsOpen(false)}>
+                          Заявки в друзья
+                        </Link>
+                        <Link to="/chat" onClick={() => setNotificationsOpen(false)}>
+                          Все беседы
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Выпадающее меню профиля */}
+                <div className="navbar__user-menu" ref={dropdownRef}>
+                  <button
+                    type="button"
+                    className="navbar__user-btn"
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    aria-expanded={userDropdownOpen}
+                  >
+                    <span className="navbar__user-avatar-mini">
+                      {user.Avatar_URL ? (
+                        <img src={user.Avatar_URL} alt="" className="navbar__user-img" />
+                      ) : (
+                        <span>{(user.Display_Name || user.Username)[0].toUpperCase()}</span>
+                      )}
+                    </span>
+                    <span className="navbar__user-name">{user.Display_Name || user.Username}</span>
+                    {isStaff && (
+                      <span className="navbar__staff-pill">
+                        <span className="navbar__staff-kanji">{role === 'admin' ? '師範' : '先輩'}</span>
+                        <span>{role === 'admin' ? 'Сэнсэй' : 'Сэмпай'}</span>
+                      </span>
+                    )}
+                    <span className="navbar__chevron">{userDropdownOpen ? '▴' : '▾'}</span>
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className="navbar__dropdown">
+                      <div className="navbar__dropdown-header">
+                        <div className="navbar__dropdown-user">{user.Display_Name || user.Username}</div>
+                        <div className="navbar__dropdown-email">{user.Email}</div>
+                      </div>
+                      <div className="navbar__dropdown-divider" />
+                      <Link to="/profile" className="navbar__dropdown-item">
+                        <span>Личный профиль</span>
+                      </Link>
+                      <Link to="/chat" className="navbar__dropdown-item">
+                        <span>Сообщения Додзё</span>
+                      </Link>
+                      <Link to="/friends" className="navbar__dropdown-item">
+                        <span>Соратники (Друзья)</span>
+                      </Link>
+                      {isStaff && (
+                        <Link to="/admin" className="navbar__dropdown-item navbar__dropdown-item--admin">
+                          <span>Панель управления</span>
+                        </Link>
+                      )}
+                      <div className="navbar__dropdown-divider" />
+                      <button type="button" className="navbar__dropdown-item navbar__dropdown-item--logout" onClick={logout}>
+                        <span>Выйти из профиля</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
               <div className="navbar__auth-links">
                 <Link to="/login" className="btn btn-subtle navbar__login-btn">
@@ -166,50 +377,41 @@ export default function MainLayout() {
         <div className="navbar__bottom-border" />
       </header>
 
-      {/* МОБИЛЬНОЕ ВЫДВИЖНОЕ МЕНЮ */}
+      {/* МОБИЛЬНОЕ ВЫДВИЖНОЕ МЕНЮ (Задача 42: убраны лишние иероглифы) */}
       {mobileMenuOpen && (
         <div className="mobile-drawer">
           <div className="container mobile-drawer__inner">
             <nav className="mobile-drawer__nav">
               <NavLink to="/" end className="mobile-drawer__link">
                 <span>Главная</span>
-                <span className="mobile-drawer__kanji">本道場</span>
               </NavLink>
               <NavLink to="/kata" className="mobile-drawer__link">
                 <span>Каталог ката (26 форм)</span>
-                <span className="mobile-drawer__kanji">型目録</span>
               </NavLink>
               <NavLink to="/bunkai" className="mobile-drawer__link">
                 <span>Разборы бункай</span>
-                <span className="mobile-drawer__kanji">分解</span>
               </NavLink>
               <NavLink to="/karate-studio" className="mobile-drawer__link">
                 <span>Мокап 3D (Каратэ Студия)</span>
-                <span className="mobile-drawer__kanji">動態</span>
               </NavLink>
               <NavLink to="/bunkai/new" className="mobile-drawer__link">
                 <span>Студия бункай</span>
-                <span className="mobile-drawer__kanji">鍛錬</span>
               </NavLink>
               {user && (
                 <>
                   <div className="mobile-drawer__divider" />
                   <NavLink to="/profile" className="mobile-drawer__link">
                     <span>Мой профиль</span>
-                    <span className="mobile-drawer__kanji">門下生</span>
                   </NavLink>
                   <NavLink to="/chat" className="mobile-drawer__link">
                     <span>Сообщения</span>
-                    <span className="mobile-drawer__kanji">通信</span>
                   </NavLink>
                   <NavLink to="/friends" className="mobile-drawer__link">
                     <span>Соратники</span>
-                    <span className="mobile-drawer__kanji">仲間</span>
                   </NavLink>
                   {isStaff && (
                     <NavLink to="/admin" className="mobile-drawer__link mobile-drawer__link--admin">
                       <span>Панель управления</span>
-                      <span className="mobile-drawer__kanji">管理</span>
                     </NavLink>
                   )}
                 </>
@@ -240,6 +442,31 @@ export default function MainLayout() {
       <main className="site-content">
         <Outlet />
       </main>
+
+      {/* Задача 44: Интерактивный всплывающий тост для сообщений и заявок в соратники */}
+      {toast && (
+        <div className="dojo-toast-container" role="alert" aria-live="polite">
+          <div className="dojo-toast" onClick={toast.onClick}>
+            <span className="dojo-toast__icon">{toast.icon}</span>
+            <div className="dojo-toast__content">
+              <div className="dojo-toast__title">{toast.title}</div>
+              <div className="dojo-toast__message">{toast.message}</div>
+              <div className="dojo-toast__action">{toast.actionText}</div>
+            </div>
+            <button
+              type="button"
+              className="dojo-toast__close"
+              onClick={(e) => {
+                e.stopPropagation();
+                setToast(null);
+              }}
+              aria-label="Закрыть уведомление"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* АРХИТЕКТУРНЫЙ ФУТЕР В СТИЛИСТИКЕ ТРАДИЦИОННОГО ДОДЗЁ ХОНБУ */}
       <footer className="dojo-footer">

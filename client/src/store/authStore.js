@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as authApi from '../api/auth';
 import { setAccessToken, setUnauthorizedHandler } from '../api/client';
+import { disconnectSocket } from '../hooks/useChatSocket';
 
 // status: 'checking' | 'guest' | 'authenticated'
 export const useAuthStore = create((set, get) => ({
@@ -37,6 +38,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       await authApi.logout();
     } finally {
+      disconnectSocket();
       setAccessToken(null);
       set({ status: 'guest', user: null, role: 'guest' });
     }
@@ -48,6 +50,7 @@ export const useAuthStore = create((set, get) => ({
 
   // Гость: сессия истекла / refresh не удался
   forceGuest() {
+    disconnectSocket();
     setAccessToken(null);
     set({ status: 'guest', user: null, role: 'guest' });
   },

@@ -360,6 +360,320 @@
   color: #ff6b6b;
 }
 
+/* Задача 41: Кнопка быстрого перехода в чаты */
+.navbar__chat-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #191512;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 1.05rem;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.navbar__chat-quick-btn:hover {
+  border-color: var(--gold-border);
+  background: #211c17;
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+/* Задача 39: Иконка уведомлений у иконки профиля */
+.navbar__notifications-wrap {
+  position: relative;
+}
+
+.navbar__bell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: #191512;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.navbar__bell-btn:hover {
+  border-color: var(--gold-border);
+  background: #211c17;
+  color: var(--gold);
+}
+
+.navbar__bell-btn.has-unread {
+  color: var(--gold);
+}
+
+.navbar__bell-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.navbar__bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  background: #e53935;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 0 8px rgba(229, 57, 53, 0.7);
+  animation: pulseBellBadge 2s infinite;
+}
+
+@keyframes pulseBellBadge {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 0 12px rgba(229, 57, 53, 0.9); }
+  100% { transform: scale(1); }
+}
+
+.navbar__notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 310px;
+  background: #171411;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--gold);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lift);
+  z-index: var(--z-drawer);
+  overflow: hidden;
+  animation: dojoFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.navbar__notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.navbar__notifications-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--gold);
+}
+
+.navbar__notifications-clear {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition: all 0.15s ease;
+}
+
+.navbar__notifications-clear:hover {
+  color: var(--danger);
+  background: rgba(201, 52, 52, 0.15);
+}
+
+.navbar__notifications-list {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.navbar__notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.navbar__notification-item:hover {
+  background: rgba(212, 162, 76, 0.08);
+}
+
+.navbar__notification-item--highlight {
+  background: rgba(212, 162, 76, 0.05);
+  border-left: 3px solid var(--gold);
+}
+
+.navbar__notification-item-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.navbar__notification-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.navbar__notification-item-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.navbar__notification-item-text {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar__notification-item-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.navbar__notifications-empty {
+  padding: 1.8rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.navbar__notifications-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+}
+
+.navbar__notifications-footer a {
+  color: var(--gold-soft);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.navbar__notifications-footer a:hover {
+  color: var(--gold-bright);
+  text-decoration: underline;
+}
+
+/* Задача 44: Интерактивный всплывающий тост для сообщений и приглашений */
+.dojo-toast-container {
+  position: fixed;
+  top: 76px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 370px;
+  pointer-events: none;
+}
+
+.dojo-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #1c1712;
+  border: 1px solid var(--gold);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(212, 162, 76, 0.15);
+  cursor: pointer;
+  animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: all 0.16s ease;
+}
+
+.dojo-toast:hover {
+  background: #241d17;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.85), 0 0 20px rgba(212, 162, 76, 0.25);
+}
+
+.dojo-toast__icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dojo-toast__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dojo-toast__title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 2px;
+}
+
+.dojo-toast__message {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.dojo-toast__action {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--gold-soft);
+  margin-top: 5px;
+}
+
+.dojo-toast__close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.dojo-toast__close:hover {
+  color: #fff;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Мобильный гамбургер */
 .navbar__burger {
   display: none;
