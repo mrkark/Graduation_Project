@@ -17,28 +17,34 @@ export default function KarateStudioPage() {
   const [availableIps, setAvailableIps] = useState([]);
   const [publicTunnelUrl, setPublicTunnelUrl] = useState('');
   const [tunnelActive, setTunnelActive] = useState(false);
-  const [networkMode, setNetworkMode] = useState('tunnel'); // 'tunnel' | 'local'
+  const [networkMode, setNetworkMode] = useState('local'); // 'local' по умолчанию для домашнего Wi-Fi
+  const [useHttps, setUseHttps] = useState(true); // HTTPS (8088) по умолчанию для камеры
+  const [copied, setCopied] = useState(false);
+  const [isEditingIp, setIsEditingIp] = useState(false);
+  const [customIpInput, setCustomIpInput] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [realIp, setRealIp] = useState(() => {
-    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-      return window.location.hostname;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mocap_user_ip');
+      if (saved && saved !== '127.0.0.1' && saved !== '10.131.233.47') return saved;
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return window.location.hostname;
+      }
     }
-    return '';
+    return '192.168.100.28';
   });
 
   useEffect(() => {
     let mounted = true;
     const checkStatus = async () => {
-      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        if (mounted) setRealIp((prev) => prev || window.location.hostname);
-      }
       try {
         const res = await fetch('/status');
         if (res.ok) {
           const data = await res.json();
           if (mounted) {
-            if (data?.ip && data.ip !== '127.0.0.1') {
-              setRealIp((prev) => prev || data.ip);
+            const ip = data?.ip;
+            if (ip && ip !== '127.0.0.1' && ip !== '10.131.233.47' && !ip.startsWith('172.')) {
+              setRealIp((prev) => (prev && prev !== '10.131.233.47' && prev !== '127.0.0.1' ? prev : ip));
             }
             setStudioOnline(true);
           }
@@ -54,11 +60,13 @@ export default function KarateStudioPage() {
         if (r.ok) {
           const j = await r.json();
           if (mounted) {
-            if (j?.data?.localIp && j.data.localIp !== '127.0.0.1') {
-              setRealIp((prev) => prev || j.data.localIp);
+            const lIp = j?.data?.localIp;
+            if (lIp && lIp !== '127.0.0.1' && lIp !== '10.131.233.47' && !lIp.startsWith('172.')) {
+              setRealIp((prev) => (prev && prev !== '10.131.233.47' && prev !== '127.0.0.1' ? prev : lIp));
             }
             if (Array.isArray(j?.data?.localIps) && j.data.localIps.length > 0) {
-              setAvailableIps(j.data.localIps);
+              const filtered = j.data.localIps.filter((item) => item.ip !== '10.131.233.47');
+              setAvailableIps(filtered);
             }
             if (j?.data?.publicUrl) {
               setPublicTunnelUrl(j.data.publicUrl);
@@ -77,7 +85,12 @@ export default function KarateStudioPage() {
     };
   }, []);
 
-  const displayHost = realIp || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? window.location.hostname : '127.0.0.1');
+  const displayHost = (realIp && realIp !== '10.131.233.47' && realIp !== '127.0.0.1')
+    ? realIp
+    : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+        ? window.location.hostname
+        : '192.168.100.28');
+
   const studioUrl = '/studio';
 
   const isTunnelAvailable = Boolean(publicTunnelUrl && tunnelActive);
@@ -85,7 +98,26 @@ export default function KarateStudioPage() {
 
   const activeCamUrl = (activeMode === 'tunnel' && publicTunnelUrl)
     ? `${publicTunnelUrl}/${selectedCam}`
-    : `https://${displayHost}:8088/${selectedCam}`;
+    : `${useHttps ? 'https' : 'http'}://${displayHost}:${useHttps ? '8088' : '8000'}/${selectedCam}`;
+
+  const handleCopyLink = () => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(activeCamUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handleSaveCustomIp = (ipToSave) => {
+    const trimmed = (ipToSave || customIpInput).trim();
+    if (trimmed) {
+      setRealIp(trimmed);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mocap_user_ip', trimmed);
+      }
+      setIsEditingIp(false);
+    }
+  };
 
   // Генерация динамического QR-кода при смене ссылки
   useEffect(() => {
@@ -371,6 +403,101 @@ export default function KarateStudioPage() {
             </button>
           </div>
 
+          {/* Селектор протокола и настройка IP адреса */}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#13151f', padding: '6px 12px', borderRadius: '8px', border: '1px solid #232738' }}>
+            <span style={{ fontSize: '11.5px', color: '#9ca3af' }}>Протокол:</span>
+            <button
+              type="button"
+              onClick={() => setUseHttps(true)}
+              style={{
+                background: useHttps ? '#10b981' : '#1e2230',
+                color: useHttps ? '#000' : '#d1d5db',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              🔒 HTTPS (8088)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseHttps(false)}
+              style={{
+                background: !useHttps ? '#f59e0b' : '#1e2230',
+                color: !useHttps ? '#000' : '#d1d5db',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              🔓 HTTP (8000)
+            </button>
+
+            <span style={{ color: '#4b5563', margin: '0 4px' }}>|</span>
+
+            {isEditingIp ? (
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="192.168.100.28"
+                  value={customIpInput}
+                  onChange={(e) => setCustomIpInput(e.target.value)}
+                  style={{
+                    background: '#0d0e14',
+                    border: '1px solid #10b981',
+                    color: '#fff',
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    fontSize: '11px',
+                    width: '120px',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSaveCustomIp()}
+                  style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingIp(false)}
+                  style={{ background: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '11px' }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '11.5px', color: '#6ee7b7', fontFamily: 'monospace' }}>IP: {displayHost}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomIpInput(displayHost);
+                    setIsEditingIp(true);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px solid #374151',
+                    color: '#9ca3af',
+                    borderRadius: '4px',
+                    padding: '1px 5px',
+                    fontSize: '10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✏️ Сменить
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Camera Switcher Tabs */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {['cam1', 'cam2', 'cam3'].map((cid) => {
@@ -407,51 +534,70 @@ export default function KarateStudioPage() {
             justifyContent: 'center',
             gap: '24px',
             flexWrap: 'wrap',
-            maxWidth: '750px',
+            maxWidth: '780px',
           }}>
-            <img
-              src={qrDataUrl || `/qr/${selectedCam}.png`}
-              onError={(e) => { e.currentTarget.src = `http://${displayHost}:8000/qr/${selectedCam}.png`; }}
-              alt="QR Code"
-              style={{
-                width: '128px',
-                height: '128px',
-                borderRadius: '8px',
-                background: '#fff',
-                padding: '4px',
-                border: `2px solid ${camDescriptions[selectedCam].badgeColor}`,
-              }}
-            />
-            <div style={{ flex: 1, minWidth: '280px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+              <img
+                src={qrDataUrl || `/qr/${selectedCam}.png`}
+                onError={(e) => { e.currentTarget.src = `http://${displayHost}:8000/qr/${selectedCam}.png`; }}
+                alt="QR Code"
+                style={{
+                  width: '140px',
+                  height: '140px',
+                  borderRadius: '8px',
+                  background: '#fff',
+                  padding: '4px',
+                  border: `2px solid ${camDescriptions[selectedCam].badgeColor}`,
+                }}
+              />
+              <span style={{ fontSize: '11px', color: '#9ca3af' }}>Сканируйте камерой</span>
+            </div>
+
+            <div style={{ flex: 1, minWidth: '300px' }}>
               <h4 style={{ color: camDescriptions[selectedCam].badgeColor, fontSize: '15px', marginBottom: '4px', fontWeight: 800 }}>
                 {camDescriptions[selectedCam].title}
               </h4>
-              <p style={{ color: '#d1d5db', fontSize: '12.5px', lineHeight: 1.45, marginBottom: '6px' }}>
+              <p style={{ color: '#d1d5db', fontSize: '12.5px', lineHeight: 1.45, marginBottom: '8px' }}>
                 {camDescriptions[selectedCam].desc}
               </p>
-              <div style={{ fontSize: '11.5px', color: '#9ca3af', marginBottom: '6px' }}>
-                💡 <i>Все подключенные камеры объединяются в <b>одну общую 3D-модель</b> каратиста без дублирования.</i>
-              </div>
-              <div style={{ fontSize: '12px', fontFamily: 'monospace', color: camDescriptions[selectedCam].badgeColor, wordBreak: 'break-all' }}>
-                {activeMode === 'tunnel' ? '🌐 Глобальная ссылка (4G / Интернет): ' : '🏠 Локальная ссылка (Wi-Fi): '}
-                <a href={activeCamUrl} target="_blank" rel="noreferrer" style={{ color: '#6ee7b7', fontWeight: 700, textDecoration: 'underline' }}>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', background: '#12151e', padding: '6px 10px', borderRadius: '6px', border: '1px solid #232a3b' }}>
+                <a
+                  href={activeCamUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#6ee7b7', fontWeight: 700, textDecoration: 'underline', fontSize: '12px', fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}
+                >
                   {activeCamUrl}
                 </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  style={{
+                    background: copied ? '#10b981' : '#1f2430',
+                    color: copied ? '#000' : '#e2e8f0',
+                    border: '1px solid #374151',
+                    borderRadius: '4px',
+                    padding: '3px 8px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {copied ? '✓ Скопировано' : '📋 Копия'}
+                </button>
               </div>
-              {activeMode === 'tunnel' ? (
-                <div style={{ fontSize: '11px', color: isTunnelAvailable ? '#10b981' : '#f59e0b', marginTop: '4px' }}>
-                  {isTunnelAvailable ? (
-                    '✅ Телефон может быть в ЛЮБОЙ сети (4G/5G/LTE/другой Wi-Fi). Доступно отовсюду!'
-                  ) : (
-                    '⚠️ Туннель не запущен. Для удаленного захвата запустите start_mocap_tunnel.bat'
-                  )}
-                </div>
-              ) : (
-                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
-                  (При первом открытии по локальной сети подтвердите сертификат: «Дополнительно» → «Перейти на сайт»)
-                </div>
-              )}
+
+              {/* Пошаговая инструкция для успешного подключения */}
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '8px 12px', fontSize: '11.5px', color: '#d1d5db', lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '2px' }}>📱 Инструкция для телефона:</div>
+                <div>1. Телефон должен быть в одной сети Wi-Fi с компьютером.</div>
+                <div>2. Отсканируйте QR-код и откройте ссылку в мобильном браузере.</div>
+                <div>3. При предупреждении о сертификате: на <strong>Android</strong> нажмите <em>«Дополнительно» → «Перейти на сайт»</em>; на <strong>iPhone</strong> нажмите <em>«Показать подробности» → «Посетить сайт»</em>.</div>
+                <div>4. Нажмите <strong>«Разрешить»</strong> для доступа к видеокамере.</div>
+              </div>
             </div>
+
             <button
               type="button"
               onClick={() => setShowQr(false)}

@@ -62,11 +62,16 @@ app.get('/api/health', (req, res) => res.json({ success: true, data: { status: '
 
 // Получение и обновление статуса локального HTTPS шлюза для подключения телефонов
 app.get('/api/mocap/tunnel', (req, res) => {
+  const defaultHost = process.env.HOST_IP || '192.168.100.28';
   try {
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     if (fs.existsSync(tunnelPath)) {
       const data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
-      if (!data.localIp) data.localIp = '192.168.100.6';
+      if (!data.localIp || data.localIp === '10.131.233.47' || data.localIp.startsWith('172.')) {
+        data.localIp = defaultHost;
+        data.url = `https://${defaultHost}:8088`;
+        data.httpsUrl = `https://${defaultHost}:8088`;
+      }
       return res.json({ success: true, data });
     }
   } catch (e) {
@@ -76,12 +81,12 @@ app.get('/api/mocap/tunnel', (req, res) => {
     success: true,
     data: {
       active: true,
-      url: 'https://192.168.100.6:8443',
-      httpsUrl: 'https://192.168.100.6:8443',
-      httpsPort: 8443,
-      localIp: '192.168.100.6',
+      url: `https://${defaultHost}:8088`,
+      httpsUrl: `https://${defaultHost}:8088`,
+      httpsPort: 8088,
+      localIp: defaultHost,
       localIps: [
-        { name: 'Wi-Fi (Активный LAN)', ip: '192.168.100.6', isPrimary: true },
+        { name: 'Основной LAN (Wi-Fi / Ethernet)', ip: defaultHost, isPrimary: true },
         { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
       ],
     },

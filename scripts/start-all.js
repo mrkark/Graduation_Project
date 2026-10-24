@@ -12,15 +12,23 @@ const STUDIO_DIR = path.join(ROOT_DIR, 'karate_motion_studio');
 const children = [];
 
 function getLocalIp() {
+  if (process.env.HOST_IP && process.env.HOST_IP !== '127.0.0.1') {
+    return process.env.HOST_IP;
+  }
   const interfaces = os.networkInterfaces();
+  const candidates = [];
   for (const name of Object.keys(interfaces)) {
+    const isVirtual = /virtual|vmware|vbox|wsl|hyper-v|loopback/i.test(name);
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+        if (!iface.address.startsWith('192.168.56.') && !iface.address.startsWith('169.254.') && !iface.address.startsWith('10.131.')) {
+          if (!isVirtual) return iface.address;
+          candidates.push(iface.address);
+        }
       }
     }
   }
-  return '127.0.0.1';
+  return candidates[0] || '192.168.100.28';
 }
 
 function checkPort(port) {

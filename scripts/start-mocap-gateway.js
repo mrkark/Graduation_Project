@@ -32,14 +32,14 @@ const KEY_PATH = path.join(SSL_DIR, 'ssl_key.pem');
 
 // 1. Динамическое определение активного локального IP-адреса Wi-Fi / LAN
 function detectLocalIp() {
-  if (process.env.HOST_IP && process.env.HOST_IP.trim() && process.env.HOST_IP !== '127.0.0.1') {
+  if (process.env.HOST_IP && process.env.HOST_IP.trim() && process.env.HOST_IP !== '127.0.0.1' && process.env.HOST_IP !== '10.131.233.47') {
     return Promise.resolve(process.env.HOST_IP.trim());
   }
 
   try {
     if (fs.existsSync(STATUS_FILE)) {
       const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
-      if (data?.localIp && !data.localIp.startsWith('172.') && !data.localIp.startsWith('127.')) {
+      if (data?.localIp && !data.localIp.startsWith('172.') && !data.localIp.startsWith('127.') && !data.localIp.startsWith('10.131.')) {
         return Promise.resolve(data.localIp);
       }
     }
@@ -51,18 +51,18 @@ function detectLocalIp() {
       socket.connect(80, '8.8.8.8', () => {
         const ip = socket.address().address;
         socket.close();
-        if (ip.startsWith('172.') || ip.startsWith('127.')) {
-          resolve('192.168.100.6');
+        if (ip.startsWith('172.') || ip.startsWith('127.') || ip.startsWith('10.131.')) {
+          resolve('192.168.100.28');
         } else {
           resolve(ip);
         }
       });
       socket.on('error', () => {
         try { socket.close(); } catch (e) {}
-        resolve('192.168.100.6');
+        resolve('192.168.100.28');
       });
     } catch (e) {
-      resolve('192.168.100.6');
+      resolve('192.168.100.28');
     }
   });
 }
