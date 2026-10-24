@@ -1,0 +1,16 @@
+{
+  "name": "bunkai-explorer",
+  "version": "1.0.0",
+  "description": "Bunkai Explorer — Karate Shotokan 3D Dojo with AI Motion Capture",
+  "scripts": {
+    "start": "node scripts/start-all.js",
+    "dev": "node scripts/start-all.js",
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
+  },
+  "author": "mrkark",
+  "license": "ISC"
+}

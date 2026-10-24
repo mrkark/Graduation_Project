@@ -64,9 +64,11 @@ services:
     restart: unless-stopped
     depends_on:
       - server
+      - mocap-studio
     environment:
       VITE_API_URL: http://localhost:5000/api
       VITE_SOCKET_URL: http://localhost:5000
+      STUDIO_URL: http://mocap-studio:8000
     ports:
       - '5173:5173'
     volumes:
@@ -84,6 +86,7 @@ services:
     depends_on:
       - client
       - server
+      - mocap-studio
     environment:
       TARGET_HOST: client
       VITE_PORT: 5173
@@ -117,6 +120,13 @@ services:
       HOST_IP: ${HOST_IP:-192.168.100.6}
     volumes:
       - ./karate_motion_studio:/app
+      - ./ssl:/app/ssl:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     networks:
       - bunkai-network
 

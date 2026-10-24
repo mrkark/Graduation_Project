@@ -1141,6 +1141,19 @@ async def phone_stream_endpoint(websocket: WebSocket, camera_id: str):
 def run_web_studio():
     cert_path = ASSETS_DIR / "ssl_cert.pem"
     key_path = ASSETS_DIR / "ssl_key.pem"
+    if not cert_path.exists() or not key_path.exists():
+        possible_ssl_dirs = [
+            Path("/app/ssl"),
+            Path(__file__).resolve().parent / "ssl",
+            Path(__file__).resolve().parent.parent / "ssl",
+        ]
+        for sdir in possible_ssl_dirs:
+            c = sdir / "ssl_cert.pem"
+            k = sdir / "ssl_key.pem"
+            if c.exists() and k.exists():
+                cert_path = c
+                key_path = k
+                break
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

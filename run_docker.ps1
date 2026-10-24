@@ -7,12 +7,13 @@ $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $CurrentDir
 
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "  Karate Bunkai Explorer — Сборка и запуск 4 контейнеров" -ForegroundColor Cyan
+Write-Host "  Karate Bunkai Explorer — Сборка и запуск 5 контейнеров" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host "1. MSSQL 2025      -> Порт 1433" -ForegroundColor Yellow
 Write-Host "2. Backend API     -> Порт 5000" -ForegroundColor Yellow
 Write-Host "3. Frontend UI     -> Порт 5173" -ForegroundColor Yellow
 Write-Host "4. MoCap Gateway   -> Порт 8443 (HTTPS для подключения смартфонов по QR)" -ForegroundColor Yellow
+Write-Host "5. Python MoCap    -> Порты 8000 и 8088 (ИИ захват движения и 3D студия)" -ForegroundColor Yellow
 Write-Host "--------------------------------------------------------"
 
 # 1. Автоматическое определение активного локального IP-адреса Wi-Fi / LAN
@@ -107,7 +108,7 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Host "[+] Запуск 4 контейнеров (docker compose up -d --build)..." -ForegroundColor Green
+Write-Host "[+] Запуск 5 контейнеров (docker compose up -d --build)..." -ForegroundColor Green
 docker compose up -d --build
 
 if ($LASTEXITCODE -eq 0) {

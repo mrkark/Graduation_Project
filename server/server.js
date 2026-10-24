@@ -15,32 +15,59 @@ const fs = require('fs');
 
 function checkAndStartPythonMocap() {
   const s = new net.Socket();
-  s.setTimeout(600);
-  s.on('connect', () => {
-    s.destroy();
-  });
-  s.on('error', () => {
-    s.destroy();
+  let handled = false;
+
+  const launch = () => {
+    if (handled) return;
+    handled = true;
+    try { s.destroy(); } catch {}
+
     const studioDir = path.resolve(__dirname, '../karate_motion_studio');
     const studioScript = path.join(studioDir, 'web_studio_server.py');
     if (!fs.existsSync(studioScript)) return;
 
-    let pythonExe = 'C:\\Users\\user\\Downloads\\bunkai_explorer_karate_motion_capture\\bunkai_explorer_karate_motion_capture\\.venv\\Scripts\\python.exe';
-    if (!fs.existsSync(pythonExe)) pythonExe = 'python';
+    // Автопоиск Python с поддержкой виртуального окружения
+    const candidatePythons = [
+      process.env.PYTHON_PATH,
+      process.env.MOCAP_PYTHON,
+      path.join(studioDir, '.venv', 'Scripts', 'python.exe'),
+      path.resolve(__dirname, '../../.venv/Scripts/python.exe'),
+      'C:\\Users\\user\\Downloads\\bunkai_explorer_karate_motion_capture\\bunkai_explorer_karate_motion_capture\\.venv\\Scripts\\python.exe',
+      'python',
+      'python3',
+      'py',
+    ].filter(Boolean);
+
+    let pythonExe = candidatePythons.find((p) => {
+      try {
+        return fs.existsSync(p);
+      } catch {
+        return false;
+      }
+    }) || 'python';
 
     try {
       const child = spawn(pythonExe, ['web_studio_server.py'], {
         cwd: studioDir,
         detached: true,
         stdio: 'ignore',
+        windowsHide: true,
       });
       child.unref();
-      console.log('✔ Python AI MoCap Server автоматически запущен вместе с проектом (порт 8000/8088)');
-    } catch {}
-  });
-  s.on('timeout', () => {
+      console.log(`✔ Python AI MoCap Server автоматически запущен вместе с проектом (${pythonExe})`);
+    } catch (err) {
+      console.warn('✘ Не удалось запустить Python AI MoCap Server автоматически:', err.message);
+    }
+  };
+
+  s.setTimeout(800);
+  s.on('connect', () => {
+    handled = true;
     s.destroy();
+    console.log('✔ Python AI MoCap Studio уже активен на порту 8000');
   });
+  s.on('error', launch);
+  s.on('timeout', launch);
   s.connect(8000, '127.0.0.1');
 }
 

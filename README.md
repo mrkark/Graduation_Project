@@ -185,27 +185,40 @@ sqlcmd -S localhost -U sa -P '<пароль>' -d BunkaiExplorer -i database/proc
 
 ---
 
-### 2. Запуск Backend (`/server`)
+### 2. Запуск проекта одной командой (Все сервисы + Python AI MoCap)
 
+Больше **не требуется** запускать сторонние `.bat` файлы — все сервисы стартуют автоматически:
+
+#### Вариант А: Запуск через Docker (5 контейнеров в единой сети)
 ```bash
-cd server
-npm install
-npm run dev
+docker compose up -d --build
+# или через npm:
+npm run docker:up
 ```
+Поднимает 5 контейнеров:
+1. `bunkai-explorer-mssql` (MSSQL Server 2025, порт 1433)
+2. `bunkai-explorer-server` (Node.js API, порт 5000)
+3. `bunkai-explorer-client` (React Three.js UI, порт 5173)
+4. `bunkai-explorer-gateway` (HTTPS Шлюз для камер телефонов, порт 8443)
+5. `bunkai-explorer-mocap-studio` (Python AI MoCap Server, порты 8000 и 8088)
 
-Сервер API и сокетов будет запущен по адресу: `http://localhost:5000`
+#### Вариант Б: Локальный запуск без сторонних bat-файлов
+```bash
+npm run dev
+# или npm start
+```
+Команда запускает:
+* **Python AI MoCap Studio** (`web_studio_server.py`) — автоматически проверяет порт 8000 и стартует процесс;
+* **Backend API** (`http://localhost:5000`);
+* **Frontend UI** (`http://localhost:5173`).
 
 ---
 
-### 3. Запуск Frontend (`/client`)
+### 3. Запуск компонентов по отдельности
 
-```bash
-cd client
-npm install
-npm run dev
-```
-
-Клиентское веб-приложение откроется по адресу: `http://localhost:5173`
+Если вы запускаете компоненты раздельно:
+* `cd server && npm run dev` — бэкенд автоматически проверяет и запускает Python AI MoCap, если он еще не запущен;
+* `cd client && npm run dev` — клиент Vite проксирует запросы на бэкенд и студию захвата движения.
 
 ---
 
