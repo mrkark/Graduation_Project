@@ -19,7 +19,8 @@ RUN pip install --no-cache-dir \
     uvicorn \
     pillow \
     qrcode \
-    websockets
+    websockets \
+    cryptography
 
 COPY . ./
 

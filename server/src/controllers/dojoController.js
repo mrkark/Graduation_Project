@@ -58,14 +58,14 @@ async function inviteUser(req, res, next) {
       ip: req.ip,
     });
 
-    // Персистентное уведомление в БД (Задачи 6 и 7)
+    // Персистентное уведомление в БД
     const dojoMsg = `${req.user.Display_Name || req.user.Username} пригласил вас в Додзё «${result.Dojo_Name}»`;
     const savedNotif = await notificationRepo.createNotification(
       targetUserId,
       'dojo_invite',
       'Приглашение в Додзё',
       dojoMsg,
-      '/dojos'
+      '/dojos?tab=invites'
     );
 
     // Оповещение в реальном времени через Socket.IO
@@ -76,7 +76,7 @@ async function inviteUser(req, res, next) {
         type: 'dojo_invite',
         title: 'Приглашение в Додзё',
         message: dojoMsg,
-        targetUrl: '/dojos',
+        targetUrl: '/dojos?tab=invites',
         data: { dojoId, dojoName: result.Dojo_Name },
       });
     }
@@ -130,10 +130,62 @@ async function respondInvite(req, res, next) {
   }
 }
 
+// PUT /api/dojos/:id
+async function updateDojo(req, res, next) {
+  try {
+    const dojoId = Number(req.params.id);
+    const { name, kanji, description, avatarUrl } = req.body;
+    if (!name || name.trim().length < 3) {
+      return fail(res, 400, 'Название Додзё должно содержать минимум 3 символа', 'VALIDATION_ERROR');
+    }
+
+    const updated = await dojoRepo.updateDojo(dojoId, req.user.User_ID, {
+      name: name.trim(),
+      kanji: kanji?.trim(),
+      description: description?.trim(),
+      avatarUrl: avatarUrl?.trim(),
+    });
+
+    await logActivity({
+      userId: req.user.User_ID,
+      action: 'update_dojo',
+      entityType: 'Dojo',
+      entityId: dojoId,
+      ip: req.ip,
+    });
+
+    return ok(res, updated);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+// DELETE /api/dojos/:id
+async function deleteDojo(req, res, next) {
+  try {
+    const dojoId = Number(req.params.id);
+    const result = await dojoRepo.deleteDojo(dojoId, req.user.User_ID);
+
+    await logActivity({
+      userId: req.user.User_ID,
+      action: 'delete_dojo',
+      entityType: 'Dojo',
+      entityId: dojoId,
+      ip: req.ip,
+    });
+
+    return ok(res, result);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
 module.exports = {
   createDojo,
   inviteUser,
   listMyDojos,
   getDojoDetails,
   respondInvite,
+  updateDojo,
+  deleteDojo,
 };

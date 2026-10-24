@@ -39,6 +39,8 @@
 .dojo-card__seal {
   width: 52px;
   height: 52px;
+  min-width: 52px;
+  min-height: 52px;
   background: linear-gradient(135deg, rgba(212, 162, 76, 0.15) 0%, rgba(212, 162, 76, 0.05) 100%);
   border: 1px solid var(--gold-border);
   border-radius: var(--radius-sm);
@@ -46,9 +48,16 @@
   align-items: center;
   justify-content: center;
   font-family: var(--font-kanji);
-  font-size: 1.6rem;
+  font-size: 1.05rem;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
   color: var(--gold);
   flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 4px;
+  box-sizing: border-box;
 }
 
 .dojo-card__info {

@@ -76,10 +76,18 @@ def generate_self_signed_cert(cert_path: Path, key_path: Path, host_ip: str) -> 
             x509.DNSName("localhost"),
             x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
         ]
-        try:
-            san_list.append(x509.IPAddress(ipaddress.IPv4Address(host_ip)))
-        except ValueError:
-            san_list.append(x509.DNSName(host_ip))
+        # Include active IP and known interfaces in SAN
+        for ip_cand in [host_ip, "192.168.100.28", "192.168.100.6", "192.168.218.1", "192.168.241.1", "192.168.56.1", "172.28.224.1"]:
+            if not ip_cand:
+                continue
+            try:
+                ip_obj = x509.IPAddress(ipaddress.IPv4Address(ip_cand))
+                if ip_obj not in san_list:
+                    san_list.append(ip_obj)
+            except ValueError:
+                dns_obj = x509.DNSName(ip_cand)
+                if dns_obj not in san_list:
+                    san_list.append(dns_obj)
 
         cert = (
             x509.CertificateBuilder()
@@ -88,7 +96,7 @@ def generate_self_signed_cert(cert_path: Path, key_path: Path, host_ip: str) -> 
             .public_key(key.public_key())
             .serial_number(x509.random_serial_number())
             .not_valid_before(datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1))
-            .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=365))
+            .not_valid_after(datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=3650))
             .add_extension(
                 x509.SubjectAlternativeName(san_list),
                 critical=False,
@@ -99,8 +107,22 @@ def generate_self_signed_cert(cert_path: Path, key_path: Path, host_ip: str) -> 
         cert_path.write_bytes(cert_pem)
         return True
     except Exception as e:
-        print(f"Warning: Failed to generate self-signed SSL cert: {e}")
-        return False
+        print(f"Warning: Failed to generate self-signed SSL cert via cryptography: {e}")
+        try:
+            import subprocess
+            cmd = [
+                "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+                "-keyout", str(key_path),
+                "-out", str(cert_path),
+                "-days", "3650",
+                "-subj", f"/C=RU/O=BunkaiExplorer/CN={host_ip}",
+                "-addext", f"subjectAltName = DNS:localhost,IP:127.0.0.1,IP:{host_ip},IP:192.168.100.28,IP:192.168.100.6"
+            ]
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return True
+        except Exception as oe:
+            print(f"Warning: Failed openssl fallback cert generation: {oe}")
+            return False
 
 
 MOBILE_CLIENT_HTML = """<!DOCTYPE html>

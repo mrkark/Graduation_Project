@@ -1719,6 +1719,85 @@ BEGIN
 END;
 GO
 
+-- Редактирование существующего Додзё
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_Update
+    @DojoId      INT,
+    @UserId      INT,
+    @Name        NVARCHAR(150),
+    @Kanji       NVARCHAR(50) = NULL,
+    @Description NVARCHAR(MAX) = NULL,
+    @AvatarUrl   NVARCHAR(500) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId)
+        THROW 50000, N'ERR|404|DOJO_NOT_FOUND|Додзё не найдено', 1;
+
+    DECLARE @UserRole NVARCHAR(50);
+    SELECT @UserRole = r.Role_Name 
+    FROM dbo.Users u 
+    JOIN dbo.Roles r ON r.Role_ID = u.Role_ID 
+    WHERE u.User_ID = @UserId;
+
+    -- Проверка прав: создатель Додзё, сэнсэй либо глобальный админ
+    IF NOT EXISTS (
+        SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId AND Creator_ID = @UserId
+    ) AND NOT EXISTS (
+        SELECT 1 FROM dbo.DojoMembers WHERE Dojo_ID = @DojoId AND User_ID = @UserId AND Role = 'sensei' AND Status = 'active'
+    ) AND ISNULL(@UserRole, '') <> 'admin'
+        THROW 50000, N'ERR|403|FORBIDDEN|Только создатель или Сэнсэй может изменять параметры Додзё', 1;
+
+    SET @Name = LTRIM(RTRIM(@Name));
+    IF @Name IS NULL OR LEN(@Name) < 3
+        THROW 50000, N'ERR|400|VALIDATION_ERROR|Название Додзё должно содержать минимум 3 символа', 1;
+
+    IF @Kanji IS NULL OR LEN(LTRIM(RTRIM(@Kanji))) = 0
+        SET @Kanji = N'道場';
+
+    UPDATE dbo.Dojos
+    SET Name = @Name,
+        Kanji = LTRIM(RTRIM(@Kanji)),
+        Description = @Description,
+        Avatar_URL = ISNULL(@AvatarUrl, Avatar_URL),
+        Updated_At = SYSUTCDATETIME()
+    WHERE Dojo_ID = @DojoId;
+
+    SELECT d.Dojo_ID, d.Name, d.Kanji, d.Description, d.Creator_ID, d.Avatar_URL, d.Created_At, d.Updated_At,
+           (SELECT COUNT(*) FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.Status = 'active') AS MembersCount
+    FROM dbo.Dojos d
+    WHERE d.Dojo_ID = @DojoId;
+END;
+GO
+
+-- Удаление (роспуск) Додзё
+CREATE OR ALTER PROCEDURE dbo.sp_Dojo_Delete
+    @DojoId INT,
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId)
+        THROW 50000, N'ERR|404|DOJO_NOT_FOUND|Додзё не найдено', 1;
+
+    DECLARE @UserRole NVARCHAR(50);
+    SELECT @UserRole = r.Role_Name 
+    FROM dbo.Users u 
+    JOIN dbo.Roles r ON r.Role_ID = u.Role_ID 
+    WHERE u.User_ID = @UserId;
+
+    -- Удалить Додзё может создатель либо глобальный админ
+    IF NOT EXISTS (
+        SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId AND Creator_ID = @UserId
+    ) AND ISNULL(@UserRole, '') <> 'admin'
+        THROW 50000, N'ERR|403|FORBIDDEN|Только создатель Додзё может его распустить и удалить', 1;
+
+    -- Удаляем Додзё (каскадное удаление удалит участников DojoMembers)
+    DELETE FROM dbo.Dojos WHERE Dojo_ID = @DojoId;
+
+    SELECT @DojoId AS Deleted_Dojo_ID;
+END;
+GO
+
 -- ============================================================
 -- УВЕДОМЛЕНИЯ (Персистентные и оффлайн-уведомления)
 -- ============================================================

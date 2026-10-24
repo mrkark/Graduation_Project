@@ -18,7 +18,7 @@ export default function KarateStudioPage() {
   const [publicTunnelUrl, setPublicTunnelUrl] = useState('');
   const [tunnelActive, setTunnelActive] = useState(false);
   const [networkMode, setNetworkMode] = useState('local'); // 'local' по умолчанию для домашнего Wi-Fi
-  const [useHttps, setUseHttps] = useState(true); // HTTPS (8088) по умолчанию для камеры
+  const [selectedPort, setSelectedPort] = useState('8088'); // '8088' | '8443' | '8000'
   const [copied, setCopied] = useState(false);
   const [isEditingIp, setIsEditingIp] = useState(false);
   const [customIpInput, setCustomIpInput] = useState('');
@@ -96,9 +96,10 @@ export default function KarateStudioPage() {
   const isTunnelAvailable = Boolean(publicTunnelUrl && tunnelActive);
   const activeMode = (networkMode === 'tunnel' && isTunnelAvailable) ? 'tunnel' : (isTunnelAvailable ? networkMode : 'local');
 
+  const portProtocol = selectedPort === '8000' ? 'http' : 'https';
   const activeCamUrl = (activeMode === 'tunnel' && publicTunnelUrl)
     ? `${publicTunnelUrl}/${selectedCam}`
-    : `${useHttps ? 'https' : 'http'}://${displayHost}:${useHttps ? '8088' : '8000'}/${selectedCam}`;
+    : `${portProtocol}://${displayHost}:${selectedPort}/${selectedCam}`;
 
   const handleCopyLink = () => {
     if (navigator?.clipboard) {
@@ -405,13 +406,13 @@ export default function KarateStudioPage() {
 
           {/* Селектор протокола и настройка IP адреса */}
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#13151f', padding: '6px 12px', borderRadius: '8px', border: '1px solid #232738' }}>
-            <span style={{ fontSize: '11.5px', color: '#9ca3af' }}>Протокол:</span>
+            <span style={{ fontSize: '11.5px', color: '#9ca3af' }}>Порт:</span>
             <button
               type="button"
-              onClick={() => setUseHttps(true)}
+              onClick={() => setSelectedPort('8088')}
               style={{
-                background: useHttps ? '#10b981' : '#1e2230',
-                color: useHttps ? '#000' : '#d1d5db',
+                background: selectedPort === '8088' ? '#10b981' : '#1e2230',
+                color: selectedPort === '8088' ? '#000' : '#d1d5db',
                 border: 'none',
                 borderRadius: '4px',
                 padding: '3px 8px',
@@ -424,10 +425,26 @@ export default function KarateStudioPage() {
             </button>
             <button
               type="button"
-              onClick={() => setUseHttps(false)}
+              onClick={() => setSelectedPort('8443')}
               style={{
-                background: !useHttps ? '#f59e0b' : '#1e2230',
-                color: !useHttps ? '#000' : '#d1d5db',
+                background: selectedPort === '8443' ? '#3b82f6' : '#1e2230',
+                color: selectedPort === '8443' ? '#fff' : '#d1d5db',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              🛡️ Шлюз (8443)
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedPort('8000')}
+              style={{
+                background: selectedPort === '8000' ? '#f59e0b' : '#1e2230',
+                color: selectedPort === '8000' ? '#000' : '#d1d5db',
                 border: 'none',
                 borderRadius: '4px',
                 padding: '3px 8px',
@@ -589,12 +606,15 @@ export default function KarateStudioPage() {
               </div>
 
               {/* Пошаговая инструкция для успешного подключения */}
-              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '8px 12px', fontSize: '11.5px', color: '#d1d5db', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '2px' }}>📱 Инструкция для телефона:</div>
-                <div>1. Телефон должен быть в одной сети Wi-Fi с компьютером.</div>
-                <div>2. Отсканируйте QR-код и откройте ссылку в мобильном браузере.</div>
-                <div>3. При предупреждении о сертификате: на <strong>Android</strong> нажмите <em>«Дополнительно» → «Перейти на сайт»</em>; на <strong>iPhone</strong> нажмите <em>«Показать подробности» → «Посетить сайт»</em>.</div>
-                <div>4. Нажмите <strong>«Разрешить»</strong> для доступа к видеокамере.</div>
+              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '10px 14px', fontSize: '11.5px', color: '#d1d5db', lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '3px' }}>📱 Быстрое подключение телефона:</div>
+                <div>1. Телефон должен быть в одной сети Wi-Fi с ПК (или в режиме точки доступа).</div>
+                <div>2. Отсканируйте QR-код и откройте ссылку в мобильном браузере (Chrome / Safari).</div>
+                <div>3. При предупреждении о сертификате: на <strong>Android</strong> нажмите <em>«Дополнительно» → «Перейти на сайт ({displayHost})»</em>; на <strong>iPhone</strong> нажмите <em>«Показать подробности» → «Посетить сайт»</em>.</div>
+                <div>4. Нажмите <strong>«Разрешить»</strong> для камеры — захват сразу отобразится на 3D-аватаре!</div>
+                <div style={{ marginTop: '4px', fontSize: '11px', color: '#fcd34d' }}>
+                  💡 Если порт 8088 не отвечает на вашем роутере, нажмите на кнопку <strong>«Шлюз (8443)»</strong> выше.
+                </div>
               </div>
             </div>
 

@@ -1,16 +1,38 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { listMyDojos, createDojo, getDojoDetails, inviteUserToDojo, respondDojoInvite } from '../api/dojos';
-import { searchUsers } from '../api/friends';
+import { listMyDojos, createDojo, getDojoDetails, inviteUserToDojo, respondDojoInvite, updateDojo, deleteDojo } from '../api/dojos';
+import { searchUsers, listFriends } from '../api/friends';
 import { HankoSeal } from '../components/ui/JapaneseDecor';
 import './DojoPage.css';
 
+function getSealFontSize(kanji) {
+  const text = (kanji || '道場').trim();
+  if (text.length <= 1) return '1.5rem';
+  if (text.length === 2) return '1.05rem';
+  if (text.length === 3) return '0.85rem';
+  return '0.75rem';
+}
+
 export default function DojoPage() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('my'); // 'my' | 'invites' | 'create'
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam === 'invites' ? 'invites' : tabParam === 'create' ? 'create' : 'my');
   const [dojos, setDojos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (tabParam && ['my', 'invites', 'create'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   // Form state
   const [createName, setCreateName] = useState('');
@@ -19,10 +41,21 @@ export default function DojoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState(null);
 
+  // Edit dojo state
+  const [editingDojo, setEditingDojo] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editKanji, setEditKanji] = useState('道場');
+  const [editDesc, setEditDesc] = useState('');
+  const [updating, setUpdating] = useState(false);
+
   // Selected dojo modal
   const [selectedDojoId, setSelectedDojoId] = useState(null);
   const [selectedDojoData, setSelectedDojoData] = useState(null);
   const [loadingModal, setLoadingModal] = useState(false);
+
+  // Quick invite from friends
+  const [friendsList, setFriendsList] = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
 
   // Invite search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,13 +87,19 @@ export default function DojoPage() {
     setInviteStatus({});
     try {
       setLoadingModal(true);
-      const details = await getDojoDetails(id);
+      setLoadingFriends(true);
+      const [details, friends] = await Promise.all([
+        getDojoDetails(id),
+        listFriends().catch(() => []),
+      ]);
       setSelectedDojoData(details);
+      setFriendsList(friends || []);
     } catch (err) {
       alert(err?.response?.data?.error || 'Не удалось открыть информацию о Додзё');
       setSelectedDojoId(null);
     } finally {
       setLoadingModal(false);
+      setLoadingFriends(false);
     }
   };
 
@@ -83,12 +122,58 @@ export default function DojoPage() {
       setFormSuccess('Додзё успешно основано!');
       setCreateName('');
       setCreateDesc('');
+      setCreateKanji('道場');
       await loadDojos();
       setActiveTab('my');
     } catch (err) {
       setError(err?.response?.data?.error || 'Не удалось создать Додзё');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStartEdit = (d) => {
+    setEditingDojo(d);
+    setEditName(d.Name || '');
+    setEditKanji(d.Kanji || '道場');
+    setEditDesc(d.Description || '');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingDojo || !editName.trim()) return;
+    try {
+      setUpdating(true);
+      await updateDojo(editingDojo.Dojo_ID, {
+        name: editName.trim(),
+        kanji: editKanji.trim() || '道場',
+        description: editDesc.trim(),
+      });
+      setEditingDojo(null);
+      await loadDojos();
+      if (selectedDojoId === editingDojo.Dojo_ID) {
+        const refreshed = await getDojoDetails(selectedDojoId);
+        setSelectedDojoData(refreshed);
+      }
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Не удалось обновить Додзё');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteDojo = async (dojoId, dojoName) => {
+    if (!window.confirm(`Вы уверены, что хотите распустить и навсегда закрыть Додзё «${dojoName}»? Это действие нельзя отменить.`)) {
+      return;
+    }
+    try {
+      await deleteDojo(dojoId);
+      if (selectedDojoId === dojoId) {
+        closeDojoModal();
+      }
+      await loadDojos();
+    } catch (err) {
+      alert(err?.response?.data?.error || 'Не удалось распустить Додзё');
     }
   };
 
@@ -156,21 +241,21 @@ export default function DojoPage() {
         <button
           type="button"
           className={`btn ${activeTab === 'my' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('my')}
+          onClick={() => switchTab('my')}
         >
           🥋 Мои Додзё ({activeDojos.length})
         </button>
         <button
           type="button"
           className={`btn ${activeTab === 'invites' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('invites')}
+          onClick={() => switchTab('invites')}
         >
           📬 Приглашения {invitedDojos.length > 0 && `(${invitedDojos.length})`}
         </button>
         <button
           type="button"
           className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('create')}
+          onClick={() => switchTab('create')}
         >
           ➕ Основать Додзё
         </button>
@@ -207,7 +292,9 @@ export default function DojoPage() {
                   {activeDojos.map((d) => (
                     <div key={d.Dojo_ID} className="dojo-card">
                       <div className="dojo-card__header">
-                        <div className="dojo-card__seal">{d.Kanji || '道'}</div>
+                        <div className="dojo-card__seal" style={{ fontSize: getSealFontSize(d.Kanji) }}>
+                          {d.Kanji || '道場'}
+                        </div>
                         <div className="dojo-card__info">
                           <div className="dojo-card__name">{d.Name}</div>
                           <div className="dojo-card__sensei">
@@ -227,7 +314,7 @@ export default function DojoPage() {
                         </span>
                       </div>
 
-                      <div className="dojo-card__actions">
+                      <div className="dojo-card__actions" style={{ flexDirection: 'column', gap: '0.5rem' }}>
                         <button
                           type="button"
                           className="btn btn-subtle"
@@ -236,6 +323,27 @@ export default function DojoPage() {
                         >
                           Соратники и приглашения →
                         </button>
+
+                        {((d.Role || d.MyRole) === 'sensei' || d.Creator_ID === user?.User_ID) && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.4rem', width: '100%' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                              onClick={() => handleStartEdit(d)}
+                            >
+                              ✏️ Изменить
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              style={{ padding: '4px 8px', fontSize: '0.78rem' }}
+                              onClick={() => handleDeleteDojo(d.Dojo_ID, d.Name)}
+                            >
+                              🗑️ Распустить
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -260,7 +368,9 @@ export default function DojoPage() {
                   {invitedDojos.map((d) => (
                     <div key={d.Dojo_ID} className="dojo-card">
                       <div className="dojo-card__header">
-                        <div className="dojo-card__seal">{d.Kanji || '道'}</div>
+                        <div className="dojo-card__seal" style={{ fontSize: getSealFontSize(d.Kanji) }}>
+                          {d.Kanji || '道場'}
+                        </div>
                         <div className="dojo-card__info">
                           <div className="dojo-card__name">{d.Name}</div>
                           <div className="dojo-card__sensei">
@@ -370,8 +480,30 @@ export default function DojoPage() {
         <div className="dojo-modal-overlay" onClick={closeDojoModal}>
           <div className="dojo-modal" onClick={(e) => e.stopPropagation()}>
             <div className="dojo-modal__header">
-              <div className="dojo-modal__title">
-                ⛩️ {selectedDojoData?.Name || selectedDojoData?.dojo?.Name || 'Додзё'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+                <div className="dojo-modal__title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  ⛩️ {selectedDojoData?.Name || selectedDojoData?.dojo?.Name || 'Додзё'}
+                </div>
+                {((selectedDojoData?.MyRole === 'sensei') || (selectedDojoData?.Creator_ID === user?.User_ID)) && (
+                  <div style={{ display: 'flex', gap: '0.4rem', marginLeft: 'auto', marginRight: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                      onClick={() => handleStartEdit(selectedDojoData?.dojo || selectedDojoData)}
+                    >
+                      ✏️ Изменить
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                      onClick={() => handleDeleteDojo(selectedDojoId, selectedDojoData?.Name || selectedDojoData?.dojo?.Name)}
+                    >
+                      🗑️ Распустить
+                    </button>
+                  </div>
+                )}
               </div>
               <button type="button" className="dojo-modal__close" onClick={closeDojoModal}>✕</button>
             </div>
@@ -416,6 +548,70 @@ export default function DojoPage() {
                   {/* Пригласить пользователя */}
                   <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem' }}>
                     <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem' }}>✉️ Пригласить соратника в Додзё</h4>
+
+                    {/* Быстрый выбор из друзей */}
+                    <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--gold-soft)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span>👥</span> Быстрый выбор из друзей ({friendsList.length}):
+                      </div>
+                      {loadingFriends ? (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Загрузка соратников...</div>
+                      ) : friendsList.length === 0 ? (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>В вашем списке друзей пока нет соратников. Добавьте друзей во вкладке «Соратники».</div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '0.6rem', overflowX: 'auto', paddingBottom: '0.3rem' }}>
+                          {friendsList.map((f) => {
+                            const memberInfo = selectedDojoData.members?.find((m) => m.User_ID === f.User_ID);
+                            const state = inviteStatus[f.User_ID];
+                            const isInvited = memberInfo?.Status === 'invited' || state === 'sent';
+                            const isActive = memberInfo?.Status === 'active';
+
+                            return (
+                              <div
+                                key={f.User_ID}
+                                style={{
+                                  flexShrink: 0,
+                                  background: '#161310',
+                                  border: '1px solid var(--border-subtle)',
+                                  borderRadius: '6px',
+                                  padding: '8px 10px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  width: '105px',
+                                  textAlign: 'center',
+                                }}
+                              >
+                                <div className="dojo-member-avatar" style={{ width: '30px', height: '30px', fontSize: '0.8rem' }}>
+                                  {(f.Display_Name || f.Username || '?')[0].toUpperCase()}
+                                </div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                                  {f.Display_Name || f.Username}
+                                </div>
+
+                                {isActive ? (
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>✓ В Додзё</span>
+                                ) : isInvited ? (
+                                  <span style={{ fontSize: '0.7rem', color: '#eab308' }}>Приглашён</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    style={{ padding: '2px 8px', fontSize: '0.72rem', width: '100%', marginTop: '2px' }}
+                                    disabled={state === 'sending'}
+                                    onClick={() => handleInviteUser(f.User_ID)}
+                                  >
+                                    {state === 'sending' ? '...' : '+ Позвать'}
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                     <form onSubmit={handleSearchUsers} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                       <input
                         type="text"
@@ -468,6 +664,73 @@ export default function DojoPage() {
                   </div>
                 </>
               ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ ДОДЗЁ */}
+      {editingDojo && (
+        <div className="dojo-modal-overlay" onClick={() => setEditingDojo(null)}>
+          <div className="dojo-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
+            <div className="dojo-modal__header">
+              <div className="dojo-modal__title">✏️ Редактирование Додзё</div>
+              <button type="button" className="dojo-modal__close" onClick={() => setEditingDojo(null)}>✕</button>
+            </div>
+            <div className="dojo-modal__body">
+              <form onSubmit={handleSaveEdit}>
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Название Додзё *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '0.75rem', background: '#120f0d', border: '1px solid var(--border)', color: '#fff', borderRadius: '4px' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Иероглиф / Печать Додзё (Кандзи)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    maxLength={4}
+                    value={editKanji}
+                    onChange={(e) => setEditKanji(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', background: '#120f0d', border: '1px solid var(--border)', color: '#fff', borderRadius: '4px' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Девиз и описание школы</label>
+                  <textarea
+                    rows={4}
+                    className="form-control"
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', background: '#120f0d', border: '1px solid var(--border)', color: '#fff', borderRadius: '4px', resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setEditingDojo(null)}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={updating || !editName.trim()}
+                  >
+                    {updating ? 'Сохранение...' : 'Сохранить изменения'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

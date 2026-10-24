@@ -125,19 +125,20 @@ export default function MainLayout() {
         type: notif.type || 'friend_request',
         title: notif.title || 'Уведомление Додзё',
         message: notif.message || 'Новое событие',
-        targetUrl: notif.targetUrl || (notif.type === 'dojo_invite' ? '/dojos' : notif.type === 'bunkai_new' ? notif.targetUrl : '/friends?tab=incoming'),
+        targetUrl: notif.targetUrl || (notif.type === 'dojo_invite' ? '/dojos?tab=invites' : notif.type === 'bunkai_new' ? notif.targetUrl : '/friends?tab=incoming'),
         isRead: false,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setNotifications((prev) => [notifItem, ...prev.slice(0, 29)]);
 
       const icon = notif.type === 'dojo_invite' ? '⛩️' : notif.type === 'bunkai_new' ? '🥋' : '🤝';
+      const actionText = notif.type === 'dojo_invite' ? 'Открыть вызов в Додзё →' : notif.type === 'bunkai_new' ? 'Смотреть разбор →' : 'Перейти к событию →';
       setToast({
         id: notifItem.id,
         icon,
         title: notifItem.title,
         message: notifItem.message,
-        actionText: 'Перейти к событию →',
+        actionText,
         onClick: () => {
           handleNotificationClick(notifItem);
           setToast(null);
@@ -327,6 +328,9 @@ export default function MainLayout() {
                       </div>
 
                       <div className="navbar__notifications-footer">
+                        <Link to="/dojos?tab=invites" onClick={() => setNotificationsOpen(false)}>
+                          Вызовы в Додзё
+                        </Link>
                         <Link to="/friends?tab=incoming" onClick={() => setNotificationsOpen(false)}>
                           Заявки в друзья
                         </Link>

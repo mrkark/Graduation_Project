@@ -21,6 +21,8 @@ const VITE_PORT = process.env.VITE_PORT ? parseInt(process.env.VITE_PORT, 10) : 
 const TARGET_HOST = process.env.TARGET_HOST || '127.0.0.1';
 const BACKEND_HOST = process.env.BACKEND_HOST || TARGET_HOST;
 const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT, 10) : 5000;
+const MOCAP_HOST = process.env.MOCAP_HOST || 'mocap-studio';
+const MOCAP_PORT = process.env.MOCAP_PORT ? parseInt(process.env.MOCAP_PORT, 10) : 8000;
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SSL_DIR = path.join(ROOT_DIR, 'ssl');
@@ -139,9 +141,17 @@ async function main() {
 
   // HTTPS Прокси для HTTP запросов
   const server = https.createServer(sslOptions, (clientReq, clientRes) => {
+    const isMocap =
+      clientReq.url.startsWith('/cam') ||
+      clientReq.url.startsWith('/ws/stream') ||
+      clientReq.url.startsWith('/qr/') ||
+      clientReq.url === '/studio' ||
+      clientReq.url.startsWith('/assets/') ||
+      clientReq.url === '/karateka_lowpoly.glb';
     const isBackend = clientReq.url.startsWith('/api') || clientReq.url.startsWith('/socket.io');
-    const destHost = isBackend ? BACKEND_HOST : TARGET_HOST;
-    const destPort = isBackend ? BACKEND_PORT : VITE_PORT;
+
+    const destHost = isMocap ? MOCAP_HOST : (isBackend ? BACKEND_HOST : TARGET_HOST);
+    const destPort = isMocap ? MOCAP_PORT : (isBackend ? BACKEND_PORT : VITE_PORT);
 
     const options = {
       hostname: destHost,
@@ -175,11 +185,13 @@ async function main() {
     clientReq.pipe(proxyReq);
   });
 
-  // WebSocket Upgrade Прокси для Socket.IO и Vite HMR
+  // WebSocket Upgrade Прокси для Socket.IO, Vite HMR и AI MoCap Stream
   server.on('upgrade', (req, clientSocket, head) => {
+    const isMocap = req.url.startsWith('/ws/stream') || req.url.startsWith('/cam');
     const isBackend = req.url.startsWith('/socket.io');
-    const destHost = isBackend ? BACKEND_HOST : TARGET_HOST;
-    const destPort = isBackend ? BACKEND_PORT : VITE_PORT;
+
+    const destHost = isMocap ? MOCAP_HOST : (isBackend ? BACKEND_HOST : TARGET_HOST);
+    const destPort = isMocap ? MOCAP_PORT : (isBackend ? BACKEND_PORT : VITE_PORT);
 
     const proxySocket = net.connect(destPort, destHost, () => {
       proxySocket.write(

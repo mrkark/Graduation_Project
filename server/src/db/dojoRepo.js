@@ -52,10 +52,32 @@ async function respondInvite(dojoId, userId, accept) {
   return rows[0] || null;
 }
 
+async function updateDojo(dojoId, userId, { name, kanji, description, avatarUrl }) {
+  const rows = await callProcedure('sp_Dojo_Update', {
+    DojoId: Number(dojoId),
+    UserId: Number(userId),
+    Name: name,
+    Kanji: kanji || '道場',
+    Description: description || null,
+    AvatarUrl: avatarUrl || null,
+  });
+  return rows[0] || null;
+}
+
+async function deleteDojo(dojoId, userId) {
+  const rows = await callProcedure('sp_Dojo_Delete', {
+    DojoId: Number(dojoId),
+    UserId: Number(userId),
+  });
+  return rows[0] || null;
+}
+
 module.exports = {
   createDojo,
   inviteUser,
   listMyDojos,
   getDojoDetails,
   respondInvite,
+  updateDojo,
+  deleteDojo,
 };

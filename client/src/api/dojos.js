@@ -15,6 +15,16 @@ export async function getDojoDetails(id) {
   return data.data;
 }
 
+export async function updateDojo(id, payload) {
+  const { data } = await api.put(`/dojos/${id}`, payload);
+  return data.data;
+}
+
+export async function deleteDojo(id) {
+  const { data } = await api.delete(`/dojos/${id}`);
+  return data.data;
+}
+
 export async function inviteUserToDojo(dojoId, targetUserId) {
   const { data } = await api.post(`/dojos/${dojoId}/invite`, { targetUserId });
   return data.data;
