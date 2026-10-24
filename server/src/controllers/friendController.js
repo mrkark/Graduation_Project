@@ -25,6 +25,18 @@ async function sendRequest(req, res, next) {
 
     const request = await friendRepo.sendRequest(req.user.User_ID, receiverId);
     await logActivity({ userId: req.user.User_ID, action: 'send_friend_request', entityType: 'FriendRequest', entityId: request.Request_ID, ip: req.ip });
+
+    // Задача 44: мгновенное оповещение пользователя в сети о новой заявке в друзья
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${receiverId}`).emit('notification', {
+        type: 'friend_request',
+        senderId: req.user.User_ID,
+        senderName: req.user.Display_Name || req.user.Username,
+        message: `${req.user.Display_Name || req.user.Username} отправил вам заявку в соратники Додзё!`,
+      });
+    }
+
     return created(res, request);
   } catch (err) {
     return handleError(err, next, res);

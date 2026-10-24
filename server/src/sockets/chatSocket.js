@@ -31,6 +31,9 @@ function registerChatSocket(io) {
   io.on('connection', (socket) => {
     const recentTimestamps = [];
 
+    // Присоединяем сокет к комнате пользователя для адресных уведомлений (Задачи 39, 44)
+    socket.join(`user:${socket.user.User_ID}`);
+
     socket.emit('connected', {
       user: socket.user,
       role: socket.userRole,
@@ -79,6 +82,17 @@ function registerChatSocket(io) {
         const message = await chatRepo.createMessage(roomId, socket.user.User_ID, trimmed);
 
         io.to(`room:${roomId}`).emit('message:new', message);
+
+        // Задача 44: мгновенное всплывающее уведомление для соратников в сети
+        socket.broadcast.emit('chat:notification', {
+          type: 'message',
+          roomId,
+          messageId: message.Message_ID,
+          authorName: socket.user.Display_Name || socket.user.Username,
+          authorId: socket.user.User_ID,
+          snippet: trimmed.slice(0, 60),
+        });
+
         cb?.({ ok: true, message });
 
         await logActivity({ userId: socket.user.User_ID, action: 'send_message', entityType: 'ChatMessage', entityId: message.Message_ID });

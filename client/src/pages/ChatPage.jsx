@@ -178,7 +178,7 @@ export default function ChatPage() {
       <div className="page-header">
         <div>
           <span className="chat-kicker">道場チャット · СВЯЗЬ ДОДЗЁ</span>
-          <h1>Связь Додзё (道場チャット)</h1>
+          <h1>Связь Додзё</h1>
           <p className="page-subtitle">Общий зал бесед мастеров и личные переписки с соратниками</p>
         </div>
       </div>

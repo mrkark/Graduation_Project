@@ -84,7 +84,7 @@ export default function FriendsPage() {
       <div className="page-header">
         <div>
           <span className="friends-kicker">仲間 · БРАТСТВО ДОДЗЁ</span>
-          <h1>Соратники Додзё (仲間 · Накама)</h1>
+          <h1>Соратники Додзё</h1>
           <p className="page-subtitle">Взаимная отработка ката, обмен опытом и личные сообщения</p>
         </div>
       </div>
@@ -260,9 +260,14 @@ export default function FriendsPage() {
                         </div>
                       </div>
                       {isAlreadyFriend ? (
-                        <span className="btn btn-subtle" style={{ pointerEvents: 'none', opacity: 0.85, fontSize: '0.82rem' }}>
-                          ✓ В соратниках
-                        </span>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <span className="btn btn-subtle" style={{ pointerEvents: 'none', opacity: 0.85, fontSize: '0.82rem' }}>
+                            ✓ В соратниках
+                          </span>
+                          <Link to={`/chat?friendId=${u.User_ID}`} className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}>
+                            💬 Написать
+                          </Link>
+                        </div>
                       ) : isSent ? (
                         <span className="btn" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', pointerEvents: 'none', fontSize: '0.82rem' }}>
                           ✓ Заявка отправлена
