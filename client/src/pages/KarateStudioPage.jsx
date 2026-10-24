@@ -3,6 +3,14 @@ import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 
 export default function KarateStudioPage() {
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
+    const isSmallScreen = window.innerWidth < 1024;
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return isSmallScreen || (isTouch && isMobileUA);
+  });
+
   const [showQr, setShowQr] = useState(false);
   const [selectedCam, setSelectedCam] = useState('cam1');
   const [studioOnline, setStudioOnline] = useState(true);
@@ -96,21 +104,85 @@ export default function KarateStudioPage() {
 
   const camDescriptions = {
     cam1: {
-      title: 'Камера 1 — Фронтальная (0°)',
-      desc: 'Установите телефон спереди во весь рост на уровне солнечного сплетения. Отвечает за оси X и Y, руки, корпус и позицию.',
+      title: 'Камера 1 — Фронтальная (0° · Основание буквы T)',
+      desc: 'Установите телефон спереди во весь рост по центру. Отвечает за оси X и Y, лицо, плечи и прямые удары.',
       badgeColor: '#10b981',
     },
     cam2: {
-      title: 'Камера 2 — Боковая глубина (90°)',
-      desc: 'Установите второй телефон сбоку. Рассчитывает физическую глубину стоек (ось Z) и длину выпадов дзенкуцу-дати.',
+      title: 'Камера 2 — Левая боковая (+90° · Левое плечо буквы T)',
+      desc: 'Установите телефон слева под 90°. Считывает физическую глубину Z левой стороны и движения левой руки при прижатии к корпусу.',
       badgeColor: '#06b6d4',
     },
     cam3: {
-      title: 'Камера 3 — Диагональная (45°)',
-      desc: 'Установите третий телефон под углом 45°. Устраняет слепые зоны и перекрытия рук при скручиваниях и ударах.',
+      title: 'Камера 3 — Правая боковая (-90° · Правое плечо буквы T)',
+      desc: 'Установите третий телефон справа под 90°. Считывает физическую глубину Z правой стороны и позицию правого кулака в хикитэ у бедра.',
       badgeColor: '#a855f7',
     },
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
+      const isSmallScreen = window.innerWidth < 1024;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobileOrTablet(isSmallScreen || (isTouch && isMobileUA));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  if (isMobileOrTablet) {
+    return (
+      <div style={{
+        minHeight: 'calc(100vh - 80px)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem 1.5rem',
+        background: '#0d0e12',
+        color: '#e2e8f0',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          maxWidth: '520px',
+          background: '#161822',
+          border: '1px solid #282d3c',
+          borderRadius: '16px',
+          padding: '2.5rem 1.8rem',
+          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
+        }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>💻</div>
+          <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#f59e0b', margin: '0 0 0.8rem' }}>
+            Доступно только на компьютерах
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: 1.6, margin: '0 0 1.6rem' }}>
+            Страница <strong>Мокап 3D (Karate Motion Studio)</strong> предназначена исключительно для мониторов ПК и ноутбуков. На планшетах и телефонах 3D-студией с множественными камерами пользоваться неудобно.
+          </p>
+          <div style={{
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            borderRadius: '10px',
+            padding: '1rem',
+            marginBottom: '1.8rem',
+            textAlign: 'left',
+          }}>
+            <p style={{ fontSize: '0.88rem', color: '#fef3c7', margin: 0, lineHeight: 1.5 }}>
+              📱 <strong>Как использовать телефон:</strong> откройте эту страницу на компьютере и отсканируйте камерой телефона QR-код — телефон подключится как беспроводная камера захвата движений!
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link to="/kata" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none' }}>
+              🥋 В каталог Ката
+            </Link>
+            <Link to="/" className="btn btn-subtle" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none' }}>
+              ⛩️ На главную
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: '100%', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', background: '#0d0e12', overflow: 'hidden' }}>
@@ -321,9 +393,9 @@ export default function KarateStudioPage() {
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  {cid === 'cam1' && '🟢 Камера 1 (Фронт)'}
-                  {cid === 'cam2' && '🔵 Камера 2 (Сбоку 90°)'}
-                  {cid === 'cam3' && '🟣 Камера 3 (Диагональ 45°)'}
+                  {cid === 'cam1' && '🟢 Камера 1 (Фронт · T-база)'}
+                  {cid === 'cam2' && '🔵 Камера 2 (Слева 90° · T-плечо)'}
+                  {cid === 'cam3' && '🟣 Камера 3 (Справа 90° · T-плечо)'}
                 </button>
               );
             })}

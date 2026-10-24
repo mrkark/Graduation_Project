@@ -102,6 +102,24 @@ services:
     networks:
       - bunkai-network
 
+  # 5. Контейнер Python AI MoCap Studio (web_studio_server.py)
+  mocap-studio:
+    build:
+      context: ./karate_motion_studio
+      dockerfile: Dockerfile
+    container_name: bunkai-explorer-mocap-studio
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+      - '8088:8088'
+    environment:
+      PYTHONUNBUFFERED: '1'
+      HOST_IP: ${HOST_IP:-192.168.100.6}
+    volumes:
+      - ./karate_motion_studio:/app
+    networks:
+      - bunkai-network
+
 networks:
   bunkai-network:
     driver: bridge

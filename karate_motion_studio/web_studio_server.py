@@ -192,10 +192,10 @@ def fuse_multicam_landmarks(
     fdata3: Optional[FrameData],
 ) -> Optional[FrameData]:
     """
-    Fuses landmarks from up to 3 cameras into ONE unified FrameData:
-    - Cam 1: Frontal plane (X width, Y height, head & hands)
-    - Cam 2: Side 90° profile (Physical depth Z fusion: delta X in side view is delta Z in world!)
-    - Cam 3: Diagonal 45° (Occlusion compensation for crossed limbs)
+    Fuses landmarks from 3 cameras arranged in a canonical T-configuration (Задача 30):
+    - Cam 1: Frontal (0°, основание буквы T) — оси X (ширина) и Y (высота), плечевой пояс и голова
+    - Cam 2: Левый боковой профиль (+90°, левое плечо буквы T) — глубина Z левой стороны, локти и стойки
+    - Cam 3: Правый боковой профиль (-90°, правое плечо буквы T) — глубина Z правой стороны, исключение слепых зон при хикитэ
     """
     # Pick primary anchor
     if fdata1 is not None and not fdata1.tracking_loss:
@@ -210,7 +210,8 @@ def fuse_multicam_landmarks(
     fused_joints = {k: list(v) for k, v in base.joints.items()}
     fused_conf = dict(base.confidence)
 
-    # 1. Fuse Side Camera (Cam 2) for true physical anatomical depth (Z axis)
+    # 1. Слияние данных Камеры 2 (+90° Слева, левое плечо буквы T):
+    # Обеспечивает точную физическую глубину Z и отслеживание левой руки/ноги даже при прижатии к телу (Задачи 30 и 31)
     if (
         fdata2 is not None
         and not fdata2.tracking_loss
@@ -225,41 +226,56 @@ def fuse_multicam_landmarks(
         hip_side_x = (s_joints["left_hip"][0] + s_joints["right_hip"][0]) * 0.5
         hip_base_z = (fused_joints["left_hip"][2] + fused_joints["right_hip"][2]) * 0.5
 
-        depth_joints = [
+        left_and_lower_joints = [
             "left_knee", "right_knee", "left_ankle", "right_ankle",
             "left_heel", "right_heel", "left_foot_index", "right_foot_index",
+            "left_shoulder", "left_elbow", "left_wrist",
         ]
 
-        for j in depth_joints:
+        for j in left_and_lower_joints:
             if j in s_joints and j in fused_joints:
                 c2 = s_conf.get(j, 0.0)
-                if c2 > 0.40:
+                if c2 > 0.35:
                     dz_side = s_joints[j][0] - hip_side_x
                     target_z = hip_base_z + dz_side
-                    # Weight: 65% physical side-camera depth + 35% front estimate
-                    fused_joints[j][2] = round(0.65 * target_z + 0.35 * fused_joints[j][2], 4)
+                    fused_joints[j][2] = round(0.70 * target_z + 0.30 * fused_joints[j][2], 4)
+                    # Если конечность прижата к телу (низкая видимость на фронтальной), берем Y и Z с боковой камеры
+                    if fused_conf.get(j, 0.0) < 0.50:
+                        fused_joints[j][1] = round(0.5 * fused_joints[j][1] + 0.5 * s_joints[j][1], 4)
                     fused_conf[j] = round(max(fused_conf.get(j, 0.0), c2), 3)
 
-    # 2. Fuse Diagonal Camera (Cam 3 at 45°) for occlusion recovery
+    # 2. Слияние данных Камеры 3 (-90° Справа, правое плечо буквы T):
+    # Обеспечивает точную глубину Z правой стороны тела и отслеживание правой руки при хикитэ/прижатии (Задачи 30 и 31)
     if (
         fdata3 is not None
         and not fdata3.tracking_loss
         and "left_hip" in fdata3.joints
         and "right_hip" in fdata3.joints
+        and "left_hip" in fused_joints
+        and "right_hip" in fused_joints
     ):
-        d_joints = fdata3.joints
-        d_conf = fdata3.confidence
-        cos45, sin45 = 0.7071, 0.7071
+        r_joints = fdata3.joints
+        r_conf = fdata3.confidence
 
-        for j, pt in d_joints.items():
-            c3 = d_conf.get(j, 0.0)
-            c_base = fused_conf.get(j, 0.0)
-            if c3 > 0.60 and c_base < 0.45:
-                x3, y3, z3 = pt
-                x_perf = x3 * cos45 - z3 * sin45
-                z_perf = x3 * sin45 + z3 * cos45
-                fused_joints[j] = [round(x_perf, 4), round(y3, 4), round(z_perf, 4)]
-                fused_conf[j] = round(c3, 3)
+        hip_right_x = (r_joints["left_hip"][0] + r_joints["right_hip"][0]) * 0.5
+        hip_base_z = (fused_joints["left_hip"][2] + fused_joints["right_hip"][2]) * 0.5
+
+        right_joints = [
+            "right_shoulder", "right_elbow", "right_wrist",
+            "right_knee", "right_ankle", "right_heel", "right_foot_index",
+        ]
+
+        for j in right_joints:
+            if j in r_joints and j in fused_joints:
+                c3 = r_conf.get(j, 0.0)
+                if c3 > 0.35:
+                    # Инвертированная ось X для камеры с противоположной стороны (-90°)
+                    dz_right = -(r_joints[j][0] - hip_right_x)
+                    target_z = hip_base_z + dz_right
+                    fused_joints[j][2] = round(0.70 * target_z + 0.30 * fused_joints[j][2], 4)
+                    if fused_conf.get(j, 0.0) < 0.50:
+                        fused_joints[j][1] = round(0.5 * fused_joints[j][1] + 0.5 * r_joints[j][1], 4)
+                    fused_conf[j] = round(max(fused_conf.get(j, 0.0), c3), 3)
 
     return FrameData(
         frame=base.frame,

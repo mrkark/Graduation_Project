@@ -102,9 +102,9 @@
 }
 
 .bunkai-mode-option.active {
-  background: rgba(184, 41, 41, 0.12);
-  border-color: var(--accent-red);
-  box-shadow: 0 0 0 1px var(--accent-red);
+  background: rgba(197, 160, 89, 0.15);
+  border-color: #ffd700;
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.25);
 }
 
 .bunkai-mode-option strong {

@@ -69,6 +69,12 @@ export default function BunkaiMultiAvatarPlayer({
 }) {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [showUke2, setShowUke2] = useState(defaultParticipantMode === '3-person');
+
+  // Задача 29: синхронизация режима участников при клике на кнопку выбора количества (2 или 3)
+  useEffect(() => {
+    setShowUke2(defaultParticipantMode === '3-person');
+  }, [defaultParticipantMode]);
+
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1.0);
   const [timelineTime, setTimelineTime] = useState(0); // Мастер-время в секундах

@@ -8,6 +8,41 @@ const { registerChatSocket } = require('./src/sockets/chatSocket');
 const { registerMocapSocket } = require('./src/sockets/mocapSocket');
 
 const PORT = process.env.PORT || 5000;
+const net = require('net');
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+function checkAndStartPythonMocap() {
+  const s = new net.Socket();
+  s.setTimeout(600);
+  s.on('connect', () => {
+    s.destroy();
+  });
+  s.on('error', () => {
+    s.destroy();
+    const studioDir = path.resolve(__dirname, '../karate_motion_studio');
+    const studioScript = path.join(studioDir, 'web_studio_server.py');
+    if (!fs.existsSync(studioScript)) return;
+
+    let pythonExe = 'C:\\Users\\user\\Downloads\\bunkai_explorer_karate_motion_capture\\bunkai_explorer_karate_motion_capture\\.venv\\Scripts\\python.exe';
+    if (!fs.existsSync(pythonExe)) pythonExe = 'python';
+
+    try {
+      const child = spawn(pythonExe, ['web_studio_server.py'], {
+        cwd: studioDir,
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      console.log('✔ Python AI MoCap Server автоматически запущен вместе с проектом (порт 8000/8088)');
+    } catch {}
+  });
+  s.on('timeout', () => {
+    s.destroy();
+  });
+  s.connect(8000, '127.0.0.1');
+}
 
 const server = http.createServer(app);
 
@@ -39,6 +74,7 @@ async function start() {
   server.listen(PORT, () => {
     console.log(`✔ Bunkai Explorer API запущен на порту ${PORT}`);
     console.log(`✔ Socket.IO ожидает подключения (CORS origin: ${process.env.CLIENT_URL || 'http://localhost:5173'})`);
+    checkAndStartPythonMocap();
   });
 }
 
