@@ -13,6 +13,15 @@ function mapRoomRow(row) {
           Avatar_URL: row.Friend_Avatar_URL,
         }
       : null,
+    Dojo: row.Dojo_ID
+      ? {
+          Dojo_ID: row.Dojo_ID,
+          Name: row.Dojo_Name,
+          Kanji: row.Dojo_Kanji,
+          Avatar_URL: row.Dojo_Avatar_URL,
+          MembersCount: row.MembersCount,
+        }
+      : null,
   };
 }
 
@@ -35,6 +44,11 @@ function mapMessageRow(row) {
 
 async function getOrCreateGeneralRoom() {
   const rows = await callProcedure('sp_Chat_GetOrCreateGeneralRoom', {});
+  return mapRoomRow(rows[0]);
+}
+
+async function getOrCreateDojoRoom(dojoId, userId) {
+  const rows = await callProcedure('sp_Chat_GetOrCreateDojoRoom', { DojoId: dojoId, UserId: userId });
   return mapRoomRow(rows[0]);
 }
 
@@ -69,4 +83,13 @@ async function getRoomRecipients(roomId, excludeUserId) {
   return (rows || []).map((r) => r.User_ID);
 }
 
-module.exports = { getOrCreateGeneralRoom, listRoomsForUser, createPrivateRoom, listMessages, createMessage, deleteMessage, getRoomRecipients };
+module.exports = {
+  getOrCreateGeneralRoom,
+  getOrCreateDojoRoom,
+  listRoomsForUser,
+  createPrivateRoom,
+  listMessages,
+  createMessage,
+  deleteMessage,
+  getRoomRecipients,
+};

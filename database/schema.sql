@@ -164,8 +164,10 @@ GO
 CREATE TABLE dbo.ChatRooms (
     ChatRoom_ID INT IDENTITY(1,1) PRIMARY KEY,
     Room_Type   NVARCHAR(20) NOT NULL,
+    Dojo_ID     INT NULL,
+    Name        NVARCHAR(150) NULL,
     Created_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT CK_ChatRooms_Type CHECK (Room_Type IN ('general', 'private'))
+    CONSTRAINT CK_ChatRooms_Type CHECK (Room_Type IN ('general', 'private', 'dojo'))
 );
 GO
 
@@ -320,6 +322,12 @@ CREATE TABLE dbo.DojoMembers (
 );
 GO
 CREATE INDEX IX_DojoMembers_User ON dbo.DojoMembers(User_ID, Status);
+GO
+
+-- Связь чата созданного Додзё с таблицей Dojos
+ALTER TABLE dbo.ChatRooms ADD CONSTRAINT FK_ChatRooms_Dojos FOREIGN KEY (Dojo_ID) REFERENCES dbo.Dojos(Dojo_ID) ON DELETE CASCADE;
+GO
+CREATE UNIQUE INDEX UX_ChatRooms_Dojo_ID ON dbo.ChatRooms(Dojo_ID) WHERE Dojo_ID IS NOT NULL;
 GO
 
 -- =========================================================

@@ -48,16 +48,37 @@ AS
 BEGIN
     DECLARE @result BIT = 0;
     DECLARE @roomType NVARCHAR(20);
+    DECLARE @dojoId INT;
 
-    SELECT @roomType = Room_Type FROM dbo.ChatRooms WHERE ChatRoom_ID = @RoomId;
+    SELECT @roomType = Room_Type, @dojoId = Dojo_ID FROM dbo.ChatRooms WHERE ChatRoom_ID = @RoomId;
 
     IF @roomType IS NULL
         RETURN 0;
 
-    IF @roomType <> N'private'
+    IF @roomType = N'general'
         SET @result = 1;
-    ELSE IF EXISTS (SELECT 1 FROM dbo.PrivateChatParticipants WHERE ChatRoom_ID = @RoomId AND User_ID = @UserId)
-        SET @result = 1;
+    ELSE IF @roomType = N'private'
+    BEGIN
+        IF EXISTS (SELECT 1 FROM dbo.PrivateChatParticipants WHERE ChatRoom_ID = @RoomId AND User_ID = @UserId)
+            SET @result = 1;
+    END
+    ELSE IF @roomType = N'dojo'
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM dbo.Dojos d
+            WHERE d.Dojo_ID = @dojoId AND d.Creator_ID = @UserId
+        )
+        OR EXISTS (
+            SELECT 1 FROM dbo.DojoMembers dm
+            WHERE dm.Dojo_ID = @dojoId AND dm.User_ID = @UserId AND dm.Status = 'active'
+        )
+        OR EXISTS (
+            SELECT 1 FROM dbo.Users u
+            JOIN dbo.Roles r ON r.Role_ID = u.Role_ID
+            WHERE u.User_ID = @UserId AND r.Role_Name = 'admin'
+        )
+            SET @result = 1;
+    END
 
     RETURN @result;
 END
@@ -725,6 +746,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_Chat_GetOrCreateGeneralRoom
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
 
     IF NOT EXISTS (SELECT 1 FROM dbo.ChatRooms WHERE Room_Type = N'general')
         INSERT INTO dbo.ChatRooms (Room_Type) VALUES (N'general');
@@ -733,6 +755,11 @@ BEGIN
         ChatRoom_ID, 
         Room_Type, 
         Created_At,
+        CAST(NULL AS INT) AS Dojo_ID,
+        CAST(NULL AS NVARCHAR(150)) AS Dojo_Name,
+        CAST(NULL AS NVARCHAR(50)) AS Dojo_Kanji,
+        CAST(NULL AS NVARCHAR(500)) AS Dojo_Avatar_URL,
+        CAST(NULL AS INT) AS MembersCount,
         CAST(NULL AS INT) AS Friend_User_ID,
         CAST(NULL AS NVARCHAR(50)) AS Friend_Username,
         CAST(NULL AS NVARCHAR(100)) AS Friend_Display_Name,
@@ -741,18 +768,77 @@ BEGIN
 END
 GO
 
--- Все доступные комнаты пользователя (общий чат додзё + приватные диалоги с друзьями)
+CREATE OR ALTER PROCEDURE dbo.sp_Chat_GetOrCreateDojoRoom
+    @DojoId INT,
+    @UserId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId)
+        THROW 50000, N'ERR|404|DOJO_NOT_FOUND|Додзё не найдено', 1;
+
+    DECLARE @canAccess BIT = 0;
+    IF EXISTS (SELECT 1 FROM dbo.Dojos WHERE Dojo_ID = @DojoId AND Creator_ID = @UserId)
+        OR EXISTS (SELECT 1 FROM dbo.DojoMembers WHERE Dojo_ID = @DojoId AND User_ID = @UserId AND Status = 'active')
+        OR EXISTS (SELECT 1 FROM dbo.Users u JOIN dbo.Roles r ON r.Role_ID = u.Role_ID WHERE u.User_ID = @UserId AND r.Role_Name = 'admin')
+        SET @canAccess = 1;
+
+    IF @canAccess = 0
+        THROW 50000, N'ERR|403|FORBIDDEN|Вы не являетесь участником этого Додзё', 1;
+
+    DECLARE @roomId INT;
+    SELECT @roomId = ChatRoom_ID FROM dbo.ChatRooms WHERE Dojo_ID = @DojoId;
+
+    IF @roomId IS NULL
+    BEGIN
+        DECLARE @dojoName NVARCHAR(150);
+        SELECT @dojoName = Name FROM dbo.Dojos WHERE Dojo_ID = @DojoId;
+
+        INSERT INTO dbo.ChatRooms (Room_Type, Dojo_ID, Name)
+        VALUES (N'dojo', @DojoId, @dojoName);
+
+        SET @roomId = SCOPE_IDENTITY();
+    END
+
+    SELECT 
+        r.ChatRoom_ID, 
+        r.Room_Type, 
+        r.Created_At,
+        r.Dojo_ID,
+        d.Name AS Dojo_Name,
+        d.Kanji AS Dojo_Kanji,
+        d.Avatar_URL AS Dojo_Avatar_URL,
+        (SELECT COUNT(*) FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.Status = 'active') AS MembersCount,
+        CAST(NULL AS INT) AS Friend_User_ID,
+        CAST(NULL AS NVARCHAR(50)) AS Friend_Username,
+        CAST(NULL AS NVARCHAR(100)) AS Friend_Display_Name,
+        CAST(NULL AS NVARCHAR(500)) AS Friend_Avatar_URL
+    FROM dbo.ChatRooms r
+    JOIN dbo.Dojos d ON d.Dojo_ID = r.Dojo_ID
+    WHERE r.ChatRoom_ID = @roomId;
+END
+GO
+
+-- Все доступные комнаты пользователя (общий чат додзё + чаты созданных додзё + приватные диалоги с друзьями)
 CREATE OR ALTER PROCEDURE dbo.sp_Chat_ListRoomsForUser
     @UserId INT
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
 
-    -- Общий чат додзё
+    -- 1. Глобальное Додзё
     SELECT 
         ChatRoom_ID, 
         Room_Type, 
         Created_At,
+        CAST(NULL AS INT) AS Dojo_ID,
+        CAST(NULL AS NVARCHAR(150)) AS Dojo_Name,
+        CAST(NULL AS NVARCHAR(50)) AS Dojo_Kanji,
+        CAST(NULL AS NVARCHAR(500)) AS Dojo_Avatar_URL,
+        CAST(NULL AS INT) AS MembersCount,
         CAST(NULL AS INT) AS Friend_User_ID,
         CAST(NULL AS NVARCHAR(50)) AS Friend_Username,
         CAST(NULL AS NVARCHAR(100)) AS Friend_Display_Name,
@@ -762,11 +848,41 @@ BEGIN
 
     UNION ALL
 
-    -- Приватные чаты (с привязкой данных собеседника-друга)
+    -- 2. Чаты созданных Додзё пользователя
     SELECT 
         r.ChatRoom_ID, 
         r.Room_Type, 
         r.Created_At,
+        d.Dojo_ID,
+        d.Name AS Dojo_Name,
+        d.Kanji AS Dojo_Kanji,
+        d.Avatar_URL AS Dojo_Avatar_URL,
+        (SELECT COUNT(*) FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.Status = 'active') AS MembersCount,
+        CAST(NULL AS INT) AS Friend_User_ID,
+        CAST(NULL AS NVARCHAR(50)) AS Friend_Username,
+        CAST(NULL AS NVARCHAR(100)) AS Friend_Display_Name,
+        CAST(NULL AS NVARCHAR(500)) AS Friend_Avatar_URL
+    FROM dbo.ChatRooms r
+    JOIN dbo.Dojos d ON d.Dojo_ID = r.Dojo_ID
+    WHERE r.Room_Type = N'dojo'
+      AND (
+          d.Creator_ID = @UserId
+          OR EXISTS (SELECT 1 FROM dbo.DojoMembers dm WHERE dm.Dojo_ID = d.Dojo_ID AND dm.User_ID = @UserId AND dm.Status = 'active')
+          OR EXISTS (SELECT 1 FROM dbo.Users u JOIN dbo.Roles ro ON ro.Role_ID = u.Role_ID WHERE u.User_ID = @UserId AND ro.Role_Name = 'admin')
+      )
+
+    UNION ALL
+
+    -- 3. Приватные чаты с соратниками
+    SELECT 
+        r.ChatRoom_ID, 
+        r.Room_Type, 
+        r.Created_At,
+        CAST(NULL AS INT) AS Dojo_ID,
+        CAST(NULL AS NVARCHAR(150)) AS Dojo_Name,
+        CAST(NULL AS NVARCHAR(50)) AS Dojo_Kanji,
+        CAST(NULL AS NVARCHAR(500)) AS Dojo_Avatar_URL,
+        CAST(NULL AS INT) AS MembersCount,
         fu.User_ID AS Friend_User_ID,
         fu.Username AS Friend_Username,
         fu.Display_Name AS Friend_Display_Name,
@@ -788,6 +904,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_Chat_CreatePrivateRoom
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
 
     IF dbo.fn_IsFriend(@UserId, @FriendUserId) = 0
         THROW 50000, N'ERR|403|NOT_FRIENDS|Приватный чат доступен только для друзей', 1;
@@ -815,6 +932,11 @@ BEGIN
         r.ChatRoom_ID, 
         r.Room_Type, 
         r.Created_At,
+        CAST(NULL AS INT) AS Dojo_ID,
+        CAST(NULL AS NVARCHAR(150)) AS Dojo_Name,
+        CAST(NULL AS NVARCHAR(50)) AS Dojo_Kanji,
+        CAST(NULL AS NVARCHAR(500)) AS Dojo_Avatar_URL,
+        CAST(NULL AS INT) AS MembersCount,
         fu.User_ID AS Friend_User_ID,
         fu.Username AS Friend_Username,
         fu.Display_Name AS Friend_Display_Name,
@@ -823,6 +945,47 @@ BEGIN
     JOIN dbo.PrivateChatParticipants fp ON fp.ChatRoom_ID = r.ChatRoom_ID AND fp.User_ID = @FriendUserId
     JOIN dbo.Users fu ON fu.User_ID = fp.User_ID
     WHERE r.ChatRoom_ID = @roomId;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Chat_GetRoomRecipients
+    @RoomId INT,
+    @ExcludeUserId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
+
+    DECLARE @roomType NVARCHAR(20);
+    SELECT @roomType = Room_Type FROM dbo.ChatRooms WHERE ChatRoom_ID = @RoomId;
+
+    IF @roomType = N'private'
+    BEGIN
+        SELECT User_ID
+        FROM dbo.PrivateChatParticipants
+        WHERE ChatRoom_ID = @RoomId
+          AND (@ExcludeUserId IS NULL OR User_ID <> @ExcludeUserId);
+    END
+    ELSE IF @roomType = N'dojo'
+    BEGIN
+        SELECT DISTINCT u.User_ID
+        FROM (
+            SELECT dm.User_ID
+            FROM dbo.ChatRooms r
+            JOIN dbo.DojoMembers dm ON dm.Dojo_ID = r.Dojo_ID AND dm.Status = 'active'
+            WHERE r.ChatRoom_ID = @RoomId
+            UNION
+            SELECT d.Creator_ID AS User_ID
+            FROM dbo.ChatRooms r
+            JOIN dbo.Dojos d ON d.Dojo_ID = r.Dojo_ID
+            WHERE r.ChatRoom_ID = @RoomId
+        ) u
+        WHERE (@ExcludeUserId IS NULL OR u.User_ID <> @ExcludeUserId);
+    END
+    ELSE
+    BEGIN
+        SELECT TOP 0 CAST(1 AS INT) AS User_ID;
+    END
 END
 GO
 
@@ -1558,6 +1721,7 @@ CREATE OR ALTER PROCEDURE dbo.sp_Dojo_Create
 AS
 BEGIN
     SET NOCOUNT ON;
+    SET QUOTED_IDENTIFIER ON;
     IF @CreatorId IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.Users WHERE User_ID = @CreatorId AND Is_Blocked = 0)
         THROW 50000, N'ERR|401|UNAUTHORIZED|Пользователь не найден или заблокирован', 1;
 
@@ -1580,6 +1744,10 @@ BEGIN
         -- Создатель становится сэнсэем Додзё
         INSERT INTO dbo.DojoMembers (Dojo_ID, User_ID, Role, Status)
         VALUES (@DojoId, @CreatorId, 'sensei', 'active');
+
+        -- Создаём официальный чат созданного Додзё
+        INSERT INTO dbo.ChatRooms (Room_Type, Dojo_ID, Name)
+        VALUES (N'dojo', @DojoId, @Name);
 
         COMMIT TRANSACTION;
     END TRY

@@ -195,7 +195,7 @@ export default function MainLayout() {
       <header className="navbar">
         <div className="navbar__top-trim" />
         <div className="container navbar__container">
-          {/* Логотип Bunkai Explorer: Тигр Сётокан + Название + Печать Ханко */}
+          {/* Логотип Bunkai Explorer: Тигр Сётокан + Название */}
           <Link to="/" className="navbar__brand" title="Bunkai Explorer — Главная Додзё">
             <div className="navbar__logo-icon-wrap">
               <ShotokanTiger size={30} color="var(--gold)" className="navbar__logo-tiger" />
@@ -204,7 +204,6 @@ export default function MainLayout() {
               <span className="navbar__logo-text">BUNKAI EXPLORER</span>
               <span className="navbar__logo-subtext">松濤館流 · 空手道</span>
             </div>
-            <HankoSeal text="分解" size="sm" variant="vermilion" shape="square" className="navbar__logo-seal" />
           </Link>
 
           {/* Основная навигация по залам Додзё (Задача 42: убраны лишние иероглифы) */}

@@ -40,6 +40,19 @@ async function createPrivateRoom(req, res, next) {
   }
 }
 
+// POST or GET /api/chat/rooms/dojo/:dojoId
+async function getOrCreateDojoRoom(req, res, next) {
+  try {
+    const dojoId = Number(req.params.dojoId || req.body?.dojoId);
+    if (!dojoId) return fail(res, 400, 'Укажите Додзё', 'VALIDATION_ERROR');
+
+    const room = await chatRepo.getOrCreateDojoRoom(dojoId, req.user.User_ID);
+    return ok(res, room);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
 // GET /api/chat/rooms/:id/messages
 async function listMessages(req, res, next) {
   try {
@@ -71,4 +84,4 @@ async function deleteMessage(req, res, next) {
   }
 }
 
-module.exports = { listRooms, getOrCreateGeneralRoom, createPrivateRoom, listMessages, deleteMessage };
+module.exports = { listRooms, getOrCreateGeneralRoom, getOrCreateDojoRoom, createPrivateRoom, listMessages, deleteMessage };

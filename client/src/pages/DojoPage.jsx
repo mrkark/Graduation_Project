@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { listMyDojos, createDojo, getDojoDetails, inviteUserToDojo, respondDojoInvite, updateDojo, deleteDojo } from '../api/dojos';
 import { searchUsers, listFriends } from '../api/friends';
@@ -25,6 +25,7 @@ function extractErrorMessage(err, fallback = 'Произошла ошибка') 
 
 export default function DojoPage() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabParam === 'invites' ? 'invites' : tabParam === 'create' ? 'create' : 'my');
@@ -326,6 +327,15 @@ export default function DojoPage() {
                       <div className="dojo-card__actions" style={{ flexDirection: 'column', gap: '0.5rem' }}>
                         <button
                           type="button"
+                          className="btn btn-secondary"
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '6px 12px' }}
+                          onClick={() => navigate(`/chat?dojoId=${d.Dojo_ID}`)}
+                        >
+                          💬 Чат Додзё
+                        </button>
+
+                        <button
+                          type="button"
                           className="btn btn-subtle"
                           style={{ width: '100%' }}
                           onClick={() => openDojoDetails(d.Dojo_ID)}
@@ -525,6 +535,18 @@ export default function DojoPage() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
                     {selectedDojoData?.Description || selectedDojoData?.dojo?.Description || 'Совместные тренировки и изучение традиционного Сётокан.'}
                   </p>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ width: '100%', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '8px 14px' }}
+                    onClick={() => {
+                      closeDojoModal();
+                      navigate(`/chat?dojoId=${selectedDojoId}`);
+                    }}
+                  >
+                    💬 Войти в чат Додзё
+                  </button>
 
                   <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem' }}>🥋 Участники школы ({selectedDojoData.members?.length || 0})</h4>
                   <div className="dojo-members-list">

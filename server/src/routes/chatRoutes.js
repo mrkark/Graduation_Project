@@ -8,6 +8,8 @@ router.use(requireAuth);
 
 router.get('/rooms', chatController.listRooms);
 router.get('/rooms/general', chatController.getOrCreateGeneralRoom);
+router.get('/rooms/dojo/:dojoId', chatController.getOrCreateDojoRoom);
+router.post('/rooms/dojo/:dojoId', chatController.getOrCreateDojoRoom);
 router.post('/rooms/private', chatController.createPrivateRoom);
 router.get('/rooms/:id/messages', chatController.listMessages);
 router.delete('/messages/:id', chatController.deleteMessage);

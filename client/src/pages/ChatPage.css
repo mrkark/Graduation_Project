@@ -99,6 +99,68 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
+.chat-modal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.chat-modal-tab {
+  flex: 1;
+  padding: 5px 6px;
+  font-size: 0.74rem;
+  background: #14110e;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+}
+
+.chat-modal-tab:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.chat-modal-tab.active {
+  background: #241d17;
+  border-color: var(--gold);
+  color: var(--gold-soft);
+  font-weight: 600;
+}
+
+.chat-room-badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+  display: inline-block;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.chat-room-badge--general {
+  background: rgba(212, 162, 76, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(212, 162, 76, 0.35);
+}
+
+.chat-room-badge--dojo {
+  background: rgba(80, 160, 240, 0.15);
+  color: #7dc1ff;
+  border: 1px solid rgba(80, 160, 240, 0.35);
+}
+
+.chat-room-badge--private {
+  background: rgba(140, 198, 63, 0.15);
+  color: #a6e22e;
+  border: 1px solid rgba(140, 198, 63, 0.35);
+}
+
 .chat-new-modal__header {
   display: flex;
   justify-content: space-between;
