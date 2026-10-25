@@ -393,10 +393,14 @@ export default function ChatPage() {
 
         <div className="chat-window">
           <div className="chat-window__status">
-            <span className={`chat-window__status-dot ${connected ? 'online' : ''}`} />
-            <span>{connected ? 'Соединение с Додзё установлено' : 'Переподключение к Додзё…'}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexShrink: 0 }}>
+              <span className={`chat-window__status-dot ${connected ? 'online' : ''}`} />
+              <span className="chat-window__status-conn-text">
+                {connected ? 'В сети' : 'Переподключение…'}
+              </span>
+            </div>
             {activeRoom && (
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden', maxWidth: '60%' }}>
+              <div className="chat-window__status-room-wrap" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.45rem', overflow: 'hidden', minWidth: 0 }}>
                 {renderRoomBadge(activeRoom)}
                 <span className="chat-window__status-room-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {roomLabel(activeRoom)}

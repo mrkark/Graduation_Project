@@ -214,7 +214,7 @@ export default function MainLayout() {
             <NavLink to="/bunkai" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Бункай</span>
             </NavLink>
-            <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
+            <NavLink to="/karate-studio" className={({ isActive }) => `navbar__link navbar__link--desktop-only ${isActive ? 'active' : ''}`}>
               <span className="navbar__link-title">Мокап 3D</span>
             </NavLink>
             <NavLink to="/dojos" className={({ isActive }) => `navbar__link ${isActive ? 'active' : ''}`}>
@@ -438,9 +438,6 @@ export default function MainLayout() {
               <NavLink to="/bunkai" className="mobile-drawer__link">
                 <span>Разборы бункай</span>
               </NavLink>
-              <NavLink to="/karate-studio" className="mobile-drawer__link">
-                <span>Мокап 3D (Каратэ Студия)</span>
-              </NavLink>
               <NavLink to="/bunkai/new" className="mobile-drawer__link">
                 <span>Студия бункай</span>
               </NavLink>
@@ -554,7 +551,7 @@ export default function MainLayout() {
               <ul className="dojo-footer__list">
                 <li><Link to="/kata">Атлас 26 Ката (型)</Link></li>
                 <li><Link to="/bunkai">Боевые сценарии Бункай (分解)</Link></li>
-                <li><Link to="/karate-studio">Мокап 3D (Каратэ Студия)</Link></li>
+                <li><Link to="/karate-studio" className="footer-desktop-link">Мокап 3D (Каратэ Студия · ПК)</Link></li>
                 <li><Link to="/bunkai/new">Мастерская симуляции боя</Link></li>
               </ul>
             </div>
@@ -569,7 +566,7 @@ export default function MainLayout() {
                 <li><Link to="/kata/1">Школа Хэйан (Базовые формы)</Link></li>
                 <li><Link to="/kata">Мастерские ката (Дан)</Link></li>
                 <li><Link to="/bunkai">Контроль дистанции Ма-ай</Link></li>
-                <li><Link to="/karate-studio">Анализ биомеханики Кимэ</Link></li>
+                <li><Link to="/karate-studio" className="footer-desktop-link">Анализ биомеханики Кимэ (ПК)</Link></li>
               </ul>
             </div>
 

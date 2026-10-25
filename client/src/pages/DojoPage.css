@@ -2,9 +2,16 @@
   padding-bottom: 4rem;
 }
 
+.dojo-tabs-header {
+  display: flex;
+  gap: 0.65rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
 .dojo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
 }
@@ -215,4 +222,44 @@
 .dojo-member-status--invited {
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+/* Адаптивность Додзё для смартфонов и планшетов */
+@media (max-width: 640px) {
+  .dojo-tabs-header {
+    gap: 0.45rem;
+    margin-bottom: 1.25rem;
+  }
+  .dojo-tabs-header .btn {
+    flex: 1 1 calc(50% - 0.45rem);
+    font-size: 0.8rem;
+    padding: 0.55rem 0.65rem;
+    text-align: center;
+    min-height: 44px;
+  }
+  .dojo-card {
+    padding: 1.15rem;
+  }
+  .dojo-card__header {
+    gap: 0.75rem;
+  }
+  .dojo-card__seal {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .dojo-card__name {
+    font-size: 1.05rem;
+  }
+  .dojo-modal {
+    width: 95%;
+    max-height: 94vh;
+  }
+  .dojo-modal__header {
+    padding: 1rem 1.15rem;
+  }
+  .dojo-modal__body {
+    padding: 1.15rem;
+  }
 }

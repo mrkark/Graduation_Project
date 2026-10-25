@@ -247,7 +247,7 @@ export default function DojoPage() {
       </div>
 
       {/* Вкладки навигации */}
-      <div className="tabs-header" style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem' }}>
+      <div className="dojo-tabs-header">
         <button
           type="button"
           className={`btn ${activeTab === 'my' ? 'btn-primary' : 'btn-secondary'}`}

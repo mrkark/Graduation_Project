@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 
+function checkIsMobileOrTablet() {
+  if (typeof window === 'undefined') return false;
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const isMobileOrTabletUA =
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|PlayBook|Silk/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSmallOrTabletWidth = window.innerWidth <= 1180;
+  return isSmallOrTabletWidth || isMobileOrTabletUA || (isTouch && window.innerWidth <= 1366);
+}
+
 export default function KarateStudioPage() {
-  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
-    const isSmallScreen = window.innerWidth < 1024;
-    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return isSmallScreen || (isTouch && isMobileUA);
-  });
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(checkIsMobileOrTablet);
 
   const [showQr, setShowQr] = useState(false);
   const [selectedCam, setSelectedCam] = useState('cam1');
@@ -151,10 +155,7 @@ export default function KarateStudioPage() {
 
   useEffect(() => {
     const handleResize = () => {
-      const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 1;
-      const isSmallScreen = window.innerWidth < 1024;
-      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobileOrTablet(isSmallScreen || (isTouch && isMobileUA));
+      setIsMobileOrTablet(checkIsMobileOrTablet());
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
