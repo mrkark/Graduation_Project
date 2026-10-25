@@ -262,10 +262,20 @@ export default function KataListPage() {
     setParams(next);
   }
 
-  // Задача 1: установка приоритета фильтрации павильонов и поясов
+  // Быстрые фильтры перекрывают поисковый фильтр
   function handleSelectPavilion(pavId) {
+    if (search) {
+      updateParam('search', '');
+    }
     const nextPav = selectedPavilion === pavId ? 'all' : pavId;
     setSelectedPavilion(nextPav);
+
+    // При выборе Избранного сбрасываем пояс, чтобы показать все избранные формы любых рангов
+    if (nextPav === 'favorites') {
+      setSelectedBelt('all');
+      return;
+    }
+
     // Приоритет основного раздела над поясом: сбрасываем пояс, если в павильоне нет такого ранга
     if (nextPav !== 'all' && selectedBelt !== 'all') {
       const pav = CANON_PAVILIONS.find((p) => p.id === nextPav);
@@ -277,15 +287,31 @@ export default function KataListPage() {
   }
 
   function handleSelectBelt(beltId) {
+    if (search) {
+      updateParam('search', '');
+    }
     const nextBelt = selectedBelt === beltId ? 'all' : beltId;
     setSelectedBelt(nextBelt);
-    // Если выбран пояс, отсутствующий в выбранном павильоне, переключаем павильон на 'Все 26 Ката'
-    if (nextBelt !== 'all' && selectedPavilion !== 'all') {
+
+    // Если был выбран раздел (кроме избранного), проверяем наличие пояса
+    if (nextBelt !== 'all' && selectedPavilion !== 'all' && selectedPavilion !== 'favorites') {
       const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
       const hasBelt = items.some((item) => pav?.matcher(item) && getKataBeltInfo(item).id === nextBelt);
       if (!hasBelt) {
         setSelectedPavilion('all');
       }
+    }
+  }
+
+  function handleSearchChange(val) {
+    updateParam('search', val);
+    if (val.trim()) {
+      // Поисковый фильтр становится главным: сбрасываем павильоны и пояса для глобального поиска
+      setSelectedPavilion('all');
+      setSelectedBelt('all');
+      setShowSuggestions(true);
+    } else {
+      setShowSuggestions(false);
     }
   }
 
@@ -318,21 +344,24 @@ export default function KataListPage() {
 
   function handleSelectSuggestion(kata) {
     const mainTitle = (kata.Title || '').split('(')[0].trim();
+    setSelectedPavilion('all');
+    setSelectedBelt('all');
     updateParam('search', mainTitle);
     setSelectedId(kata.Kata_ID);
     setShowSuggestions(false);
   }
 
-  // Фильтрация ката с учетом приоритетов (Задачи 1, 3, 8)
+  // Фильтрация ката с учетом приоритетов:
+  // Главным является поисковый фильтр (при вводе запроса в поиск),
+  // но быстрые фильтры (павильоны / избранное / пояса) перекрывают поиск при клике
   const filteredItems = useMemo(() => {
     const rawQ = (search || '').trim().toLowerCase();
     const normalizedQ = rawQ.replace(/[-–—]/g, ' ');
     const searchWords = normalizedQ.split(/\s+/).filter(Boolean);
 
-    // 1. Если введен поиск (или нажат быстрый тег)
+    // 1. Поисковый фильтр (главный, если пользователь ввёл запрос)
     if (searchWords.length > 0) {
-      // Задача 3: Строгий приоритет поиска по названию ката и кандзи.
-      // Исключает ложное попадание Хэйан Сандан при поиске «Эмпи».
+      // Строгий приоритет поиска по названию ката и кандзи
       const titleMatches = sortedItems.filter((item) => {
         const titleNorm = (item.Title || '').toLowerCase().replace(/[-–—]/g, ' ');
         const kanji = (getKataKanji(item) || '').toLowerCase();
@@ -355,27 +384,27 @@ export default function KataListPage() {
       return baseList;
     }
 
-    // 2. Если поиска нет: основной раздел (павильон) имеет ПЕРВЫЙ приоритет
-    let pavilionList = sortedItems;
+    // 2. Быстрые фильтры (Павильон или Избранное)
+    let list = sortedItems;
     if (selectedPavilion === 'favorites') {
-      pavilionList = sortedItems.filter((item) => kataFavorites.includes(Number(item.Kata_ID)));
+      list = sortedItems.filter((item) => kataFavorites.includes(Number(item.Kata_ID)));
     } else if (selectedPavilion !== 'all') {
       const pav = CANON_PAVILIONS.find((p) => p.id === selectedPavilion);
       if (pav) {
-        pavilionList = sortedItems.filter(pav.matcher);
+        list = sortedItems.filter(pav.matcher);
       }
     }
 
-    // Приоритет 2: пояс внутри павильона (если пояс есть в выбранном павильоне)
+    // Фильтрация по поясу внутри раздела
     if (selectedBelt !== 'all') {
-      const beltMatches = pavilionList.filter((item) => getKataBeltInfo(item).id === selectedBelt);
+      const beltMatches = list.filter((item) => getKataBeltInfo(item).id === selectedBelt);
       if (beltMatches.length > 0) {
         return beltMatches;
       }
     }
 
-    return pavilionList;
-  }, [sortedItems, selectedBelt, selectedPavilion, search]);
+    return list;
+  }, [sortedItems, selectedBelt, selectedPavilion, search, kataFavorites]);
 
   // Активная выбранная ката для блока Spotlight
   const activeKata = useMemo(() => {
@@ -465,10 +494,7 @@ export default function KataListPage() {
               value={search}
               style={{ paddingLeft: '3.8rem' }}
               onFocus={() => setShowSuggestions(true)}
-              onChange={(e) => {
-                updateParam('search', e.target.value);
-                setShowSuggestions(true);
-              }}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Поиск по названию ката (Хэйан, Бассай-дай, Канку-дай, Эмпи, Унсу)…"
             />
             {search && (
@@ -721,31 +747,35 @@ export default function KataListPage() {
           )}
 
           {/* 6. ДИНАМИЧЕСКИЙ BENTO-АТЛАС КАТА: БОЛЬШИЕ HERO КАРТОЧКИ + СТАНДАРТНЫЕ */}
-          {CANON_PAVILIONS.filter((pav) => (!search.trim() ? (selectedPavilion === 'all' || pav.id === selectedPavilion) : true)).map((pav) => {
-            const matcherFn = selectedPavilion === pav.id ? pav.matcher : (pav.sectionMatcher || pav.matcher);
-            const pavItems = filteredItems.filter(matcherFn);
-            if (pavItems.length === 0) return null;
-
-            return (
-              <section key={pav.id} className="atlas-pavilion">
-                {/* Заголовок павильона */}
-                <div className="atlas-pavilion__header">
-                  <div className="atlas-pavilion__title-group">
-                    <HankoSeal text={pav.seal} size="md" variant="gold" shape="square" />
-                    <div>
-                      <h3 className="atlas-pavilion__title">
-                        <span>{pav.title}</span>
-                        <span className="atlas-pavilion__kanji">{pav.kanji}</span>
-                      </h3>
-                      <p className="atlas-pavilion__desc">{pav.description}</p>
-                    </div>
+          {selectedPavilion === 'favorites' ? (
+            <section className="atlas-pavilion">
+              <div className="atlas-pavilion__header">
+                <div className="atlas-pavilion__title-group">
+                  <HankoSeal text="愛" size="md" variant="gold" shape="square" />
+                  <div>
+                    <h3 className="atlas-pavilion__title">
+                      <span>Избранные Ката Сётокан</span>
+                      <span className="atlas-pavilion__kanji">愛好 · {filteredItems.length} форм</span>
+                    </h3>
+                    <p className="atlas-pavilion__desc">
+                      Ваша персональная коллекция ката для углубленного изучения техники и бункай.
+                    </p>
                   </div>
-                  <span className="atlas-pavilion__count">{pavItems.length} форм</span>
                 </div>
+                <span className="atlas-pavilion__count">{filteredItems.length} форм</span>
+              </div>
 
-                {/* Динамическая сетка Bento: сочетание карточек разного размера (Featured и Standard) */}
+              {filteredItems.length === 0 ? (
+                <div className="empty-state-box" style={{ padding: '2.5rem 1rem', marginTop: '1rem' }}>
+                  <p style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>🤍</p>
+                  <h3>В избранном пока нет ката</h3>
+                  <p style={{ color: 'var(--text-muted)' }}>
+                    Нажмите на сердечко на карточке любой ката в каталоге, чтобы добавить её в избранное.
+                  </p>
+                </div>
+              ) : (
                 <div className="atlas-bento-grid">
-                  {pavItems.map((item, idx) => {
+                  {filteredItems.map((item, idx) => {
                     const isSelected = item.Kata_ID === activeKata?.Kata_ID;
                     const isHero = isHeroKata(item);
                     const kanji = getKataKanji(item);
@@ -769,7 +799,7 @@ export default function KataListPage() {
                           }
                         }}
                       >
-                        {/* Кнопка добавления в избранное (Задача 8) */}
+                        {/* Кнопка добавления в избранное */}
                         <button
                           type="button"
                           className={`atlas-fav-btn ${isKataFavorite(item.Kata_ID) ? 'active' : ''}`}
@@ -783,7 +813,6 @@ export default function KataListPage() {
                           {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
                         </button>
 
-                        {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
                         <div className="atlas-card__media">
                           <img
                             src={thumbnail}
@@ -797,17 +826,14 @@ export default function KataListPage() {
                             style={{ backgroundColor: belt.colorHex, borderColor: belt.borderColor }}
                           />
 
-                          {/* Каллиграфический водяной знак */}
                           <span className="atlas-card__watermark-kanji">{kanji}</span>
 
-                          {/* Бейдж номера формы и ранга */}
                           <div className="atlas-card__media-badges">
                             <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
                             {isHero && <span className="atlas-card__hero-badge">★ Ключевая форма</span>}
                           </div>
                         </div>
 
-                        {/* Тело карточки */}
                         <div className="atlas-card__body">
                           <div className="atlas-card__header-row">
                             <div className="atlas-card__titles">
@@ -823,7 +849,6 @@ export default function KataListPage() {
                               : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
                           </p>
 
-                          {/* Нижняя панель с мета-информацией */}
                           <div className="atlas-card__footer">
                             <div className="atlas-card__meta-badges">
                               <BeltBadge belt={belt} size="sm" showKanji={false} />
@@ -835,9 +860,127 @@ export default function KataListPage() {
                     );
                   })}
                 </div>
-              </section>
-            );
-          })}
+              )}
+            </section>
+          ) : (
+            CANON_PAVILIONS.filter((pav) => (!search.trim() ? (selectedPavilion === 'all' || pav.id === selectedPavilion) : true)).map((pav) => {
+              const matcherFn = selectedPavilion === pav.id ? pav.matcher : (pav.sectionMatcher || pav.matcher);
+              const pavItems = filteredItems.filter(matcherFn);
+              if (pavItems.length === 0) return null;
+
+              return (
+                <section key={pav.id} className="atlas-pavilion">
+                  {/* Заголовок павильона */}
+                  <div className="atlas-pavilion__header">
+                    <div className="atlas-pavilion__title-group">
+                      <HankoSeal text={pav.seal} size="md" variant="gold" shape="square" />
+                      <div>
+                        <h3 className="atlas-pavilion__title">
+                          <span>{pav.title}</span>
+                          <span className="atlas-pavilion__kanji">{pav.kanji}</span>
+                        </h3>
+                        <p className="atlas-pavilion__desc">{pav.description}</p>
+                      </div>
+                    </div>
+                    <span className="atlas-pavilion__count">{pavItems.length} форм</span>
+                  </div>
+
+                  {/* Динамическая сетка Bento: сочетание карточек разного размера (Featured и Standard) */}
+                  <div className="atlas-bento-grid">
+                    {pavItems.map((item, idx) => {
+                      const isSelected = item.Kata_ID === activeKata?.Kata_ID;
+                      const isHero = isHeroKata(item);
+                      const kanji = getKataKanji(item);
+                      const thumbnail = getKataThumbnail(item);
+                      const belt = getKataBeltInfo(item);
+                      const stepsCount = item.Steps?.length || (belt.id === 'white' ? 21 : 34);
+
+                      return (
+                        <div
+                          key={item.Kata_ID}
+                          className={`atlas-card ${isHero ? 'atlas-card--hero' : 'atlas-card--standard'} ${
+                            isSelected ? 'active' : ''
+                          }`}
+                          onClick={() => navigate(`/kata/${item.Kata_ID}`)}
+                          role="button"
+                          tabIndex={0}
+                          title={`Открыть форму ${item.Title} в 3D`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              navigate(`/kata/${item.Kata_ID}`);
+                            }
+                          }}
+                        >
+                          {/* Кнопка добавления в избранное (Задача 8) */}
+                          <button
+                            type="button"
+                            className={`atlas-fav-btn ${isKataFavorite(item.Kata_ID) ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite('kata', item.Kata_ID);
+                            }}
+                            title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
+                            aria-label="Избранное"
+                          >
+                            {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                          </button>
+
+                          {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
+                          <div className="atlas-card__media">
+                            <img
+                              src={thumbnail}
+                              alt={item.Title}
+                              className="atlas-card__img"
+                              loading="lazy"
+                            />
+                            <div className="atlas-card__media-overlay" />
+                            <div
+                              className="atlas-card__belt-ribbon"
+                              style={{ backgroundColor: belt.colorHex, borderColor: belt.borderColor }}
+                            />
+
+                            {/* Каллиграфический водяной знак */}
+                            <span className="atlas-card__watermark-kanji">{kanji}</span>
+
+                            {/* Бейдж номера формы и ранга */}
+                            <div className="atlas-card__media-badges">
+                              <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
+                              {isHero && <span className="atlas-card__hero-badge">★ Ключевая форма</span>}
+                            </div>
+                          </div>
+
+                          {/* Тело карточки */}
+                          <div className="atlas-card__body">
+                            <div className="atlas-card__header-row">
+                              <div className="atlas-card__titles">
+                                <span className="atlas-card__kanji-subtitle">{kanji}</span>
+                                <h4 className="atlas-card__title">{item.Title}</h4>
+                              </div>
+                              <HankoSeal text="型" size="sm" variant="vermilion" shape="square" />
+                            </div>
+
+                            <p className="atlas-card__desc">
+                              {item.Description
+                                ? (isHero ? item.Description.slice(0, 140) : item.Description.slice(0, 75)) + '…'
+                                : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
+                            </p>
+
+                            {/* Нижняя панель с мета-информацией */}
+                            <div className="atlas-card__footer">
+                              <div className="atlas-card__meta-badges">
+                                <BeltBadge belt={belt} size="sm" showKanji={false} />
+                                <span className="atlas-card__steps-pill">{formatSteps(stepsCount)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })
+          )}
         </>
       ) : (
         /* 7. СВОДНЫЙ ТАБЛИЧНЫЙ РЕЕСТР */
