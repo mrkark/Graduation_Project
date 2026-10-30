@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
 import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
+import VideoModal from '../components/VideoModal';
 import { HankoSeal, ShotokanTiger, DojoDivider, SearchIcon } from '../components/ui/JapaneseDecor';
 import './BunkaiListPage.css';
 
@@ -45,6 +46,7 @@ export default function BunkaiListPage() {
   const [meta, setMeta] = useState({ total: 0, page: 1, pageSize: 12 });
   const [loading, setLoading] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeVideo, setActiveVideo] = useState(null);
   const searchBoxRef = useRef(null);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
 
@@ -286,11 +288,32 @@ export default function BunkaiListPage() {
                 </div>
 
                 <div>
-                  {/* Задача 17: Дистанция Ма-ай без переносов */}
-                  <div className="bunkai-unit__maai-badge">
-                    <span className="bunkai-maai-kanji">間合</span>
-                    <span>Дистанция:</span>
-                    <strong>{b.Episodes?.length > 1 ? 'Многофазный бой' : 'Иссоку-итто'}</strong>
+                  {/* Задача 17: Дистанция Ма-ай без переносов и кнопка Видео бункая */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                    <div className="bunkai-unit__maai-badge" style={{ marginBottom: 0 }}>
+                      <span className="bunkai-maai-kanji">間合</span>
+                      <span>Дистанция:</span>
+                      <strong>{b.Episodes?.length > 1 ? 'Многофазный бой' : 'Иссоку-итто'}</strong>
+                    </div>
+
+                    {b.Video_URL && (
+                      <button
+                        type="button"
+                        className="bunkai-video-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setActiveVideo({
+                            url: b.Video_URL,
+                            title: b.Title,
+                            subtitle: 'Оё-Бункай (боевой разбор) · Мастера JKS (Japan Karate Shoto Federation)',
+                          });
+                        }}
+                        title="Смотреть видеоразбор бункая мастеров JKS с таймкода"
+                      >
+                        ▶ Видео
+                      </button>
+                    )}
                   </div>
 
                   {/* Задача 18: У стандартных бункай нет подписи инструктора */}
@@ -317,6 +340,15 @@ export default function BunkaiListPage() {
           })}
         </div>
       )}
+
+      {/* Модальное окно просмотра канонического японского видео бункая с таймкода */}
+      <VideoModal
+        isOpen={!!activeVideo}
+        onClose={() => setActiveVideo(null)}
+        videoUrl={activeVideo?.url}
+        title={activeVideo?.title}
+        subtitle={activeVideo?.subtitle}
+      />
     </div>
   );
 }

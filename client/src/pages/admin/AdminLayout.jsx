@@ -21,10 +21,12 @@ export default function AdminLayout() {
             <span>Обзор системы</span>
             <span className="admin-nav__kanji">総括</span>
           </NavLink>
-          <NavLink to="/admin/users">
-            <span>Каратэки (Пользователи)</span>
-            <span className="admin-nav__kanji">門人</span>
-          </NavLink>
+          {isAdmin && (
+            <NavLink to="/admin/users">
+              <span>Каратэки (Пользователи)</span>
+              <span className="admin-nav__kanji">門人</span>
+            </NavLink>
+          )}
           {isAdmin && (
             <NavLink to="/admin/kata">
               <span>Модерация ката</span>
@@ -34,6 +36,10 @@ export default function AdminLayout() {
           <NavLink to="/admin/bunkai">
             <span>Модерация бункай</span>
             <span className="admin-nav__kanji">分解</span>
+          </NavLink>
+          <NavLink to="/admin/comments">
+            <span>Модерация комментариев</span>
+            <span className="admin-nav__kanji">論</span>
           </NavLink>
           {isAdmin && (
             <NavLink to="/admin/logs">

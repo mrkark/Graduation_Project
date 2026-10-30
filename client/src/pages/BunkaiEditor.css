@@ -82,6 +82,12 @@
   margin-top: 1rem;
 }
 
+@media (max-width: 600px) {
+  .bunkai-mode-toggle {
+    flex-direction: column;
+  }
+}
+
 .bunkai-mode-option {
   flex: 1;
   display: flex;
@@ -241,4 +247,23 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   margin-top: 0.5rem;
+}
+
+/* Нижняя панель действий конструктора */
+.bunkai-studio__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 640px) {
+  .bunkai-studio__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

@@ -1029,3 +1029,26 @@ input.atlas-search-input {
   border-color: #e53935;
   background: rgba(229, 57, 53, 0.25);
 }
+
+/* Кнопка эталонного видео на карточке ката */
+.atlas-card__video-badge-btn {
+  background: rgba(212, 162, 76, 0.15);
+  border: 1px solid var(--gold, #d4a24c);
+  color: var(--gold, #d4a24c);
+  border-radius: 4px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.atlas-card__video-badge-btn:hover {
+  background: var(--gold, #d4a24c);
+  color: #120f0d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(212, 162, 76, 0.35);
+}

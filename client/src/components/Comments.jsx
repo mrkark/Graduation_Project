@@ -131,7 +131,7 @@ export default function Comments({ kataId, bunkaiId }) {
             const authorName = c.Author?.Display_Name || c.Author?.Username || 'Пользователь';
             const dateStr = formatDateOnly(c.Created_At);
             const { isReply, replyAuthor, replySnippet, body } = parseCommentText(c.Text);
-            const canDelete = isOwn || role === 'admin';
+            const canDelete = isOwn || role === 'admin' || role === 'moderator';
 
             return (
               <div

@@ -25,6 +25,7 @@ const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage')
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminKataPage = lazy(() => import('./pages/admin/AdminKataPage'));
 const AdminBunkaiPage = lazy(() => import('./pages/admin/AdminBunkaiPage'));
+const AdminCommentsPage = lazy(() => import('./pages/admin/AdminCommentsPage'));
 const AdminLogsPage = lazy(() => import('./pages/admin/AdminLogsPage'));
 const AdminAnimationsPage = lazy(() => import('./pages/admin/AdminAnimationsPage'));
 const AdminBackupsPage = lazy(() => import('./pages/admin/AdminBackupsPage'));
@@ -138,8 +139,16 @@ export default function App() {
               <Route element={<RequireAdminOrModerator />}>
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboardPage />} />
-                  <Route path="users" element={<AdminUsersPage />} />
+                  <Route
+                    path="users"
+                    element={
+                      <RequireAdmin>
+                        <AdminUsersPage />
+                      </RequireAdmin>
+                    }
+                  />
                   <Route path="bunkai" element={<AdminBunkaiPage />} />
+                  <Route path="comments" element={<AdminCommentsPage />} />
                   <Route
                     path="kata"
                     element={

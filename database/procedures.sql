@@ -492,11 +492,11 @@ BEGIN
     JOIN dbo.Kata k ON k.Kata_ID = b.Kata_ID
     WHERE
         (
-            @UserRole = N'admin'
+            @UserRole IN (N'admin', N'moderator')
             OR b.Status = N'approved'
             OR b.Author_ID = @UserId
         )
-        AND (@UserRole <> N'admin' OR @Status IS NULL OR b.Status = @Status)
+        AND (@UserRole NOT IN (N'admin', N'moderator') OR @Status IS NULL OR b.Status = @Status)
         AND (@Search IS NULL OR @Search = N'' OR b.Title LIKE N'%' + @Search + N'%')
         AND (@KataId IS NULL OR b.Kata_ID = @KataId)
         AND (@Difficulty IS NULL OR b.Difficulty = @Difficulty)
@@ -523,7 +523,7 @@ BEGIN
     IF @status IS NULL
         THROW 50000, N'ERR|404|BUNKAI_NOT_FOUND|Бункай не найден', 1;
 
-    IF @status <> N'approved' AND @authorId <> @UserId AND @UserRole <> N'admin'
+    IF @status <> N'approved' AND @authorId <> @UserId AND @UserRole NOT IN (N'admin', N'moderator')
         THROW 50000, N'ERR|404|BUNKAI_NOT_FOUND|Бункай не найден', 1;
 
     SELECT
@@ -729,12 +729,16 @@ BEGIN
     IF @ownerId IS NULL
         THROW 50000, N'ERR|404|COMMENT_NOT_FOUND|Комментарий не найден', 1;
 
-    IF @ownerId <> @UserId AND @UserRole <> N'admin'
+    IF @ownerId <> @UserId AND @UserRole NOT IN (N'admin', N'moderator')
         THROW 50000, N'ERR|403|FORBIDDEN|Недостаточно прав', 1;
 
     DELETE FROM dbo.Comments WHERE Comment_ID = @CommentId;
 
-    SELECT CASE WHEN @ownerId = @UserId THEN N'delete_own_comment' ELSE N'admin_delete_comment' END AS Action_Name;
+    SELECT CASE 
+        WHEN @ownerId = @UserId THEN N'delete_own_comment'
+        WHEN @UserRole = N'moderator' THEN N'moderator_delete_comment'
+        ELSE N'admin_delete_comment'
+    END AS Action_Name;
 END
 GO
 
@@ -1400,6 +1404,9 @@ GO
 CREATE OR ALTER PROCEDURE dbo.sp_Admin_ListLogs
     @Action NVARCHAR(100) = NULL,
     @UserId INT = NULL,
+    @IpAddress NVARCHAR(50) = NULL,
+    @DateFrom DATETIME2 = NULL,
+    @DateTo DATETIME2 = NULL,
     @Offset INT = 0,
     @Limit INT = 50
 AS
@@ -1414,7 +1421,34 @@ BEGIN
     LEFT JOIN dbo.Users u ON u.User_ID = l.User_ID
     WHERE (@Action IS NULL OR @Action = N'' OR l.Action = @Action)
       AND (@UserId IS NULL OR l.User_ID = @UserId)
+      AND (@IpAddress IS NULL OR @IpAddress = N'' OR l.Ip_Address LIKE N'%' + @IpAddress + N'%')
+      AND (@DateFrom IS NULL OR l.Created_At >= @DateFrom)
+      AND (@DateTo IS NULL OR l.Created_At <= @DateTo)
     ORDER BY l.Created_At DESC
+    OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.sp_Admin_ListComments
+    @Search NVARCHAR(200) = NULL,
+    @Offset INT = 0,
+    @Limit INT = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        c.Comment_ID, c.User_ID, c.Kata_ID, c.Bunkai_ID, c.Text, c.Created_At, c.Updated_At,
+        u.Username AS Author_Username, u.Display_Name AS Author_Display_Name, u.Avatar_URL AS Author_Avatar_URL,
+        k.Title AS Kata_Title,
+        b.Title AS Bunkai_Title,
+        COUNT(*) OVER () AS Total_Count
+    FROM dbo.Comments c
+    JOIN dbo.Users u ON u.User_ID = c.User_ID
+    LEFT JOIN dbo.Kata k ON k.Kata_ID = c.Kata_ID
+    LEFT JOIN dbo.Bunkai b ON b.Bunkai_ID = c.Bunkai_ID
+    WHERE (@Search IS NULL OR @Search = N'' OR c.Text LIKE N'%' + @Search + N'%' OR u.Username LIKE N'%' + @Search + N'%')
+    ORDER BY c.Created_At DESC
     OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY;
 END
 GO

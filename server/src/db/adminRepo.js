@@ -60,15 +60,48 @@ async function deleteUser(userId, actorUserId) {
   await callProcedure('sp_Admin_DeleteUser', { UserId: userId, ActorUserId: actorUserId });
 }
 
-async function listLogs({ action, userId, offset, limit }) {
+async function listLogs({ action, userId, ipAddress, dateFrom, dateTo, offset, limit }) {
   const rows = await callProcedure('sp_Admin_ListLogs', {
     Action: action || null,
     UserId: userId || null,
+    IpAddress: ipAddress || null,
+    DateFrom: dateFrom || null,
+    DateTo: dateTo || null,
     Offset: offset,
     Limit: limit,
   });
   const total = rows[0]?.Total_Count || 0;
   return { items: rows.map(mapLogRow), total };
+}
+
+function mapCommentRow(row) {
+  return {
+    Comment_ID: row.Comment_ID,
+    User_ID: row.User_ID,
+    Kata_ID: row.Kata_ID,
+    Bunkai_ID: row.Bunkai_ID,
+    Text: row.Text,
+    Created_At: row.Created_At,
+    Updated_At: row.Updated_At,
+    Kata_Title: row.Kata_Title,
+    Bunkai_Title: row.Bunkai_Title,
+    Author: {
+      User_ID: row.User_ID,
+      Username: row.Author_Username,
+      Display_Name: row.Author_Display_Name,
+      Avatar_URL: row.Author_Avatar_URL,
+    },
+  };
+}
+
+async function listComments({ search, offset, limit }) {
+  const rows = await callProcedure('sp_Admin_ListComments', {
+    Search: search || null,
+    Offset: offset,
+    Limit: limit,
+  });
+  const total = rows[0]?.Total_Count || 0;
+  return { items: rows.map(mapCommentRow), total };
 }
 
 async function listBackups() {
@@ -112,6 +145,7 @@ module.exports = {
   changeRole,
   deleteUser,
   listLogs,
+  listComments,
   listBackups,
   createBackupRecord,
   updateBackupStatus,

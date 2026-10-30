@@ -32,3 +32,10 @@ export async function fetchStats() {
   const { data } = await api.get('/admin/stats');
   return data.data;
 }
+export async function fetchAdminComments(params) {
+  const { data } = await api.get('/admin/comments', { params });
+  return data;
+}
+export async function deleteAdminComment(id) {
+  await api.delete(`/comments/${id}`);
+}

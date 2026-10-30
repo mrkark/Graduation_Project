@@ -372,3 +372,28 @@
   background: rgba(229, 57, 53, 0.2);
 }
 
+/* Кнопка запуска видео японского бункая */
+.bunkai-video-btn {
+  background: rgba(212, 162, 76, 0.12);
+  border: 1px solid rgba(212, 162, 76, 0.35);
+  color: var(--gold);
+  border-radius: var(--radius-xs);
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.bunkai-video-btn:hover {
+  background: var(--gold);
+  color: #141210;
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+

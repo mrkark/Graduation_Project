@@ -94,6 +94,22 @@
   display: flex;
   gap: 0.6rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .bunkai-detail__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bunkai-detail__actions {
+    width: 100%;
+  }
+  .bunkai-detail__arena-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
 }
 
 /* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ */

@@ -111,6 +111,23 @@
   letter-spacing: 0.12em;
 }
 
+@media (max-width: 520px) {
+  .navbar__brand {
+    gap: 0.5rem;
+  }
+  .navbar__logo-icon-wrap {
+    width: 32px;
+    height: 32px;
+  }
+  .navbar__logo-text {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+  .navbar__logo-subtext {
+    display: none;
+  }
+}
+
 .navbar__logo-seal {
   margin-left: 0.2rem;
 }
@@ -197,6 +214,18 @@
   gap: 1.25rem;
 }
 
+@media (max-width: 768px) {
+  .navbar__actions {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar__actions {
+    gap: 0.35rem;
+  }
+}
+
 .navbar__auth-links {
   display: flex;
   align-items: center;
@@ -264,6 +293,18 @@
   text-overflow: ellipsis;
 }
 
+@media (max-width: 768px) {
+  .navbar__user-name {
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar__user-name {
+    display: none;
+  }
+}
+
 .navbar__staff-pill {
   font-size: 0.7rem;
   font-weight: 700;
@@ -277,6 +318,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .navbar__staff-pill {
+    display: none;
+  }
 }
 
 .navbar__staff-kanji {
@@ -390,6 +437,12 @@
   background: #211c17;
   color: var(--gold);
   transform: translateY(-1px);
+}
+
+@media (max-width: 520px) {
+  .navbar__chat-quick-btn {
+    display: none;
+  }
 }
 
 /* Задача 39: Иконка уведомлений у иконки профиля */

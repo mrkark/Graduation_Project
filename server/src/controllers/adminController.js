@@ -94,11 +94,33 @@ async function deleteUser(req, res, next) {
 // GET /api/admin/logs
 async function listLogs(req, res, next) {
   try {
-    const { page = 1, pageSize = 50, action, userId } = req.query;
+    const { page = 1, pageSize = 50, action, userId, ip, ipAddress, dateFrom, dateTo } = req.query;
     const limit = Math.min(Number(pageSize) || 50, 200);
     const offset = (Math.max(Number(page) || 1, 1) - 1) * limit;
 
-    const { items, total } = await adminRepo.listLogs({ action, userId, offset, limit });
+    const { items, total } = await adminRepo.listLogs({
+      action,
+      userId,
+      ipAddress: ipAddress || ip,
+      dateFrom,
+      dateTo,
+      offset,
+      limit,
+    });
+    return ok(res, items, { total, page: Number(page), pageSize: limit });
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+// GET /api/admin/comments (Модерация комментариев)
+async function listComments(req, res, next) {
+  try {
+    const { page = 1, pageSize = 50, search } = req.query;
+    const limit = Math.min(Number(pageSize) || 50, 100);
+    const offset = (Math.max(Number(page) || 1, 1) - 1) * limit;
+
+    const { items, total } = await adminRepo.listComments({ search, offset, limit });
     return ok(res, items, { total, page: Number(page), pageSize: limit });
   } catch (err) {
     return handleError(err, next, res);
@@ -152,6 +174,7 @@ module.exports = {
   changeRole,
   deleteUser,
   listLogs,
+  listComments,
   listBackups,
   createBackup,
   stats,

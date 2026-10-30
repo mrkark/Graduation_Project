@@ -866,11 +866,17 @@ export default function BunkaiFormPage() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" className="btn" onClick={() => navigate(-1)} disabled={saving}>
             Отмена
           </button>
-          <button type="button" className="btn btn-primary" onClick={onSubmit} disabled={saving}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={onSubmit}
+            disabled={saving}
+            style={{ maxWidth: '100%', whiteSpace: 'normal', textAlign: 'center' }}
+          >
             {saving ? 'Сохранение в базе данных…' : isEdit ? 'Обновить бункай' : '🥋 Опубликовать бункай Сётокан'}
           </button>
         </div>

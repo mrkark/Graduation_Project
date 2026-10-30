@@ -494,27 +494,27 @@ export default function BunkaiMultiAvatarPlayer({
       </div>
 
       {/* Панель интерактивного управления боевым взаимодействием */}
-      <div style={{ background: 'var(--color-surface)', padding: '16px 20px', borderTop: '1px solid var(--color-border)' }}>
+      <div style={{ background: 'var(--color-surface)', padding: '12px 12px', borderTop: '1px solid var(--color-border)', overflowX: 'hidden' }}>
         {/* Верхняя строка: навигация по шагам, режим участников, непрерывность и плеер */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           {/* Переключение шагов */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn"
               disabled={currentStepIdx === 0}
               onClick={handlePrevStep}
-              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+              style={{ padding: '6px 10px', fontSize: '0.82rem' }}
             >
               ◀ Предыдущий
             </button>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-gold)', minWidth: 90, textAlign: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', minWidth: 60, textAlign: 'center' }}>
               {currentStepIdx + 1} / {chainedEpisodes.length}
             </span>
             <button
               className="btn"
               disabled={currentStepIdx === chainedEpisodes.length - 1}
               onClick={handleNextStep}
-              style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+              style={{ padding: '6px 10px', fontSize: '0.82rem' }}
             >
               Следующий ▶
             </button>
@@ -584,10 +584,10 @@ export default function BunkaiMultiAvatarPlayer({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-            gap: 16,
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
             background: 'rgba(0,0,0,0.25)',
-            padding: '12px 16px',
+            padding: '10px 12px',
             borderRadius: 8,
             border: '1px solid rgba(255,255,255,0.06)',
             marginBottom: 14,

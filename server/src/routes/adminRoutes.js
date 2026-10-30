@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 router.get('/stats', moderatorMiddleware, adminController.stats);
+router.get('/comments', moderatorMiddleware, adminController.listComments);
 router.get('/logs', adminMiddleware, adminController.listLogs);
 router.get('/backups', adminMiddleware, adminController.listBackups);
 router.post('/backups', adminMiddleware, adminController.createBackup);
