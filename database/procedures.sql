@@ -335,11 +335,15 @@ BEGIN
 
     SET @newId = SCOPE_IDENTITY();
 
-    INSERT INTO dbo.KataSteps (Kata_ID, Step_Number, Title, Description, Technique, Direction, Duration, Image_URL, Video_URL)
+    INSERT INTO dbo.KataSteps (
+        Kata_ID, Step_Number, Title, Description, Technique, Direction, Duration, Image_URL, Video_URL,
+        Clip_ID, Stance_In, Stance_Out, Root_Displacement_X, Root_Displacement_Z, Root_Rotation_Y
+    )
     SELECT
         @newId,
         ISNULL(j.StepNumber, ROW_NUMBER() OVER (ORDER BY (SELECT NULL))),
-        j.Title, j.Description, j.Technique, j.Direction, j.Duration, j.ImageUrl, j.VideoUrl
+        j.Title, j.Description, j.Technique, j.Direction, j.Duration, j.ImageUrl, j.VideoUrl,
+        j.ClipId, j.StanceIn, j.StanceOut, ISNULL(j.RootDisplacementX, 0.0), ISNULL(j.RootDisplacementZ, 0.0), ISNULL(j.RootRotationY, 0.0)
     FROM OPENJSON(ISNULL(@StepsJson, N'[]')) WITH (
         StepNumber INT '$.stepNumber',
         Title NVARCHAR(200) '$.title',
@@ -348,7 +352,13 @@ BEGIN
         Direction NVARCHAR(50) '$.direction',
         Duration INT '$.duration',
         ImageUrl NVARCHAR(500) '$.imageUrl',
-        VideoUrl NVARCHAR(500) '$.videoUrl'
+        VideoUrl NVARCHAR(500) '$.videoUrl',
+        ClipId INT '$.clipId',
+        StanceIn NVARCHAR(50) '$.stanceIn',
+        StanceOut NVARCHAR(50) '$.stanceOut',
+        RootDisplacementX FLOAT '$.rootDisplacementX',
+        RootDisplacementZ FLOAT '$.rootDisplacementZ',
+        RootRotationY FLOAT '$.rootRotationY'
     ) j;
 
     COMMIT TRANSACTION;
@@ -403,11 +413,15 @@ BEGIN
     BEGIN
         DELETE FROM dbo.KataSteps WHERE Kata_ID = @KataId;
 
-        INSERT INTO dbo.KataSteps (Kata_ID, Step_Number, Title, Description, Technique, Direction, Duration, Image_URL, Video_URL)
+        INSERT INTO dbo.KataSteps (
+            Kata_ID, Step_Number, Title, Description, Technique, Direction, Duration, Image_URL, Video_URL,
+            Clip_ID, Stance_In, Stance_Out, Root_Displacement_X, Root_Displacement_Z, Root_Rotation_Y
+        )
         SELECT
             @KataId,
             ISNULL(j.StepNumber, ROW_NUMBER() OVER (ORDER BY (SELECT NULL))),
-            j.Title, j.Description, j.Technique, j.Direction, j.Duration, j.ImageUrl, j.VideoUrl
+            j.Title, j.Description, j.Technique, j.Direction, j.Duration, j.ImageUrl, j.VideoUrl,
+            j.ClipId, j.StanceIn, j.StanceOut, ISNULL(j.RootDisplacementX, 0.0), ISNULL(j.RootDisplacementZ, 0.0), ISNULL(j.RootRotationY, 0.0)
         FROM OPENJSON(@StepsJson) WITH (
             StepNumber INT '$.stepNumber',
             Title NVARCHAR(200) '$.title',
@@ -416,7 +430,13 @@ BEGIN
             Direction NVARCHAR(50) '$.direction',
             Duration INT '$.duration',
             ImageUrl NVARCHAR(500) '$.imageUrl',
-            VideoUrl NVARCHAR(500) '$.videoUrl'
+            VideoUrl NVARCHAR(500) '$.videoUrl',
+            ClipId INT '$.clipId',
+            StanceIn NVARCHAR(50) '$.stanceIn',
+            StanceOut NVARCHAR(50) '$.stanceOut',
+            RootDisplacementX FLOAT '$.rootDisplacementX',
+            RootDisplacementZ FLOAT '$.rootDisplacementZ',
+            RootRotationY FLOAT '$.rootRotationY'
         ) j;
     END
 

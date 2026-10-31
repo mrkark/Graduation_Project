@@ -90,8 +90,14 @@ CREATE TABLE dbo.KataSteps (
     Technique   NVARCHAR(200) NULL,
     Direction   NVARCHAR(50) NULL,
     Duration    INT NULL, -- в секундах
-    Image_URL   NVARCHAR(500) NULL,
-    Video_URL   NVARCHAR(500) NULL,
+    Image_URL           NVARCHAR(500) NULL,
+    Video_URL           NVARCHAR(500) NULL,
+    Clip_ID             INT NULL,
+    Stance_In           NVARCHAR(50) NULL,
+    Stance_Out          NVARCHAR(50) NULL,
+    Root_Displacement_X FLOAT NULL DEFAULT 0.0,
+    Root_Displacement_Z FLOAT NULL DEFAULT 0.0,
+    Root_Rotation_Y     FLOAT NULL DEFAULT 0.0,
     CONSTRAINT FK_KataSteps_Kata FOREIGN KEY (Kata_ID) REFERENCES dbo.Kata(Kata_ID) ON DELETE CASCADE,
     CONSTRAINT UQ_KataSteps_Order UNIQUE (Kata_ID, Step_Number)
 );
