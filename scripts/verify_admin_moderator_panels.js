@@ -138,6 +138,10 @@ async function run() {
       const hasHorizontalScroll = tableWrap ? tableWrap.scrollWidth > tableWrap.clientWidth : false;
       const lastTh = document.querySelector('.admin-table th:last-child');
       const computedPaddingRight = lastTh ? window.getComputedStyle(lastTh).paddingRight : '';
+      const thTexts = Array.from(document.querySelectorAll('.admin-table th')).map(t => t.textContent.trim());
+      const hasEmailCol = thTexts.some(t => t.toLowerCase().includes('email'));
+      const hasRoleCol = thTexts.includes('Роль');
+      const hasDateCol = thTexts.some(t => t.toLowerCase().includes('создания') || t.toLowerCase().includes('дата'));
       return {
         hasTable: !!table,
         rowCount: rows.length,
@@ -146,10 +150,13 @@ async function run() {
         hasModeratorActions: modBtns.length > 0,
         hasHorizontalScroll,
         edgePaddingRight: computedPaddingRight,
+        hasNoEmailCol: !hasEmailCol,
+        hasRoleCol,
+        hasDateCol,
       };
     });
     console.log('[TEST] Admin Users Check:', JSON.stringify(usersCheck));
-    if (usersCheck.hasTable && usersCheck.rowCount > 0 && usersCheck.hasBlockActions && usersCheck.hasModeratorActions && !usersCheck.hasHorizontalScroll) {
+    if (usersCheck.hasTable && usersCheck.rowCount > 0 && usersCheck.hasBlockActions && usersCheck.hasModeratorActions && !usersCheck.hasHorizontalScroll && usersCheck.hasNoEmailCol && usersCheck.hasRoleCol && usersCheck.hasDateCol) {
       results.adminUsersTableUsecases = true;
     }
     await page.screenshot({ path: path.join(screenshotDir, 'admin_users_desktop.png'), fullPage: false });
@@ -165,15 +172,18 @@ async function run() {
       const options = actionSelect ? Array.from(actionSelect.options).map(o => o.value) : [];
       const dateInputs = document.querySelectorAll('input[type="date"]');
       const tableRows = document.querySelectorAll('.admin-table tbody tr');
+      const thTexts = Array.from(document.querySelectorAll('.admin-table th')).map(t => t.textContent.trim());
+      const hasIpCol = thTexts.some(t => t.toLowerCase().includes('ip'));
       return {
         hasActionSelect: !!actionSelect,
         actionOptionsCount: options.length,
         hasDateInputs: dateInputs.length === 2,
         logRowsCount: tableRows.length,
+        hasNoIpCol: !hasIpCol,
       };
     });
     console.log('[TEST] Admin Logs Check:', JSON.stringify(logsCheck));
-    if (logsCheck.hasActionSelect && logsCheck.hasDateInputs && logsCheck.logRowsCount > 0) {
+    if (logsCheck.hasActionSelect && logsCheck.hasDateInputs && logsCheck.logRowsCount > 0 && logsCheck.hasNoIpCol) {
       results.adminLogsFiltersWorking = true;
     }
     await page.screenshot({ path: path.join(screenshotDir, 'admin_logs_desktop.png'), fullPage: false });
@@ -240,12 +250,24 @@ async function run() {
     await page.goto('http://localhost:5173/admin/bunkai', { waitUntil: 'domcontentloaded', timeout: 15000 });
     await page.waitForSelector('.admin-bunkai-page', { timeout: 10000 });
 
+    // Switch to "Одобренные" tab to verify action buttons on real items
+    const tabButtons = await page.$$('.admin-status-tab');
+    if (tabButtons.length >= 2) {
+      await tabButtons[1].click();
+      await new Promise(r => setTimeout(r, 800));
+    }
+
     const bunkaiModCheck = await page.evaluate(() => {
       const tabs = Array.from(document.querySelectorAll('.admin-status-tab')).map(t => t.textContent.trim());
       const searchInput = document.querySelector('.admin-search-wrap input');
+      const actionBtns = Array.from(document.querySelectorAll('.admin-row-actions button, .admin-row-actions a')).map(b => b.textContent.trim());
+      const hasPreview = actionBtns.some(b => b.includes('3D-просмотр'));
+      const hasDeleteOrReject = actionBtns.some(b => b.includes('Отклонить') || b.includes('Удалить'));
       return {
         tabs,
         hasSearch: !!searchInput,
+        hasPreview,
+        hasDeleteOrReject,
       };
     });
     console.log('[TEST] Moderator Bunkai Check:', JSON.stringify(bunkaiModCheck));

@@ -494,9 +494,15 @@
 
 .admin-users-table th,
 .admin-users-table td {
-  padding: 0.75rem 0.65rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  padding: 0.85rem 0.85rem;
+  vertical-align: middle;
+}
+
+.admin-users-table td:nth-child(2),
+.admin-users-table td:nth-child(3),
+.admin-users-table td:nth-child(4) {
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .admin-users-table th:last-child,

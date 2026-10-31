@@ -218,12 +218,11 @@ export default function AdminUsersPage() {
           <table className="admin-table admin-users-table">
             <thead>
               <tr>
-                <th style={{ width: '18%' }}>Каратэка</th>
-                <th style={{ width: '18%' }}>Email</th>
-                <th style={{ width: '11%' }}>Роль</th>
-                <th style={{ width: '11%' }}>Статус</th>
-                <th style={{ width: '9%' }}>Регистрация</th>
-                <th style={{ width: '33%', textAlign: 'right' }}>Действия управления</th>
+                <th style={{ width: '24%' }}>Каратэка</th>
+                <th style={{ width: '15%' }}>Роль</th>
+                <th style={{ width: '13%' }}>Статус</th>
+                <th style={{ width: '13%' }}>Дата создания</th>
+                <th style={{ width: '35%', textAlign: 'right' }}>Действия управления</th>
               </tr>
             </thead>
             <tbody>
@@ -247,11 +246,6 @@ export default function AdminUsersPage() {
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td>
-                      <span className="admin-user-email" title={u.Email}>
-                        {u.Email}
-                      </span>
                     </td>
                     <td>
                       <span

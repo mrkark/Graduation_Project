@@ -217,12 +217,11 @@ export default function AdminLogsPage() {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Время события</th>
-                  <th>Пользователь</th>
-                  <th>Действие</th>
-                  <th>Целевой объект</th>
-                  <th>IP-адрес</th>
-                  <th>Детали</th>
+                  <th style={{ width: '20%' }}>Время события</th>
+                  <th style={{ width: '20%' }}>Пользователь</th>
+                  <th style={{ width: '18%' }}>Действие</th>
+                  <th style={{ width: '17%' }}>Целевой объект</th>
+                  <th style={{ width: '25%' }}>Детали</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,12 +264,7 @@ export default function AdminLogsPage() {
                           {log.Entity_Type ? `${log.Entity_Type} #${log.Entity_ID || ''}` : '—'}
                         </span>
                       </td>
-                      <td>
-                        <code style={{ fontSize: '0.8rem', color: 'var(--gold)' }}>
-                          {log.Ip_Address || '—'}
-                        </code>
-                      </td>
-                      <td style={{ maxWidth: 260 }}>
+                      <td style={{ maxWidth: 320 }}>
                         <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
                           {log.Details ? JSON.stringify(log.Details) : '—'}
                         </span>

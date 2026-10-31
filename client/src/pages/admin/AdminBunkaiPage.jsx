@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Clock,
   CheckCircle,
+  CheckCircle2,
   XCircle,
   Check,
   X,
@@ -102,7 +103,9 @@ export default function AdminBunkaiPage() {
       {notice && (
         <div className={`admin-alert-banner admin-alert-banner--${notice.type}`}>
           <span>{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)}>✕</button>
+          <button type="button" onClick={() => setNotice(null)} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <X size={14} />
+          </button>
         </div>
       )}
 
@@ -159,8 +162,9 @@ export default function AdminBunkaiPage() {
           <span className="admin-counter-pill">
             Материалов в списке: <strong>{filteredItems.length}</strong>
           </span>
-          <button type="button" className="btn btn-subtle" onClick={load} disabled={loading}>
-            {loading ? 'Обновление…' : '🔄 Обновить список'}
+          <button type="button" className="btn btn-subtle" onClick={load} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <RefreshCw size={14} className={loading ? 'admin-spin' : ''} />
+            <span>{loading ? 'Обновление…' : 'Обновить список'}</span>
           </button>
         </div>
       </div>
@@ -232,9 +236,9 @@ export default function AdminBunkaiPage() {
                             className="btn btn-success btn-sm"
                             onClick={() => onApprove(b.Bunkai_ID, b.Title)}
                             disabled={isBusy}
-                            title="Утвердить публикацию бункая в общем каталоге"
+                            title="Утвердить публикацию боевого сценария бункай"
                           >
-                            <Check size={13} />
+                            <CheckCircle2 size={13} />
                             <span>Утвердить</span>
                           </button>
                         )}
@@ -246,9 +250,9 @@ export default function AdminBunkaiPage() {
                             className="btn btn-warning btn-sm"
                             onClick={() => onReject(b.Bunkai_ID, b.Title)}
                             disabled={isBusy}
-                            title="Отклонить публикацию с пометкой"
+                            title="Отклонить публикацию боевого сценария"
                           >
-                            <X size={13} />
+                            <XCircle size={13} />
                             <span>Отклонить</span>
                           </button>
                         )}
@@ -256,10 +260,10 @@ export default function AdminBunkaiPage() {
                         <Link
                           to={`/bunkai/${b.Bunkai_ID}`}
                           className="btn btn-subtle btn-sm"
-                          title="Открыть 3D плеер и изучить движения"
+                          title="Открыть интерактивный 3D-просмотр движений"
                         >
                           <Eye size={13} />
-                          <span>3D</span>
+                          <span>3D-просмотр</span>
                         </Link>
 
                         <button
@@ -270,6 +274,7 @@ export default function AdminBunkaiPage() {
                           title="Удалить сценарий из базы"
                         >
                           <Trash2 size={13} />
+                          <span>Удалить</span>
                         </button>
                       </div>
                     </td>
