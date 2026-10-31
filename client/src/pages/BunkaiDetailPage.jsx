@@ -28,14 +28,6 @@ export default function BunkaiDetailPage() {
   const [bunkaiSteps, setBunkaiSteps] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('application'); // 'application' | 'video' | 'comments'
-  const [viewMode, setViewMode] = useState('video'); // 'video' | '3d' - видео по умолчанию для мгновенной загрузки
-
-  useEffect(() => {
-    if (bunkai && !bunkai.Video_URL) {
-      setViewMode('3d');
-    }
-  }, [bunkai]);
 
   const { isBunkaiFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
 
@@ -116,17 +108,6 @@ export default function BunkaiDetailPage() {
             >
               {isBunkaiFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
             </button>
-            {bunkai.Video_URL && (
-              <button
-                type="button"
-                className={`btn ${viewMode === 'video' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setViewMode(viewMode === 'video' ? '3d' : 'video')}
-                style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
-                title="Переключить режим: Видео мастеров JKS или 3D спарринг"
-              >
-                {viewMode === 'video' ? '🥋 Режим 3D' : '🎥 Видео JKS'}
-              </button>
-            )}
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>
 
@@ -158,34 +139,13 @@ export default function BunkaiDetailPage() {
         )}
       </header>
 
-      {/* 2. БОЛЬШАЯ АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ (ВИДЕО JKS ИЛИ 3D СПАРРИНГ) */}
+      {/* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО СПАРРИНГА ТОРИ И УКЭ */}
       <section className="bunkai-detail__arena-wrap">
         <div className="bunkai-detail__arena-header">
           <div className="bunkai-detail__arena-badge">
             <ShotokanTiger size={18} color="var(--gold)" />
-            <span>{viewMode === 'video' ? 'ЭТАЛОННЫЙ БУНКАЙ JKS · ВИДЕОРАЗБОР' : 'БОЕВОЙ СПАРРИНГ · КУМИТЭ БУНКАЙ'}</span>
+            <span>БОЕВОЙ СПАРРИНГ · КУМИТЭ БУНКАЙ 3D</span>
           </div>
-
-          {bunkai.Video_URL && (
-            <div className="stage-mode-switcher">
-              <button
-                type="button"
-                className={`stage-mode-btn ${viewMode === 'video' ? 'active' : ''}`}
-                onClick={() => setViewMode('video')}
-                title="Смотреть каноническое видео боевого применения мастеров JKS"
-              >
-                🎥 Видео мастеров JKS
-              </button>
-              <button
-                type="button"
-                className={`stage-mode-btn ${viewMode === '3d' ? 'active' : ''}`}
-                onClick={() => setViewMode('3d')}
-                title="Интерактивный 3D спарринг Тори и Укэ"
-              >
-                🥋 3D Спарринг
-              </button>
-            </div>
-          )}
 
           <div className="bunkai-detail__arena-roles">
             <span className="bunkai-role-tag bunkai-role-tag--uke">
@@ -198,111 +158,90 @@ export default function BunkaiDetailPage() {
           </div>
         </div>
 
-        {viewMode === 'video' && bunkai.Video_URL ? (
-          <div className="bunkai-detail__video-hero">
+        <Suspense
+          fallback={
+            <div
+              style={{
+                height: 540,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#060709',
+                color: 'var(--gold, #d4a24c)',
+              }}
+            >
+              <ShotokanTiger size={36} color="var(--gold, #d4a24c)" />
+              <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--text-muted, #a8a29e)' }}>
+                Инициализация 3D моделей Тори и Укэ…
+              </p>
+            </div>
+          }
+        >
+          <BunkaiMultiAvatarPlayer
+            steps={bunkaiSteps}
+            defaultParticipantMode={
+              bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
+            }
+            height={540}
+          />
+        </Suspense>
+      </section>
+
+      {/* 3. ТАКТИЧЕСКИЙ РАЗБОР И НАСТАВЛЕНИЯ ПРИМЕНЕНИЯ */}
+      <section className="bunkai-detail__content">
+        <div className="bunkai-notes">
+          {bunkai.Description && (
+            <div className="bunkai-notes__block">
+              <h3>Общая тактическая концепция</h3>
+              <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.75 }}>{bunkai.Description}</p>
+            </div>
+          )}
+
+          {bunkai.Application && (
+            <div className="bunkai-notes__block">
+              <h3>Применение в реальном поединке (Оё-бункай)</h3>
+              <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.75 }}>{bunkai.Application}</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 4. ОТДЕЛЬНЫЙ ПРЕМИАЛЬНЫЙ БЛОК ЭТАЛОННОГО ВИДЕО МАСТЕРОВ JKS ВНИЗУ СТРАНИЦЫ */}
+      {bunkai.Video_URL && (
+        <section className="bunkai-detail__video-section">
+          <div className="bunkai-detail__video-section-header">
+            <div className="bunkai-detail__video-section-badge">
+              <ShotokanTiger size={22} color="var(--gold)" />
+              <span className="bunkai-detail__video-section-eyebrow">
+                ЭТАЛОННОЕ ИСПОЛНЕНИЕ · МАСТЕРА JKS (JAPAN KARATE SHOTO FEDERATION)
+              </span>
+            </div>
+            <h2 className="bunkai-detail__video-section-title">
+              Видеоразбор применения: {bunkai.Title}
+            </h2>
+            <p className="bunkai-detail__video-section-subtitle">
+              Каноническая видеодемонстрация боевого применения бункай ведущими инструкторами штаб-квартиры JKS (Токио, Япония) под руководством шеф-инструктора Масао Кагава (9 Дан).
+            </p>
+          </div>
+
+          <div className="bunkai-detail__video-player-container">
             <VideoEmbed
               url={bunkai.Video_URL}
               title={bunkai.Title}
-              masterName="Прикладной Бункай · Мастера JKS (Japan Karate Shoto Federation)"
+              masterName="Мастера JKS · Шеф-инструктор Масао Кагава (9 Дан)"
               autoLoad={false}
             />
           </div>
-        ) : (
-          <Suspense
-            fallback={
-              <div
-                style={{
-                  height: 540,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: '#060709',
-                  color: 'var(--gold, #d4a24c)',
-                }}
-              >
-                <ShotokanTiger size={36} color="var(--gold, #d4a24c)" />
-                <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--text-muted, #a8a29e)' }}>
-                  Загрузка 3D моделей Тори и Укэ…
-                </p>
-              </div>
-            }
-          >
-            <BunkaiMultiAvatarPlayer
-              steps={bunkaiSteps}
-              defaultParticipantMode={
-                bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
-              }
-              height={540}
-            />
-          </Suspense>
-        )}
-      </section>
+        </section>
+      )}
 
-      {/* 3. ПРОГРЕССИВНОЕ РАСКРЫТИЕ СМЫСЛА И ПРИМЕНЕНИЯ */}
-      <section className="bunkai-detail__content">
-        <div className="tabs">
-          <button
-            type="button"
-            className={activeTab === 'application' ? 'active' : ''}
-            onClick={() => setActiveTab('application')}
-          >
-            Тактический разбор (Оё-бункай)
-          </button>
-          {bunkai.Video_URL && (
-            <button
-              type="button"
-              className={activeTab === 'video' ? 'active' : ''}
-              onClick={() => setActiveTab('video')}
-            >
-              Видео демонстрации
-            </button>
-          )}
-          <button
-            type="button"
-            className={activeTab === 'comments' ? 'active' : ''}
-            onClick={() => setActiveTab('comments')}
-          >
-            Обсуждение
-          </button>
-        </div>
-
-        <div className="bunkai-detail__tab-panel">
-          {activeTab === 'application' && (
-            <div className="bunkai-notes">
-              {bunkai.Description && (
-                <div className="bunkai-notes__block">
-                  <h3>Общая концепция</h3>
-                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{bunkai.Description}</p>
-                </div>
-              )}
-
-              {bunkai.Application && (
-                <div className="bunkai-notes__block">
-                  <h3>Применение в реальном поединке</h3>
-                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{bunkai.Application}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'video' && bunkai.Video_URL && (
-            <div className="bunkai-video-box">
-              <VideoEmbed
-                url={bunkai.Video_URL}
-                title={bunkai.Title}
-                masterName="Мастера JKS · Прикладной разбор бункай"
-                autoLoad={true}
-              />
-            </div>
-          )}
-
-          {activeTab === 'comments' && (
-            <div>
-              <Comments bunkaiId={Number(id)} />
-            </div>
-          )}
-        </div>
+      {/* 5. ОБСУЖДЕНИЕ И ВОПРОСЫ ДОДЗЁ */}
+      <section className="bunkai-detail__comments-section">
+        <h3 className="bunkai-detail__comments-title">
+          <span>🥋 Обсуждение и тактический разбор</span>
+        </h3>
+        <Comments bunkaiId={Number(id)} />
       </section>
     </div>
   );

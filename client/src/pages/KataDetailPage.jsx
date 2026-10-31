@@ -40,13 +40,6 @@ export default function KataDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('notes'); // 'notes' | 'video' | 'bunkai' | 'comments'
-  const [viewMode, setViewMode] = useState('video'); // 'video' | '3d' - видео по умолчанию для мгновенной загрузки страницы
-
-  useEffect(() => {
-    if (kata && !kata.Video_URL) {
-      setViewMode('3d');
-    }
-  }, [kata]);
 
   const { isKataFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
 
@@ -199,17 +192,6 @@ export default function KataDetailPage() {
             >
               {isKataFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
             </button>
-            {kata.Video_URL && (
-              <button
-                type="button"
-                className={`btn ${viewMode === 'video' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setViewMode(viewMode === 'video' ? '3d' : 'video')}
-                style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
-                title="Переключить режим отображения: Видео мастера JKS или 3D"
-              >
-                {viewMode === 'video' ? '🥋 Режим 3D' : '🎥 Видео JKS'}
-              </button>
-            )}
             <HankoSeal
               text={kata.Title?.match(/[\u4e00-\u9faf]{1,2}/)?.[0] || '型'}
               size="md"
@@ -241,81 +223,49 @@ export default function KataDetailPage() {
         )}
       </header>
 
-      {/* 2. ЦЕНТРАЛЬНАЯ АРЕНА (ПЕРЕКЛЮЧЕНИЕ МЕЖДУ ВИДЕО МАСТЕРА JKS И 3D БИОМЕХАНИКОЙ) */}
+      {/* 2. ЦЕНТРАЛЬНАЯ 3D АРЕНА БИОМЕХАНИКИ КАТА */}
       <section className="kata-study__stage-wrap">
         <div className="kata-study__stage-frame-header">
           <div className="kata-study__stage-badge">
             <ShotokanTiger size={18} color="var(--gold)" />
-            <span>{viewMode === 'video' ? 'ЭТАЛОННОЕ ВИДЕО JKS · СЁТОКАН' : '3D АРЕНА ДОДЗЁ · СЁТОКАН КАРАТЭДО'}</span>
+            <span>3D АРЕНА ДОДЗЁ · СЁТОКАН КАРАТЭДО</span>
           </div>
-
-          {kata.Video_URL && (
-            <div className="stage-mode-switcher">
-              <button
-                type="button"
-                className={`stage-mode-btn ${viewMode === 'video' ? 'active' : ''}`}
-                onClick={() => setViewMode('video')}
-                title="Смотреть каноническое видео исполнения японских мастеров JKS"
-              >
-                🎥 Видео мастера JKS
-              </button>
-              <button
-                type="button"
-                className={`stage-mode-btn ${viewMode === '3d' ? 'active' : ''}`}
-                onClick={() => setViewMode('3d')}
-                title="Перейти к интерактивной 3D модели и анализу траекторий"
-              >
-                🥋 3D Биомеханика
-              </button>
-            </div>
-          )}
 
           <span className="kata-study__stage-slug">
             {kataSlug ? kataSlug.toUpperCase() : 'KATA'}
           </span>
         </div>
 
-        {viewMode === 'video' && kata.Video_URL ? (
-          <div className="kata-study__video-container">
-            <VideoEmbed
-              url={kata.Video_URL}
-              title={kata.Title}
-              masterName="Шеф-инструктор Масао Кагава (9 Дан) · Сборная JKS"
-              autoLoad={false}
+        <div className="kata-study__canvas-container">
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  height: 560,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#060709',
+                  color: 'var(--gold, #d4a24c)',
+                }}
+              >
+                <ShotokanTiger size={36} color="var(--gold, #d4a24c)" />
+                <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--text-muted, #a8a29e)' }}>
+                  Инициализация 3D сцены Додзё и кинематики ката…
+                </p>
+              </div>
+            }
+          >
+            <KataSequencer
+              kataTitle={kata.Title}
+              steps={effectiveSteps}
+              height={560}
+              activeStepIndex={activeStepIdx}
+              onStepChange={setActiveStepIdx}
             />
-          </div>
-        ) : (
-          <div className="kata-study__canvas-container">
-            <Suspense
-              fallback={
-                <div
-                  style={{
-                    height: 560,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: '#060709',
-                    color: 'var(--gold, #d4a24c)',
-                  }}
-                >
-                  <ShotokanTiger size={36} color="var(--gold, #d4a24c)" />
-                  <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--text-muted, #a8a29e)' }}>
-                    Инициализация 3D сцены Додзё и кинематики ката…
-                  </p>
-                </div>
-              }
-            >
-              <KataSequencer
-                kataTitle={kata.Title}
-                steps={effectiveSteps}
-                height={560}
-                activeStepIndex={activeStepIdx}
-                onStepChange={setActiveStepIdx}
-              />
-            </Suspense>
-          </div>
-        )}
+          </Suspense>
+        </div>
 
         {/* 3. КОМПАКТНАЯ ПАНЕЛЬ ШАГА И УПРАВЛЕНИЯ ПЕРЕМЕЩЕНИЕМ */}
         <div className="kata-stepper">

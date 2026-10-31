@@ -118,6 +118,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
               className="video-embed-iframe"
               src={activeSrc}
               title={title || 'Видео техники Сётокан'}
+              loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
             />

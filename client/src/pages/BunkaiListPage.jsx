@@ -47,6 +47,7 @@ export default function BunkaiListPage() {
   const [loading, setLoading] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const searchBoxRef = useRef(null);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
 
@@ -108,18 +109,22 @@ export default function BunkaiListPage() {
     setShowSuggestions(false);
   }
 
-  // Задача 15: поиск только по названию бункай + фильтр избранного (Задача 8)
+  // Задача 15: поиск по названию бункай + фильтр избранного (Задача 8) + фильтр сложности
   const filteredItems = useMemo(() => {
     const q = (search || '').trim().toLowerCase();
     return items.filter((b) => {
       if (onlyFavorites && !bunkaiFavorites.includes(Number(b.Bunkai_ID))) {
         return false;
       }
+      if (selectedDifficulty !== 'all') {
+        const diff = getBunkaiDifficulty(b);
+        if (diff !== selectedDifficulty) return false;
+      }
       if (!q) return true;
       const title = (b.Title || '').toLowerCase();
       return title.includes(q);
     });
-  }, [items, search, onlyFavorites, bunkaiFavorites]);
+  }, [items, search, onlyFavorites, bunkaiFavorites, selectedDifficulty]);
 
   return (
     <div className="container bunkai-catalog">
@@ -149,90 +154,130 @@ export default function BunkaiListPage() {
         </div>
       </header>
 
-      {/* 2. ПОИСК И СОРТИРОВКА В ДИЗАЙНЕ СТРАНИЦЫ КАТА (Задача 15) */}
-      <div className="atlas-search-section" style={{ marginBottom: '2rem' }}>
-        <div className="atlas-search-strip">
-          <div className="atlas-search-box" ref={searchBoxRef}>
-            <div className="atlas-search-icon-badge">
-              <SearchIcon size={19} color="#d4a24c" className="atlas-search-icon" />
-            </div>
-            <input
-              type="text"
-              className="atlas-search-input"
-              value={search}
-              style={{ paddingLeft: '3.8rem' }}
-              onFocus={() => setShowSuggestions(true)}
-              onChange={(e) => {
-                updateParam('search', e.target.value);
-                setShowSuggestions(true);
-              }}
-              placeholder="Поиск по названию бункай (Хэйан, Бассай-дай, Канку-дай, Унсу)…"
-            />
-            {search && (
-              <button
-                type="button"
-                className="atlas-search-clear-btn"
-                onClick={() => {
-                  updateParam('search', '');
-                  setShowSuggestions(false);
-                }}
-                title="Очистить поиск"
-              >
-                ✕
-              </button>
-            )}
-
-            {/* Задача 2: Выпадающие динамические подсказки в поиске бункай */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="atlas-search-suggestions">
-                <div className="atlas-search-suggestions-header">
-                  Подходящие сценарии бункай ({suggestions.length}):
-                </div>
-                {suggestions.map((b) => (
-                  <div
-                    key={b.Bunkai_ID}
-                    className="atlas-suggestion-item"
-                    onMouseDown={() => handleSelectSuggestion(b)}
-                  >
-                    <span className="atlas-suggestion-icon">⚔️</span>
-                    <div className="atlas-suggestion-text">
-                      <span className="atlas-suggestion-title">{b.Title}</span>
-                      <span className="atlas-suggestion-meta">
-                        {b.Difficulty ? `Сложность: ${b.Difficulty}` : 'Канонический разбор'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+      {/* 2. ПОИСК, ФИЛЬТРЫ И ИЗБРАННОЕ В СТИЛЕ ДОДЗЁ С НАДЕЖНЫМ ПОЗИЦИОНИРОВАНИЕМ */}
+      <section className="bunkai-search-card">
+        {/* Верхняя строка: Поле поиска со встроенной иконкой лупы */}
+        <div className="bunkai-search-field-wrap" ref={searchBoxRef}>
+          <div className="bunkai-search-icon-box">
+            <SearchIcon size={20} color="#d4a24c" />
           </div>
-
-          <div className="atlas-search-meta-group">
+          <input
+            type="text"
+            className="bunkai-search-input"
+            value={search}
+            onFocus={() => setShowSuggestions(true)}
+            onChange={(e) => {
+              updateParam('search', e.target.value);
+              setShowSuggestions(true);
+            }}
+            placeholder="Поиск по названию бункай (Хэйан, Бассай-дай, Канку-дай, Унсу)…"
+          />
+          {search && (
             <button
               type="button"
-              className={`btn ${onlyFavorites ? 'btn-primary' : 'btn-subtle'}`}
-              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
-              onClick={() => setOnlyFavorites(!onlyFavorites)}
+              className="bunkai-search-clear-btn"
+              onClick={() => {
+                updateParam('search', '');
+                setShowSuggestions(false);
+              }}
+              title="Очистить поиск"
+              aria-label="Очистить поиск"
             >
-              <span>{onlyFavorites ? '❤️ Только избранные' : '🤍 Избранное'} ({bunkaiFavorites.length})</span>
+              ✕
+            </button>
+          )}
+
+          {/* Выпадающие динамические подсказки в поиске бункай */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="bunkai-search-suggestions">
+              <div className="bunkai-search-suggestions-header">
+                Подходящие сценарии бункай ({suggestions.length}):
+              </div>
+              {suggestions.map((b) => (
+                <div
+                  key={b.Bunkai_ID}
+                  className="bunkai-suggestion-item"
+                  onMouseDown={() => handleSelectSuggestion(b)}
+                >
+                  <span className="bunkai-suggestion-icon">⚔️</span>
+                  <div className="bunkai-suggestion-text">
+                    <span className="bunkai-suggestion-title">{b.Title}</span>
+                    <span className="bunkai-suggestion-meta">
+                      {b.Difficulty ? `Сложность: ${b.Difficulty}` : 'Канонический разбор'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Нижняя строка: Фильтры (Избранное, Уровни сложности), Сортировка и Счетчик */}
+        <div className="bunkai-filters-toolbar">
+          <div className="bunkai-filters-toolbar__left">
+            <button
+              type="button"
+              className={`bunkai-fav-toggle-btn ${onlyFavorites ? 'active' : ''}`}
+              onClick={() => setOnlyFavorites(!onlyFavorites)}
+              title={onlyFavorites ? 'Показать все сценарии' : 'Показать только избранные'}
+            >
+              <span className="bunkai-fav-toggle-icon">{onlyFavorites ? '❤️' : '🤍'}</span>
+              <span>{onlyFavorites ? 'Только избранные' : 'Избранное'}</span>
+              <span className="bunkai-fav-toggle-badge">{bunkaiFavorites.length}</span>
             </button>
 
-            <span className="atlas-found-badge">
-              Найдено: <strong>{filteredItems.length}</strong> сценариев
+            <div className="bunkai-difficulty-pills">
+              <button
+                type="button"
+                className={`bunkai-diff-pill ${selectedDifficulty === 'all' ? 'active' : ''}`}
+                onClick={() => setSelectedDifficulty('all')}
+              >
+                Все уровни
+              </button>
+              <button
+                type="button"
+                className={`bunkai-diff-pill ${selectedDifficulty === 'beginner' ? 'active' : ''}`}
+                onClick={() => setSelectedDifficulty('beginner')}
+              >
+                Базовый (Кю)
+              </button>
+              <button
+                type="button"
+                className={`bunkai-diff-pill ${selectedDifficulty === 'intermediate' ? 'active' : ''}`}
+                onClick={() => setSelectedDifficulty('intermediate')}
+              >
+                Средний (Сэнтэй)
+              </button>
+              <button
+                type="button"
+                className={`bunkai-diff-pill ${selectedDifficulty === 'master' ? 'active' : ''}`}
+                onClick={() => setSelectedDifficulty('master')}
+              >
+                Мастерский (Дан)
+              </button>
+            </div>
+          </div>
+
+          <div className="bunkai-filters-toolbar__right">
+            <span className="bunkai-results-count">
+              Найдено: <strong>{filteredItems.length}</strong> {filteredItems.length === 1 ? 'сценарий' : 'сценариев'}
             </span>
 
-            <select
-              className="atlas-sort-select"
-              value={sort}
-              onChange={(e) => updateParam('sort', e.target.value)}
-            >
-              <option value="newest">Сначала новые сценарии</option>
-              <option value="oldest">Сначала ранние сценарии</option>
-              <option value="title">По алфавиту (А–Я)</option>
-            </select>
+            <div className="bunkai-sort-wrap">
+              <select
+                className="bunkai-sort-select"
+                value={sort}
+                onChange={(e) => updateParam('sort', e.target.value)}
+                aria-label="Сортировка каталога бункай"
+              >
+                <option value="newest">Сначала новые сценарии</option>
+                <option value="oldest">Сначала ранние сценарии</option>
+                <option value="title">По алфавиту (А–Я)</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* 3. СПИСОК БОЕВЫХ СИТУАЦИЙ */}
       {loading ? (

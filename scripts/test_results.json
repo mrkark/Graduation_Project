@@ -1,0 +1,9 @@
+{
+  "searchIconInsideField": true,
+  "noHorizontalScrollDesktop": true,
+  "noHorizontalScrollMobile": true,
+  "favoritesToggleWorking": true,
+  "difficultyFiltersWorking": true,
+  "bunkaiDetail3DTop": true,
+  "bunkaiDetailVideoBottom": true
+}

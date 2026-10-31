@@ -195,28 +195,86 @@
   font-size: 1rem;
 }
 
-.bunkai-video-box {
+/* 4. ОТДЕЛЬНЫЙ ПРЕМИАЛЬНЫЙ БЛОК ЭТАЛОННОГО ВИДЕО МАСТЕРОВ JKS ВНИЗУ СТРАНИЦЫ */
+.bunkai-detail__video-section {
+  max-width: 900px;
+  margin: 3rem auto 0;
+  background: linear-gradient(180deg, #181512 0%, #110e0c 100%);
+  border: 1px solid rgba(212, 162, 76, 0.32);
+  border-top: 3px solid var(--gold, #d4a24c);
+  border-radius: var(--radius-md, 10px);
+  padding: 2rem 2.25rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(212, 162, 76, 0.15);
+}
+
+.bunkai-detail__video-section-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(212, 162, 76, 0.18);
+}
+
+.bunkai-detail__video-section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.bunkai-detail__video-section-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold, #d4a24c);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.bunkai-detail__video-section-title {
+  margin: 0.2rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+  color: var(--text-primary);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.bunkai-detail__video-section-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.bunkai-detail__video-player-container {
+  width: 100%;
+}
+
+/* 5. СЕКЦИЯ КОММЕНТАРИЕВ И ОБСУЖДЕНИЯ */
+.bunkai-detail__comments-section {
+  max-width: 900px;
+  margin: 3rem auto 0;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1.5rem;
+  border-radius: var(--radius-md, 10px);
+  padding: 2rem;
   box-shadow: var(--shadow-subtle);
 }
 
-
-/* Переключатель режимов Видео / 3D в шапке арены бункая */
-.bunkai-detail__arena-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+.bunkai-detail__comments-title {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.85rem;
 }
 
-.bunkai-detail__video-hero {
-  width: 100%;
-  border-radius: var(--radius-sm, 6px);
-  overflow: hidden;
-  background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+@media (max-width: 600px) {
+  .bunkai-detail__video-section {
+    padding: 1.25rem 1rem;
+    margin-top: 2rem;
+  }
+  .bunkai-detail__comments-section {
+    padding: 1.25rem 1rem;
+    margin-top: 2rem;
+  }
 }
