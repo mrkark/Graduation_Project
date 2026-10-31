@@ -1,4 +1,5 @@
 import React from 'react';
+import { Search, Swords, Shield } from 'lucide-react';
 import './JapaneseDecor.css';
 
 /**
@@ -32,92 +33,30 @@ export function HankoSeal({
 }
 
 /**
- * ShotokanTiger — Канонический круглый тигр Сётокан (Тора-но маки / 虎の巻)
- * Эмблема мастера Хоана Косуги для первого трактата Гитина Фунакоси.
+ * ShotokanTiger — Символ боевого духа Сётокан (открытый источник: Lucide Icons)
  */
-export function ShotokanTiger({ size = 48, color = 'currentColor', className = '' }) {
+export function ShotokanTiger({ size = 32, color = 'currentColor', className = '' }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+    <Swords
+      size={size}
+      color={color}
       className={`shotokan-tiger-svg ${className}`}
       aria-hidden="true"
-    >
-      {/* Внешнее кольцо с двойным традиционным кантом */}
-      <circle cx="50" cy="50" r="46" stroke={color} strokeWidth="3" strokeDasharray="300" strokeDashoffset="0" opacity="0.9" />
-      <circle cx="50" cy="50" r="42" stroke={color} strokeWidth="1" strokeOpacity="0.6" />
-
-      {/* Стилизованный круглый тигр Сётокан */}
-      <g stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none">
-        {/* Голова и оскал тигра */}
-        <path d="M 46 22 C 48 18, 54 18, 56 22 C 58 25, 62 26, 65 24 C 64 28, 62 31, 59 33 C 58 37, 54 40, 50 40 C 46 40, 42 37, 41 33 C 38 31, 36 28, 35 24 C 38 26, 42 25, 44 22 Z" />
-        {/* Глаза и лобные полосы */}
-        <circle cx="45" cy="28" r="1.5" fill={color} />
-        <circle cx="55" cy="28" r="1.5" fill={color} />
-        <path d="M 50 20 L 50 26 M 47 24 L 53 24" strokeWidth="1.5" />
-
-        {/* Выгнутая мощная спина в прыжке по кругу */}
-        <path d="M 59 31 C 68 32, 78 40, 78 52 C 78 64, 70 76, 56 78 C 42 80, 28 74, 24 60 C 20 46, 28 32, 41 30" />
-
-        {/* Полосы тигра (традиционные каллиграфические росчерки) */}
-        <path d="M 72 44 C 67 46, 64 50, 65 54" strokeWidth="2.5" />
-        <path d="M 75 53 C 69 55, 66 59, 67 63" strokeWidth="2.5" />
-        <path d="M 70 63 C 65 65, 62 69, 61 73" strokeWidth="2" />
-        <path d="M 28 50 C 33 52, 35 56, 33 60" strokeWidth="2" />
-        <path d="M 32 61 C 37 63, 38 67, 36 71" strokeWidth="2" />
-
-        {/* Лапы с когтями */}
-        <path d="M 58 38 C 64 42, 68 47, 65 52 M 63 53 L 67 52 M 64 55 L 68 55" />
-        <path d="M 42 38 C 36 43, 33 48, 36 53 M 34 54 L 38 53" />
-        <path d="M 36 70 C 38 75, 42 77, 47 76 M 44 79 L 46 76 M 47 80 L 49 76" />
-
-        {/* Хвост тигра, закрученный вверх к небу */}
-        <path d="M 25 58 C 22 52, 23 42, 30 36 C 33 33, 35 34, 34 37 C 32 40, 27 46, 30 52" strokeWidth="2.4" />
-      </g>
-    </svg>
+    />
   );
 }
 
 /**
- * JapaneseKamon — Традиционный японский герб (Мон / 家紋)
- * symbol: 'mitsu-tomoe' (три вихря), 'takanoha' (перья ястреба), 'asanoha' (лист конопли)
+ * JapaneseKamon — Традиционный герб Додзё (открытый источник: Lucide Icons)
  */
-export function JapaneseKamon({ symbol = 'mitsu-tomoe', size = 32, color = 'currentColor', className = '' }) {
-  if (symbol === 'asanoha') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 40 40" fill="none" className={`kamon-svg ${className}`}>
-        <circle cx="20" cy="20" r="18" stroke={color} strokeWidth="1.5" />
-        <path d="M 20 2 L 35.6 11 L 35.6 29 L 20 38 L 4.4 29 L 4.4 11 Z" stroke={color} strokeWidth="1" />
-        <path d="M 20 2 L 20 38 M 4.4 11 L 35.6 29 M 4.4 29 L 35.6 11" stroke={color} strokeWidth="1" />
-        <path d="M 20 20 L 20 2 M 20 20 L 35.6 11 M 20 20 L 35.6 29 M 20 20 L 20 38 M 20 20 L 4.4 29 M 20 20 L 4.4 11" stroke={color} strokeWidth="1.5" />
-      </svg>
-    );
-  }
-
-  // По умолчанию: Mitsu-Tomoe (Три вихря духа Будо)
+export function JapaneseKamon({ size = 32, color = 'currentColor', className = '' }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" className={`kamon-svg ${className}`}>
-      <circle cx="50" cy="50" r="46" stroke={color} strokeWidth="3" />
-      <circle cx="50" cy="50" r="42" stroke={color} strokeWidth="1" strokeOpacity="0.5" />
-      <g fill={color} opacity="0.9">
-        {/* Tomoe 1 (Верхний вихрь) */}
-        <path d="M 50 16 C 60 16, 68 24, 68 34 C 68 44, 60 50, 50 50 C 44 50, 40 46, 40 40 C 40 26, 44 16, 50 16 Z" />
-        <path d="M 68 34 C 68 54, 50 70, 32 64 C 40 68, 56 64, 60 48 C 64 36, 60 26, 50 16 C 62 18, 68 24, 68 34 Z" />
-        {/* Tomoe 2 (Правый нижний вихрь) */}
-        <g transform="rotate(120 50 50)">
-          <path d="M 50 16 C 60 16, 68 24, 68 34 C 68 44, 60 50, 50 50 C 44 50, 40 46, 40 40 C 40 26, 44 16, 50 16 Z" />
-          <path d="M 68 34 C 68 54, 50 70, 32 64 C 40 68, 56 64, 60 48 C 64 36, 60 26, 50 16 C 62 18, 68 24, 68 34 Z" />
-        </g>
-        {/* Tomoe 3 (Левый нижний вихрь) */}
-        <g transform="rotate(240 50 50)">
-          <path d="M 50 16 C 60 16, 68 24, 68 34 C 68 44, 60 50, 50 50 C 44 50, 40 46, 40 40 C 40 26, 44 16, 50 16 Z" />
-          <path d="M 68 34 C 68 54, 50 70, 32 64 C 40 68, 56 64, 60 48 C 64 36, 60 26, 50 16 C 62 18, 68 24, 68 34 Z" />
-        </g>
-      </g>
-    </svg>
+    <Shield
+      size={size}
+      color={color}
+      className={`kamon-svg ${className}`}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -235,25 +174,16 @@ export function MeifudaPlaque({
 }
 
 /**
- * SearchIcon — Минималистичная монохромная иконка лупы в традиционном стиле
+ * SearchIcon — Иконка поиска (открытый источник: Lucide Icons)
  */
 export function SearchIcon({ size = 18, color = 'currentColor', className = '' }) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <Search
+      size={size}
+      color={color}
       className={`search-icon-svg ${className}`}
       aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="7.5" />
-      <line x1="21" y1="21" x2="16.5" y2="16.5" />
-    </svg>
+    />
   );
 }
 

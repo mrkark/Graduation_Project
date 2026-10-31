@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Database, CheckCircle, Clock, RefreshCw } from 'lucide-react';
 import { fetchBackups, createBackup } from '../../api/admin';
 
 export default function AdminBackupsPage() {
@@ -71,16 +72,17 @@ export default function AdminBackupsPage() {
             className="btn btn-primary"
             onClick={onCreate}
             disabled={creating}
-            style={{ minWidth: 240 }}
+            style={{ minWidth: 240, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           >
-            {creating ? '⏳ Создание бэкапа…' : '+ Создать резервную копию БД'}
+            <Database size={16} />
+            <span>{creating ? 'Создание бэкапа…' : 'Создать резервную копию БД'}</span>
           </button>
         </div>
 
         {/* Сводка состояния бэкапов */}
         <div className="admin-metrics-grid" style={{ marginTop: '1.25rem' }}>
           <div className="admin-metric-card">
-            <div className="admin-metric-card__icon">💾</div>
+            <div className="admin-metric-card__icon"><Database size={26} color="var(--gold)" /></div>
             <div className="admin-metric-card__body">
               <span className="admin-metric-card__val">{backups.length}</span>
               <span className="admin-metric-card__lbl">Всего копий</span>
@@ -89,7 +91,7 @@ export default function AdminBackupsPage() {
           </div>
 
           <div className="admin-metric-card">
-            <div className="admin-metric-card__icon">✔</div>
+            <div className="admin-metric-card__icon"><CheckCircle size={26} color="#34d399" /></div>
             <div className="admin-metric-card__body">
               <span className="admin-metric-card__val">{successBackups}</span>
               <span className="admin-metric-card__lbl">Успешных снимков</span>
@@ -98,7 +100,7 @@ export default function AdminBackupsPage() {
           </div>
 
           <div className="admin-metric-card">
-            <div className="admin-metric-card__icon">⏱</div>
+            <div className="admin-metric-card__icon"><Clock size={26} color="var(--gold)" /></div>
             <div className="admin-metric-card__body">
               <span className="admin-metric-card__val" style={{ fontSize: '1.2rem', marginTop: '0.4rem' }}>
                 {lastBackup ? new Date(lastBackup.Created_At).toLocaleDateString('ru-RU') : '—'}
@@ -116,7 +118,8 @@ export default function AdminBackupsPage() {
       <div className="admin-section-header" style={{ marginTop: '2rem' }}>
         <h3>Журнал резервных копий</h3>
         <button type="button" className="btn btn-subtle" onClick={load} disabled={loading}>
-          {loading ? 'Обновление…' : '🔄 Обновить'}
+          <RefreshCw size={14} className={loading ? 'admin-spin' : ''} />
+          <span>{loading ? 'Обновление…' : 'Обновить'}</span>
         </button>
       </div>
 

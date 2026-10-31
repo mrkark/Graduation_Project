@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Play, ExternalLink, RefreshCw } from 'lucide-react';
 import './VideoEmbed.css';
 
 export function getYouTubeEmbedInfo(url) {
@@ -99,12 +100,10 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
 
               <div className="video-embed-facade__center">
                 <div className="video-embed-play-btn">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                  <Play size={28} fill="currentColor" />
                 </div>
                 <div className="video-embed-play-text">
-                  ▶ Смотреть видео {title ? `«${title}»` : 'техники'}
+                  Смотреть видео {title ? `«${title}»` : 'техники'}
                 </div>
               </div>
 
@@ -139,7 +138,8 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
               className="video-embed-btn video-embed-btn--youtube"
               title="Открыть видео напрямую на YouTube в новой вкладке"
             >
-              ▶ Открыть на YouTube ↗
+              <span>Открыть на YouTube</span>
+              <ExternalLink size={13} />
             </a>
 
             <button

@@ -5,6 +5,7 @@ import { listFriendRequests } from '../api/friends';
 import { listNotifications, markNotificationRead } from '../api/notifications';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
+import { Bell, MessageSquare, ChevronDown } from 'lucide-react';
 import './MainLayout.css';
 
 export default function MainLayout() {
@@ -240,7 +241,7 @@ export default function MainLayout() {
                   title="Перейти в сообщения Додзё"
                   aria-label="Сообщения Додзё"
                 >
-                  <span className="navbar__chat-quick-icon">💬</span>
+                  <MessageSquare size={17} className="navbar__chat-quick-icon" />
                 </Link>
 
                 {/* Задача 39: Иконка уведомлений у иконки профиля */}
@@ -253,10 +254,7 @@ export default function MainLayout() {
                     aria-label="Уведомления"
                     title="Уведомления Додзё"
                   >
-                    <svg className="navbar__bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                    </svg>
+                    <Bell className="navbar__bell-icon" size={18} />
                     {totalUnreadCount > 0 && (
                       <span className="navbar__bell-badge">
                         {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
@@ -267,7 +265,7 @@ export default function MainLayout() {
                   {notificationsOpen && (
                     <div className="navbar__notifications-dropdown">
                       <div className="navbar__notifications-header">
-                        <span className="navbar__notifications-title">🔔 Уведомления</span>
+                        <span className="navbar__notifications-title">Уведомления</span>
                         {totalUnreadCount > 0 && (
                           <button
                             type="button"

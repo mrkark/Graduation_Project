@@ -130,20 +130,26 @@ async function run() {
 
     const usersCheck = await page.evaluate(() => {
       const table = document.querySelector('.admin-table');
+      const tableWrap = document.querySelector('.admin-table-wrap');
       const rows = document.querySelectorAll('.admin-table tbody tr');
       const controls = document.querySelector('.admin-controls-card');
       const blockBtns = document.querySelectorAll('.btn-warning, .btn-success');
       const modBtns = document.querySelectorAll('.btn-info, .btn-subtle');
+      const hasHorizontalScroll = tableWrap ? tableWrap.scrollWidth > tableWrap.clientWidth : false;
+      const lastTh = document.querySelector('.admin-table th:last-child');
+      const computedPaddingRight = lastTh ? window.getComputedStyle(lastTh).paddingRight : '';
       return {
         hasTable: !!table,
         rowCount: rows.length,
         hasControls: !!controls,
         hasBlockActions: blockBtns.length > 0,
         hasModeratorActions: modBtns.length > 0,
+        hasHorizontalScroll,
+        edgePaddingRight: computedPaddingRight,
       };
     });
     console.log('[TEST] Admin Users Check:', JSON.stringify(usersCheck));
-    if (usersCheck.hasTable && usersCheck.rowCount > 0 && usersCheck.hasBlockActions && usersCheck.hasModeratorActions) {
+    if (usersCheck.hasTable && usersCheck.rowCount > 0 && usersCheck.hasBlockActions && usersCheck.hasModeratorActions && !usersCheck.hasHorizontalScroll) {
       results.adminUsersTableUsecases = true;
     }
     await page.screenshot({ path: path.join(screenshotDir, 'admin_users_desktop.png'), fullPage: false });
@@ -176,6 +182,7 @@ async function run() {
     console.log('[TEST] Navigating to http://localhost:5173/admin/backups...');
     await page.goto('http://localhost:5173/admin/backups', { waitUntil: 'domcontentloaded', timeout: 15000 });
     await page.waitForSelector('.admin-backups-page', { timeout: 10000 });
+    await page.waitForSelector('.admin-table tbody tr', { timeout: 10000 });
 
     const backupsCheck = await page.evaluate(() => {
       const createBtn = document.querySelector('.btn-primary');

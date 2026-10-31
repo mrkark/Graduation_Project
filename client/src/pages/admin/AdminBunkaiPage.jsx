@@ -1,5 +1,16 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Check,
+  X,
+  Eye,
+  Trash2,
+  Search,
+  RefreshCw,
+} from 'lucide-react';
 import { listBunkai, approveBunkai, rejectBunkai, deleteBunkai } from '../../api/bunkai';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -113,21 +124,24 @@ export default function AdminBunkaiPage() {
               className={`admin-status-tab ${status === 'pending' ? 'active' : ''}`}
               onClick={() => setStatus('pending')}
             >
-              ⏳ На модерации
+              <Clock size={15} />
+              <span>На модерации</span>
             </button>
             <button
               type="button"
               className={`admin-status-tab ${status === 'approved' ? 'active' : ''}`}
               onClick={() => setStatus('approved')}
             >
-              ✔ Одобренные
+              <CheckCircle size={15} />
+              <span>Одобренные</span>
             </button>
             <button
               type="button"
               className={`admin-status-tab ${status === 'rejected' ? 'active' : ''}`}
               onClick={() => setStatus('rejected')}
             >
-              ✕ Отклонённые
+              <XCircle size={15} />
+              <span>Отклонённые</span>
             </button>
           </div>
 
@@ -215,12 +229,13 @@ export default function AdminBunkaiPage() {
                         {b.Status !== 'approved' && (
                           <button
                             type="button"
-                            className="btn btn-success"
+                            className="btn btn-success btn-sm"
                             onClick={() => onApprove(b.Bunkai_ID, b.Title)}
                             disabled={isBusy}
                             title="Утвердить публикацию бункая в общем каталоге"
                           >
-                            ✔ Утвердить
+                            <Check size={13} />
+                            <span>Утвердить</span>
                           </button>
                         )}
 
@@ -228,31 +243,33 @@ export default function AdminBunkaiPage() {
                         {b.Status !== 'rejected' && (
                           <button
                             type="button"
-                            className="btn btn-warning"
+                            className="btn btn-warning btn-sm"
                             onClick={() => onReject(b.Bunkai_ID, b.Title)}
                             disabled={isBusy}
                             title="Отклонить публикацию с пометкой"
                           >
-                            ✕ Отклонить
+                            <X size={13} />
+                            <span>Отклонить</span>
                           </button>
                         )}
 
                         <Link
                           to={`/bunkai/${b.Bunkai_ID}`}
-                          className="btn btn-subtle"
+                          className="btn btn-subtle btn-sm"
                           title="Открыть 3D плеер и изучить движения"
                         >
-                          👁 3D
+                          <Eye size={13} />
+                          <span>3D</span>
                         </Link>
 
                         <button
                           type="button"
-                          className="btn btn-danger"
+                          className="btn btn-danger btn-sm"
                           onClick={() => onDelete(b.Bunkai_ID, b.Title)}
                           disabled={isBusy}
                           title="Удалить сценарий из базы"
                         >
-                          🗑
+                          <Trash2 size={13} />
                         </button>
                       </div>
                     </td>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { RefreshCw, X, Filter } from 'lucide-react';
 import { fetchLogs } from '../../api/admin';
 
 const COMMON_ACTIONS = [
@@ -93,8 +94,9 @@ export default function AdminLogsPage() {
             </p>
           </div>
           {hasActiveFilters && (
-            <button type="button" className="btn btn-subtle" onClick={handleReset}>
-              ✕ Сбросить фильтры
+            <button type="button" className="btn btn-subtle" onClick={handleReset} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+              <X size={14} />
+              <span>Сбросить фильтры</span>
             </button>
           )}
         </div>
@@ -195,8 +197,9 @@ export default function AdminLogsPage() {
           <span className="admin-counter-pill">
             Найдено событий: <strong>{meta.total}</strong>
           </span>
-          <button type="button" className="btn btn-subtle" onClick={loadLogs} disabled={loading}>
-            {loading ? 'Обновление…' : '🔄 Обновить журнал'}
+          <button type="button" className="btn btn-subtle" onClick={loadLogs} disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+            <RefreshCw size={14} className={loading ? 'admin-spin' : ''} />
+            <span>{loading ? 'Обновление…' : 'Обновить журнал'}</span>
           </button>
         </div>
       </div>

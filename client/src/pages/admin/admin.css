@@ -481,6 +481,66 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
+/* Устранение горизонтального скролла в разделе пользователей и отступ кнопок */
+.admin-users-page .admin-table-wrap {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.admin-users-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 0.75rem 0.65rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-users-table th:last-child,
+.admin-users-table td:last-child,
+.admin-users-table .admin-actions-cell {
+  padding-right: 2rem !important; /* Отодвигаем кнопки назначения ролей от правого края */
+  text-align: right;
+  overflow: visible;
+}
+
+.admin-users-table .admin-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.admin-users-table .btn-sm {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.admin-user-email {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.admin-spin {
+  animation: adminSpin 1s linear infinite;
+}
+
+@keyframes adminSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;

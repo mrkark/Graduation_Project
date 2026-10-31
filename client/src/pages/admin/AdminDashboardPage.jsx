@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Users,
+  Swords,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  Database,
+  CheckCircle,
+  ArrowRight,
+} from 'lucide-react';
 import { fetchStats } from '../../api/admin';
 import { useAuthStore } from '../../store/authStore';
 
@@ -44,18 +54,18 @@ export default function AdminDashboardPage() {
         {isAdmin ? (
           <>
             <div className="admin-metric-card">
-              <div className="admin-metric-card__icon">👥</div>
+              <div className="admin-metric-card__icon"><Users size={26} color="var(--gold)" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.users}</span>
                 <span className="admin-metric-card__lbl">Пользователей</span>
                 <span className="admin-metric-card__sub">
-                  {stats.blockedUsers > 0 ? `⛔ Заблокировано: ${stats.blockedUsers}` : '✔ Блокировок нет'}
+                  {stats.blockedUsers > 0 ? `Заблокировано: ${stats.blockedUsers}` : 'Блокировок нет'}
                 </span>
               </div>
             </div>
 
             <div className="admin-metric-card admin-metric-card--alert">
-              <div className="admin-metric-card__icon">⚔️</div>
+              <div className="admin-metric-card__icon"><Swords size={26} color="#f87171" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.bunkaiPending || 0}</span>
                 <span className="admin-metric-card__lbl">Бункаев на модерации</span>
@@ -64,7 +74,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="admin-metric-card">
-              <div className="admin-metric-card__icon">💬</div>
+              <div className="admin-metric-card__icon"><MessageSquare size={26} color="var(--gold)" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.comments || 0}</span>
                 <span className="admin-metric-card__lbl">Комментариев в Додзё</span>
@@ -73,12 +83,12 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="admin-metric-card">
-              <div className="admin-metric-card__icon">🥋</div>
+              <div className="admin-metric-card__icon"><BookOpen size={26} color="var(--gold)" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.kataTotal || 26}</span>
                 <span className="admin-metric-card__lbl">Форм Ката Сётокан</span>
                 <span className="admin-metric-card__sub">
-                  {stats.kataPending > 0 ? `На проверке: ${stats.kataPending}` : '✔ База укомплектована'}
+                  {stats.kataPending > 0 ? `На проверке: ${stats.kataPending}` : 'База укомплектована'}
                 </span>
               </div>
             </div>
@@ -86,7 +96,7 @@ export default function AdminDashboardPage() {
         ) : (
           <>
             <div className="admin-metric-card admin-metric-card--alert">
-              <div className="admin-metric-card__icon">⚔️</div>
+              <div className="admin-metric-card__icon"><Swords size={26} color="#f87171" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.bunkaiPending || 0}</span>
                 <span className="admin-metric-card__lbl">Бункаев ждут проверки</span>
@@ -95,7 +105,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="admin-metric-card">
-              <div className="admin-metric-card__icon">✔</div>
+              <div className="admin-metric-card__icon"><CheckCircle size={26} color="#34d399" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.bunkaiTotal || 0}</span>
                 <span className="admin-metric-card__lbl">Опубликованных бункаев</span>
@@ -104,7 +114,7 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="admin-metric-card">
-              <div className="admin-metric-card__icon">💬</div>
+              <div className="admin-metric-card__icon"><MessageSquare size={26} color="var(--gold)" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.comments || 0}</span>
                 <span className="admin-metric-card__lbl">Комментариев</span>
@@ -124,7 +134,7 @@ export default function AdminDashboardPage() {
         {isAdmin ? (
           <>
             <Link to="/admin/users" className="admin-action-card">
-              <div className="admin-action-card__icon">👥</div>
+              <div className="admin-action-card__icon"><Users size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Управление учетными записями</h4>
                 <p>Блокировка и разблокировка доступа, назначение и снятие модераторов Додзё</p>
@@ -133,7 +143,7 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link to="/admin/logs" className="admin-action-card">
-              <div className="admin-action-card__icon">📜</div>
+              <div className="admin-action-card__icon"><FileText size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Журнал системного аудита</h4>
                 <p>Мониторинг событий и фильтрация по дате, пользователю, IP и коду действия</p>
@@ -142,7 +152,7 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link to="/admin/backups" className="admin-action-card">
-              <div className="admin-action-card__icon">💾</div>
+              <div className="admin-action-card__icon"><Database size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Резервные копии БД</h4>
                 <p>Создание полных сжатых резервных копий Microsoft SQL Server</p>
@@ -151,7 +161,7 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link to="/admin/bunkai" className="admin-action-card">
-              <div className="admin-action-card__icon">⚔️</div>
+              <div className="admin-action-card__icon"><Swords size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Модерация бункай</h4>
                 <p>Утверждение и отклонение боевых сценариев, присланных учениками</p>
@@ -162,7 +172,7 @@ export default function AdminDashboardPage() {
         ) : (
           <>
             <Link to="/admin/bunkai" className="admin-action-card">
-              <div className="admin-action-card__icon">⚔️</div>
+              <div className="admin-action-card__icon"><Swords size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Модерация бункай</h4>
                 <p>Утверждение публикаций боевых сценариев или отклонение с пометкой</p>
@@ -171,7 +181,7 @@ export default function AdminDashboardPage() {
             </Link>
 
             <Link to="/admin/comments" className="admin-action-card">
-              <div className="admin-action-card__icon">💬</div>
+              <div className="admin-action-card__icon"><MessageSquare size={24} color="var(--gold)" /></div>
               <div className="admin-action-card__info">
                 <h4>Модерация комментариев</h4>
                 <p>Просмотр всех сообщений пользователей в обсуждениях ката и бункай, удаление нарушений</p>

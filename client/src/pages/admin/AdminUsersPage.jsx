@@ -1,4 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
+import {
+  Lock,
+  Unlock,
+  ShieldCheck,
+  ShieldAlert,
+  Crown,
+  Trash2,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 import { listUsers, blockUser, unblockUser, changeUserRole, deleteUser } from '../../api/admin';
 import { useAuthStore } from '../../store/authStore';
 
@@ -191,7 +201,8 @@ export default function AdminUsersPage() {
             Найдено: <strong>{filteredUsers.length}</strong> каратэк
           </span>
           <button type="button" className="btn btn-subtle" onClick={load} disabled={loading}>
-            {loading ? 'Обновление…' : '🔄 Обновить'}
+            <RefreshCw size={14} className={loading ? 'admin-spin' : ''} />
+            <span>{loading ? 'Обновление…' : 'Обновить'}</span>
           </button>
         </div>
       </div>
@@ -204,15 +215,15 @@ export default function AdminUsersPage() {
         </div>
       ) : (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-users-table">
             <thead>
               <tr>
-                <th>Каратэка</th>
-                <th>Email</th>
-                <th>Роль</th>
-                <th>Статус</th>
-                <th>Регистрация</th>
-                <th style={{ textAlign: 'right' }}>Действия управления</th>
+                <th style={{ width: '18%' }}>Каратэка</th>
+                <th style={{ width: '18%' }}>Email</th>
+                <th style={{ width: '11%' }}>Роль</th>
+                <th style={{ width: '11%' }}>Статус</th>
+                <th style={{ width: '9%' }}>Регистрация</th>
+                <th style={{ width: '33%', textAlign: 'right' }}>Действия управления</th>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +248,11 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
                     </td>
-                    <td>{u.Email}</td>
+                    <td>
+                      <span className="admin-user-email" title={u.Email}>
+                        {u.Email}
+                      </span>
+                    </td>
                     <td>
                       <span
                         className={`admin-role-badge ${
@@ -265,40 +280,54 @@ export default function AdminUsersPage() {
                         <span>{u.Is_Blocked ? 'Заблокирован' : 'Активен'}</span>
                       </span>
                     </td>
-                    <td>{new Date(u.Created_At).toLocaleDateString('ru-RU')}</td>
-                    <td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {new Date(u.Created_At).toLocaleDateString('ru-RU')}
+                    </td>
+                    <td className="admin-actions-cell">
                       <div className="admin-row-actions">
                         {/* 1. Блокировка / Разблокировка учетной записи (Прецедент UML) */}
                         <button
                           type="button"
-                          className={`btn ${u.Is_Blocked ? 'btn-success' : 'btn-warning'}`}
+                          className={`btn ${u.Is_Blocked ? 'btn-success' : 'btn-warning'} btn-sm`}
                           onClick={() => onToggleBlock(u)}
                           disabled={isBusy || isSelf}
                           title={u.Is_Blocked ? 'Разблокировать доступ к аккаунту' : 'Заблокировать доступ к аккаунту'}
                         >
-                          {u.Is_Blocked ? '🔓 Разблокировать' : '🔒 Блокировать'}
+                          {u.Is_Blocked ? (
+                            <>
+                              <Unlock size={12} />
+                              <span>Разблок</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lock size={12} />
+                              <span>Блок</span>
+                            </>
+                          )}
                         </button>
 
                         {/* 2. Добавление / Удаление модератора (Прецедент UML) */}
                         {isTargetModerator ? (
                           <button
                             type="button"
-                            className="btn btn-subtle"
+                            className="btn btn-subtle btn-sm"
                             onClick={() => onRevokeModerator(u)}
                             disabled={isBusy}
                             title="Снять статус модератора (перевести в обычные пользователи)"
                           >
-                            ✕ Снять модератора
+                            <ShieldAlert size={12} />
+                            <span>Снять</span>
                           </button>
                         ) : !isTargetAdmin ? (
                           <button
                             type="button"
-                            className="btn btn-info"
+                            className="btn btn-info btn-sm"
                             onClick={() => onAssignModerator(u)}
                             disabled={isBusy}
                             title="Назначить модератором Додзё"
                           >
-                            + Назначить модератором
+                            <ShieldCheck size={12} />
+                            <span>Модератор</span>
                           </button>
                         ) : null}
 
@@ -306,12 +335,13 @@ export default function AdminUsersPage() {
                         {!isSelf && (
                           <button
                             type="button"
-                            className="btn btn-gold"
+                            className="btn btn-gold btn-sm"
                             onClick={() => onToggleAdmin(u)}
                             disabled={isBusy}
                             title={isTargetAdmin ? 'Снять права администратора' : 'Сделать администратором системы'}
                           >
-                            {isTargetAdmin ? 'Снять админа' : '👑 Сделать админом'}
+                            <Crown size={12} />
+                            <span>{isTargetAdmin ? 'Снять' : 'Админ'}</span>
                           </button>
                         )}
 
@@ -319,12 +349,12 @@ export default function AdminUsersPage() {
                         {!isSelf && (
                           <button
                             type="button"
-                            className="btn btn-danger"
+                            className="btn btn-danger btn-sm"
                             onClick={() => onDelete(u)}
                             disabled={isBusy}
                             title="Удалить пользователя из системы"
                           >
-                            🗑
+                            <Trash2 size={12} />
                           </button>
                         )}
                       </div>

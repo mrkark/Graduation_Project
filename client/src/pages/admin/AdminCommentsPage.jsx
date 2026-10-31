@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { Trash2, Search, MessageSquare } from 'lucide-react';
 import { fetchAdminComments, deleteAdminComment } from '../../api/admin';
 
 export default function AdminCommentsPage() {
@@ -171,12 +172,13 @@ export default function AdminCommentsPage() {
                           {/* Прецедент: Удаление комментариев */}
                           <button
                             type="button"
-                            className="btn btn-danger"
+                            className="btn btn-danger btn-sm"
                             onClick={() => onDelete(c)}
                             disabled={isBusy}
                             title="Удалить комментарий"
                           >
-                            🗑 Удалить
+                            <Trash2 size={13} />
+                            <span>Удалить</span>
                           </button>
                         </div>
                       </td>
