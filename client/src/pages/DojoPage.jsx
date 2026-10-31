@@ -558,7 +558,6 @@ export default function DojoPage() {
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{m.Display_Name || m.Username}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>@{m.Username}</div>
                           </div>
                         </div>
 

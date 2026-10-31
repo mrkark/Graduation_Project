@@ -1,6 +1,20 @@
 import { useEffect, useState } from 'react';
 import { fetchLogs } from '../../api/admin';
 
+const COMMON_ACTIONS = [
+  { value: '', label: 'Все действия' },
+  { value: 'login', label: 'Вход в систему (login)' },
+  { value: 'register', label: 'Регистрация (register)' },
+  { value: 'block_user', label: 'Блокировка пользователя (block_user)' },
+  { value: 'unblock_user', label: 'Разблокировка (unblock_user)' },
+  { value: 'change_role', label: 'Смена роли (change_role)' },
+  { value: 'delete_user', label: 'Удаление пользователя (delete_user)' },
+  { value: 'approve_bunkai', label: 'Утверждение бункай (approve_bunkai)' },
+  { value: 'reject_bunkai', label: 'Отклонение бункай (reject_bunkai)' },
+  { value: 'delete_comment', label: 'Удаление комментария (delete_comment)' },
+  { value: 'create_backup', label: 'Создание бэкапа (create_backup)' },
+];
+
 export default function AdminLogsPage() {
   const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(1);
@@ -46,176 +60,244 @@ export default function AdminLogsPage() {
     setPage(1);
   }
 
+  function setPresetDates(days) {
+    if (days === 0) {
+      const today = new Date().toISOString().split('T')[0];
+      setDateFrom(today);
+      setDateTo(today);
+    } else if (days > 0) {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(to.getDate() - days);
+      setDateFrom(from.toISOString().split('T')[0]);
+      setDateTo(to.toISOString().split('T')[0]);
+    } else {
+      setDateFrom('');
+      setDateTo('');
+    }
+    setPage(1);
+  }
+
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+  const hasActiveFilters = Boolean(actionFilter || ipFilter || dateFrom || dateTo || userIdFilter);
 
   return (
-    <div>
+    <div className="admin-logs-page">
       {/* Панель фильтрации системного аудита (Диаграмма прецедентов: Фильтрация по дате, IP, пользователю, коду действия) */}
-      <div
-        style={{
-          background: 'var(--surface-sunken, rgba(0,0,0,0.3))',
-          padding: '1rem',
-          borderRadius: '8px',
-          border: '1px solid var(--border, #333)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--gold, #d4a24c)', marginBottom: '0.8rem' }}>
-          🔍 Фильтрация событий системного аудита:
+      <div className="admin-controls-card">
+        <div className="admin-controls-card__header">
+          <div>
+            <h3>Мониторинг журнала системного аудита</h3>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Регистрация и аудит всех критических действий администраторов, модераторов и пользователей
+            </p>
+          </div>
+          {hasActiveFilters && (
+            <button type="button" className="btn btn-subtle" onClick={handleReset}>
+              ✕ Сбросить фильтры
+            </button>
+          )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
-          {/* По коду действия */}
-          <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-              Код действия:
-            </label>
-            <input
-              placeholder="e.g. login, block_user, approve_bunkai…"
+        <div className="admin-controls-card__grid" style={{ marginTop: '1rem' }}>
+          {/* 1. Фильтрация по коду действия */}
+          <div className="admin-field-wrap">
+            <label>Код действия</label>
+            <select
+              className="admin-select"
               value={actionFilter}
               onChange={(e) => {
                 setActionFilter(e.target.value);
                 setPage(1);
               }}
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.85rem' }}
-            />
+            >
+              {COMMON_ACTIONS.map((a) => (
+                <option key={a.value} value={a.value}>{a.label}</option>
+              ))}
+            </select>
           </div>
 
-          {/* По пользователю (ID) */}
-          <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-              ID пользователя:
-            </label>
+          {/* 2. Фильтрация по пользователю */}
+          <div className="admin-field-wrap">
+            <label>ID пользователя</label>
             <input
               type="number"
-              placeholder="ID пользователя…"
+              className="admin-input"
+              placeholder="e.g. 1, 2, 5…"
               value={userIdFilter}
               onChange={(e) => {
                 setUserIdFilter(e.target.value);
                 setPage(1);
               }}
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.85rem' }}
             />
           </div>
 
-          {/* По IP адресу */}
-          <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-              IP-адрес:
-            </label>
+          {/* 3. Фильтрация по IP-адресу */}
+          <div className="admin-field-wrap">
+            <label>IP-адрес</label>
             <input
+              className="admin-input"
               placeholder="e.g. 127.0.0.1, 192.168…"
               value={ipFilter}
               onChange={(e) => {
                 setIpFilter(e.target.value);
                 setPage(1);
               }}
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.85rem' }}
             />
           </div>
 
-          {/* По дате: С */}
-          <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-              Дата С:
-            </label>
+          {/* 4. Фильтрация по дате: Период */}
+          <div className="admin-field-wrap">
+            <label>Период: Дата С</label>
             <input
               type="date"
+              className="admin-input"
               value={dateFrom}
               onChange={(e) => {
                 setDateFrom(e.target.value);
                 setPage(1);
               }}
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.85rem' }}
             />
           </div>
 
-          {/* По дате: По */}
-          <div>
-            <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>
-              Дата По:
-            </label>
+          <div className="admin-field-wrap">
+            <label>Период: Дата По</label>
             <input
               type="date"
+              className="admin-input"
               value={dateTo}
               onChange={(e) => {
                 setDateTo(e.target.value);
                 setPage(1);
               }}
-              style={{ width: '100%', padding: '0.45rem', fontSize: '0.85rem' }}
             />
           </div>
         </div>
 
-        <div style={{ marginTop: '0.8rem', display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
-          {(actionFilter || ipFilter || dateFrom || dateTo || userIdFilter) && (
-            <button type="button" className="btn btn-subtle" onClick={handleReset} style={{ fontSize: '0.82rem' }}>
-              ✕ Сбросить фильтры
-            </button>
-          )}
+        {/* Быстрые пресеты дат */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Быстрый выбор периода:</span>
+          <button type="button" className="btn btn-subtle" style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem' }} onClick={() => setPresetDates(0)}>
+            Сегодня
+          </button>
+          <button type="button" className="btn btn-subtle" style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem' }} onClick={() => setPresetDates(7)}>
+            7 дней
+          </button>
+          <button type="button" className="btn btn-subtle" style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem' }} onClick={() => setPresetDates(30)}>
+            30 дней
+          </button>
+          <button type="button" className="btn btn-subtle" style={{ fontSize: '0.78rem', padding: '0.25rem 0.6rem' }} onClick={() => setPresetDates(-1)}>
+            За всё время
+          </button>
+        </div>
+
+        <div className="admin-controls-card__footer">
+          <span className="admin-counter-pill">
+            Найдено событий: <strong>{meta.total}</strong>
+          </span>
+          <button type="button" className="btn btn-subtle" onClick={loadLogs} disabled={loading}>
+            {loading ? 'Обновление…' : '🔄 Обновить журнал'}
+          </button>
         </div>
       </div>
 
-      <div style={{ marginBottom: '0.8rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        Найдено записей аудита: <strong>{meta.total}</strong>
-      </div>
-
+      {/* Таблица событий */}
       {loading ? (
-        <p className="loading">Загрузка журнала…</p>
+        <p className="loading">Загрузка журнала аудита…</p>
       ) : logs.length === 0 ? (
-        <p className="empty-state">Событий с выбранными параметрами фильтрации не найдено.</p>
+        <div className="admin-empty-box">
+          <p>Событий аудита с выбранными параметрами фильтрации не найдено.</p>
+        </div>
       ) : (
         <>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Время (UTC)</th>
-                <th>Пользователь</th>
-                <th>Действие</th>
-                <th>Сущность</th>
-                <th>IP-адрес</th>
-                <th>Подробности</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log) => (
-                <tr key={log.Log_ID}>
-                  <td>{new Date(log.Created_At).toLocaleString('ru-RU')}</td>
-                  <td>
-                    {log.User?.Username ? (
-                      <span style={{ fontWeight: 600 }}>{log.User.Username}</span>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                  <td>
-                    <span className="badge" style={{ fontFamily: 'monospace' }}>
-                      {log.Action}
-                    </span>
-                  </td>
-                  <td>
-                    {log.Entity_Type || '—'} {log.Entity_ID ? `#${log.Entity_ID}` : ''}
-                  </td>
-                  <td><code>{log.Ip_Address || '—'}</code></td>
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {log.Details ? JSON.stringify(log.Details) : '—'}
-                  </td>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Время события</th>
+                  <th>Пользователь</th>
+                  <th>Действие</th>
+                  <th>Целевой объект</th>
+                  <th>IP-адрес</th>
+                  <th>Детали</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {logs.map((log) => {
+                  const isDanger = log.Action?.includes('delete') || log.Action?.includes('block') || log.Action?.includes('reject');
+                  const isSuccess = log.Action?.includes('approve') || log.Action?.includes('unblock') || log.Action?.includes('create_backup');
+
+                  return (
+                    <tr key={log.Log_ID}>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {new Date(log.Created_At).toLocaleString('ru-RU')}
+                      </td>
+                      <td>
+                        {log.User?.Username ? (
+                          <div className="admin-user-names">
+                            <span className="admin-user-login">{log.User.Username}</span>
+                            {log.User.Display_Name && log.User.Display_Name !== log.User.Username && (
+                              <span className="admin-user-display">{log.User.Display_Name}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)' }}>Система</span>
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`admin-action-badge ${
+                            isDanger
+                              ? 'admin-action-badge--danger'
+                              : isSuccess
+                              ? 'admin-action-badge--success'
+                              : 'admin-action-badge--info'
+                          }`}
+                        >
+                          {log.Action}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.85rem' }}>
+                          {log.Entity_Type ? `${log.Entity_Type} #${log.Entity_ID || ''}` : '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <code style={{ fontSize: '0.8rem', color: 'var(--gold)' }}>
+                          {log.Ip_Address || '—'}
+                        </code>
+                      </td>
+                      <td style={{ maxWidth: 260 }}>
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', wordBreak: 'break-word' }}>
+                          {log.Details ? JSON.stringify(log.Details) : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {totalPages > 1 && (
-            <div className="pagination" style={{ marginTop: '1rem' }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  className={`btn ${p === page ? 'btn-gold' : ''}`}
-                  onClick={() => setPage(p)}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="admin-pagination">
+              <button
+                type="button"
+                className="btn btn-subtle"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                ← Назад
+              </button>
+              <span>Страница {page} из {totalPages}</span>
+              <button
+                type="button"
+                className="btn btn-subtle"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Вперед →
+              </button>
             </div>
           )}
         </>

@@ -1,0 +1,12 @@
+{
+  "noTagsInNavbar": true,
+  "adminHeaderClean": true,
+  "adminZeroKanji": true,
+  "adminUsersTableUsecases": true,
+  "adminLogsFiltersWorking": true,
+  "adminBackupsWorking": true,
+  "moderatorPanelClean": true,
+  "moderatorRestrictedMenu": true,
+  "moderatorBunkaiTabs": true,
+  "moderatorCommentsList": true
+}

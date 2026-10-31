@@ -41,18 +41,18 @@ export function RedirectIfAuthenticated({ children }) {
   return children;
 }
 
-export function RequireAdmin() {
+export function RequireAdmin({ children }) {
   const role = useAuthStore((s) => s.role);
   if (role !== 'admin') {
     return <Navigate to="/" replace />;
   }
-  return <Outlet />;
+  return children || <Outlet />;
 }
 
-export function RequireAdminOrModerator() {
+export function RequireAdminOrModerator({ children }) {
   const role = useAuthStore((s) => s.role);
   if (role !== 'admin' && role !== 'moderator') {
     return <Navigate to="/" replace />;
   }
-  return <Outlet />;
+  return children || <Outlet />;
 }

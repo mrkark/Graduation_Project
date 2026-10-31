@@ -94,16 +94,6 @@ export default function ProfilePage() {
         <div className="profile-info">
           <div className="profile-name-row">
             <h2 className="profile-name">{user?.Display_Name || user?.Username}</h2>
-            <span className={`rank-badge ${roleInfo.rankClass}`}>
-              <span>{roleInfo.kanji}</span>
-              <span>{roleInfo.belt}</span>
-            </span>
-            <HankoSeal
-              text={role === 'admin' ? '先生' : role === 'moderator' ? '先輩' : '門下'}
-              size="sm"
-              variant={role === 'admin' ? 'vermilion' : 'gold'}
-              shape="square"
-            />
           </div>
           <p className="profile-meta">
             <span>Логин: <strong>{user?.Username}</strong></span>

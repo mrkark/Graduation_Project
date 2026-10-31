@@ -127,7 +127,7 @@ export default function FriendsPage() {
                       </div>
                       <div className="friend-card__meta">
                         <span className="friend-card__name">{f.Display_Name || f.Username}</span>
-                        <span className="friend-card__role">Ученик Додзё · @{f.Username}</span>
+                        <span className="friend-card__role">Ученик Додзё</span>
                       </div>
                     </div>
                     <div className="friend-card__actions">
@@ -256,7 +256,7 @@ export default function FriendsPage() {
                         </div>
                         <div className="friend-card__meta">
                           <span className="friend-card__name">{u.Display_Name || u.Username}</span>
-                          <span className="friend-card__role">@{u.Username}</span>
+                          <span className="friend-card__role">Каратэка Додзё</span>
                         </div>
                       </div>
                       {isAlreadyFriend ? (

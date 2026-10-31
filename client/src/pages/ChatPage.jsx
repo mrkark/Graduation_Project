@@ -342,7 +342,6 @@ export default function ChatPage() {
                       </span>
                       <div className="chat-new-user-meta">
                         <span className="chat-new-user-name">{f.Display_Name || f.Username}</span>
-                        <span className="chat-new-user-handle">@{f.Username}</span>
                       </div>
                     </button>
                   ))}

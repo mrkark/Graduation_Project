@@ -357,12 +357,6 @@ export default function MainLayout() {
                       )}
                     </span>
                     <span className="navbar__user-name">{user.Display_Name || user.Username}</span>
-                    {isStaff && (
-                      <span className="navbar__staff-pill">
-                        <span className="navbar__staff-kanji">{role === 'admin' ? '師範' : '先輩'}</span>
-                        <span>{role === 'admin' ? 'Сэнсэй' : 'Сэмпай'}</span>
-                      </span>
-                    )}
                     <span className="navbar__chevron">{userDropdownOpen ? '▴' : '▾'}</span>
                   </button>
 
