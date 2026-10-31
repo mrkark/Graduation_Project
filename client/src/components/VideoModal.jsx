@@ -89,8 +89,8 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, subtitle 
         </div>
 
         {/* Видеоплеер (16:9) */}
-        <div style={{ width: '100%', aspectRatio: '16 / 9', backgroundColor: '#000', position: 'relative' }}>
-          <VideoEmbed url={videoUrl} />
+        <div style={{ width: '100%', backgroundColor: '#000', position: 'relative' }}>
+          <VideoEmbed url={videoUrl} title={title} masterName={subtitle || 'Мастера JKS (Japan Karate Shoto Federation) · Масао Кагава (9 Дан)'} autoLoad={true} />
         </div>
 
         {/* Подвал модального окна */}
@@ -106,7 +106,7 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, subtitle 
           }}
         >
           <span style={{ color: 'var(--text-muted, #a8a29e)' }}>
-            Японские мастера Шотокан Карате-до (JKA / SKIF / WKF)
+            Японская Федерация Сётокан (JKS) · Шеф-инструктор Масао Кагава (9 Дан)
           </span>
 
           <div style={{ display: 'flex', gap: '0.8rem' }}>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getBunkai, getBunkaiSteps, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
 import { useAuthStore } from '../store/authStore';
@@ -6,10 +6,12 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
-import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
 import './BunkaiDetailPage.css';
+
+// Динамическая отложенная загрузка тяжелого 3D плеера (оптимизация загрузки страниц)
+const BunkaiMultiAvatarPlayer = lazy(() => import('../three/BunkaiMultiAvatarPlayer'));
 
 const DIFFICULTY_LABELS = {
   beginner: 'Базовый уровень',
@@ -27,6 +29,13 @@ export default function BunkaiDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('application'); // 'application' | 'video' | 'comments'
+  const [viewMode, setViewMode] = useState('video'); // 'video' | '3d' - видео по умолчанию для мгновенной загрузки
+
+  useEffect(() => {
+    if (bunkai && !bunkai.Video_URL) {
+      setViewMode('3d');
+    }
+  }, [bunkai]);
 
   const { isBunkaiFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
 
@@ -107,6 +116,17 @@ export default function BunkaiDetailPage() {
             >
               {isBunkaiFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
             </button>
+            {bunkai.Video_URL && (
+              <button
+                type="button"
+                className={`btn ${viewMode === 'video' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setViewMode(viewMode === 'video' ? '3d' : 'video')}
+                style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
+                title="Переключить режим: Видео мастеров JKS или 3D спарринг"
+              >
+                {viewMode === 'video' ? '🥋 Режим 3D' : '🎥 Видео JKS'}
+              </button>
+            )}
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>
 
@@ -138,13 +158,35 @@ export default function BunkaiDetailPage() {
         )}
       </header>
 
-      {/* 2. БОЛЬШАЯ 3D АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ (ТОРИ И УКЭ) */}
+      {/* 2. БОЛЬШАЯ АРЕНА БОЕВОГО ВЗАИМОДЕЙСТВИЯ (ВИДЕО JKS ИЛИ 3D СПАРРИНГ) */}
       <section className="bunkai-detail__arena-wrap">
         <div className="bunkai-detail__arena-header">
           <div className="bunkai-detail__arena-badge">
             <ShotokanTiger size={18} color="var(--gold)" />
-            <span>БОЕВОЙ СПАРРИНГ · КУМИТЭ БУНКАЙ</span>
+            <span>{viewMode === 'video' ? 'ЭТАЛОННЫЙ БУНКАЙ JKS · ВИДЕОРАЗБОР' : 'БОЕВОЙ СПАРРИНГ · КУМИТЭ БУНКАЙ'}</span>
           </div>
+
+          {bunkai.Video_URL && (
+            <div className="stage-mode-switcher">
+              <button
+                type="button"
+                className={`stage-mode-btn ${viewMode === 'video' ? 'active' : ''}`}
+                onClick={() => setViewMode('video')}
+                title="Смотреть каноническое видео боевого применения мастеров JKS"
+              >
+                🎥 Видео мастеров JKS
+              </button>
+              <button
+                type="button"
+                className={`stage-mode-btn ${viewMode === '3d' ? 'active' : ''}`}
+                onClick={() => setViewMode('3d')}
+                title="Интерактивный 3D спарринг Тори и Укэ"
+              >
+                🥋 3D Спарринг
+              </button>
+            </div>
+          )}
+
           <div className="bunkai-detail__arena-roles">
             <span className="bunkai-role-tag bunkai-role-tag--uke">
               <span className="bunkai-role-kanji">受</span> Укэ
@@ -156,13 +198,45 @@ export default function BunkaiDetailPage() {
           </div>
         </div>
 
-        <BunkaiMultiAvatarPlayer
-          steps={bunkaiSteps}
-          defaultParticipantMode={
-            bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
-          }
-          height={540}
-        />
+        {viewMode === 'video' && bunkai.Video_URL ? (
+          <div className="bunkai-detail__video-hero">
+            <VideoEmbed
+              url={bunkai.Video_URL}
+              title={bunkai.Title}
+              masterName="Прикладной Бункай · Мастера JKS (Japan Karate Shoto Federation)"
+              autoLoad={false}
+            />
+          </div>
+        ) : (
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  height: 540,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#060709',
+                  color: 'var(--gold, #d4a24c)',
+                }}
+              >
+                <ShotokanTiger size={36} color="var(--gold, #d4a24c)" />
+                <p style={{ marginTop: '0.8rem', fontSize: '0.9rem', color: 'var(--text-muted, #a8a29e)' }}>
+                  Загрузка 3D моделей Тори и Укэ…
+                </p>
+              </div>
+            }
+          >
+            <BunkaiMultiAvatarPlayer
+              steps={bunkaiSteps}
+              defaultParticipantMode={
+                bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
+              }
+              height={540}
+            />
+          </Suspense>
+        )}
       </section>
 
       {/* 3. ПРОГРЕССИВНОЕ РАСКРЫТИЕ СМЫСЛА И ПРИМЕНЕНИЯ */}
@@ -214,7 +288,12 @@ export default function BunkaiDetailPage() {
 
           {activeTab === 'video' && bunkai.Video_URL && (
             <div className="bunkai-video-box">
-              <VideoEmbed url={bunkai.Video_URL} />
+              <VideoEmbed
+                url={bunkai.Video_URL}
+                title={bunkai.Title}
+                masterName="Мастера JKS · Прикладной разбор бункай"
+                autoLoad={true}
+              />
             </div>
           )}
 

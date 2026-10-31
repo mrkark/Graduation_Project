@@ -23,7 +23,37 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://img.youtube.com',
+          'https://i.ytimg.com',
+          'https://*.ytimg.com',
+          'https://*.youtube.com',
+        ],
+        frameSrc: [
+          "'self'",
+          'https://www.youtube.com',
+          'https://www.youtube-nocookie.com',
+          'https://youtube.com',
+        ],
+        connectSrc: ["'self'", 'ws:', 'wss:', 'http:', 'https:'],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: null,
+      },
+    },
+  })
+);
 const allowedOrigins = [
   'http://localhost:5173',
   'https://localhost:5173',

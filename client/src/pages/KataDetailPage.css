@@ -134,6 +134,51 @@
   border-radius: 2px;
 }
 
+.stage-mode-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 3px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.stage-mode-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #d6d3d1);
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stage-mode-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stage-mode-btn.active {
+  background: linear-gradient(135deg, var(--gold, #d4a24c) 0%, #b8862d 100%);
+  color: #120f0d;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(212, 162, 76, 0.35);
+}
+
+.kata-study__video-container {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 .kata-study__canvas-container {
   width: 100%;
   border-radius: 2px;

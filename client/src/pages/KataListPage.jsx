@@ -886,7 +886,7 @@ export default function KataListPage() {
                                 }}
                                 title="Смотреть эталонное видео мастеров JKS"
                               >
-                                ▶ Видео
+                                🎥 Видео JKS
                               </button>
                             )}
                           </div>
@@ -1020,7 +1020,7 @@ export default function KataListPage() {
                                   }}
                                   title="Смотреть эталонное видео мастеров JKS"
                                 >
-                                  ▶ Видео
+                                  🎥 Видео JKS
                                 </button>
                               )}
                             </div>

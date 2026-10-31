@@ -1,0 +1,211 @@
+.video-embed-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.video-embed-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md, 8px);
+  background-color: #0b0a09;
+  border: 1px solid var(--border, #2a2825);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.video-embed-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.video-embed {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Фасад-постер для мгновенной загрузки страницы без тормозов YouTube */
+.video-embed-facade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.25rem;
+  box-sizing: border-box;
+}
+
+.video-embed-facade__scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%),
+              linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, transparent 40%, rgba(0, 0, 0, 0.85) 100%);
+  pointer-events: none;
+}
+
+.video-embed-facade__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.video-embed-facade__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(18, 15, 13, 0.85);
+  border: 1px solid var(--gold, #d4a24c);
+  color: var(--gold, #d4a24c);
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(4px);
+}
+
+.video-embed-facade__center {
+  position: relative;
+  z-index: 2;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  transition: transform 0.25s ease;
+}
+
+.video-embed-facade:hover .video-embed-facade__center {
+  transform: scale(1.06);
+}
+
+.video-embed-play-btn {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold, #d4a24c) 0%, #b8862d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 25px rgba(212, 162, 76, 0.6), 0 4px 15px rgba(0, 0, 0, 0.8);
+  border: 2px solid #fff;
+  transition: all 0.25s ease;
+}
+
+.video-embed-play-btn svg {
+  width: 28px;
+  height: 28px;
+  fill: #120f0d;
+  margin-left: 3px;
+}
+
+.video-embed-play-text {
+  color: #f5f5f4;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.03em;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.25rem 0.8rem;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.video-embed-facade__footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: #d6d3d1;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+/* Панель вспомогательных ссылок и обхода замедления */
+.video-embed-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(26, 23, 20, 0.7);
+  border: 1px solid var(--border, #2a2825);
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.82rem;
+}
+
+.video-embed-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted, #a8a29e);
+}
+
+.video-embed-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.video-embed-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.video-embed-btn--youtube {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.video-embed-btn--youtube:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.video-embed-btn--mirror {
+  background: rgba(212, 162, 76, 0.15);
+  color: var(--gold, #d4a24c);
+  border-color: rgba(212, 162, 76, 0.4);
+}
+
+.video-embed-btn--mirror:hover {
+  background: var(--gold, #d4a24c);
+  color: #120f0d;
+}
+
+.video-embed-btn--copy {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary, #d6d3d1);
+  border-color: var(--border, #2a2825);
+}
+
+.video-embed-btn--copy:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}

@@ -311,7 +311,7 @@ export default function BunkaiListPage() {
                         }}
                         title="Смотреть видеоразбор бункая мастеров JKS с таймкода"
                       >
-                        ▶ Видео
+                        🎥 Видео JKS
                       </button>
                     )}
                   </div>
