@@ -427,71 +427,151 @@
   to { opacity: 1; }
 }
 
-/* Конструктор поз */
-.pose-creator-box {
+/* Переключатель режимов: Модульный синтез vs Динамика Ката / Унсу */
+.modular-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modular-mode-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary, #999);
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+}
+
+.modular-mode-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modular-mode-btn.active {
+  background: rgba(191, 161, 95, 0.15);
+  border-color: var(--gold, #bfa15f);
+  color: var(--gold, #ffd700);
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(191, 161, 95, 0.2);
+}
+
+/* Редактор анимаций Администратора */
+.admin-editor-box {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.pose-phase-tabs {
-  display: flex;
-  gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.25);
-  padding: 0.3rem;
-  border-radius: 4px;
-}
-
-.pose-phase-btn {
-  flex: 1;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary, #999);
-  padding: 0.4rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  text-align: center;
-}
-
-.pose-phase-btn.active {
-  background: rgba(191, 161, 95, 0.2);
-  border-color: var(--gold, #bfa15f);
-  color: var(--gold, #bfa15f);
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #f87171;
+  font-size: 0.68rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
 }
 
-.pose-slider-group {
+.admin-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .admin-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.admin-input-label {
+  font-size: 0.76rem;
+  color: var(--text-secondary, #a8a29e);
+  font-weight: 600;
+}
+
+.admin-text-input,
+.admin-select-input {
+  background: #11100e;
+  border: 1px solid #374151;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  color: #fff;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.admin-text-input:focus,
+.admin-select-input:focus {
+  border-color: var(--gold, #bfa15f);
+}
+
+.admin-timeline-container {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  padding: 0.85rem;
 }
 
-.pose-slider-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.pose-slider-header {
+.admin-timeline-header {
   display: flex;
   justify-content: space-between;
-  font-size: 0.76rem;
-  color: var(--text-secondary, #a8a29e);
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-primary, #e2ded5);
 }
 
-.pose-slider-header strong {
-  color: #fff;
+.admin-timeline-track {
+  height: 28px;
+  background: #1e1d1a;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #333;
 }
 
-.pose-range-input {
-  width: 100%;
-  accent-color: var(--gold, #bfa15f);
-  cursor: pointer;
+.admin-timeline-active-slice {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(191, 161, 95, 0.5), rgba(245, 158, 11, 0.6));
+  border-left: 2px solid #ffd700;
+  border-right: 2px solid #ffd700;
+}
+
+.admin-actions-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.5rem;
 }
 
 /* Библиотека пользовательских слоев */

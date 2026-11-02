@@ -5,23 +5,28 @@ import * as THREE from 'three';
 import KaratekaLowpolyModel, {
   synthesizeModularClip,
   registerCustomClip,
+  resolveClip,
+  getCachedClips,
+  globalClipCache,
 } from './KaratekaLowpolyModel';
 import TraditionalDojo from './TraditionalDojo';
 import {
   loadCustomLayers,
   saveCustomLayer,
   deleteCustomLayer,
-  buildClipFromPoseKeyframes,
   buildClipFromRecordedFrames,
+  generateUnsuJump360Clip,
+  loadAdminAnimationOverrides,
+  saveAdminAnimationOverride,
+  resetAdminAnimationOverride,
 } from './customMotionManager';
 import {
   loadMediaPipePose,
   mapPoseToAvatarBones,
-  calculateAngle3D,
 } from '../utils/mocapPoseTracker';
+import { useAuthStore } from '../store/authStore';
 import {
   Play,
-  Pause,
   RotateCcw,
   Download,
   Copy,
@@ -30,9 +35,7 @@ import {
   Sliders,
   Compass,
   Camera,
-  Video,
   Trash2,
-  Plus,
   Square,
   Sparkles,
   Save,
@@ -40,6 +43,11 @@ import {
   Zap,
   Shield,
   Radio,
+  Settings,
+  Flame,
+  Activity,
+  Scissors,
+  CheckCircle2,
 } from 'lucide-react';
 import './modularMotionMixer.css';
 
@@ -78,30 +86,240 @@ export const MODULAR_TURN_PRESETS = [
   { deg: 270, label: '270° (Разворот назад-вправо)' },
 ];
 
+// Динамические техники цельного тела (Full-Body Kata & Acrobatics)
+// Включая уникальные движения мастера ката Унсу (Keetobi-geri 360 jump), комбинации и удары ногами
+export const FULL_BODY_DYNAMICS_PRESETS = [
+  {
+    id: 'jump_turn_360',
+    name: 'Унсу: Прыжок 360° (Кээтоби-гэри)',
+    category: 'jump',
+    desc: 'Взлет на 1.62м с разворотом на 360°, горизонтальным ударом ногой в воздухе и уходом в партерный смет на татами',
+    badge: 'Unsu 雲手',
+  },
+  {
+    id: 'kata_unsu',
+    name: 'Унсу: Мастер-прогон ката (雲手)',
+    category: 'kata',
+    desc: 'Полный эталонный прогон элитного мастерского ката Унсу (Руки-облака) со всеми акробатическими переходами',
+    badge: 'Master Kata',
+  },
+  {
+    id: 'heian_shodan',
+    name: 'Хэйан Сёдан: Мастер-прогон',
+    category: 'kata',
+    desc: 'Каноническое базовое ката Шотокан (21 форма: Дзэнкуцу-дати, Ой-цуки, Агэ-укэ, Тэцуи-ути)',
+    badge: 'Kata',
+  },
+  {
+    id: 'mae_geri_gyaku_zuki',
+    name: 'Маэ-гэри + Гяку-цуки (Связка)',
+    category: 'combo',
+    desc: 'Проникающий удар ногой вперед с мгновенным нокаутирующим реверсивным ударом кулака',
+    badge: 'Комбо',
+  },
+  {
+    id: 'age_uke_gyaku_zuki',
+    name: 'Агэ-укэ + Гяку-цуки (Связка)',
+    category: 'combo',
+    desc: 'Встречный верхний блок с последующей контратакой противоположным кулаком с доворотом таза',
+    badge: 'Комбо',
+  },
+  {
+    id: 'gankaku_shuto',
+    name: 'Ганкаку-дати + Сюто-укэ (Журавль)',
+    category: 'kata',
+    desc: 'Баланс на одной ноге (Цуруаси-дати) с синхронным блоком ребром ладони',
+    badge: 'Gankaku',
+  },
+  {
+    id: 'mae_geri',
+    name: 'Маэ-гэри (Прямой удар ногой)',
+    category: 'kick',
+    desc: 'Классический хлесткий или проникающий удар подушечками пальцев стопы (Тюсоку)',
+    badge: 'Удар ногой',
+  },
+  {
+    id: 'mawashi_geri',
+    name: 'Маваси-гэри (Круговой удар ногой)',
+    category: 'kick',
+    desc: 'Мощный круговой удар подъемом стопы или коси в корпус или голову с выносом колена',
+    badge: 'Удар ногой',
+  },
+  {
+    id: 'yoko_geri',
+    name: 'Ёко-гэри кэкоми (Боковой таранный)',
+    category: 'kick',
+    desc: 'Сокрушающий боковой удар ребром стопы (Сокуто) по прямой траектории',
+    badge: 'Удар ногой',
+  },
+  {
+    id: 'ushiro_geri',
+    name: 'Усиро-гэри (Удар назад с разворотом)',
+    category: 'kick',
+    desc: 'Неожиданный мощный удар пяткой назад с быстрым доворотом таза через спину',
+    badge: 'Удар ногой',
+  },
+  {
+    id: 'choku_zuki',
+    name: 'Тёку-цуки (Прямой удар на месте)',
+    category: 'punch',
+    desc: 'Фундаментальный прямой удар из стойки Сидзэнтай с полным закручиванием кулака',
+    badge: 'Удар рукой',
+  },
+  {
+    id: 'uraken_uchi',
+    name: 'Уракэн-ути (Удар тыльной стороной)',
+    category: 'strike',
+    desc: 'Хлесткий секущий щелчок тыльной стороной кулака в висок или нос',
+    badge: 'Удар рукой',
+  },
+  {
+    id: 'empi_uchi',
+    name: 'Эмпи-ути (Удар локтем)',
+    category: 'strike',
+    desc: 'Ближний разрушительный таранный удар локтем вперед-вверх',
+    badge: 'Удар рукой',
+  },
+  {
+    id: 'shuto_uchi',
+    name: 'Сюто-ути (Секущий удар ребром ладони)',
+    category: 'strike',
+    desc: 'Рассекающий удар открытой ладонью в шею или ключицу',
+    badge: 'Удар рукой',
+  },
+];
+
+// Каталог готовых анимаций для панели Администратора
+export const ADMIN_EDITABLE_CATALOG = [
+  { group: 'Ката и акробатика', items: [
+    { id: 'jump_turn_360', name: 'Унсу: Прыжок 360° (Кээтоби-гэри)', jp: '雲手 蹴飛蹴り / Unsu Keetobi-geri', cat: 'Прыжок' },
+    { id: 'kata_unsu', name: 'Унсу (Мастер-ката 雲手)', jp: '雲手 / Unsu', cat: 'Ката' },
+    { id: 'heian_shodan', name: 'Хэйан Сёдан', jp: '平安初段 / Heian Shodan', cat: 'Ката' },
+    { id: 'mae_geri_gyaku_zuki', name: 'Маэ-гэри + Гяку-цуки', jp: '前蹴 逆突き / Combo', cat: 'Связка' },
+    { id: 'age_uke_gyaku_zuki', name: 'Агэ-укэ + Гяку-цуки', jp: '揚受 逆突き / Combo', cat: 'Связка' },
+    { id: 'gankaku_shuto', name: 'Ганкаку-дати + Сюто-укэ', jp: '岩鶴 鶴足立ち 手刀受け', cat: 'Ката' },
+  ]},
+  { group: 'Удары руками (Цуки и Ути)', items: [
+    { id: 'choku_zuki', name: 'Тёку-цуки (Прямой удар)', jp: '直突き / Choku-zuki', cat: 'Удар рукой' },
+    { id: 'oi_zuki', name: 'Ой-цуки (Удар с выпадом)', jp: '追突き / Oi-zuki', cat: 'Удар рукой' },
+    { id: 'gyaku_zuki', name: 'Гяку-цуки (Реверсивный удар)', jp: '逆突き / Gyaku-zuki', cat: 'Удар рукой' },
+    { id: 'kizami_zuki', name: 'Кидзами-цуки (Джеб передней рукой)', jp: '刻み突き / Kizami-zuki', cat: 'Удар рукой' },
+    { id: 'ren_zuki', name: 'Рэн-цуки (Двойной удар)', jp: '連突き / Ren-zuki', cat: 'Удар рукой' },
+    { id: 'sanbon_zuki', name: 'Санбон-цуки (Тройной удар)', jp: '三本突き / Sanbon-zuki', cat: 'Удар рукой' },
+    { id: 'uraken_uchi', name: 'Уракэн-ути (Тыльный удар)', jp: '裏拳打ち / Uraken-uchi', cat: 'Удар рукой' },
+    { id: 'tetsui_uchi', name: 'Тэцуи-ути (Удар кулаком-молотом)', jp: '鉄槌打ち / Tetsui-uchi', cat: 'Удар рукой' },
+    { id: 'empi_uchi', name: 'Эмпи-ути (Удар локтем)', jp: '猿臂打ち / Empi-uchi', cat: 'Удар рукой' },
+    { id: 'shuto_uchi', name: 'Сюто-ути (Удар ребром ладони)', jp: '手刀打ち / Shuto-uchi', cat: 'Удар рукой' },
+    { id: 'morote_zuki', name: 'Моротэ-цуки (Двойной удар)', jp: '諸手突き / Morote-zuki', cat: 'Удар рукой' },
+  ]},
+  { group: 'Защитные блоки (Укэ)', items: [
+    { id: 'gedan_barai', name: 'Гэдан-барай (Нижний блок)', jp: '下段払い / Gedan-barai', cat: 'Блок' },
+    { id: 'age_uke', name: 'Агэ-укэ (Верхний блок)', jp: '揚げ受け / Age-uke', cat: 'Блок' },
+    { id: 'soto_uke', name: 'Сото-укэ (Блок снаружи-внутрь)', jp: '外受け / Soto-uke', cat: 'Блок' },
+    { id: 'uchi_uke', name: 'Ути-укэ (Блок изнутри-наружу)', jp: '内受け / Uchi-uke', cat: 'Блок' },
+    { id: 'shuto_uke', name: 'Сюто-укэ (Блок ребром ладони)', jp: '手刀受け / Shuto-uke', cat: 'Блок' },
+    { id: 'manji_uke', name: 'Мандзи-укэ (Двойной разноуровневый блок)', jp: '卍受け / Manji-uke', cat: 'Блок' },
+  ]},
+  { group: 'Удары ногами (Гэри)', items: [
+    { id: 'mae_geri', name: 'Маэ-гэри (Прямой удар)', jp: '前蹴り / Mae-geri', cat: 'Удар ногой' },
+    { id: 'mawashi_geri', name: 'Маваси-гэри (Круговой удар)', jp: '回し蹴り / Mawashi-geri', cat: 'Удар ногой' },
+    { id: 'yoko_geri', name: 'Ёко-гэри кэкоми (Боковой таранный)', jp: '横蹴り蹴込み / Yoko-geri', cat: 'Удар ногой' },
+    { id: 'ushiro_geri', name: 'Усиро-гэри (Удар пяткой назад)', jp: '後ろ蹴り / Ushiro-geri', cat: 'Удар ногой' },
+  ]},
+  { group: 'Стойки Шотокан (Дати)', items: [
+    { id: 'stance_zenkutsu', name: 'Дзэнкуцу-дати', jp: '前屈立ち / Zenkutsu-dachi', cat: 'Стойка' },
+    { id: 'stance_kokutsu', name: 'Кокуцу-дати', jp: '後屈立ち / Kokutsu-dachi', cat: 'Стойка' },
+    { id: 'stance_kiba', name: 'Киба-дати', jp: '騎馬立ち / Kiba-dachi', cat: 'Стойка' },
+    { id: 'stance_fudo', name: 'Фудо-дати', jp: '不動立ち / Fudo-dachi', cat: 'Стойка' },
+    { id: 'stance_ready', name: 'Сидзэнтай (Йой)', jp: '自然体 / Shizentai', cat: 'Стойка' },
+  ]},
+];
+
 export default function ModularMotionMixer() {
-  // Активный режим студии: 'mixer' | 'recorder' | 'creator' | 'library'
+  // Авторизация и роль пользователя: проверка прав администратора
+  const { role, user } = useAuthStore();
+  const isAdmin = role === 'admin' || user?.role === 'admin';
+
+  // Активная вкладка студии: 'mixer' | 'recorder' | 'library' | 'admin'
   const [activeTab, setActiveTab] = useState('mixer');
+
+  // Режим микшера: 'modular' (Сборка слоев) или 'fullbody' (Динамика цельного тела / Унсу)
+  const [motionMode, setMotionMode] = useState('modular'); // 'modular' | 'fullbody'
 
   // Пользовательские сохраненные слои
   const [customLayers, setCustomLayers] = useState(() => loadCustomLayers());
 
-  // Выбранные слои в микшере
+  // Выбранные слои в модульном режиме
   const [selectedStance, setSelectedStance] = useState('zenkutsu_dachi_left');
   const [selectedTechnique, setSelectedTechnique] = useState('tech_gedan_barai_left');
+
+  // Выбранное движение в режиме цельного тела (Full-Body / Ката / Унсу)
+  const [selectedFullBody, setSelectedFullBody] = useState('jump_turn_360');
+
+  // Общие параметры воспроизведения
   const [selectedTurn, setSelectedTurn] = useState(0);
   const [speed, setSpeed] = useState(1.0);
   const [isLooping, setIsLooping] = useState(true);
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Тонкая настройка биомеханики слоев (в реальном времени)
+  // Тонкая настройка биомеханики (доворот корпуса Ханми 45° / Сёмен 0°)
   const [layerAdjustments, setLayerAdjustments] = useState({
-    hipsHeight: 0, // см (-15 до +10)
-    torsoTwist: 0, // градусов (-45 до +45)
+    torsoTwist: 0,
   });
-  const [isPlayingCreatorAnimation, setIsPlayingCreatorAnimation] = useState(false);
 
-  // При монтировании регистрируем все кастомные слои в глобальном движке Three.js
+  // =========================================================================
+  // СОСТОЯНИЕ РЕЖИМА АДМИНИСТРАТОРА: РЕДАКТОР АНИМАЦИЙ
+  // =========================================================================
+  const [adminSelectedAnim, setAdminSelectedAnim] = useState('jump_turn_360');
+  const [adminDuration, setAdminDuration] = useState(2.0);
+  const [adminTrimStart, setAdminTrimStart] = useState(0.0);
+  const [adminTrimEnd, setAdminTrimEnd] = useState(2.0);
+  const [adminSpeed, setAdminSpeed] = useState(1.0);
+  const [adminYaw, setAdminYaw] = useState(0);
+  const [adminLoop, setAdminLoop] = useState(false);
+  const [adminTitle, setAdminTitle] = useState('Унсу: Прыжок 360° (Кээтоби-гэри)');
+  const [adminJapanese, setAdminJapanese] = useState('雲手 蹴飛蹴り / Unsu Keetobi-geri');
+  const [adminCategory, setAdminCategory] = useState('Прыжок');
+  const [adminNotes, setAdminNotes] = useState('Канонический 360° прыжок ката Унсу с выносом ноги и приземлением в партерный смет');
+  const [adminStatusMessage, setAdminStatusMessage] = useState('');
+  const [adminTrackCount, setAdminTrackCount] = useState(0);
+  const [adminActivePreviewClip, setAdminActivePreviewClip] = useState(null);
+
+  // Инициализация при смене редактируемой анимации админом
+  useEffect(() => {
+    let raw = resolveClip(adminSelectedAnim) || globalClipCache.get(adminSelectedAnim);
+    if (!raw && adminSelectedAnim === 'jump_turn_360') {
+      raw = generateUnsuJump360Clip('jump_turn_360');
+    }
+
+    // Поиск метаданных в каталоге
+    let foundMeta = null;
+    for (const group of ADMIN_EDITABLE_CATALOG) {
+      const it = group.items.find((x) => x.id === adminSelectedAnim);
+      if (it) {
+        foundMeta = it;
+        break;
+      }
+    }
+
+    const dur = raw ? raw.duration : 1.5;
+    setAdminDuration(dur);
+    setAdminTrimStart(0.0);
+    setAdminTrimEnd(dur);
+    setAdminTrackCount(raw ? raw.tracks.length : 0);
+    setAdminActivePreviewClip(null);
+
+    if (foundMeta) {
+      setAdminTitle(foundMeta.name);
+      setAdminJapanese(foundMeta.jp || '');
+      setAdminCategory(foundMeta.cat || 'Техника');
+    } else {
+      setAdminTitle(adminSelectedAnim);
+    }
+  }, [adminSelectedAnim]);
+
+  // При монтировании регистрируем все кастомные слои в Three.js
   useEffect(() => {
     customLayers.forEach((layer) => {
       if (layer.clipJson) {
@@ -113,6 +331,12 @@ export default function ModularMotionMixer() {
         }
       }
     });
+
+    // Регистрация прыжка Унсу 360°
+    if (!globalClipCache.has('jump_turn_360')) {
+      const unsuClip = generateUnsuJump360Clip('jump_turn_360');
+      registerCustomClip('jump_turn_360', unsuClip);
+    }
   }, [customLayers]);
 
   // Общий список стоек (стандартные + созданные пользователем)
@@ -123,7 +347,7 @@ export default function ModularMotionMixer() {
         id: l.id,
         name: l.name,
         type: 'custom',
-        desc: `Пользовательская стойка (${l.source === 'camera' ? 'Запись с камеры' : 'Конструктор поз'})`,
+        desc: 'Пользовательская стойка (Запись MoCap)',
       }));
     return [...MODULAR_STANCE_PRESETS, ...customStances];
   }, [customLayers]);
@@ -136,9 +360,23 @@ export default function ModularMotionMixer() {
         id: l.id,
         name: l.name,
         type: 'custom',
-        desc: `Пользовательская техника (${l.source === 'camera' ? 'Запись с камеры' : 'Конструктор поз'})`,
+        desc: 'Пользовательская техника (Запись MoCap)',
       }));
     return [...MODULAR_TECHNIQUE_PRESETS, ...customTechs];
+  }, [customLayers]);
+
+  // Общий список динамических движений цельного тела
+  const allFullBodyPresets = useMemo(() => {
+    const customFull = customLayers
+      .filter((l) => l.layerType === 'full')
+      .map((l) => ({
+        id: l.id,
+        name: l.name,
+        category: 'custom',
+        desc: `Пользовательская запись цельного тела (${l.duration?.toFixed(1) || '—'}с)`,
+        badge: 'Мой MoCap',
+      }));
+    return [...FULL_BODY_DYNAMICS_PRESETS, ...customFull];
   }, [customLayers]);
 
   const stanceObj = useMemo(
@@ -151,19 +389,32 @@ export default function ModularMotionMixer() {
     [selectedTechnique, allTechniques]
   );
 
+  const fullBodyObj = useMemo(
+    () => allFullBodyPresets.find((f) => f.id === selectedFullBody) || allFullBodyPresets[0],
+    [selectedFullBody, allFullBodyPresets]
+  );
+
   const handleReplay = () => {
     setReplayTrigger((prev) => prev + 1);
   };
 
   const copyKataStepJson = () => {
-    const stepCode = {
-      description: `${techObj.name} в стойке ${stanceObj.name}`,
-      stance: selectedStance,
-      technique: selectedTechnique,
-      turnAngleDeg: selectedTurn,
-      modularExecution: true,
-      displacement: [0, 0, selectedStance.includes('step') ? 1.2 : 0],
-    };
+    const stepCode = motionMode === 'fullbody'
+      ? {
+          description: fullBodyObj.name,
+          fullBodyDynamicClip: selectedFullBody,
+          category: fullBodyObj.category,
+          turnAngleDeg: selectedTurn,
+          speed: speed,
+        }
+      : {
+          description: `${techObj.name} в стойке ${stanceObj.name}`,
+          stance: selectedStance,
+          technique: selectedTechnique,
+          turnAngleDeg: selectedTurn,
+          modularExecution: true,
+          displacement: [0, 0, selectedStance.includes('step') ? 1.2 : 0],
+        };
     navigator.clipboard?.writeText(JSON.stringify(stepCode, null, 2));
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
@@ -172,7 +423,7 @@ export default function ModularMotionMixer() {
   // =========================================================================
   // СОСТОЯНИЕ РЕЖИМА 1: ЗАПИСЬ С КАМЕРЫ (AI MOCAP RECORDER)
   // =========================================================================
-  const [recorderLayerType, setRecorderLayerType] = useState('upper'); // 'upper' | 'lower' | 'full'
+  const [recorderLayerType, setRecorderLayerType] = useState('full'); // 'full' | 'upper' | 'lower'
   const [camActive, setCamActive] = useState(false);
   const [camStatus, setCamStatus] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -202,7 +453,6 @@ export default function ModularMotionMixer() {
     setCamStatus('');
   }, []);
 
-  // Очистка при размонтировании
   useEffect(() => {
     return () => {
       stopCamera();
@@ -229,7 +479,6 @@ export default function ModularMotionMixer() {
       poseInstanceRef.current = pose;
 
       pose.onResults((results) => {
-        // Отрисовка скелета на канвасе
         const cvs = canvasRef.current;
         if (!cvs) return;
         const ctx = cvs.getContext('2d');
@@ -237,16 +486,15 @@ export default function ModularMotionMixer() {
 
         const lms = results.poseLandmarks;
         if (lms && lms.length >= 33) {
-          // Отрисовка ключевых линий скелета
           ctx.strokeStyle = '#10b981';
           ctx.lineWidth = 3;
 
           const connections = [
-            [11, 12], [11, 13], [13, 15], // Левая рука
-            [12, 14], [14, 16],           // Правая рука
-            [11, 23], [12, 24], [23, 24], // Торс
-            [23, 25], [25, 27],           // Левая нога
-            [24, 26], [26, 28],           // Правая нога
+            [11, 12], [11, 13], [13, 15],
+            [12, 14], [14, 16],
+            [11, 23], [12, 24], [23, 24],
+            [23, 25], [25, 27],
+            [24, 26], [26, 28],
           ];
 
           for (const [i, j] of connections) {
@@ -260,7 +508,6 @@ export default function ModularMotionMixer() {
             }
           }
 
-          // Точки суставов
           ctx.fillStyle = '#ffd700';
           for (let idx of [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]) {
             const pt = lms[idx];
@@ -271,7 +518,6 @@ export default function ModularMotionMixer() {
             }
           }
 
-          // Если идет запись — накапливаем кадры суставов
           if (capturedFramesRef.current && isRecording) {
             const mapped = mapPoseToAvatarBones(lms, results.poseWorldLandmarks || lms);
             if (mapped && mapped.bones) {
@@ -282,7 +528,6 @@ export default function ModularMotionMixer() {
         }
       });
 
-      // Цикл передачи кадров в MediaPipe
       const processFrame = async () => {
         if (videoRef.current && videoRef.current.readyState >= 2 && poseInstanceRef.current) {
           try {
@@ -293,7 +538,7 @@ export default function ModularMotionMixer() {
       };
 
       setCamActive(true);
-      setCamStatus('Камера активна. Займите исходную боевую позицию.');
+      setCamStatus('Камера активна. Займите исходную позицию перед объективом.');
       animFrameIdRef.current = requestAnimationFrame(processFrame);
     } catch (err) {
       console.error('Ошибка активации камеры:', err);
@@ -302,7 +547,6 @@ export default function ModularMotionMixer() {
     }
   };
 
-  // Старт записи с обратным отсчетом 3.. 2.. 1..
   const triggerRecording = () => {
     setCountdown(3);
     const countTimer = setInterval(() => {
@@ -323,7 +567,7 @@ export default function ModularMotionMixer() {
     setIsRecording(true);
     setRecordProgress(0);
 
-    const maxDuration = 4000; // 4 секунды на технику
+    const maxDuration = recorderLayerType === 'full' ? 5000 : 4000;
     const stepInterval = 100;
     let elapsed = 0;
 
@@ -358,13 +602,19 @@ export default function ModularMotionMixer() {
     if (clip) {
       registerCustomClip(clipName, clip);
       setRecordedPreviewClip(clip);
-      setNewLayerName(`Запись ${recorderLayerType === 'upper' ? 'удара' : 'стойки'} #${frames.length}`);
-      setCamStatus(`Запись завершена! Получено ${frames.length} кадров (${totalDur.toFixed(1)}с). Введите название.`);
+      const typeLabel = recorderLayerType === 'full' ? 'динамики' : (recorderLayerType === 'upper' ? 'удара' : 'стойки');
+      setNewLayerName(`Запись ${typeLabel} #${frames.length}`);
+      setCamStatus(`Запись завершена! Захвачено ${frames.length} кадров (${totalDur.toFixed(1)}с). Введите название.`);
 
-      // Сразу активируем в 3D для предпросмотра
-      if (recorderLayerType === 'upper') {
+      // Мгновенный предпросмотр в 3D
+      if (recorderLayerType === 'full') {
+        setMotionMode('fullbody');
+        setSelectedFullBody(clipName);
+      } else if (recorderLayerType === 'upper') {
+        setMotionMode('modular');
         setSelectedTechnique(clipName);
       } else {
+        setMotionMode('modular');
         setSelectedStance(clipName);
       }
     }
@@ -386,181 +636,9 @@ export default function ModularMotionMixer() {
     saveCustomLayer(layer);
     setCustomLayers(loadCustomLayers());
     setRecordedPreviewClip(null);
-    setCamStatus('Слой сохранен в вашей библиотеке!');
+    setCamStatus('Движение успешно сохранено в вашей личной библиотеке!');
     setActiveTab('mixer');
   };
-
-  // =========================================================================
-  // СОСТОЯНИЕ РЕЖИМА 2: ИНТЕРАКТИВНЫЙ КОНСТРУКТОР ПОЗ И ФАЗ
-  // =========================================================================
-  const [creatorLayerType, setCreatorLayerType] = useState('upper'); // 'upper' | 'lower'
-  const [activePhaseIdx, setActivePhaseIdx] = useState(1); // 0: Start, 1: Peak/Impact, 2: Return
-
-  // Ключевые фазы движения
-  const [keyframes, setKeyframes] = useState([
-    {
-      time: 0.0,
-      label: '1. Замах / Камаэ',
-      pose: {
-        hanmiAngle: 30,
-        torsoPitch: 0,
-        leftShoulderPitch: -20,
-        leftShoulderAbduct: 20,
-        leftElbowFlex: 90,
-        leftForearmTwist: 0,
-        rightShoulderPitch: -30,
-        rightShoulderAbduct: 15,
-        rightElbowFlex: 95,
-        rightForearmTwist: 0,
-        leftHipPitch: 20,
-        leftHipSpread: 10,
-        leftKneeFlex: 30,
-        rightHipPitch: -15,
-        rightHipSpread: 10,
-        rightKneeFlex: 20,
-        hipsDrop: -10,
-      },
-    },
-    {
-      time: 0.5,
-      label: '2. Кимэ / Кульминация',
-      pose: {
-        hanmiAngle: 0,
-        torsoPitch: -5,
-        leftShoulderPitch: 10,
-        leftShoulderAbduct: 15,
-        leftElbowFlex: 20,
-        leftForearmTwist: 180,
-        rightShoulderPitch: -45,
-        rightShoulderAbduct: 10,
-        rightElbowFlex: 120,
-        rightForearmTwist: -90,
-        leftHipPitch: 35,
-        leftHipSpread: 12,
-        leftKneeFlex: 60,
-        rightHipPitch: -25,
-        rightHipSpread: 12,
-        rightKneeFlex: 15,
-        hipsDrop: -25,
-      },
-    },
-    {
-      time: 1.0,
-      label: '3. Фиксация / Дзансин',
-      pose: {
-        hanmiAngle: 15,
-        torsoPitch: 0,
-        leftShoulderPitch: 5,
-        leftShoulderAbduct: 15,
-        leftElbowFlex: 30,
-        leftForearmTwist: 180,
-        rightShoulderPitch: -40,
-        rightShoulderAbduct: 10,
-        rightElbowFlex: 110,
-        rightForearmTwist: -90,
-        leftHipPitch: 30,
-        leftHipSpread: 10,
-        leftKneeFlex: 50,
-        rightHipPitch: -20,
-        rightHipSpread: 10,
-        rightKneeFlex: 20,
-        hipsDrop: -20,
-      },
-    },
-  ]);
-
-  const [creatorClipName, setCreatorClipName] = useState('Мой особый контрудар');
-
-  // Мгновенное обновление слайдера в активной фазе (Live Pose Editing)
-  const updateActivePhasePose = (key, val) => {
-    if (isPlayingCreatorAnimation) {
-      setIsPlayingCreatorAnimation(false);
-    }
-    const num = parseFloat(val);
-    const nextKeyframes = [...keyframes];
-    nextKeyframes[activePhaseIdx] = {
-      ...nextKeyframes[activePhaseIdx],
-      pose: {
-        ...nextKeyframes[activePhaseIdx].pose,
-        [key]: isNaN(num) ? 0 : num,
-      },
-    };
-    setKeyframes(nextKeyframes);
-  };
-
-  // Переключение воспроизведения анимационного теста ключевых кадров
-  const handleToggleCreatorAnimation = () => {
-    if (isPlayingCreatorAnimation) {
-      setIsPlayingCreatorAnimation(false);
-    } else {
-      const previewName = `creator_test_${Date.now()}`;
-      const previewClip = buildClipFromPoseKeyframes({
-        name: previewName,
-        layerType: creatorLayerType,
-        keyframes,
-        duration: 1.2,
-      });
-      if (previewClip) {
-        registerCustomClip(previewName, previewClip);
-        if (creatorLayerType === 'upper') {
-          setSelectedTechnique(previewName);
-        } else {
-          setSelectedStance(previewName);
-        }
-        setIsPlayingCreatorAnimation(true);
-        setReplayTrigger((prev) => prev + 1);
-      }
-    }
-  };
-
-  // Сброс позы текущей фазы к нейтральным значениям
-  const handleResetActivePhasePose = () => {
-    setIsPlayingCreatorAnimation(false);
-    const nextKeyframes = [...keyframes];
-    nextKeyframes[activePhaseIdx] = {
-      ...nextKeyframes[activePhaseIdx],
-      pose: creatorLayerType === 'upper'
-        ? { hanmiAngle: 0, torsoPitch: 0, leftShoulderPitch: 0, leftElbowFlex: 60, rightShoulderPitch: 0, rightElbowFlex: 60 }
-        : { hipsDrop: 0, leftKneeFlex: 30, rightKneeFlex: 20 },
-    };
-    setKeyframes(nextKeyframes);
-  };
-
-  const handleSaveCreatedLayer = () => {
-    const clipId = `custom_pose_${Date.now()}`;
-    const clip = buildClipFromPoseKeyframes({
-      name: clipId,
-      layerType: creatorLayerType,
-      keyframes,
-      duration: 1.2,
-    });
-
-    if (clip) {
-      registerCustomClip(clipId, clip);
-      const layer = {
-        id: clipId,
-        name: creatorClipName.trim() || `Кастомная техника (${clipId.slice(-4)})`,
-        layerType: creatorLayerType,
-        source: 'creator',
-        duration: 1.2,
-        createdAt: new Date().toISOString(),
-        clipJson: clip.toJSON(),
-      };
-
-      saveCustomLayer(layer);
-      setCustomLayers(loadCustomLayers());
-
-      if (creatorLayerType === 'upper') {
-        setSelectedTechnique(clipId);
-      } else {
-        setSelectedStance(clipId);
-      }
-      setIsPlayingCreatorAnimation(false);
-      setActiveTab('mixer');
-    }
-  };
-
-  const currentPose = keyframes[activePhaseIdx]?.pose || {};
 
   // Удаление кастомного слоя
   const handleDeleteCustomLayer = (id) => {
@@ -568,6 +646,7 @@ export default function ModularMotionMixer() {
     setCustomLayers(loadCustomLayers());
     if (selectedStance === id) setSelectedStance('zenkutsu_dachi_left');
     if (selectedTechnique === id) setSelectedTechnique('tech_gedan_barai_left');
+    if (selectedFullBody === id) setSelectedFullBody('jump_turn_360');
   };
 
   // Экспорт JSON слоя
@@ -580,6 +659,100 @@ export default function ModularMotionMixer() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // =========================================================================
+  // ОБРАБОТЧИКИ АДМИНИСТРАТОРА
+  // =========================================================================
+  const handleAdminTest3D = () => {
+    let source = resolveClip(adminSelectedAnim) || globalClipCache.get(adminSelectedAnim);
+    if (!source && adminSelectedAnim === 'jump_turn_360') {
+      source = generateUnsuJump360Clip('jump_turn_360');
+    }
+    if (!source) {
+      setAdminStatusMessage('Клип не найден в памяти');
+      return;
+    }
+
+    try {
+      const fps = 60;
+      const startFrame = Math.max(0, Math.round(adminTrimStart * fps));
+      const endFrame = Math.max(startFrame + 1, Math.round(adminTrimEnd * fps));
+      const subName = `admin_sub_${adminSelectedAnim}_${Date.now()}`;
+      const sub = THREE.AnimationUtils.subclip(source, subName, startFrame, endFrame, fps);
+
+      registerCustomClip(subName, sub);
+      setAdminActivePreviewClip(sub);
+      setMotionMode('fullbody');
+      setSelectedFullBody(subName);
+      setSelectedTurn(adminYaw);
+      setSpeed(adminSpeed);
+      setIsLooping(adminLoop);
+      setReplayTrigger((prev) => prev + 1);
+      setAdminStatusMessage(`Тест запущен: [${adminTrimStart.toFixed(2)}с – ${adminTrimEnd.toFixed(2)}с]`);
+    } catch (err) {
+      console.error('Ошибка нарезки клипа админа:', err);
+      setAdminStatusMessage(`Ошибка: ${err.message}`);
+    }
+  };
+
+  const handleAdminSave = () => {
+    saveAdminAnimationOverride(adminSelectedAnim, {
+      title: adminTitle,
+      japanese: adminJapanese,
+      category: adminCategory,
+      notes: adminNotes,
+      trimStart: adminTrimStart,
+      trimEnd: adminTrimEnd,
+      speed: adminSpeed,
+      yaw: adminYaw,
+      loop: adminLoop,
+    });
+    setAdminStatusMessage('Изменения успешно сохранены в реестр анимаций!');
+    setTimeout(() => setAdminStatusMessage(''), 3000);
+  };
+
+  const handleAdminReset = () => {
+    resetAdminAnimationOverride(adminSelectedAnim);
+    setAdminTrimStart(0.0);
+    setAdminTrimEnd(adminDuration);
+    setAdminSpeed(1.0);
+    setAdminYaw(0);
+    setAdminLoop(false);
+    setAdminActivePreviewClip(null);
+    setAdminStatusMessage('Параметры сброшены к оригинальным значениям.');
+  };
+
+  const handleAdminExportJson = () => {
+    let clip = adminActivePreviewClip || resolveClip(adminSelectedAnim) || globalClipCache.get(adminSelectedAnim);
+    if (!clip && adminSelectedAnim === 'jump_turn_360') {
+      clip = generateUnsuJump360Clip('jump_turn_360');
+    }
+    if (!clip) return;
+
+    const exportData = {
+      id: adminSelectedAnim,
+      title: adminTitle,
+      japanese: adminJapanese,
+      category: adminCategory,
+      notes: adminNotes,
+      duration: clip.duration,
+      tracksCount: clip.tracks.length,
+      clipJson: clip.toJSON(),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${adminSelectedAnim}_edited.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Эффективный активный клип для 3D персонажа
+  const effectiveActiveClip = motionMode === 'fullbody' ? selectedFullBody : null;
+  const effectiveLowerClip = motionMode === 'modular' ? selectedStance : null;
+  const effectiveUpperClip = motionMode === 'modular' ? selectedTechnique : null;
 
   return (
     <div className="modular-mixer-container">
@@ -596,156 +769,223 @@ export default function ModularMotionMixer() {
           <group position={[0, 0, 0]}>
             <KaratekaLowpolyModel
               role="tori"
-              modularLowerClip={selectedStance}
-              modularUpperClip={selectedTechnique}
+              activeClip={effectiveActiveClip}
+              modularLowerClip={effectiveLowerClip}
+              modularUpperClip={effectiveUpperClip}
               modularTurn={selectedTurn}
               modularLoop={isLooping}
               speed={speed}
               replayTrigger={replayTrigger}
               layerAdjustments={layerAdjustments}
-              creatorPose={activeTab === 'creator' ? currentPose : null}
-              creatorLayerType={creatorLayerType}
-              isPlayingCreatorAnimation={isPlayingCreatorAnimation}
             />
           </group>
 
-          <ContactShadows position={[0, 0.01, 0]} opacity={0.65} scale={8} blur={1.5} far={4} />
+          <ContactShadows position={[0, 0.005, 0]} opacity={0.7} scale={8} blur={1.4} far={4} />
           <OrbitControls
-            target={[0, 0.85, 0]}
+            target={[0, 0.82, 0]}
             maxPolarAngle={Math.PI / 2 - 0.02}
-            minDistance={1.2}
+            minDistance={1.1}
             maxDistance={6.0}
             enableDamping
           />
         </Canvas>
 
-        {/* Наложение подсказки */}
+        {/* Наложение бейджа активного движения */}
         <div className="modular-viewport-badge">
-          <Layers size={14} />
-          <span>
-            Модульный синтез: <strong>{stanceObj.name}</strong> + <strong>{techObj.name}</strong>
-          </span>
+          {motionMode === 'fullbody' ? (
+            <>
+              <Activity size={14} color="#ffd700" />
+              <span>
+                Динамика: <strong>{fullBodyObj.name}</strong> ({fullBodyObj.badge || 'Цельное тело'})
+              </span>
+            </>
+          ) : (
+            <>
+              <Layers size={14} color="#bfa15f" />
+              <span>
+                Модульный синтез: <strong>{stanceObj.name}</strong> + <strong>{techObj.name}</strong>
+              </span>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Панель управления модулями и студией */}
+      {/* Панель управления студией */}
       <div className="modular-mixer-controls">
         {/* Вкладки переключения студии */}
         <div className="modular-tabs">
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'mixer' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('mixer'); setIsPlayingCreatorAnimation(false); }}
+            onClick={() => setActiveTab('mixer')}
           >
             <Sliders size={14} />
-            <span>Микшер слоев</span>
+            <span>Микшер и Ката</span>
           </button>
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'recorder' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('recorder'); setIsPlayingCreatorAnimation(false); }}
+            onClick={() => setActiveTab('recorder')}
           >
             <Camera size={14} />
-            <span>Запись с камеры</span>
-          </button>
-          <button
-            type="button"
-            className={`modular-tab-btn ${activeTab === 'creator' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('creator'); setIsPlayingCreatorAnimation(false); }}
-          >
-            <Sparkles size={14} />
-            <span>Конструктор поз</span>
+            <span>Запись MoCap</span>
           </button>
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'library' ? 'active' : ''}`}
-            onClick={() => { setActiveTab('library'); setIsPlayingCreatorAnimation(false); }}
+            onClick={() => setActiveTab('library')}
           >
             <BookOpen size={14} />
-            <span>Мои слои ({customLayers.length})</span>
+            <span>Мои движения ({customLayers.length})</span>
           </button>
+
+          {/* Вкладка только для Администратора */}
+          {isAdmin && (
+            <button
+              type="button"
+              className={`modular-tab-btn ${activeTab === 'admin' ? 'active' : ''}`}
+              onClick={() => setActiveTab('admin')}
+              style={{ borderColor: 'rgba(239, 68, 68, 0.4)' }}
+            >
+              <Shield size={14} color="#ef4444" />
+              <span style={{ color: '#f87171' }}>Редактор (Админ)</span>
+            </button>
+          )}
         </div>
 
         {/* ================================================================= */}
-        {/* ВКЛАДКА 1: МИКШЕР СЛОЕВ (СБОРКА ГОТОВЫХ И ПОЛЬЗОВАТЕЛЬСКИХ)       */}
+        {/* ВКЛАДКА 1: МИКШЕР И КАТА (СИНТЕЗ ИЛИ ДИНАМИКА ЦЕЛЬНОГО ТЕЛА)      */}
         {/* ================================================================= */}
         {activeTab === 'mixer' && (
           <>
             <div className="modular-controls-header">
               <h3>
                 <Sliders size={18} />
-                <span>Модульный конструктор Шотокан</span>
+                <span>3D Студия движений каратэ Шотокан</span>
               </h3>
               <p className="modular-controls-subtitle">
-                Комбинируйте стандартные стойки и техники или подключайте созданные вами слои
+                Комбинируйте стойки и техники по слоям или воспроизводите непрерывные динамические формы ката (включая акробатику Унсу)
               </p>
             </div>
 
-            {/* Секция 1: Нижний слой (Стойка / Перемещение) */}
-            <div className="modular-section">
-              <label className="modular-section-label">
-                <span className="badge-tag badge-tag--lower">НИЖНИЙ СЛОЙ</span>
-                <span>Стойка / Шаг (Таз + Ноги In-Place)</span>
-              </label>
-              <div className="modular-presets-grid">
-                {allStances.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`modular-preset-btn ${selectedStance === s.id ? 'active' : ''} ${s.type === 'custom' ? 'modular-preset-btn--custom' : ''}`}
-                    onClick={() => setSelectedStance(s.id)}
-                    title={s.desc}
-                  >
-                    <span className="modular-preset-title">{s.name}</span>
-                    <span className="modular-preset-type">
-                      {s.type === 'custom' ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <Sparkles size={10} color="var(--gold, #bfa15f)" /> Мой слой
-                        </span>
-                      ) : s.type === 'movement' ? (
-                        'Шаг'
-                      ) : (
-                        'Стойка'
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
+            {/* Переключатель режимов: Модульный синтез vs Динамика Ката */}
+            <div className="modular-mode-selector">
+              <button
+                type="button"
+                className={`modular-mode-btn ${motionMode === 'modular' ? 'active' : ''}`}
+                onClick={() => setMotionMode('modular')}
+              >
+                <Layers size={14} />
+                <span>Модульный синтез (Стойка + Техника)</span>
+              </button>
+              <button
+                type="button"
+                className={`modular-mode-btn ${motionMode === 'fullbody' ? 'active' : ''}`}
+                onClick={() => setMotionMode('fullbody')}
+              >
+                <Flame size={14} color="#f59e0b" />
+                <span>Динамика Ката (Цельное тело / Унсу)</span>
+              </button>
             </div>
 
-            {/* Секция 2: Верхний слой (Техника рук / Блок) */}
-            <div className="modular-section">
-              <label className="modular-section-label">
-                <span className="badge-tag badge-tag--upper">ВЕРХНИЙ СЛОЙ</span>
-                <span>Техника рук (Удары, Блоки, Скручивание)</span>
-              </label>
-              <div className="modular-presets-grid">
-                {allTechniques.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`modular-preset-btn ${selectedTechnique === t.id ? 'active' : ''} ${t.type === 'custom' ? 'modular-preset-btn--custom' : ''}`}
-                    onClick={() => setSelectedTechnique(t.id)}
-                    title={t.desc}
-                  >
-                    <span className="modular-preset-title">{t.name}</span>
-                    <span className="modular-preset-type">
-                      {t.type === 'custom' ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <Sparkles size={10} color="var(--gold, #bfa15f)" /> Мой слой
+            {/* РЕЖИМ А: МОДУЛЬНЫЙ СИНТЕЗ СЛОЕВ */}
+            {motionMode === 'modular' && (
+              <>
+                {/* Секция 1: Нижний слой (Стойка / Шаг) */}
+                <div className="modular-section">
+                  <label className="modular-section-label">
+                    <span className="badge-tag badge-tag--lower">НИЖНИЙ СЛОЙ</span>
+                    <span>Стойка / Шаг (Таз + Ноги In-Place)</span>
+                  </label>
+                  <div className="modular-presets-grid">
+                    {allStances.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`modular-preset-btn ${selectedStance === s.id ? 'active' : ''} ${s.type === 'custom' ? 'modular-preset-btn--custom' : ''}`}
+                        onClick={() => setSelectedStance(s.id)}
+                        title={s.desc}
+                      >
+                        <span className="modular-preset-title">{s.name}</span>
+                        <span className="modular-preset-type">
+                          {s.type === 'custom' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Sparkles size={10} color="var(--gold, #bfa15f)" /> Мой MoCap
+                            </span>
+                          ) : s.type === 'movement' ? (
+                            'Шаг'
+                          ) : (
+                            'Стойка'
+                          )}
                         </span>
-                      ) : t.type === 'block' ? (
-                        'Блок'
-                      ) : (
-                        'Удар'
-                      )}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-            {/* Секция 3: Разворот эмбусэн */}
+                {/* Секция 2: Верхний слой (Техника рук) */}
+                <div className="modular-section">
+                  <label className="modular-section-label">
+                    <span className="badge-tag badge-tag--upper">ВЕРХНИЙ СЛОЙ</span>
+                    <span>Техника рук (Удары, Блоки, Скручивание)</span>
+                  </label>
+                  <div className="modular-presets-grid">
+                    {allTechniques.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`modular-preset-btn ${selectedTechnique === t.id ? 'active' : ''} ${t.type === 'custom' ? 'modular-preset-btn--custom' : ''}`}
+                        onClick={() => setSelectedTechnique(t.id)}
+                        title={t.desc}
+                      >
+                        <span className="modular-preset-title">{t.name}</span>
+                        <span className="modular-preset-type">
+                          {t.type === 'custom' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Sparkles size={10} color="var(--gold, #bfa15f)" /> Мой MoCap
+                            </span>
+                          ) : t.type === 'block' ? (
+                            'Блок'
+                          ) : (
+                            'Удар'
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* РЕЖИМ Б: ДИНАМИКА КАТА И АКРОБАТИКА ЦЕЛЬНОГО ТЕЛА (УНСУ) */}
+            {motionMode === 'fullbody' && (
+              <div className="modular-section">
+                <label className="modular-section-label">
+                  <span className="badge-tag" style={{ background: '#451a03', color: '#fbbf24', border: '1px solid #78350f' }}>
+                    ЦЕЛЬНОЕ ТЕЛО & УНСУ
+                  </span>
+                  <span>Динамические мастер-формы, прыжки и непрерывные приемы</span>
+                </label>
+                <div className="modular-presets-grid" style={{ maxHeight: '220px' }}>
+                  {allFullBodyPresets.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`modular-preset-btn ${selectedFullBody === f.id ? 'active' : ''}`}
+                      onClick={() => setSelectedFullBody(f.id)}
+                      title={f.desc}
+                    >
+                      <span className="modular-preset-title">{f.name}</span>
+                      <span className="modular-preset-type" style={{ color: '#fbbf24' }}>
+                        {f.badge || 'Цельное тело'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Секция: Разворот эмбусэн */}
             <div className="modular-section">
               <label className="modular-section-label">
                 <Compass size={14} />
@@ -765,66 +1005,7 @@ export default function ModularMotionMixer() {
               </div>
             </div>
 
-            {/* Секция 4: Тонкая настройка слоев (Высота стойки и доворот корпуса в реальном времени) */}
-            <div className="modular-section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="modular-section-label" style={{ marginBottom: 0 }}>
-                  <Sliders size={14} />
-                  <span>Тонкая настройка биомеханики слоёв</span>
-                </label>
-                {(layerAdjustments.hipsHeight !== 0 || layerAdjustments.torsoTwist !== 0) && (
-                  <button
-                    type="button"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: 'var(--gold, #bfa15f)',
-                      fontSize: '0.74rem',
-                      cursor: 'pointer',
-                      padding: '2px 6px',
-                    }}
-                    onClick={() => setLayerAdjustments({ hipsHeight: 0, torsoTwist: 0 })}
-                  >
-                    Сбросить
-                  </button>
-                )}
-              </div>
-              <div className="pose-slider-group" style={{ marginTop: '0.45rem' }}>
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Высота таза / Глубина стойки:</span>
-                    <strong>{layerAdjustments.hipsHeight > 0 ? `+${layerAdjustments.hipsHeight}` : layerAdjustments.hipsHeight} см</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-15"
-                    max="10"
-                    step="1"
-                    value={layerAdjustments.hipsHeight}
-                    onChange={(e) => setLayerAdjustments(prev => ({ ...prev, hipsHeight: parseFloat(e.target.value) }))}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Доворот корпуса (Ханми 45° / Сёмен 0°):</span>
-                    <strong>{layerAdjustments.torsoTwist > 0 ? `+${layerAdjustments.torsoTwist}` : layerAdjustments.torsoTwist}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-45"
-                    max="45"
-                    step="5"
-                    value={layerAdjustments.torsoTwist}
-                    onChange={(e) => setLayerAdjustments(prev => ({ ...prev, torsoTwist: parseFloat(e.target.value) }))}
-                    className="pose-range-input"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Секция 5: Плеер и скорость */}
+            {/* Секция: Плеер и управление скоростью */}
             <div className="modular-player-toolbar">
               <button type="button" className="btn btn-primary modular-play-btn" onClick={handleReplay}>
                 <RotateCcw size={15} />
@@ -869,17 +1050,17 @@ export default function ModularMotionMixer() {
         )}
 
         {/* ================================================================= */}
-        {/* ВКЛАДКА 2: ЗАПИСЬ С КАМЕРЫ (AI MOCAP LAYER RECORDER)             */}
+        {/* ВКЛАДКА 2: ЗАПИСЬ С КАМЕРЫ (AI MOCAP RECORDER)                   */}
         {/* ================================================================= */}
         {activeTab === 'recorder' && (
           <div className="mocap-recorder-box">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h4 style={{ margin: 0, color: 'var(--gold, #bfa15f)', fontSize: '0.98rem' }}>
-                  Запись слоя с веб-камеры в реальном времени
+                  AI MoCap Запись с веб-камеры
                 </h4>
                 <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary, #999)' }}>
-                  Захват движений через нейросеть MediaPipe Pose прямо в браузере
+                  Захват движений через нейросеть MediaPipe Pose: цельное тело, удары руками или стойки
                 </p>
               </div>
               {camActive && (
@@ -889,29 +1070,40 @@ export default function ModularMotionMixer() {
               )}
             </div>
 
-            {/* Выбор записываемого слоя */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            {/* Выбор записываемого слоя: Цельное тело, Верх или Низ */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+              <button
+                type="button"
+                className={`modular-preset-btn ${recorderLayerType === 'full' ? 'active' : ''}`}
+                onClick={() => setRecorderLayerType('full')}
+              >
+                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Flame size={13} color="#f59e0b" />
+                  <span>Цельное тело</span>
+                </span>
+                <span className="modular-preset-type">Прыжки, удары, Унсу</span>
+              </button>
               <button
                 type="button"
                 className={`modular-preset-btn ${recorderLayerType === 'upper' ? 'active' : ''}`}
                 onClick={() => setRecorderLayerType('upper')}
               >
-                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Shield size={14} color="var(--gold, #bfa15f)" />
-                  <span>Только Верхний слой</span>
+                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Shield size={13} color="var(--gold, #bfa15f)" />
+                  <span>Верхний слой</span>
                 </span>
-                <span className="modular-preset-type">Руки и корпус (ноги в стойке)</span>
+                <span className="modular-preset-type">Руки и корпус</span>
               </button>
               <button
                 type="button"
                 className={`modular-preset-btn ${recorderLayerType === 'lower' ? 'active' : ''}`}
                 onClick={() => setRecorderLayerType('lower')}
               >
-                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Zap size={14} color="var(--gold, #bfa15f)" />
-                  <span>Только Нижний слой</span>
+                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Zap size={13} color="var(--gold, #bfa15f)" />
+                  <span>Нижний слой</span>
                 </span>
-                <span className="modular-preset-type">Стойка и шаги (In-Place)</span>
+                <span className="modular-preset-type">Стойки и шаги</span>
               </button>
             </div>
 
@@ -939,7 +1131,7 @@ export default function ModularMotionMixer() {
                   </div>
                   <div className="recorder-cam-title">Веб-камера выключена</div>
                   <p className="recorder-cam-desc">
-                    Включите камеру для AI захвата движений мастера каратэ и записи модульных слоев
+                    Включите камеру для AI захвата движений мастера каратэ и сохранения собственных анимаций
                   </p>
                   <button type="button" className="btn btn-primary recorder-cam-start-btn" onClick={startCamera}>
                     <Camera size={16} />
@@ -952,7 +1144,7 @@ export default function ModularMotionMixer() {
               {countdown > 0 && (
                 <div className="countdown-overlay">
                   <div className="countdown-num">{countdown}</div>
-                  <div style={{ color: '#fff', fontSize: '0.9rem' }}>Приготовьтесь к выполнению техники!</div>
+                  <div style={{ color: '#fff', fontSize: '0.9rem' }}>Приготовьтесь к выполнению движения!</div>
                 </div>
               )}
 
@@ -1004,19 +1196,19 @@ export default function ModularMotionMixer() {
               <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', padding: '12px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <strong style={{ color: '#10b981', fontSize: '0.88rem' }}>✓ Запись успешно преобразована в 3D клип!</strong>
                 <p style={{ margin: 0, fontSize: '0.78rem', color: '#d1d5db' }}>
-                  Движение сейчас проигрывается на 3D аватаре Тори слева. Введите название и сохраните в свою библиотеку.
+                  Движение сейчас проигрывается на 3D аватаре Тори слева. Введите название и сохраните в библиотеку.
                 </p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
                     value={newLayerName}
                     onChange={(e) => setNewLayerName(e.target.value)}
-                    placeholder="Например: Мой блок уракэн"
+                    placeholder="Например: Мой удар ногой маваси"
                     style={{ flex: 1, background: '#111', border: '1px solid #374151', borderRadius: 4, padding: '6px 10px', color: '#fff', fontSize: '0.82rem' }}
                   />
                   <button type="button" className="btn btn-gold" onClick={handleSaveRecordedLayer}>
                     <Save size={14} />
-                    <span>Сохранить в Мои слои</span>
+                    <span>Сохранить в Мои движения</span>
                   </button>
                 </div>
               </div>
@@ -1025,272 +1217,27 @@ export default function ModularMotionMixer() {
         )}
 
         {/* ================================================================= */}
-        {/* ВКЛАДКА 3: ИНТЕРАКТИВНЫЙ КОНСТРУКТОР ПОЗ И ФАЗ                   */}
-        {/* ================================================================= */}
-        {activeTab === 'creator' && (
-          <div className="pose-creator-box">
-            <div>
-              <h4 style={{ margin: 0, color: 'var(--gold, #bfa15f)', fontSize: '0.98rem' }}>
-                Конструктор поз и фаз по частям
-              </h4>
-              <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary, #999)' }}>
-                Настраивайте суставы покадрово — Three.js автоматически интерполирует движение
-              </p>
-            </div>
-
-            {/* Выбор типа слоя */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-              <button
-                type="button"
-                className={`modular-preset-btn ${creatorLayerType === 'upper' ? 'active' : ''}`}
-                onClick={() => {
-                  setCreatorLayerType('upper');
-                  setIsPlayingCreatorAnimation(false);
-                }}
-              >
-                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Shield size={14} color="var(--gold, #bfa15f)" />
-                  <span>Верхний слой</span>
-                </span>
-                <span className="modular-preset-type">Удар / Блок / Руки</span>
-              </button>
-              <button
-                type="button"
-                className={`modular-preset-btn ${creatorLayerType === 'lower' ? 'active' : ''}`}
-                onClick={() => {
-                  setCreatorLayerType('lower');
-                  setIsPlayingCreatorAnimation(false);
-                }}
-              >
-                <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Zap size={14} color="var(--gold, #bfa15f)" />
-                  <span>Нижний слой</span>
-                </span>
-                <span className="modular-preset-type">Стойка / Таз In-Place</span>
-              </button>
-            </div>
-
-            {/* Выбор активной фазы */}
-            <div className="pose-phase-tabs">
-              {keyframes.map((kf, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className={`pose-phase-btn ${activePhaseIdx === idx ? 'active' : ''}`}
-                  onClick={() => {
-                    setActivePhaseIdx(idx);
-                    setIsPlayingCreatorAnimation(false);
-                  }}
-                >
-                  {kf.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Слайдеры суставов для Верхнего слоя */}
-            {creatorLayerType === 'upper' && (
-              <div className="pose-slider-group">
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Скручивание корпуса (Ханми / Сёмен):</span>
-                    <strong>{currentPose.hanmiAngle || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-45"
-                    max="45"
-                    step="5"
-                    value={currentPose.hanmiAngle || 0}
-                    onChange={(e) => updateActivePhasePose('hanmiAngle', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Левое плечо (Подъем / Вынос):</span>
-                    <strong>{currentPose.leftShoulderPitch || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-90"
-                    max="60"
-                    step="5"
-                    value={currentPose.leftShoulderPitch || 0}
-                    onChange={(e) => updateActivePhasePose('leftShoulderPitch', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Левый локоть (Сгиб блока/удара):</span>
-                    <strong>{currentPose.leftElbowFlex || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="140"
-                    step="5"
-                    value={currentPose.leftElbowFlex || 60}
-                    onChange={(e) => updateActivePhasePose('leftElbowFlex', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Правое плечо (Удар кулаком / Реверс):</span>
-                    <strong>{currentPose.rightShoulderPitch || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-90"
-                    max="60"
-                    step="5"
-                    value={currentPose.rightShoulderPitch || 0}
-                    onChange={(e) => updateActivePhasePose('rightShoulderPitch', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Правый локоть (Сгиб):</span>
-                    <strong>{currentPose.rightElbowFlex || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="140"
-                    step="5"
-                    value={currentPose.rightElbowFlex || 60}
-                    onChange={(e) => updateActivePhasePose('rightElbowFlex', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Слайдеры суставов для Нижнего слоя */}
-            {creatorLayerType === 'lower' && (
-              <div className="pose-slider-group">
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Снижение таза / Глубина стойки:</span>
-                    <strong>{currentPose.hipsDrop || 0} см</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="-30"
-                    max="0"
-                    step="2"
-                    value={currentPose.hipsDrop ?? -10}
-                    onChange={(e) => updateActivePhasePose('hipsDrop', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Левое колено (Сгиб опорной ноги):</span>
-                    <strong>{currentPose.leftKneeFlex || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="80"
-                    step="5"
-                    value={currentPose.leftKneeFlex || 30}
-                    onChange={(e) => updateActivePhasePose('leftKneeFlex', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-
-                <div className="pose-slider-row">
-                  <div className="pose-slider-header">
-                    <span>Правое колено (Сгиб задней ноги):</span>
-                    <strong>{currentPose.rightKneeFlex || 0}°</strong>
-                  </div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="80"
-                    step="5"
-                    value={currentPose.rightKneeFlex || 20}
-                    onChange={(e) => updateActivePhasePose('rightKneeFlex', e.target.value)}
-                    className="pose-range-input"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Управление тестом движения и сбросом */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                type="button"
-                className={`btn ${isPlayingCreatorAnimation ? 'btn-danger' : 'btn-secondary'}`}
-                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.8rem' }}
-                onClick={handleToggleCreatorAnimation}
-              >
-                {isPlayingCreatorAnimation ? <Square size={14} color="#ef4444" /> : <Play size={14} />}
-                <span>{isPlayingCreatorAnimation ? 'Остановить тест (режим позы)' : 'Тест движения (Фазы 1 → 2 → 3)'}</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
-                title="Сбросить позу текущей фазы"
-                onClick={handleResetActivePhasePose}
-              >
-                <RotateCcw size={14} />
-                <span>Сброс</span>
-              </button>
-            </div>
-
-            {/* Сохранение позы */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                value={creatorClipName}
-                onChange={(e) => setCreatorClipName(e.target.value)}
-                placeholder="Название созданной техники..."
-                style={{ flex: 1, background: '#111', border: '1px solid #374151', borderRadius: 4, padding: '8px 10px', color: '#fff', fontSize: '0.82rem' }}
-              />
-              <button type="button" className="btn btn-gold" onClick={handleSaveCreatedLayer}>
-                <Sparkles size={14} />
-                <span>Синтезировать и сохранить</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ================================================================= */}
-        {/* ВКЛАДКА 4: МОИ СОХРАНЕННЫЕ СЛОИ (БИБЛИОТЕКА)                      */}
+        {/* ВКЛАДКА 3: МОИ СОХРАНЕННЫЕ ДВИЖЕНИЯ (БИБЛИОТЕКА)                 */}
         {/* ================================================================= */}
         {activeTab === 'library' && (
           <div>
             <div className="modular-controls-header">
               <h3>
                 <BookOpen size={18} />
-                <span>Библиотека моих слоев</span>
+                <span>Библиотека моих движений</span>
               </h3>
               <p className="modular-controls-subtitle">
-                Все записанные с камеры и смоделированные вручную части анимации
+                Все записанные вами с веб-камеры и кастомные движения каратэ
               </p>
             </div>
 
             {customLayers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem', background: 'rgba(0,0,0,0.2)', borderRadius: 6, border: '1px dashed #374151', color: 'var(--text-secondary)' }}>
-                <p style={{ margin: 0, fontSize: '0.86rem' }}>У вас пока нет сохраненных слоев.</p>
+                <p style={{ margin: 0, fontSize: '0.86rem' }}>У вас пока нет сохраненных анимаций.</p>
                 <div style={{ marginTop: '0.8rem', display: 'flex', gap: '8px', justifyContent: 'center' }}>
                   <button type="button" className="btn btn-primary" onClick={() => setActiveTab('recorder')}>
                     <Camera size={13} />
-                    <span>Записать с камеры</span>
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setActiveTab('creator')}>
-                    <Sparkles size={13} />
-                    <span>Создать по частям</span>
+                    <span>Записать с веб-камеры</span>
                   </button>
                 </div>
               </div>
@@ -1302,21 +1249,19 @@ export default function ModularMotionMixer() {
                       <strong>{layer.name}</strong>
                       <div className="custom-layer-sub">
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {layer.layerType === 'upper' ? (
+                          {layer.layerType === 'full' ? (
+                            <Flame size={12} color="#f59e0b" />
+                          ) : layer.layerType === 'upper' ? (
                             <Shield size={12} color="var(--gold, #bfa15f)" />
                           ) : (
                             <Zap size={12} color="var(--gold, #bfa15f)" />
                           )}
-                          {layer.layerType === 'upper' ? 'Верхний слой' : 'Нижний слой'}
+                          {layer.layerType === 'full' ? 'Цельное тело' : (layer.layerType === 'upper' ? 'Верхний слой' : 'Нижний слой')}
                         </span>
                         <span>•</span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {layer.source === 'camera' ? (
-                            <Camera size={12} color="#10b981" />
-                          ) : (
-                            <Sliders size={12} color="#60a5fa" />
-                          )}
-                          {layer.source === 'camera' ? 'Запись с камеры' : 'Конструктор поз'}
+                          <Camera size={12} color="#10b981" />
+                          <span>Запись с камеры</span>
                         </span>
                       </div>
                     </div>
@@ -1327,9 +1272,14 @@ export default function ModularMotionMixer() {
                         className="btn btn-primary"
                         style={{ padding: '5px 10px', fontSize: '0.75rem' }}
                         onClick={() => {
-                          if (layer.layerType === 'upper') {
+                          if (layer.layerType === 'full') {
+                            setMotionMode('fullbody');
+                            setSelectedFullBody(layer.id);
+                          } else if (layer.layerType === 'upper') {
+                            setMotionMode('modular');
                             setSelectedTechnique(layer.id);
                           } else {
+                            setMotionMode('modular');
                             setSelectedStance(layer.id);
                           }
                           setActiveTab('mixer');
@@ -1360,6 +1310,265 @@ export default function ModularMotionMixer() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ================================================================= */}
+        {/* ВКЛАДКА 4: РЕДАКТОР АНИМАЦИЙ (ТОЛЬКО ДЛЯ АДМИНИСТРАТОРА)          */}
+        {/* ================================================================= */}
+        {isAdmin && activeTab === 'admin' && (
+          <div className="admin-editor-box">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h4 style={{ margin: 0, color: '#f87171', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Shield size={16} />
+                    <span>Редактор готовых анимаций библиотеки</span>
+                  </h4>
+                  <span className="admin-badge">Admin Mode</span>
+                </div>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--text-secondary, #999)' }}>
+                  Обрезка фаз (Trim), регулировка темпа, поворот, редактирование метаданных и экспорт клипов
+                </p>
+              </div>
+            </div>
+
+            {/* Выбор анимации для редактирования */}
+            <div className="admin-input-group">
+              <label className="admin-input-label">Выберите анимацию из каталога Шотокан:</label>
+              <select
+                className="admin-select-input"
+                value={adminSelectedAnim}
+                onChange={(e) => setAdminSelectedAnim(e.target.value)}
+              >
+                {ADMIN_EDITABLE_CATALOG.map((grp) => (
+                  <optgroup key={grp.group} label={grp.group}>
+                    {grp.items.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        {it.name} ({it.cat})
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                {customLayers.length > 0 && (
+                  <optgroup label="Пользовательские записи">
+                    {customLayers.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        [MoCap] {l.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+
+            {/* Инспектор дорожек и длительности */}
+            <div style={{ display: 'flex', gap: 12, background: 'rgba(0,0,0,0.3)', padding: '6px 12px', borderRadius: 4, fontSize: '0.78rem', color: '#9ca3af' }}>
+              <span>Длительность оригинала: <strong style={{ color: '#fff' }}>{adminDuration.toFixed(2)}с</strong></span>
+              <span>•</span>
+              <span>Костей/дорожек: <strong style={{ color: '#fff' }}>{adminTrackCount}</strong></span>
+              <span>•</span>
+              <span>Выбранный срез: <strong style={{ color: '#fcd34d' }}>{(adminTrimEnd - adminTrimStart).toFixed(2)}с</strong></span>
+            </div>
+
+            {/* Таймлайн и Обрезка (Trim Start / Trim End) */}
+            <div className="admin-timeline-container">
+              <div className="admin-timeline-header">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Scissors size={14} color="#f59e0b" />
+                  <span>Обрезка временных границ клипа (Trim):</span>
+                </span>
+                <span style={{ fontFamily: 'monospace', color: '#fbbf24' }}>
+                  {adminTrimStart.toFixed(2)}с — {adminTrimEnd.toFixed(2)}с
+                </span>
+              </div>
+
+              {/* Визуальная шкала таймлайна */}
+              <div className="admin-timeline-track">
+                <div
+                  className="admin-timeline-active-slice"
+                  style={{
+                    left: `${adminDuration > 0 ? (adminTrimStart / adminDuration) * 100 : 0}%`,
+                    width: `${adminDuration > 0 ? ((adminTrimEnd - adminTrimStart) / adminDuration) * 100 : 100}%`,
+                  }}
+                />
+              </div>
+
+              {/* Ползунки начала и конца */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginBottom: 2 }}>
+                    <span>Начало (Trim Start):</span>
+                    <strong>{adminTrimStart.toFixed(2)}с</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={Math.max(0.1, adminTrimEnd - 0.05)}
+                    step="0.05"
+                    value={adminTrimStart}
+                    onChange={(e) => setAdminTrimStart(parseFloat(e.target.value))}
+                    className="pose-range-input"
+                  />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#9ca3af', marginBottom: 2 }}>
+                    <span>Конец (Trim End):</span>
+                    <strong>{adminTrimEnd.toFixed(2)}с</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min={adminTrimStart + 0.05}
+                    max={Math.max(0.2, adminDuration)}
+                    step="0.05"
+                    value={adminTrimEnd}
+                    onChange={(e) => setAdminTrimEnd(parseFloat(e.target.value))}
+                    className="pose-range-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Настройки скорости и угла поворота */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="admin-input-group">
+                <label className="admin-input-label">Скорость исполнения: {adminSpeed.toFixed(2)}x</label>
+                <input
+                  type="range"
+                  min="0.25"
+                  max="2.0"
+                  step="0.05"
+                  value={adminSpeed}
+                  onChange={(e) => setAdminSpeed(parseFloat(e.target.value))}
+                  className="pose-range-input"
+                />
+              </div>
+              <div className="admin-input-group">
+                <label className="admin-input-label">Разворот Yaw: {adminYaw}°</label>
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="15"
+                  value={adminYaw}
+                  onChange={(e) => setAdminYaw(parseInt(e.target.value, 10))}
+                  className="pose-range-input"
+                />
+              </div>
+            </div>
+
+            {/* Поля метаданных для каталога */}
+            <div className="admin-meta-grid">
+              <div className="admin-input-group">
+                <label className="admin-input-label">Название (RU):</label>
+                <input
+                  type="text"
+                  className="admin-text-input"
+                  value={adminTitle}
+                  onChange={(e) => setAdminTitle(e.target.value)}
+                />
+              </div>
+              <div className="admin-input-group">
+                <label className="admin-input-label">Японское название (Romaji/Kanji):</label>
+                <input
+                  type="text"
+                  className="admin-text-input"
+                  value={adminJapanese}
+                  onChange={(e) => setAdminJapanese(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="admin-meta-grid">
+              <div className="admin-input-group">
+                <label className="admin-input-label">Категория:</label>
+                <select
+                  className="admin-select-input"
+                  value={adminCategory}
+                  onChange={(e) => setAdminCategory(e.target.value)}
+                >
+                  <option value="Удар рукой">Удар рукой (Цуки / Ути)</option>
+                  <option value="Блок">Защитный блок (Укэ)</option>
+                  <option value="Удар ногой">Удар ногой (Гэри)</option>
+                  <option value="Прыжок">Прыжок / Акробатика (Унсу)</option>
+                  <option value="Ката">Ката (Мастер-прогон)</option>
+                  <option value="Стойка">Стойка (Дати)</option>
+                  <option value="Связка">Связка / Комбо</option>
+                </select>
+              </div>
+              <div className="admin-input-group">
+                <label className="admin-input-label">Зацикливание при тесте:</label>
+                <div style={{ display: 'flex', alignItems: 'center', height: '100%', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    id="adminLoopCheck"
+                    checked={adminLoop}
+                    onChange={(e) => setAdminLoop(e.target.checked)}
+                  />
+                  <label htmlFor="adminLoopCheck" style={{ fontSize: '0.82rem', color: '#d1d5db', cursor: 'pointer' }}>
+                    Повторять непрерывно
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-input-group">
+              <label className="admin-input-label">Примечание по биомеханике и кимэ:</label>
+              <textarea
+                className="admin-text-input"
+                rows="2"
+                value={adminNotes}
+                onChange={(e) => setAdminNotes(e.target.value)}
+              />
+            </div>
+
+            {adminStatusMessage && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', padding: '6px 12px', borderRadius: 4, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 size={14} />
+                <span>{adminStatusMessage}</span>
+              </div>
+            )}
+
+            {/* Панель действий администратора */}
+            <div className="admin-actions-bar">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleAdminTest3D}
+                style={{ padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Play size={14} />
+                <span>Проверить срез в 3D</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-gold"
+                onClick={handleAdminSave}
+                style={{ padding: '8px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Save size={14} />
+                <span>Сохранить изменения</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleAdminExportJson}
+                style={{ padding: '8px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Download size={14} />
+                <span>Экспорт JSON</span>
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleAdminReset}
+                title="Сбросить к оригиналу"
+                style={{ padding: '8px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              >
+                <RotateCcw size={13} />
+                <span>Сброс</span>
+              </button>
+            </div>
           </div>
         )}
       </div>

@@ -40,7 +40,7 @@ function checkIsMobileOrTablet() {
 
 export default function KarateStudioPage() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(checkIsMobileOrTablet);
-  const [activeStudioTab, setActiveStudioTab] = useState('mocap'); // 'mocap' | 'modular'
+  const [showMultiCamStream, setShowMultiCamStream] = useState(false);
 
   const [showQr, setShowQr] = useState(false);
   const [selectedCam, setSelectedCam] = useState('cam1');
@@ -336,49 +336,27 @@ export default function KarateStudioPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Переключатель режимов: Камеры MoCap / Модульный конструктор */}
-          <div style={{ display: 'flex', gap: '4px', background: '#0e1017', padding: '3px', borderRadius: '8px', border: '1px solid #282d3c' }}>
-            <button
-              type="button"
-              onClick={() => setActiveStudioTab('mocap')}
-              style={{
-                background: activeStudioTab === 'mocap' ? '#2563eb' : 'transparent',
-                color: activeStudioTab === 'mocap' ? '#ffffff' : '#9ca3af',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <Camera size={13} />
-              <span>Камеры MoCap</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveStudioTab('modular')}
-              style={{
-                background: activeStudioTab === 'modular' ? '#f59e0b' : 'transparent',
-                color: activeStudioTab === 'modular' ? '#000000' : '#9ca3af',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: '11.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <Layers size={13} />
-              <span>Модульная студия & Запись</span>
-            </button>
-          </div>
+          {/* Кнопка потока мульти-камер Python MoCap (Сплит-режим) */}
+          <button
+            type="button"
+            onClick={() => setShowMultiCamStream(!showMultiCamStream)}
+            style={{
+              background: showMultiCamStream ? 'rgba(37, 99, 235, 0.2)' : 'transparent',
+              color: showMultiCamStream ? '#60a5fa' : '#9ca3af',
+              border: showMultiCamStream ? '1px solid #2563eb' : '1px solid #374151',
+              borderRadius: '6px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Camera size={13} color={showMultiCamStream ? '#60a5fa' : '#9ca3af'} />
+            <span>{showMultiCamStream ? 'Скрыть камеры Python' : 'Поток камер (Python)'}</span>
+          </button>
 
           <button
             type="button"
@@ -798,67 +776,81 @@ export default function KarateStudioPage() {
         </div>
       )}
 
-      {/* Main Viewport */}
-      {activeStudioTab === 'modular' ? (
+      {/* Main Unified Viewport (3D Studio + Опциональный сплит с Python MoCap) */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#0d0e12' }}>
+        {showMultiCamStream && (
+          <div style={{
+            width: '420px',
+            maxWidth: '45%',
+            height: '100%',
+            borderRight: '1px solid #282d3c',
+            display: 'flex',
+            flexDirection: 'column',
+            background: '#111216',
+            position: 'relative',
+          }}>
+            <div style={{
+              padding: '6px 12px',
+              background: '#161822',
+              borderBottom: '1px solid #282d3c',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '11.5px',
+              color: '#d1d5db',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, color: '#60a5fa' }}>
+                <Camera size={13} />
+                <span>Поток Python MoCap ({selectedCam.toUpperCase()})</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMultiCamStream(false)}
+                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 2 }}
+              >
+                <X size={13} />
+              </button>
+            </div>
+
+            {studioOnline ? (
+              <iframe
+                src={studioUrl}
+                title="Karate Motion Studio Cameras"
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  border: 'none',
+                  background: '#0d0e12',
+                }}
+                allow="camera; microphone; accelerometer; gyroscope"
+              />
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                <AlertCircle size={32} color="#f59e0b" style={{ marginBottom: 10 }} />
+                <p style={{ margin: '0 0 10px', color: '#e5e7eb', fontWeight: 600 }}>Python MoCap сервер не запущен</p>
+                <p style={{ margin: '0 0 14px', fontSize: '0.78rem' }}>
+                  Для работы мульти-камер запустите <code>start_python_mocap.bat</code>. Запись через веб-камеру в студии справа работает независимо прямо в браузере!
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => window.location.reload()}
+                  style={{ fontSize: '0.75rem', padding: '5px 12px' }}
+                >
+                  <RefreshCw size={12} />
+                  <span>Проверить снова</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: '#0d0e12' }}>
-          <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D микшера движений…</div>}>
+          <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D студии движений…</div>}>
             <ModularMotionMixer />
           </Suspense>
         </div>
-      ) : studioOnline ? (
-        <iframe
-          src={studioUrl}
-          title="Karate Motion Studio"
-          style={{
-            width: '100%',
-            flex: 1,
-            border: 'none',
-            background: '#111216',
-          }}
-          allow="camera; microphone; accelerometer; gyroscope"
-        />
-      ) : (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '30px',
-          textAlign: 'center',
-          color: '#e5e7eb',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <Video size={48} color="#f59e0b" />
-          </div>
-          <h2 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '10px' }}>
-            Python AI Сервер MoCap не запущен
-          </h2>
-          <p style={{ maxWidth: '560px', color: '#9ca3af', lineHeight: 1.6, marginBottom: '20px', fontSize: '0.95rem' }}>
-            Для работы захвата движений через Python-движок запустите файл <code>start_python_mocap.bat</code> в корне проекта или скрипт <code>karate_motion_studio/run_web_studio.bat</code>.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => window.location.reload()}
-              style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <RefreshCw size={14} />
-              <span>Проверить подключение</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setActiveStudioTab('modular')}
-              style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Layers size={14} />
-              <span>Открыть Модульную студию & Запись</span>
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

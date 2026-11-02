@@ -9,12 +9,16 @@ import {
   extractLowerBodyClip,
   extractUpperBodyClip,
 } from './modularAnimationEngine.js';
+import { generateUnsuJump360Clip } from './customMotionManager.js';
 
 export {
   synthesizeModularClip,
   extractLowerBodyClip,
   extractUpperBodyClip,
   registerCustomClip,
+  getCachedClips,
+  globalClipCache,
+  CLIP_FILES,
 };
 
 /**
@@ -115,6 +119,11 @@ export const ACTION_ALIASES = {
 export function resolveClip(name) {
   if (!name) return null;
   if (globalClipCache.has(name)) return globalClipCache.get(name);
+  if (name === 'jump_turn_360') {
+    const unsuClip = generateUnsuJump360Clip('jump_turn_360');
+    globalClipCache.set('jump_turn_360', unsuClip);
+    return unsuClip;
+  }
   const alias = ACTION_ALIASES[name];
   if (alias && globalClipCache.has(alias)) return globalClipCache.get(alias);
   return null;
@@ -329,9 +338,6 @@ export default function KaratekaLowpolyModel({
   modularTurn = null,
   modularLoop = false,
   layerAdjustments = null,
-  creatorPose = null,
-  creatorLayerType = 'upper',
-  isPlayingCreatorAnimation = false,
   blendDuration = 0.25,
   speed = 1.0,
   position = [0, 0, 0],
@@ -598,19 +604,44 @@ export default function KaratekaLowpolyModel({
     replayTrigger,
   ]);
 
-  // Запуск динамического приема (activeClip: choku_zuki, oi_zuki_right, mae_geri, heian_shodan_preview, etc.)
+  // Запуск динамического приема (activeClip: jump_turn_360, kick_mae_geri, etc.)
   useEffect(() => {
     if (kataMode || !clipsLoaded || !mixer || !activeClip) return;
     if (modularLowerClip || modularUpperClip) return;
 
-    const rawClip = resolveClip(activeClip) || globalClipCache.get(activeClip);
-    if (!rawClip) return;
+    let rawClip = resolveClip(activeClip) || globalClipCache.get(activeClip);
+    if (!rawClip) {
+      if (activeClip.startsWith('kata_') || activeClip === 'unsu') {
+        const slug = activeClip.replace(/^kata_/, '');
+        ensureKataClipLoaded(slug).then((loaded) => {
+          if (loaded && mixer && !modularLowerClip && !modularUpperClip) {
+            const c = getFilteredClip(loaded);
+            if (!c || c.tracks.length === 0) return;
+            mixer.stopAllAction();
+            try { mixer.uncacheClip(c); } catch (_) {}
+            const act = mixer.clipAction(c);
+            act.reset();
+            act.setLoop(modularLoop ? THREE.LoopRepeat : THREE.LoopOnce, 1);
+            act.timeScale = speed;
+            act.play();
+            currentActionRef.current = act;
+            activeClipRef.current = act;
+          }
+        });
+      }
+      return;
+    }
     const clip = getFilteredClip(rawClip);
     if (!clip || clip.tracks.length === 0) return;
 
+    mixer.stopAllAction();
+    try {
+      mixer.uncacheClip(clip);
+    } catch (_) {}
+
     const action = mixer.clipAction(clip);
     action.reset();
-    action.setLoop(THREE.LoopOnce, 1);
+    action.setLoop(modularLoop ? THREE.LoopRepeat : THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
     action.timeScale = speed;
 
@@ -618,34 +649,42 @@ export default function KaratekaLowpolyModel({
       action.crossFadeFrom(currentActionRef.current, 0.15, true);
     }
     action.play();
+    currentActionRef.current = action;
     activeClipRef.current = action;
 
-    const onFinished = (e) => {
-      if (e.action === action) {
-        mixer.removeEventListener('finished', onFinished);
-        activeClipRef.current = null;
+    if (groupRef.current && typeof modularTurn === 'number') {
+      const rad = THREE.MathUtils.degToRad(modularTurn);
+      groupRef.current.rotation.y = rad;
+    }
 
-        // Возврат в текущую базовую стойку
-        const stanceClipName = getStanceClipName(stance);
-        const rawStanceClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
-        const stanceClip = rawStanceClip ? getFilteredClip(rawStanceClip) : null;
-        if (stanceClip && stanceClip.tracks.length > 0) {
-          const stanceAction = mixer.clipAction(stanceClip);
-          stanceAction.reset();
-          stanceAction.setLoop(THREE.LoopRepeat);
-          stanceAction.timeScale = speed;
-          stanceAction.crossFadeFrom(action, 0.3, true);
-          stanceAction.play();
-          currentActionRef.current = stanceAction;
+    if (!modularLoop) {
+      const onFinished = (e) => {
+        if (e.action === action) {
+          mixer.removeEventListener('finished', onFinished);
+          activeClipRef.current = null;
+
+          // Возврат в текущую базовую стойку
+          const stanceClipName = getStanceClipName(stance);
+          const rawStanceClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
+          const stanceClip = rawStanceClip ? getFilteredClip(rawStanceClip) : null;
+          if (stanceClip && stanceClip.tracks.length > 0) {
+            const stanceAction = mixer.clipAction(stanceClip);
+            stanceAction.reset();
+            stanceAction.setLoop(THREE.LoopRepeat);
+            stanceAction.timeScale = speed;
+            stanceAction.crossFadeFrom(action, 0.3, true);
+            stanceAction.play();
+            currentActionRef.current = stanceAction;
+          }
         }
-      }
-    };
+      };
 
-    mixer.addEventListener('finished', onFinished);
-    return () => {
-      mixer.removeEventListener('finished', onFinished);
-    };
-  }, [kataMode, activeClip, clipsLoaded, mixer, stance, speed, getFilteredClip]);
+      mixer.addEventListener('finished', onFinished);
+      return () => {
+        mixer.removeEventListener('finished', onFinished);
+      };
+    }
+  }, [kataMode, activeClip, clipsLoaded, mixer, stance, speed, getFilteredClip, modularLowerClip, modularUpperClip, modularLoop, modularTurn, replayTrigger]);
 
   // Режим Ката (Kata Mode): Клиповая композиция шагов либо MoCap мастер-прогон
   useEffect(() => {
@@ -817,81 +856,17 @@ export default function KaratekaLowpolyModel({
   // Анимационный тик
   useFrame((_, delta) => {
     if (mixer) {
-      if (creatorPose && !isPlayingCreatorAnimation) {
-        // Статический режим интерактивного позирования активной фазы в Конструкторе поз (от ползунков)
-        const deg2rad = Math.PI / 180;
+      mixer.update(delta);
+
+      // Динамическая коррекция слоев (доворот Ханми/Сёмен при необходимости)
+      if (layerAdjustments?.torsoTwist && clonedModel) {
         const b = bonesMapRef.current;
-
-        if (creatorLayerType === 'upper') {
-          // Торс
-          if (b.spine) b.spine.rotation.set(0, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
-          if (b.chest) b.chest.rotation.set((creatorPose.torsoPitch || 0) * deg2rad, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
-
-          // Левая рука (Подъем плеча и сгиб локтя)
-          if (b.upperArmL) {
-            b.upperArmL.rotation.set((creatorPose.leftShoulderPitch || 0) * deg2rad, 0, 38 * deg2rad, 'YXZ');
-          }
-          if (b.lowerArmL) {
-            b.lowerArmL.rotation.set(0, (creatorPose.leftForearmTwist || 0) * deg2rad, (creatorPose.leftElbowFlex || 60) * deg2rad, 'YXZ');
-          }
-
-          // Правая рука (Хикитэ / Удар кулаком)
-          if (b.upperArmR) {
-            b.upperArmR.rotation.set((creatorPose.rightShoulderPitch || 0) * deg2rad, 0, -28 * deg2rad, 'YXZ');
-          }
-          if (b.lowerArmR) {
-            b.lowerArmR.rotation.set(0, -(creatorPose.rightForearmTwist || 0) * deg2rad, -(creatorPose.rightElbowFlex || 60) * deg2rad, 'YXZ');
-          }
-
-          // Естественная стойка ног Дзэнкуцу-дати, чтобы персонаж не стоял в Т-позе
-          if (b.hips) b.hips.position.y = 0.86;
-          if (b.upperLegL) b.upperLegL.rotation.set(Math.PI - 20 * deg2rad, 0, 0.12, 'YXZ');
-          if (b.lowerLegL) b.lowerLegL.rotation.set(-35 * deg2rad, 0, 0, 'YXZ');
-          if (b.upperLegR) b.upperLegR.rotation.set(Math.PI + 12 * deg2rad, 0, -0.12, 'YXZ');
-          if (b.lowerLegR) b.lowerLegR.rotation.set(-15 * deg2rad, 0, 0, 'YXZ');
-        } else {
-          // НИЖНИЙ СЛОЙ
-          if (b.hips) {
-            b.hips.position.y = 0.90 + ((creatorPose.hipsDrop || 0) / 100);
-          }
-          if (b.upperLegL) {
-            b.upperLegL.rotation.set(Math.PI - (creatorPose.leftKneeFlex || 30) * deg2rad * 0.5, 0, 0.15, 'YXZ');
-          }
-          if (b.lowerLegL) {
-            b.lowerLegL.rotation.set(-(creatorPose.leftKneeFlex || 30) * deg2rad, 0, 0, 'YXZ');
-          }
-          if (b.upperLegR) {
-            b.upperLegR.rotation.set(Math.PI + (creatorPose.rightKneeFlex || 20) * deg2rad * 0.4, 0, -0.15, 'YXZ');
-          }
-          if (b.lowerLegR) {
-            b.lowerLegR.rotation.set(-(creatorPose.rightKneeFlex || 20) * deg2rad, 0, 0, 'YXZ');
-          }
-
-          // Боевая позиция рук Камаэ, чтобы верх тела выглядел собрано
-          if (b.spine) b.spine.rotation.set(0, 15 * deg2rad, 0, 'YXZ');
-          if (b.chest) b.chest.rotation.set(0, 15 * deg2rad, 0, 'YXZ');
-          if (b.upperArmL) b.upperArmL.rotation.set(-10 * deg2rad, 0, 35 * deg2rad, 'YXZ');
-          if (b.lowerArmL) b.lowerArmL.rotation.set(0, 0, 70 * deg2rad, 'YXZ');
-          if (b.upperArmR) b.upperArmR.rotation.set(-30 * deg2rad, 0, -20 * deg2rad, 'YXZ');
-          if (b.lowerArmR) b.lowerArmR.rotation.set(0, 0, -100 * deg2rad, 'YXZ');
-        }
-      } else {
-        mixer.update(delta);
-
-        // Динамическая коррекция слоев в реальном времени (от ползунков тонкой настройки микшера)
-        if (layerAdjustments && clonedModel) {
-          const b = bonesMapRef.current;
-          if (b.hips && typeof layerAdjustments.hipsHeight === 'number') {
-            b.hips.position.y = 0.90 + (layerAdjustments.hipsHeight / 100);
-          }
-          if (typeof layerAdjustments.torsoTwist === 'number' && layerAdjustments.torsoTwist !== 0) {
-            const twistRad = (layerAdjustments.torsoTwist * Math.PI / 180) * 0.5;
-            if (b.spine) b.spine.rotation.y = twistRad;
-            if (b.chest) b.chest.rotation.y = twistRad;
-          }
-        }
+        const twistRad = (layerAdjustments.torsoTwist * Math.PI / 180) * 0.5;
+        if (b.spine) b.spine.rotation.y = twistRad;
+        if (b.chest) b.chest.rotation.y = twistRad;
       }
-      if (currentActionRef.current) {
+    }
+    if (currentActionRef.current) {
         let avatarWorldPos = null;
         if (hipsBoneRef.current) {
           const v = new THREE.Vector3();
@@ -951,7 +926,6 @@ export default function KaratekaLowpolyModel({
           }
         }
       }
-    }
   });
 
   return (
