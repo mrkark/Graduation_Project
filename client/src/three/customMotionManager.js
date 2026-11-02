@@ -118,36 +118,36 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       {
         bone: 'UpperArm.L',
         getEuler: (p) => new THREE.Euler(
-          (p.leftShoulderPitch || -20) * deg2rad,
+          (p.leftShoulderPitch || 0) * deg2rad,
           0,
-          (p.leftShoulderAbduct || 15) * deg2rad,
+          (p.leftShoulderAbduct ?? 38) * deg2rad,
           'YXZ'
         ),
       },
       {
         bone: 'LowerArm.L',
         getEuler: (p) => new THREE.Euler(
-          -(p.leftElbowFlex || 60) * deg2rad,
           0,
           (p.leftForearmTwist || 0) * deg2rad,
+          (p.leftElbowFlex || 60) * deg2rad,
           'YXZ'
         ),
       },
       {
         bone: 'UpperArm.R',
         getEuler: (p) => new THREE.Euler(
-          (p.rightShoulderPitch || -20) * deg2rad,
+          (p.rightShoulderPitch || 0) * deg2rad,
           0,
-          -(p.rightShoulderAbduct || 15) * deg2rad,
+          -(p.rightShoulderAbduct ?? 28) * deg2rad,
           'YXZ'
         ),
       },
       {
         bone: 'LowerArm.R',
         getEuler: (p) => new THREE.Euler(
-          -(p.rightElbowFlex || 60) * deg2rad,
           0,
-          (p.rightForearmTwist || 0) * deg2rad,
+          -(p.rightForearmTwist || 0) * deg2rad,
+          -(p.rightElbowFlex || 60) * deg2rad,
           'YXZ'
         ),
       },

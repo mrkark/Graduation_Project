@@ -917,15 +917,33 @@ export default function ModularMotionMixer() {
 
             {/* Окно камеры и оверлея скелета */}
             <div className="recorder-cam-wrapper">
-              <video ref={videoRef} className="recorder-video" playsInline muted />
-              <canvas ref={canvasRef} width={640} height={480} className="recorder-canvas-overlay" />
+              <video
+                ref={videoRef}
+                className="recorder-video"
+                playsInline
+                muted
+                style={{ display: camActive ? 'block' : 'none' }}
+              />
+              <canvas
+                ref={canvasRef}
+                width={640}
+                height={480}
+                className="recorder-canvas-overlay"
+                style={{ display: camActive ? 'block' : 'none' }}
+              />
 
               {!camActive && (
-                <div style={{ textAlign: 'center', padding: '1rem', zIndex: 2 }}>
-                  <Camera size={36} color="var(--gold)" style={{ marginBottom: 8 }} />
-                  <div style={{ fontSize: '0.86rem', color: '#fff', marginBottom: 10 }}>Веб-камера выключена</div>
-                  <button type="button" className="btn btn-primary" onClick={startCamera}>
-                    Включить веб-камеру
+                <div className="recorder-cam-placeholder">
+                  <div className="recorder-cam-icon-circle">
+                    <Camera size={34} color="var(--gold, #bfa15f)" />
+                  </div>
+                  <div className="recorder-cam-title">Веб-камера выключена</div>
+                  <p className="recorder-cam-desc">
+                    Включите камеру для AI захвата движений мастера каратэ и записи модульных слоев
+                  </p>
+                  <button type="button" className="btn btn-primary recorder-cam-start-btn" onClick={startCamera}>
+                    <Camera size={16} />
+                    <span>Включить веб-камеру</span>
                   </button>
                 </div>
               )}

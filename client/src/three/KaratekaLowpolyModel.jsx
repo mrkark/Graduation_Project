@@ -823,20 +823,57 @@ export default function KaratekaLowpolyModel({
         const b = bonesMapRef.current;
 
         if (creatorLayerType === 'upper') {
+          // Торс
           if (b.spine) b.spine.rotation.set(0, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
           if (b.chest) b.chest.rotation.set((creatorPose.torsoPitch || 0) * deg2rad, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
-          if (b.upperArmL) b.upperArmL.rotation.set((creatorPose.leftShoulderPitch ?? 0) * deg2rad, 0, (creatorPose.leftShoulderAbduct ?? 15) * deg2rad, 'YXZ');
-          if (b.lowerArmL) b.lowerArmL.rotation.set(-(creatorPose.leftElbowFlex ?? 60) * deg2rad, 0, (creatorPose.leftForearmTwist ?? 0) * deg2rad, 'YXZ');
-          if (b.upperArmR) b.upperArmR.rotation.set((creatorPose.rightShoulderPitch ?? 0) * deg2rad, 0, -(creatorPose.rightShoulderAbduct ?? 15) * deg2rad, 'YXZ');
-          if (b.lowerArmR) b.lowerArmR.rotation.set(-(creatorPose.rightElbowFlex ?? 60) * deg2rad, 0, (creatorPose.rightForearmTwist ?? 0) * deg2rad, 'YXZ');
-        } else {
-          if (b.hips && typeof creatorPose.hipsDrop === 'number') {
-            b.hips.position.y = 0.90 + (creatorPose.hipsDrop / 100);
+
+          // Левая рука (Подъем плеча и сгиб локтя)
+          if (b.upperArmL) {
+            b.upperArmL.rotation.set((creatorPose.leftShoulderPitch || 0) * deg2rad, 0, 38 * deg2rad, 'YXZ');
           }
-          if (b.upperLegL) b.upperLegL.rotation.set(Math.PI - (creatorPose.leftKneeFlex || 30) * deg2rad * 0.6, 0, 0.15, 'YXZ');
-          if (b.lowerLegL) b.lowerLegL.rotation.set(-(creatorPose.leftKneeFlex || 30) * deg2rad, 0, 0, 'YXZ');
-          if (b.upperLegR) b.upperLegR.rotation.set(Math.PI + (creatorPose.rightKneeFlex || 20) * deg2rad * 0.4, 0, -0.15, 'YXZ');
-          if (b.lowerLegR) b.lowerLegR.rotation.set(-(creatorPose.rightKneeFlex || 20) * deg2rad, 0, 0, 'YXZ');
+          if (b.lowerArmL) {
+            b.lowerArmL.rotation.set(0, (creatorPose.leftForearmTwist || 0) * deg2rad, (creatorPose.leftElbowFlex || 60) * deg2rad, 'YXZ');
+          }
+
+          // Правая рука (Хикитэ / Удар кулаком)
+          if (b.upperArmR) {
+            b.upperArmR.rotation.set((creatorPose.rightShoulderPitch || 0) * deg2rad, 0, -28 * deg2rad, 'YXZ');
+          }
+          if (b.lowerArmR) {
+            b.lowerArmR.rotation.set(0, -(creatorPose.rightForearmTwist || 0) * deg2rad, -(creatorPose.rightElbowFlex || 60) * deg2rad, 'YXZ');
+          }
+
+          // Естественная стойка ног Дзэнкуцу-дати, чтобы персонаж не стоял в Т-позе
+          if (b.hips) b.hips.position.y = 0.86;
+          if (b.upperLegL) b.upperLegL.rotation.set(Math.PI - 20 * deg2rad, 0, 0.12, 'YXZ');
+          if (b.lowerLegL) b.lowerLegL.rotation.set(-35 * deg2rad, 0, 0, 'YXZ');
+          if (b.upperLegR) b.upperLegR.rotation.set(Math.PI + 12 * deg2rad, 0, -0.12, 'YXZ');
+          if (b.lowerLegR) b.lowerLegR.rotation.set(-15 * deg2rad, 0, 0, 'YXZ');
+        } else {
+          // НИЖНИЙ СЛОЙ
+          if (b.hips) {
+            b.hips.position.y = 0.90 + ((creatorPose.hipsDrop || 0) / 100);
+          }
+          if (b.upperLegL) {
+            b.upperLegL.rotation.set(Math.PI - (creatorPose.leftKneeFlex || 30) * deg2rad * 0.5, 0, 0.15, 'YXZ');
+          }
+          if (b.lowerLegL) {
+            b.lowerLegL.rotation.set(-(creatorPose.leftKneeFlex || 30) * deg2rad, 0, 0, 'YXZ');
+          }
+          if (b.upperLegR) {
+            b.upperLegR.rotation.set(Math.PI + (creatorPose.rightKneeFlex || 20) * deg2rad * 0.4, 0, -0.15, 'YXZ');
+          }
+          if (b.lowerLegR) {
+            b.lowerLegR.rotation.set(-(creatorPose.rightKneeFlex || 20) * deg2rad, 0, 0, 'YXZ');
+          }
+
+          // Боевая позиция рук Камаэ, чтобы верх тела выглядел собрано
+          if (b.spine) b.spine.rotation.set(0, 15 * deg2rad, 0, 'YXZ');
+          if (b.chest) b.chest.rotation.set(0, 15 * deg2rad, 0, 'YXZ');
+          if (b.upperArmL) b.upperArmL.rotation.set(-10 * deg2rad, 0, 35 * deg2rad, 'YXZ');
+          if (b.lowerArmL) b.lowerArmL.rotation.set(0, 0, 70 * deg2rad, 'YXZ');
+          if (b.upperArmR) b.upperArmR.rotation.set(-30 * deg2rad, 0, -20 * deg2rad, 'YXZ');
+          if (b.lowerArmR) b.lowerArmR.rotation.set(0, 0, -100 * deg2rad, 'YXZ');
         }
       } else {
         mixer.update(delta);
@@ -845,12 +882,12 @@ export default function KaratekaLowpolyModel({
         if (layerAdjustments && clonedModel) {
           const b = bonesMapRef.current;
           if (b.hips && typeof layerAdjustments.hipsHeight === 'number') {
-            b.hips.position.y += (layerAdjustments.hipsHeight / 100);
+            b.hips.position.y = 0.90 + (layerAdjustments.hipsHeight / 100);
           }
           if (typeof layerAdjustments.torsoTwist === 'number' && layerAdjustments.torsoTwist !== 0) {
             const twistRad = (layerAdjustments.torsoTwist * Math.PI / 180) * 0.5;
-            if (b.spine) b.spine.rotateY(twistRad);
-            if (b.chest) b.chest.rotateY(twistRad);
+            if (b.spine) b.spine.rotation.y = twistRad;
+            if (b.chest) b.chest.rotation.y = twistRad;
           }
         }
       }
