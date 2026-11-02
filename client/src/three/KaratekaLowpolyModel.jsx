@@ -328,6 +328,10 @@ export default function KaratekaLowpolyModel({
   modularUpperClip = null,
   modularTurn = null,
   modularLoop = false,
+  layerAdjustments = null,
+  creatorPose = null,
+  creatorLayerType = 'upper',
+  isPlayingCreatorAnimation = false,
   blendDuration = 0.25,
   speed = 1.0,
   position = [0, 0, 0],
@@ -560,6 +564,9 @@ export default function KaratekaLowpolyModel({
     if (!clip || clip.tracks.length === 0) return;
 
     mixer.stopAllAction();
+    try {
+      mixer.uncacheClip(clip);
+    } catch (_) {}
     const action = mixer.clipAction(clip);
     action.reset();
     action.setLoop(modularLoop ? THREE.LoopRepeat : THREE.LoopOnce, 1);
@@ -781,16 +788,72 @@ export default function KaratekaLowpolyModel({
   }, [speed]);
 
   const hipsBoneRef = useRef(null);
+  const bonesMapRef = useRef({});
   useEffect(() => {
     if (clonedModel) {
       hipsBoneRef.current = clonedModel.getObjectByName('Hips') || clonedModel.getObjectByName('Root');
+      bonesMapRef.current = {
+        hips: hipsBoneRef.current,
+        spine: clonedModel.getObjectByName('Spine'),
+        chest: clonedModel.getObjectByName('Chest'),
+        neck: clonedModel.getObjectByName('Neck'),
+        head: clonedModel.getObjectByName('Head'),
+        upperArmL: clonedModel.getObjectByName('UpperArm.L'),
+        lowerArmL: clonedModel.getObjectByName('LowerArm.L'),
+        handL: clonedModel.getObjectByName('Hand.L'),
+        upperArmR: clonedModel.getObjectByName('UpperArm.R'),
+        lowerArmR: clonedModel.getObjectByName('LowerArm.R'),
+        handR: clonedModel.getObjectByName('Hand.R'),
+        upperLegL: clonedModel.getObjectByName('UpperLeg.L'),
+        lowerLegL: clonedModel.getObjectByName('LowerLeg.L'),
+        footL: clonedModel.getObjectByName('Foot.L'),
+        upperLegR: clonedModel.getObjectByName('UpperLeg.R'),
+        lowerLegR: clonedModel.getObjectByName('LowerLeg.R'),
+        footR: clonedModel.getObjectByName('Foot.R'),
+      };
     }
   }, [clonedModel]);
 
   // Анимационный тик
   useFrame((_, delta) => {
     if (mixer) {
-      mixer.update(delta);
+      if (creatorPose && !isPlayingCreatorAnimation) {
+        // Статический режим интерактивного позирования активной фазы в Конструкторе поз (от ползунков)
+        const deg2rad = Math.PI / 180;
+        const b = bonesMapRef.current;
+
+        if (creatorLayerType === 'upper') {
+          if (b.spine) b.spine.rotation.set(0, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
+          if (b.chest) b.chest.rotation.set((creatorPose.torsoPitch || 0) * deg2rad, (creatorPose.hanmiAngle || 0) * deg2rad * 0.5, 0, 'YXZ');
+          if (b.upperArmL) b.upperArmL.rotation.set((creatorPose.leftShoulderPitch ?? 0) * deg2rad, 0, (creatorPose.leftShoulderAbduct ?? 15) * deg2rad, 'YXZ');
+          if (b.lowerArmL) b.lowerArmL.rotation.set(-(creatorPose.leftElbowFlex ?? 60) * deg2rad, 0, (creatorPose.leftForearmTwist ?? 0) * deg2rad, 'YXZ');
+          if (b.upperArmR) b.upperArmR.rotation.set((creatorPose.rightShoulderPitch ?? 0) * deg2rad, 0, -(creatorPose.rightShoulderAbduct ?? 15) * deg2rad, 'YXZ');
+          if (b.lowerArmR) b.lowerArmR.rotation.set(-(creatorPose.rightElbowFlex ?? 60) * deg2rad, 0, (creatorPose.rightForearmTwist ?? 0) * deg2rad, 'YXZ');
+        } else {
+          if (b.hips && typeof creatorPose.hipsDrop === 'number') {
+            b.hips.position.y = 0.90 + (creatorPose.hipsDrop / 100);
+          }
+          if (b.upperLegL) b.upperLegL.rotation.set(Math.PI - (creatorPose.leftKneeFlex || 30) * deg2rad * 0.6, 0, 0.15, 'YXZ');
+          if (b.lowerLegL) b.lowerLegL.rotation.set(-(creatorPose.leftKneeFlex || 30) * deg2rad, 0, 0, 'YXZ');
+          if (b.upperLegR) b.upperLegR.rotation.set(Math.PI + (creatorPose.rightKneeFlex || 20) * deg2rad * 0.4, 0, -0.15, 'YXZ');
+          if (b.lowerLegR) b.lowerLegR.rotation.set(-(creatorPose.rightKneeFlex || 20) * deg2rad, 0, 0, 'YXZ');
+        }
+      } else {
+        mixer.update(delta);
+
+        // Динамическая коррекция слоев в реальном времени (от ползунков тонкой настройки микшера)
+        if (layerAdjustments && clonedModel) {
+          const b = bonesMapRef.current;
+          if (b.hips && typeof layerAdjustments.hipsHeight === 'number') {
+            b.hips.position.y += (layerAdjustments.hipsHeight / 100);
+          }
+          if (typeof layerAdjustments.torsoTwist === 'number' && layerAdjustments.torsoTwist !== 0) {
+            const twistRad = (layerAdjustments.torsoTwist * Math.PI / 180) * 0.5;
+            if (b.spine) b.spine.rotateY(twistRad);
+            if (b.chest) b.chest.rotateY(twistRad);
+          }
+        }
+      }
       if (currentActionRef.current) {
         let avatarWorldPos = null;
         if (hipsBoneRef.current) {

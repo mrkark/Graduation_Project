@@ -195,6 +195,17 @@ function scaleTrackTime(track, originalDuration, targetDuration) {
 const modularCompositeCache = new Map();
 
 /**
+ * Очистить кэш скомпонованных клипов
+ */
+export function clearModularCompositeCache(clipName = null) {
+  if (clipName) {
+    modularCompositeCache.delete(clipName);
+  } else {
+    modularCompositeCache.clear();
+  }
+}
+
+/**
  * Динамический синтез составного клипа (Composite AnimationClip):
  * Объединяет слой стойки (lowerClip) и слой техники (upperClip) в единый AnimationClip
  * 
@@ -204,6 +215,7 @@ const modularCompositeCache = new Map();
  * @param {string} [params.name] - Уникальное имя результата
  * @param {number} [params.duration] - Желаемая длительность (по умолчанию max длительностей)
  * @param {boolean} [params.zeroHorizontalRoot=true] - Обнулить X/Z дрейф
+ * @param {boolean} [params.bypassCache=false] - Принудительно пересчитать без чтения из кэша
  * @returns {THREE.AnimationClip}
  */
 export function synthesizeModularClip({
@@ -212,13 +224,15 @@ export function synthesizeModularClip({
   name = null,
   duration = null,
   zeroHorizontalRoot = true,
+  bypassCache = false,
 }) {
   if (!lowerClip && !upperClip) return null;
   if (!lowerClip) return upperClip;
   if (!upperClip) return lowerClip;
 
   const clipName = name || `modular_${lowerClip.name}__${upperClip.name}`;
-  if (modularCompositeCache.has(clipName)) {
+  const isDynamic = bypassCache || clipName.includes('temp') || clipName.includes('preview') || clipName.includes('custom');
+  if (!isDynamic && modularCompositeCache.has(clipName)) {
     return modularCompositeCache.get(clipName);
   }
 

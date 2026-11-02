@@ -174,7 +174,7 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       {
         bone: 'UpperLeg.L',
         getEuler: (p) => new THREE.Euler(
-          (p.leftHipPitch || 20) * deg2rad,
+          Math.PI - (p.leftKneeFlex || 30) * deg2rad * 0.6,
           0,
           (p.leftHipSpread || 10) * deg2rad,
           'YXZ'
@@ -183,7 +183,7 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       {
         bone: 'LowerLeg.L',
         getEuler: (p) => new THREE.Euler(
-          -(p.leftKneeFlex || 35) * deg2rad,
+          -(p.leftKneeFlex || 30) * deg2rad,
           0,
           0,
           'YXZ'
@@ -192,7 +192,7 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       {
         bone: 'UpperLeg.R',
         getEuler: (p) => new THREE.Euler(
-          (p.rightHipPitch || -15) * deg2rad,
+          Math.PI + (p.rightKneeFlex || 20) * deg2rad * 0.4,
           0,
           -(p.rightHipSpread || 10) * deg2rad,
           'YXZ'
@@ -201,7 +201,7 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       {
         bone: 'LowerLeg.R',
         getEuler: (p) => new THREE.Euler(
-          -(p.rightKneeFlex || 25) * deg2rad,
+          -(p.rightKneeFlex || 20) * deg2rad,
           0,
           0,
           'YXZ'
@@ -225,11 +225,12 @@ export function buildClipFromPoseKeyframes({ name, layerType, keyframes, duratio
       }
     }
 
-    // Таз In-Place (X/Z = 0, Y регулирует глубину стойки)
+    // Таз In-Place (X/Z = 0, Y регулирует глубину стойки: 0.90м + dropMeters)
+    const baseHipsY = 0.90;
     const posValues = [];
     for (const kf of keyframes) {
-      const drop = (kf.pose?.hipsDrop || 0) * 0.3;
-      posValues.push(0, 0.95 - drop, 0);
+      const dropMeters = (kf.pose?.hipsDrop || 0) / 100;
+      posValues.push(0, baseHipsY + dropMeters, 0);
     }
     for (const hAlias of BONE_ALIASES['Hips']) {
       tracks.push(new THREE.VectorKeyframeTrack(`${hAlias}.position`, times, posValues));

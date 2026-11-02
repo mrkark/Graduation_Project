@@ -94,6 +94,13 @@ export default function ModularMotionMixer() {
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Тонкая настройка биомеханики слоев (в реальном времени)
+  const [layerAdjustments, setLayerAdjustments] = useState({
+    hipsHeight: 0, // см (-15 до +10)
+    torsoTwist: 0, // градусов (-45 до +45)
+  });
+  const [isPlayingCreatorAnimation, setIsPlayingCreatorAnimation] = useState(false);
+
   // При монтировании регистрируем все кастомные слои в глобальном движке Three.js
   useEffect(() => {
     customLayers.forEach((layer) => {
@@ -411,7 +418,7 @@ export default function ModularMotionMixer() {
         rightHipPitch: -15,
         rightHipSpread: 10,
         rightKneeFlex: 20,
-        hipsDrop: 0.1,
+        hipsDrop: -10,
       },
     },
     {
@@ -434,7 +441,7 @@ export default function ModularMotionMixer() {
         rightHipPitch: -25,
         rightHipSpread: 12,
         rightKneeFlex: 15,
-        hipsDrop: 0.25,
+        hipsDrop: -25,
       },
     },
     {
@@ -457,40 +464,66 @@ export default function ModularMotionMixer() {
         rightHipPitch: -20,
         rightHipSpread: 10,
         rightKneeFlex: 20,
-        hipsDrop: 0.2,
+        hipsDrop: -20,
       },
     },
   ]);
 
   const [creatorClipName, setCreatorClipName] = useState('Мой особый контрудар');
 
-  // Обновление слайдера в активной фазе
+  // Мгновенное обновление слайдера в активной фазе (Live Pose Editing)
   const updateActivePhasePose = (key, val) => {
+    if (isPlayingCreatorAnimation) {
+      setIsPlayingCreatorAnimation(false);
+    }
+    const num = parseFloat(val);
     const nextKeyframes = [...keyframes];
     nextKeyframes[activePhaseIdx] = {
       ...nextKeyframes[activePhaseIdx],
       pose: {
         ...nextKeyframes[activePhaseIdx].pose,
-        [key]: parseFloat(val),
+        [key]: isNaN(num) ? 0 : num,
       },
     };
     setKeyframes(nextKeyframes);
+  };
 
-    // Мгновенный предпросмотр фазы на 3D модели
-    const previewClip = buildClipFromPoseKeyframes({
-      name: 'temp_pose_preview',
-      layerType: creatorLayerType,
-      keyframes: nextKeyframes,
-      duration: 1.0,
-    });
-    if (previewClip) {
-      registerCustomClip('temp_pose_preview', previewClip);
-      if (creatorLayerType === 'upper') {
-        setSelectedTechnique('temp_pose_preview');
-      } else {
-        setSelectedStance('temp_pose_preview');
+  // Переключение воспроизведения анимационного теста ключевых кадров
+  const handleToggleCreatorAnimation = () => {
+    if (isPlayingCreatorAnimation) {
+      setIsPlayingCreatorAnimation(false);
+    } else {
+      const previewName = `creator_test_${Date.now()}`;
+      const previewClip = buildClipFromPoseKeyframes({
+        name: previewName,
+        layerType: creatorLayerType,
+        keyframes,
+        duration: 1.2,
+      });
+      if (previewClip) {
+        registerCustomClip(previewName, previewClip);
+        if (creatorLayerType === 'upper') {
+          setSelectedTechnique(previewName);
+        } else {
+          setSelectedStance(previewName);
+        }
+        setIsPlayingCreatorAnimation(true);
+        setReplayTrigger((prev) => prev + 1);
       }
     }
+  };
+
+  // Сброс позы текущей фазы к нейтральным значениям
+  const handleResetActivePhasePose = () => {
+    setIsPlayingCreatorAnimation(false);
+    const nextKeyframes = [...keyframes];
+    nextKeyframes[activePhaseIdx] = {
+      ...nextKeyframes[activePhaseIdx],
+      pose: creatorLayerType === 'upper'
+        ? { hanmiAngle: 0, torsoPitch: 0, leftShoulderPitch: 0, leftElbowFlex: 60, rightShoulderPitch: 0, rightElbowFlex: 60 }
+        : { hipsDrop: 0, leftKneeFlex: 30, rightKneeFlex: 20 },
+    };
+    setKeyframes(nextKeyframes);
   };
 
   const handleSaveCreatedLayer = () => {
@@ -499,7 +532,7 @@ export default function ModularMotionMixer() {
       name: clipId,
       layerType: creatorLayerType,
       keyframes,
-      duration: 1.0,
+      duration: 1.2,
     });
 
     if (clip) {
@@ -509,7 +542,7 @@ export default function ModularMotionMixer() {
         name: creatorClipName.trim() || `Кастомная техника (${clipId.slice(-4)})`,
         layerType: creatorLayerType,
         source: 'creator',
-        duration: 1.0,
+        duration: 1.2,
         createdAt: new Date().toISOString(),
         clipJson: clip.toJSON(),
       };
@@ -522,6 +555,7 @@ export default function ModularMotionMixer() {
       } else {
         setSelectedStance(clipId);
       }
+      setIsPlayingCreatorAnimation(false);
       setActiveTab('mixer');
     }
   };
@@ -568,6 +602,10 @@ export default function ModularMotionMixer() {
               modularLoop={isLooping}
               speed={speed}
               replayTrigger={replayTrigger}
+              layerAdjustments={layerAdjustments}
+              creatorPose={activeTab === 'creator' ? currentPose : null}
+              creatorLayerType={creatorLayerType}
+              isPlayingCreatorAnimation={isPlayingCreatorAnimation}
             />
           </group>
 
@@ -597,7 +635,7 @@ export default function ModularMotionMixer() {
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'mixer' ? 'active' : ''}`}
-            onClick={() => setActiveTab('mixer')}
+            onClick={() => { setActiveTab('mixer'); setIsPlayingCreatorAnimation(false); }}
           >
             <Sliders size={14} />
             <span>Микшер слоев</span>
@@ -605,7 +643,7 @@ export default function ModularMotionMixer() {
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'recorder' ? 'active' : ''}`}
-            onClick={() => setActiveTab('recorder')}
+            onClick={() => { setActiveTab('recorder'); setIsPlayingCreatorAnimation(false); }}
           >
             <Camera size={14} />
             <span>Запись с камеры</span>
@@ -613,7 +651,7 @@ export default function ModularMotionMixer() {
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'creator' ? 'active' : ''}`}
-            onClick={() => setActiveTab('creator')}
+            onClick={() => { setActiveTab('creator'); setIsPlayingCreatorAnimation(false); }}
           >
             <Sparkles size={14} />
             <span>Конструктор поз</span>
@@ -621,7 +659,7 @@ export default function ModularMotionMixer() {
           <button
             type="button"
             className={`modular-tab-btn ${activeTab === 'library' ? 'active' : ''}`}
-            onClick={() => setActiveTab('library')}
+            onClick={() => { setActiveTab('library'); setIsPlayingCreatorAnimation(false); }}
           >
             <BookOpen size={14} />
             <span>Мои слои ({customLayers.length})</span>
@@ -727,7 +765,66 @@ export default function ModularMotionMixer() {
               </div>
             </div>
 
-            {/* Секция 4: Плеер и скорость */}
+            {/* Секция 4: Тонкая настройка слоев (Высота стойки и доворот корпуса в реальном времени) */}
+            <div className="modular-section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="modular-section-label" style={{ marginBottom: 0 }}>
+                  <Sliders size={14} />
+                  <span>Тонкая настройка биомеханики слоёв</span>
+                </label>
+                {(layerAdjustments.hipsHeight !== 0 || layerAdjustments.torsoTwist !== 0) && (
+                  <button
+                    type="button"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--gold, #bfa15f)',
+                      fontSize: '0.74rem',
+                      cursor: 'pointer',
+                      padding: '2px 6px',
+                    }}
+                    onClick={() => setLayerAdjustments({ hipsHeight: 0, torsoTwist: 0 })}
+                  >
+                    Сбросить
+                  </button>
+                )}
+              </div>
+              <div className="pose-slider-group" style={{ marginTop: '0.45rem' }}>
+                <div className="pose-slider-row">
+                  <div className="pose-slider-header">
+                    <span>Высота таза / Глубина стойки:</span>
+                    <strong>{layerAdjustments.hipsHeight > 0 ? `+${layerAdjustments.hipsHeight}` : layerAdjustments.hipsHeight} см</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min="-15"
+                    max="10"
+                    step="1"
+                    value={layerAdjustments.hipsHeight}
+                    onChange={(e) => setLayerAdjustments(prev => ({ ...prev, hipsHeight: parseFloat(e.target.value) }))}
+                    className="pose-range-input"
+                  />
+                </div>
+
+                <div className="pose-slider-row">
+                  <div className="pose-slider-header">
+                    <span>Доворот корпуса (Ханми 45° / Сёмен 0°):</span>
+                    <strong>{layerAdjustments.torsoTwist > 0 ? `+${layerAdjustments.torsoTwist}` : layerAdjustments.torsoTwist}°</strong>
+                  </div>
+                  <input
+                    type="range"
+                    min="-45"
+                    max="45"
+                    step="5"
+                    value={layerAdjustments.torsoTwist}
+                    onChange={(e) => setLayerAdjustments(prev => ({ ...prev, torsoTwist: parseFloat(e.target.value) }))}
+                    className="pose-range-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Секция 5: Плеер и скорость */}
             <div className="modular-player-toolbar">
               <button type="button" className="btn btn-primary modular-play-btn" onClick={handleReplay}>
                 <RotateCcw size={15} />
@@ -928,7 +1025,10 @@ export default function ModularMotionMixer() {
               <button
                 type="button"
                 className={`modular-preset-btn ${creatorLayerType === 'upper' ? 'active' : ''}`}
-                onClick={() => setCreatorLayerType('upper')}
+                onClick={() => {
+                  setCreatorLayerType('upper');
+                  setIsPlayingCreatorAnimation(false);
+                }}
               >
                 <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Shield size={14} color="var(--gold, #bfa15f)" />
@@ -939,7 +1039,10 @@ export default function ModularMotionMixer() {
               <button
                 type="button"
                 className={`modular-preset-btn ${creatorLayerType === 'lower' ? 'active' : ''}`}
-                onClick={() => setCreatorLayerType('lower')}
+                onClick={() => {
+                  setCreatorLayerType('lower');
+                  setIsPlayingCreatorAnimation(false);
+                }}
               >
                 <span className="modular-preset-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Zap size={14} color="var(--gold, #bfa15f)" />
@@ -956,7 +1059,10 @@ export default function ModularMotionMixer() {
                   key={idx}
                   type="button"
                   className={`pose-phase-btn ${activePhaseIdx === idx ? 'active' : ''}`}
-                  onClick={() => setActivePhaseIdx(idx)}
+                  onClick={() => {
+                    setActivePhaseIdx(idx);
+                    setIsPlayingCreatorAnimation(false);
+                  }}
                 >
                   {kf.label}
                 </button>
@@ -1053,15 +1159,15 @@ export default function ModularMotionMixer() {
               <div className="pose-slider-group">
                 <div className="pose-slider-row">
                   <div className="pose-slider-header">
-                    <span>Глубина стойки (Посадка таза):</span>
-                    <strong>{((currentPose.hipsDrop || 0) * 100).toFixed(0)}%</strong>
+                    <span>Снижение таза / Глубина стойки:</span>
+                    <strong>{currentPose.hipsDrop || 0} см</strong>
                   </div>
                   <input
                     type="range"
-                    min="0"
-                    max="0.5"
-                    step="0.05"
-                    value={currentPose.hipsDrop || 0}
+                    min="-30"
+                    max="0"
+                    step="2"
+                    value={currentPose.hipsDrop ?? -10}
                     onChange={(e) => updateActivePhasePose('hipsDrop', e.target.value)}
                     className="pose-range-input"
                   />
@@ -1100,6 +1206,29 @@ export default function ModularMotionMixer() {
                 </div>
               </div>
             )}
+
+            {/* Управление тестом движения и сбросом */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={`btn ${isPlayingCreatorAnimation ? 'btn-danger' : 'btn-secondary'}`}
+                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.8rem' }}
+                onClick={handleToggleCreatorAnimation}
+              >
+                {isPlayingCreatorAnimation ? <Square size={14} color="#ef4444" /> : <Play size={14} />}
+                <span>{isPlayingCreatorAnimation ? 'Остановить тест (режим позы)' : 'Тест движения (Фазы 1 → 2 → 3)'}</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
+                title="Сбросить позу текущей фазы"
+                onClick={handleResetActivePhasePose}
+              >
+                <RotateCcw size={14} />
+                <span>Сброс</span>
+              </button>
+            </div>
 
             {/* Сохранение позы */}
             <div style={{ display: 'flex', gap: '8px' }}>
