@@ -33,7 +33,7 @@ export function HankoSeal({
 }
 
 /**
- * ShotokanTiger — Символ боевого духа Сётокан (открытый источник: Lucide Icons)
+ * ShotokanTiger — Символ боевого духа Шотокан (открытый источник: Lucide Icons)
  */
 export function ShotokanTiger({ size = 32, color = 'currentColor', className = '' }) {
   return (
@@ -188,7 +188,7 @@ export function SearchIcon({ size = 18, color = 'currentColor', className = '' }
 }
 
 /**
- * Градация поясов Сётокан каратэдо (Кю и Даны)
+ * Градация поясов Шотокан каратэдо (Кю и Даны)
  * 9–8: белый
  * 7: желтый
  * 6: зеленый
@@ -271,7 +271,7 @@ export const BELT_GRADATION = [
 ];
 
 /**
- * Определение пояса и ступени кю/дан для ката Сётокан
+ * Определение пояса и ступени кю/дан для ката Шотокан
  */
 export function getKataBeltInfo(kata) {
   if (!kata) return BELT_GRADATION[0];

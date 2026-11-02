@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
               <div className="admin-metric-card__icon"><BookOpen size={26} color="var(--gold)" /></div>
               <div className="admin-metric-card__body">
                 <span className="admin-metric-card__val">{stats.kataTotal || 26}</span>
-                <span className="admin-metric-card__lbl">Форм Ката Сётокан</span>
+                <span className="admin-metric-card__lbl">Форм Ката Шотокан</span>
                 <span className="admin-metric-card__sub">
                   {stats.kataPending > 0 ? `На проверке: ${stats.kataPending}` : 'База укомплектована'}
                 </span>

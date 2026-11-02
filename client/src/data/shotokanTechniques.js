@@ -1,5 +1,5 @@
 /**
- * Официальная библиотека техник стиля Сётокан (松濤館流)
+ * Официальная библиотека техник стиля Шотокан (松濤館流)
  * Включает стойки (дати), блоки (укэ), удары руками (цуки/ути), удары ногами (гэри) и подсечки.
  */
 
@@ -344,7 +344,7 @@ export const SHOTOKAN_TECHNIQUES = [
   },
 ];
 
-// Траектории и нелинейные углы перемещений в Сётокан (Тай-сабаки)
+// Траектории и нелинейные углы перемещений в Шотокан (Тай-сабаки)
 export const SHOTOKAN_DIRECTIONS = [
   { angle: 0, label: 'Прямо вперед (0°)', kanji: '正' },
   { angle: 45, label: 'Диагональ вправо (45°)', kanji: '右斜' },
@@ -365,14 +365,14 @@ export const SHOTOKAN_MOVEMENT_TYPES = [
   { id: 'nage', label: 'Бросок / сваливание (Нагэ-вадза)', desc: 'Перевод противника на татами' },
 ];
 
-// 26 канонических ката Сётокан
+// 26 канонических ката Шотокан
 export const SHOTOKAN_KATA_LIST = [
-  { id: 'heian-shodan', name: 'Хэйан Сёдан', kanji: '平安初段', level: 'beginner', stepsCount: 21 },
+  { id: 'heian-shodan', name: 'Хэйан Шодан', kanji: '平安初段', level: 'beginner', stepsCount: 21 },
   { id: 'heian-nidan', name: 'Хэйан Нидан', kanji: '平安二段', level: 'beginner', stepsCount: 26 },
   { id: 'heian-sandan', name: 'Хэйан Сандан', kanji: '平安三段', level: 'beginner', stepsCount: 20 },
   { id: 'heian-yondan', name: 'Хэйан Ёндан', kanji: '平安四段', level: 'intermediate', stepsCount: 27 },
   { id: 'heian-godan', name: 'Хэйан Годан', kanji: '平安五段', level: 'intermediate', stepsCount: 23 },
-  { id: 'tekki-shodan', name: 'Тэкки Сёдан', kanji: '鉄騎初段', level: 'intermediate', stepsCount: 29 },
+  { id: 'tekki-shodan', name: 'Тэкки Шодан', kanji: '鉄騎初段', level: 'intermediate', stepsCount: 29 },
   { id: 'bassai-dai', name: 'Бассай-дай', kanji: '披塞大', level: 'advanced', stepsCount: 42 },
   { id: 'kanku-dai', name: 'Канку-дай', kanji: '観空大', level: 'advanced', stepsCount: 65 },
   { id: 'jion', name: 'Дзион', kanji: '慈恩', level: 'advanced', stepsCount: 47 },

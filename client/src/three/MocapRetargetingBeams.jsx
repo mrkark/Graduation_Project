@@ -103,7 +103,7 @@ export default function MocapRetargetingBeams({
         outlineWidth={0.012}
         outlineColor="#000000"
       >
-        ⚡ 3D СКЕЛЕТ ЗАХВАТА
+        3D СКЕЛЕТ ЗАХВАТА
       </Text>
 
       <Text
@@ -115,7 +115,7 @@ export default function MocapRetargetingBeams({
         outlineWidth={0.012}
         outlineColor="#000000"
       >
-        🥋 3D МОДЕЛЬ МАСТЕРА
+        3D МОДЕЛЬ МАСТЕРА
       </Text>
 
       <Text
@@ -127,7 +127,7 @@ export default function MocapRetargetingBeams({
         outlineWidth={0.01}
         outlineColor="#000000"
       >
-        ── ПЕРЕНОС ДВИЖЕНИЙ 60 FPS ➔ ──
+        ── ПЕРЕНОС ДВИЖЕНИЙ 60 FPS → ──
       </Text>
 
       {/* Лучи передачи движений между суставами */}

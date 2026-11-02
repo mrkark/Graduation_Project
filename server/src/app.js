@@ -59,6 +59,12 @@ const allowedOrigins = [
   'https://localhost:5173',
   'http://127.0.0.1:5173',
   'https://127.0.0.1:5173',
+  'http://localhost',
+  'https://localhost',
+  'http://localhost:8080',
+  'https://localhost:8080',
+  'http://127.0.0.1',
+  'http://127.0.0.1:8080',
 ];
 
 app.use(
@@ -83,9 +89,14 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Статика загруженных файлов (аватары/видео/превью) — раздел 16 ТЗ
 const fs = require('fs');
-const uploadsPath = fs.existsSync(path.join(__dirname, '..', 'uploads'))
-  ? path.join(__dirname, '..', 'uploads')
-  : path.join(__dirname, '..', '..', 'uploads');
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath, { recursive: true });
+}
+const avatarsPath = path.join(uploadsPath, 'avatars');
+if (!fs.existsSync(avatarsPath)) {
+  fs.mkdirSync(avatarsPath, { recursive: true });
+}
 app.use('/uploads', express.static(uploadsPath));
 
 app.get('/api/health', (req, res) => res.json({ success: true, data: { status: 'ok' } }));

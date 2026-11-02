@@ -82,6 +82,31 @@ async function updateProfile(req, res, next) {
   }
 }
 
+async function uploadAvatar(req, res, next) {
+  try {
+    if (!req.file) {
+      return fail(res, 400, 'Файл изображения не был загружен', 'NO_FILE');
+    }
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    const row = await authRepo.updateProfile(req.user.User_ID, { avatarUrl });
+    await logActivity({
+      userId: req.user.User_ID,
+      action: 'upload_avatar',
+      entityType: 'User',
+      entityId: req.user.User_ID,
+      ip: req.ip,
+    });
+    return ok(res, {
+      user: authRepo.toSafeUser(row),
+      avatarUrl,
+      message: 'Аватар успешно загружен',
+    });
+  } catch (err) {
+    if (err.status) return fail(res, err.status, err.message, err.code);
+    return next(err);
+  }
+}
+
 async function deleteAccount(req, res, next) {
   try {
     const { password } = req.body;
@@ -102,4 +127,4 @@ async function deleteAccount(req, res, next) {
   }
 }
 
-module.exports = { register, login, refresh, logout, me, updateProfile, deleteAccount };
+module.exports = { register, login, refresh, logout, me, updateProfile, uploadAvatar, deleteAccount };

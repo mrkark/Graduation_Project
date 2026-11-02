@@ -1,3 +1,4 @@
+import { Trophy, Swords, MapPin, Target, Shield, AlertTriangle, Ruler, Compass } from 'lucide-react';
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
@@ -371,11 +372,11 @@ export default function BunkaiMultiAvatarPlayer({
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>•</span>
               <span style={{ fontSize: '0.75rem', color: showUke2 ? '#68d391' : '#63b3ed', fontWeight: 600 }}>
-                {showUke2 ? '🏆 Командный бункай (3 бойца)' : '🥋 Парный бункай (Дуэль)'}
+                {showUke2 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Trophy size={13} /> Командный бункай (3 бойца)</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Swords size={13} /> Парный бункай (Дуэль)</span>}
               </span>
               <span style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>•</span>
               <span style={{ fontSize: '0.72rem', color: stateMode === 'continuous' ? '#f6ad55' : 'var(--color-text-muted)' }}>
-                {stateMode === 'continuous' ? '📍 Непрерывный бой' : '🎯 Центрирован'}
+                {stateMode === 'continuous' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MapPin size={13} /> Непрерывный бой</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Target size={13} /> Центрирован</span>}
               </span>
             </div>
             <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-washi)' }}>
@@ -464,7 +465,7 @@ export default function BunkaiMultiAvatarPlayer({
               zIndex: 10,
             }}
           >
-            🛡️ Анти-проникновение: дистанция ограничена защитной капсулой торса (0.54м)
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Shield size={14} color='#10b981' /> Анти-проникновение: дистанция ограничена защитной капсулой торса (0.54м)</span>
           </div>
         )}
 
@@ -485,7 +486,7 @@ export default function BunkaiMultiAvatarPlayer({
               zIndex: 10,
             }}
           >
-            <strong>⚠️ Зафиксировано отсутствие клипов:</strong> {missingClips.join(', ')}.
+            <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><AlertTriangle size={15} color='#f59e0b' /> Зафиксировано отсутствие клипов:</strong> {missingClips.join(', ')}.
             <div style={{ fontSize: '0.72rem', marginTop: 3, opacity: 0.9 }}>
               Потребность зарегистрирована в базе данных для генерации анимационным агентом.
             </div>
@@ -543,7 +544,7 @@ export default function BunkaiMultiAvatarPlayer({
               }}
               onClick={() => setStateMode(stateMode === 'continuous' ? 'standalone' : 'continuous')}
             >
-              {stateMode === 'continuous' ? '📍 Непрерывный бой' : '🎯 Изолированный шаг'}
+              {stateMode === 'continuous' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MapPin size={13} /> Непрерывный бой</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Target size={13} /> Изолированный шаг</span>}
             </button>
             <button className="btn btn-gold" onClick={resetCamera}>
               Сброс камеры
@@ -597,7 +598,7 @@ export default function BunkaiMultiAvatarPlayer({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 4 }}>
               <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>
-                📏 Боевая дистанция (Ма-ай):
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Ruler size={14} /> Боевая дистанция (Ма-ай):</span>
               </span>
               <span style={{ color: '#fff', fontWeight: 700 }}>
                 {placement.finalDist.toFixed(2)} м
@@ -623,7 +624,7 @@ export default function BunkaiMultiAvatarPlayer({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 4 }}>
               <span style={{ color: 'var(--color-gold)', fontWeight: 600 }}>
-                🧭 Угол атаки противника:
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Compass size={14} /> Угол атаки противника:</span>
               </span>
               <span style={{ color: '#fff', fontWeight: 700 }}>
                 {currentEpisode.attackAngleDeg + angleOffsetDeg}°

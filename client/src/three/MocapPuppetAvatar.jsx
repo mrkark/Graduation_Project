@@ -751,4 +751,4 @@ export default function MocapPuppetAvatar({
   );
 }
 
-useGLTF.preload('/models/karateka_lowpoly.glb');
+// Оптимизация: загрузка модели по требованию при монтировании

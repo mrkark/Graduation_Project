@@ -8,6 +8,7 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
+import { Heart, MessageSquare } from 'lucide-react';
 import './BunkaiDetailPage.css';
 
 // Динамическая отложенная загрузка тяжелого 3D плеера (оптимизация загрузки страниц)
@@ -106,7 +107,7 @@ export default function BunkaiDetailPage() {
               onClick={() => toggleFavorite('bunkai', id)}
               style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
             >
-              {isBunkaiFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
+              {isBunkaiFavorite(id) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
             </button>
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>
@@ -239,7 +240,7 @@ export default function BunkaiDetailPage() {
       {/* 5. ОБСУЖДЕНИЕ И ВОПРОСЫ ДОДЗЁ */}
       <section className="bunkai-detail__comments-section">
         <h3 className="bunkai-detail__comments-title">
-          <span>🥋 Обсуждение и тактический разбор</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><MessageSquare size={16} /> Обсуждение и тактический разбор</span>
         </h3>
         <Comments bunkaiId={Number(id)} />
       </section>

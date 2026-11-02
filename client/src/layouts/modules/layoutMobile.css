@@ -1,0 +1,55 @@
+/* Мобильное меню */
+.mobile-drawer {
+  position: fixed;
+  top: 72px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #110e0c;
+  z-index: var(--z-drawer);
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+}
+
+.mobile-drawer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mobile-drawer__link {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mobile-drawer__kanji {
+  font-family: var(--font-kanji);
+  font-size: 1.1rem;
+  color: var(--gold);
+}
+
+.mobile-drawer__link.active {
+  color: var(--accent-red);
+}
+
+.mobile-drawer__divider {
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 0.5rem 0;
+}
+
+/* =========================================================
+   ПОДВАЛ ДОДЗЁ (DOJO FOOTER — ХОНБУ ДОДЗЁ)
+   ========================================================= */

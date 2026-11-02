@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getKata, createKata, updateKata } from '../api/kata';
 import TechniquePicker from '../components/TechniquePicker';
+import { BookOpen, X, Trash2 } from 'lucide-react';
 import {
   SHOTOKAN_KATA_LIST,
   SHOTOKAN_DIRECTIONS,
@@ -79,14 +80,14 @@ export default function KataFormPage() {
     setSteps((s) => s.filter((_, idx) => idx !== i).map((step, idx) => ({ ...step, stepNumber: idx + 1 })));
   }
 
-  // Быстрый выбор канонического ката Сётокан
+  // Быстрый выбор канонического ката Шотокан
   function onSelectCanonicalKata(k) {
     setForm((f) => ({
       ...f,
       title: `${k.name} (${k.kanji})`,
       difficulty: k.level,
       style: 'Шотокан (松濤館流)',
-      description: `Традиционное ката стиля Сётокан каратэдо. Каноническое количество шагов: ${k.stepsCount}.`,
+      description: `Традиционное ката стиля Шотокан каратэдо. Каноническое количество шагов: ${k.stepsCount}.`,
     }));
   }
 
@@ -141,17 +142,17 @@ export default function KataFormPage() {
     <div style={{ maxWidth: 840, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '0.5rem' }}>
         <span className="hanko">松濤館</span>
-        <h1>{isEdit ? 'Редактирование ката' : 'Новое ката Сётокан'}</h1>
+        <h1>{isEdit ? 'Редактирование ката' : 'Новое ката Шотокан'}</h1>
       </div>
       <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
         Материал будет отправлен на модерацию и появится в каталоге после одобрения инструктором.
       </p>
 
-      {/* Быстрый выбор канонических ката Сётокан */}
+      {/* Быстрый выбор канонических ката Шотокан */}
       {!isEdit && (
         <div className="panel" style={{ marginBottom: '1.5rem', background: 'rgba(197, 160, 89, 0.04)' }}>
           <div style={{ fontSize: '0.82rem', color: 'var(--gold)', marginBottom: '0.6rem', fontWeight: 600 }}>
-            Быстрый выбор из 26 канонических ката Сётокан:
+            Быстрый выбор из 26 канонических ката Шотокан:
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
             {SHOTOKAN_KATA_LIST.map((k) => (
@@ -172,7 +173,7 @@ export default function KataFormPage() {
       <form onSubmit={onSubmit} className="panel">
         <div className="field">
           <label>Название ката *</label>
-          <input required value={form.title} onChange={update('title')} placeholder="Например: Хэйан Сёдан (平安初段)" />
+          <input required value={form.title} onChange={update('title')} placeholder="Например: Хэйан Шодан (平安初段)" />
         </div>
 
         <div className="field">
@@ -235,10 +236,10 @@ export default function KataFormPage() {
                   style={{ fontSize: '0.78rem', padding: '0.3em 0.8em' }}
                   onClick={() => setActivePickerIndex(i)}
                 >
-                  📖 Выбрать технику из каталога Сётокан
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><BookOpen size={13} /> Выбрать технику из каталога Шотокан</span>
                 </button>
-                <button type="button" className="btn btn-danger" onClick={() => removeStep(i)} title="Удалить шаг">
-                  ✕
+                <button type="button" className="btn btn-danger" onClick={() => removeStep(i)} title="Удалить шаг" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={15} />
                 </button>
               </div>
             </div>
@@ -311,7 +312,7 @@ export default function KataFormPage() {
 
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.8rem' }}>
           <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Сохранение…' : isEdit ? 'Обновить ката' : 'Создать ката Сётокан'}
+            {saving ? 'Сохранение…' : isEdit ? 'Обновить ката' : 'Создать ката Шотокан'}
           </button>
           <button type="button" className="btn" onClick={() => navigate(-1)} disabled={saving}>
             Отмена
@@ -319,7 +320,7 @@ export default function KataFormPage() {
         </div>
       </form>
 
-      {/* Модальное окно каталога техник Сётокан */}
+      {/* Модальное окно каталога техник Шотокан */}
       {activePickerIndex !== null && (
         <div
           style={{

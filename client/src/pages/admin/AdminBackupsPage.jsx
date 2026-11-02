@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { Database, CheckCircle, Clock, RefreshCw, X } from 'lucide-react';
 import { fetchBackups, createBackup } from '../../api/admin';
 
 export default function AdminBackupsPage() {
@@ -53,7 +53,7 @@ export default function AdminBackupsPage() {
       {notice && (
         <div className={`admin-alert-banner admin-alert-banner--${notice.type}`}>
           <span>{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)}>✕</button>
+          <button type="button" onClick={() => setNotice(null)}><X size={14} /></button>
         </div>
       )}
 

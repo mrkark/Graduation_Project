@@ -1,0 +1,86 @@
+/* =========================================================
+   BUNKAILISTPAGE.CSS — Каталог боевых сценариев (Shotokan Editorial)
+   ========================================================= */
+
+.bunkai-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding-bottom: 5rem;
+}
+
+/* --- 1. ШАПКА КАТАЛОГА БУНКАЙ --- */
+.bunkai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.bunkai-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 90px;
+  height: 2px;
+  background: var(--accent-red);
+}
+
+.bunkai-header__left {
+  max-width: 720px;
+}
+
+.bunkai-header__badge-row {
+  margin-bottom: 0.5rem;
+}
+
+.bunkai-header__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-red);
+}
+
+.bunkai-header__eyebrow-kanji {
+  font-family: var(--font-brush);
+  font-size: 1.15rem;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.bunkai-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bunkai-header__title {
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.bunkai-header__subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0;
+  line-height: 1.6;
+}
+
+.bunkai-header__actions {
+  display: flex;
+  align-items: center;
+}

@@ -6,12 +6,20 @@
 
 function getApiBaseUrl() {
   const envUrl = import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+  if (envUrl && envUrl.startsWith('http') && !envUrl.includes('localhost:5000')) {
+    return envUrl;
+  }
+  if (typeof window !== 'undefined') {
+    // При работе через Nginx (порты 80, 8080) или Vite (порт 5173) используем прямой прокси /api
+    const p = window.location.port;
+    if (p === '80' || p === '8080' || p === '' || p === '5173') {
+      return '/api';
+    }
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
       return `${window.location.protocol}//${window.location.hostname}:5000/api`;
     }
   }
-  return envUrl || 'http://localhost:5000/api';
+  return envUrl || '/api';
 }
 
 const API_BASE_URL = getApiBaseUrl();
@@ -36,7 +44,8 @@ function buildUrl(path, params) {
   const fullUrl = path.startsWith('http') ? path : `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
   if (!params) return fullUrl;
 
-  const url = new URL(fullUrl);
+  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000';
+  const url = new URL(fullUrl, base);
   Object.entries(params).forEach(([key, val]) => {
     if (val !== undefined && val !== null && val !== '') {
       url.searchParams.append(key, String(val));

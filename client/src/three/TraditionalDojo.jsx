@@ -115,5 +115,5 @@ export default function TraditionalDojo(props) {
   );
 }
 
-useGLTF.preload('/models/dojo.glb');
+// Оптимизация: useGLTF загружает dojo.glb по требованию при монтировании компонента.
 

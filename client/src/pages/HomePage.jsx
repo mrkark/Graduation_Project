@@ -1,14 +1,24 @@
 import { Link } from 'react-router-dom';
 import { HankoSeal, ShotokanTiger, DojoDivider, KakejikuScroll } from '../components/ui/JapaneseDecor';
+import LazySection from '../components/ui/LazySection';
 import './HomePage.css';
 
 export default function HomePage() {
   return (
     <div className="home fade-in">
-      {/* 1. ПЕРВЫЙ ЭКРАН: ФОТОГРАФИЯ МАСТЕРА В ТРАДИЦИОННОМ ДОДЗЁ + СВИТОК КАКЭМОНО */}
+      {/* 1. ПЕРВЫЙ ЭКРАН (1-Й ЭКРАН / CRITICAL VIEWPORT): ФОТО МАСТЕРА В ДОДЗЁ + СВИТОК КАКЭМОНО */}
       <section className="hero-dojo">
-        {/* Фоновое аутентичное фото мастера в традиционном зале */}
-        <div className="hero-dojo__bg" />
+        {/* Фоновое аутентичное фото мастера в традиционном зале с предельным приоритетом LCP */}
+        <div className="hero-dojo__bg">
+          <img
+            src="/karate_master_realistic.jpg"
+            fetchpriority="high"
+            loading="eager"
+            decoding="async"
+            className="hero-dojo__bg-img"
+            alt="Мастер традиционного каратэдо Шотокан"
+          />
+        </div>
         {/* Многослойное градиентное затемнение для идеального контраста */}
         <div className="hero-dojo__scrim" />
         {/* Тонкий карниз додзё */}
@@ -32,7 +42,7 @@ export default function HomePage() {
                 <span className="hero-dojo__kicker">
                   伝統空手道 · 松濤館流
                 </span>
-                <HankoSeal text="正伝" size="sm" variant="vermilion" shape="square" title="Каноническая традиция Сётокан" />
+                <HankoSeal text="正伝" size="sm" variant="vermilion" shape="square" title="Каноническая традиция Шотокан" />
               </div>
 
               <h1 className="hero-dojo__headline">
@@ -45,7 +55,7 @@ export default function HomePage() {
                 Пространственная геометрия эмбусэн, механика стоек и прикладной бункай в трёхмерном пространстве.
               </p>
 
-              {/* Телеметрия школы Сётокан */}
+              {/* Телеметрия школы Шотокан */}
               <div className="hero-dojo__telemetry">
                 <div className="hero-dojo__telemetry-item">
                   <span className="hero-dojo__telemetry-kanji">型</span>
@@ -78,221 +88,233 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. ТРИ СТОЛПА ДОДЗЁ (ФОРМА, СМЫСЛ, ДИСТАНЦИЯ) */}
-      <section className="pillars-section">
-        <div className="container">
-          <div className="section-head-dojo">
-            <span className="section-kicker">Основы воинского искусства</span>
-            <h2 className="section-title-dojo">Три столпа мастерства Сётокан</h2>
+      {/* 2. ТРИ СТОЛПА ДОДЗЁ — Отложенная догрузка ниже первого экрана */}
+      <LazySection minHeight="380px" rootMargin="300px">
+        <section className="pillars-section">
+          <div className="container">
+            <div className="section-head-dojo">
+              <span className="section-kicker">Основы воинского искусства</span>
+              <h2 className="section-title-dojo">Три столпа мастерства Шотокан</h2>
+            </div>
+
+            <div className="pillars-grid">
+              {/* Столп 1: Эмбусэн */}
+              <div className="pillar-item">
+                <div className="pillar-header">
+                  <span className="pillar-num">一</span>
+                  <HankoSeal text="線" size="sm" variant="gold" shape="square" />
+                </div>
+                <h3 className="pillar-title">Эмбусэн (演武線) · Векторы</h3>
+                <p className="pillar-text">
+                  Пространственная геометрия шагов и поворотов. Изучайте ось баланса, углы скручивания
+                  бёдер (Koshi) и траектории перемещения в интерактивном 3D-пространстве.
+                </p>
+                <Link to="/kata" className="pillar-link">
+                  <span>Каталог 26 форм</span>
+                  <span className="pillar-link-arr">→</span>
+                </Link>
+              </div>
+
+              {/* Столп 2: Кимэ */}
+              <div className="pillar-item">
+                <div className="pillar-header">
+                  <span className="pillar-num">二</span>
+                  <HankoSeal text="極" size="sm" variant="vermilion" shape="square" />
+                </div>
+                <h3 className="pillar-title">Кимэ (極め) · Фокус силы</h3>
+                <p className="pillar-text">
+                  Предельная концентрация взрывной силы в точке удара с мгновенной фиксацией суставов
+                  и брюшного пресса (Тандэн). Точность важнее грубой силы.
+                </p>
+                <Link to="/bunkai" className="pillar-link">
+                  <span>Сценарии бункай</span>
+                  <span className="pillar-link-arr">→</span>
+                </Link>
+              </div>
+
+              {/* Столп 3: Ма-ай */}
+              <div className="pillar-item">
+                <div className="pillar-header">
+                  <span className="pillar-num">三</span>
+                  <HankoSeal text="間" size="sm" variant="gold" shape="square" />
+                </div>
+                <h3 className="pillar-title">Ма-ай (間合い) · Дистанция</h3>
+                <p className="pillar-text">
+                  Динамический контроль боевой дистанции между Тори и Укэ. Анализ дистанций
+                  Тика-ма (ближняя), Иссоку-итто (шаг-удар) и То-ма (дальняя).
+                </p>
+                <Link to="/karate-studio" className="pillar-link">
+                  <span>3D Мокап Студия</span>
+                  <span className="pillar-link-arr">→</span>
+                </Link>
+              </div>
+            </div>
           </div>
-
-          <div className="pillars-grid">
-            {/* Столп 1: Эмбусэн */}
-            <div className="pillar-item">
-              <div className="pillar-header">
-                <span className="pillar-num">一</span>
-                <HankoSeal text="線" size="sm" variant="gold" shape="square" />
-              </div>
-              <h3 className="pillar-title">Эмбусэн (演武線) · Векторы</h3>
-              <p className="pillar-text">
-                Пространственная геометрия шагов и поворотов. Изучайте ось баланса, углы скручивания
-                бёдер (Koshi) и траектории перемещения в интерактивном 3D-пространстве.
-              </p>
-              <Link to="/kata" className="pillar-link">
-                <span>Каталог 26 форм</span>
-                <span className="pillar-link-arr">→</span>
-              </Link>
-            </div>
-
-            {/* Столп 2: Кимэ */}
-            <div className="pillar-item">
-              <div className="pillar-header">
-                <span className="pillar-num">二</span>
-                <HankoSeal text="極" size="sm" variant="vermilion" shape="square" />
-              </div>
-              <h3 className="pillar-title">Кимэ (極め) · Фокус силы</h3>
-              <p className="pillar-text">
-                Предельная концентрация взрывной силы в точке удара с мгновенной фиксацией суставов
-                и брюшного пресса (Тандэн). Точность важнее грубой силы.
-              </p>
-              <Link to="/bunkai" className="pillar-link">
-                <span>Сценарии бункай</span>
-                <span className="pillar-link-arr">→</span>
-              </Link>
-            </div>
-
-            {/* Столп 3: Ма-ай */}
-            <div className="pillar-item">
-              <div className="pillar-header">
-                <span className="pillar-num">三</span>
-                <HankoSeal text="間" size="sm" variant="gold" shape="square" />
-              </div>
-              <h3 className="pillar-title">Ма-ай (間合い) · Дистанция</h3>
-              <p className="pillar-text">
-                Динамический контроль боевой дистанции между Тори и Укэ. Анализ дистанций
-                Тика-ма (ближняя), Иссоку-итто (шаг-удар) и То-ма (дальняя).
-              </p>
-              <Link to="/karate-studio" className="pillar-link">
-                <span>3D Мокап Студия</span>
-                <span className="pillar-link-arr">→</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      </LazySection>
 
       {/* Японский орнаментальный разделитель */}
-      <DojoDivider kanji="松濤館" />
+      <LazySection minHeight="40px" rootMargin="250px">
+        <DojoDivider kanji="松濤館" />
+      </LazySection>
 
-      {/* 3. ВИТРИНА НАЧАЛЬНЫХ ФОРМ ХЭЙАН */}
-      <section className="showcase-section container">
-        <div className="showcase-header">
-          <div>
-            <span className="section-kicker">Базовая школа Сётокан · 平安五段</span>
-            <h2 className="showcase-title">Пять форм Хэйан (Мирный дух)</h2>
+      {/* 3. ВИТРИНА НАЧАЛЬНЫХ ФОРМ ХЭЙАН — Отложенная догрузка */}
+      <LazySection minHeight="450px" rootMargin="300px">
+        <section className="showcase-section container">
+          <div className="showcase-header">
+            <div>
+              <span className="section-kicker">Базовая школа Шотокан · 平安五段</span>
+              <h2 className="showcase-title">Пять форм Хэйан (Мирный дух)</h2>
+            </div>
+            <Link to="/kata" className="showcase-all-link">
+              <span>Все 26 ката Шотокан</span>
+              <span className="showcase-all-arr">→</span>
+            </Link>
           </div>
-          <Link to="/kata" className="showcase-all-link">
-            <span>Все 26 ката Сётокан</span>
-            <span className="showcase-all-arr">→</span>
-          </Link>
-        </div>
 
-        <div className="showcase-grid">
-          {/* Хэйан Сёдан */}
-          <Link to="/kata/1" className="showcase-card">
-            <div className="showcase-card__top">
-              <span className="showcase-card__tag showcase-card__tag--white">
-                9–7 Кю · Белый / Жёлтый
-              </span>
-              <HankoSeal text="初段" size="sm" variant="vermilion" shape="square" />
-            </div>
-            <h3 className="showcase-card__title">Хэйан Сёдан</h3>
-            <span className="showcase-card__jp">平安初段 · 21 шаг</span>
-            <p className="showcase-card__desc">
-              Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. Освоение крестообразной оси эмбусэн.
-            </p>
-            <span className="showcase-card__action">Изучить в 3D →</span>
-          </Link>
-
-          {/* Хэйан Нидан */}
-          <Link to="/kata/2" className="showcase-card">
-            <div className="showcase-card__top">
-              <span className="showcase-card__tag showcase-card__tag--green">
-                6–5 Кю · Зелёный
-              </span>
-              <HankoSeal text="二段" size="sm" variant="vermilion" shape="square" />
-            </div>
-            <h3 className="showcase-card__title">Хэйан Нидан</h3>
-            <span className="showcase-card__jp">平安二段 · 26 шагов</span>
-            <p className="showcase-card__desc">
-              Удары ногами маэ-гэри и ёко-гэри, переход в заднюю защитную стойку кокуцу-дати с блоком сюто-укэ.
-            </p>
-            <span className="showcase-card__action">Изучить в 3D →</span>
-          </Link>
-
-          {/* Хэйан Сандан */}
-          <Link to="/kata/3" className="showcase-card">
-            <div className="showcase-card__top">
-              <span className="showcase-card__tag showcase-card__tag--blue">
-                4 Кю · Синий
-              </span>
-              <HankoSeal text="三段" size="sm" variant="vermilion" shape="square" />
-            </div>
-            <h3 className="showcase-card__title">Хэйан Сандан</h3>
-            <span className="showcase-card__jp">平安三段 · 20 шагов</span>
-            <p className="showcase-card__desc">
-              Освобождение от захватов, блок ути-укэ и переход в низкую прочную стойку киба-дати (стойка всадника).
-            </p>
-            <span className="showcase-card__action">Изучить в 3D →</span>
-          </Link>
-        </div>
-      </section>
-
-      {/* 4. ТЕМАТИЧЕСКИЙ БАННЕР-СВИТОК «ЭМБУСЭН» (ДЭНСЁ / 伝書) */}
-      <section className="container">
-        <div className="scroll-banner">
-          <div className="scroll-banner__roller scroll-banner__roller--top" />
-          <div className="scroll-banner__inner">
-            <div className="scroll-banner__left">
-              <div className="scroll-banner__stamp-row">
-                <span className="scroll-banner__stamp">演武線の掟 · КАНОН ПЕРЕМЕЩЕНИЙ</span>
-                <HankoSeal text="演武" size="sm" variant="vermilion" shape="square" />
+          <div className="showcase-grid">
+            {/* Хэйан Шодан */}
+            <Link to="/kata/1" className="showcase-card">
+              <div className="showcase-card__top">
+                <span className="showcase-card__tag showcase-card__tag--white">
+                  9–7 Кю · Белый / Жёлтый
+                </span>
+                <HankoSeal text="初段" size="sm" variant="vermilion" shape="square" />
               </div>
-              <h3 className="scroll-banner__title">Священная Линия «Эмбусэн»</h3>
-              <p className="scroll-banner__quote">
-                «Ката — это не танец. Каждый шаг на линии эмбусэн — это решение реального поединка, где жизнь и смерть разделены долей секунды.»
+              <h3 className="showcase-card__title">Хэйан Шодан</h3>
+              <span className="showcase-card__jp">平安初段 · 21 шаг</span>
+              <p className="showcase-card__desc">
+                Базовые блоки гэдан-барай, прямолинейные выпады ой-цуки и стойка дзэнкуцу-дати. Освоение крестообразной оси эмбусэн.
               </p>
-              <span className="scroll-banner__author">— Мастер Анко Итосу, реформатор окинавского каратэ</span>
-            </div>
+              <span className="showcase-card__action">Изучить в 3D →</span>
+            </Link>
 
-            <div className="scroll-banner__axis-box">
-              <div className="scroll-banner__axis-header">
-                <span>4 Направления боя (Сихо · 四方)</span>
-                <HankoSeal text="方" size="sm" variant="gold" shape="circle" />
+            {/* Хэйан Нидан */}
+            <Link to="/kata/2" className="showcase-card">
+              <div className="showcase-card__top">
+                <span className="showcase-card__tag showcase-card__tag--green">
+                  6–5 Кю · Зелёный
+                </span>
+                <HankoSeal text="二段" size="sm" variant="vermilion" shape="square" />
               </div>
-              <div className="scroll-banner__axis-grid">
-                <div className="scroll-banner__axis-item">
-                  <strong>Сёмэн (正面)</strong> · Фронт (0°)
+              <h3 className="showcase-card__title">Хэйан Нидан</h3>
+              <span className="showcase-card__jp">平安二段 · 26 шагов</span>
+              <p className="showcase-card__desc">
+                Удары ногами маэ-гэри и ёко-гэри, переход в заднюю защитную стойку кокуцу-дати с блоком сюто-укэ.
+              </p>
+              <span className="showcase-card__action">Изучить в 3D →</span>
+            </Link>
+
+            {/* Хэйан Сандан */}
+            <Link to="/kata/3" className="showcase-card">
+              <div className="showcase-card__top">
+                <span className="showcase-card__tag showcase-card__tag--blue">
+                  4 Кю · Синий
+                </span>
+                <HankoSeal text="三段" size="sm" variant="vermilion" shape="square" />
+              </div>
+              <h3 className="showcase-card__title">Хэйан Сандан</h3>
+              <span className="showcase-card__jp">平安三段 · 20 шагов</span>
+              <p className="showcase-card__desc">
+                Освобождение от захватов, блок ути-укэ и переход в низкую прочную стойку киба-дати (стойка всадника).
+              </p>
+              <span className="showcase-card__action">Изучить в 3D →</span>
+            </Link>
+          </div>
+        </section>
+      </LazySection>
+
+      {/* 4. ТЕМАТИЧЕСКИЙ БАННЕР-СВИТОК «ЭМБУСЭН» (ДЭНСЁ / 伝書) — Отложенная догрузка */}
+      <LazySection minHeight="240px" rootMargin="300px">
+        <section className="container">
+          <div className="scroll-banner">
+            <div className="scroll-banner__roller scroll-banner__roller--top" />
+            <div className="scroll-banner__inner">
+              <div className="scroll-banner__left">
+                <div className="scroll-banner__stamp-row">
+                  <span className="scroll-banner__stamp">演武線の掟 · КАНОН ПЕРЕМЕЩЕНИЙ</span>
+                  <HankoSeal text="演武" size="sm" variant="vermilion" shape="square" />
                 </div>
-                <div className="scroll-banner__axis-item">
-                  <strong>Усиро (後ろ)</strong> · Тыл (180°)
+                <h3 className="scroll-banner__title">Священная Линия «Эмбусэн»</h3>
+                <p className="scroll-banner__quote">
+                  «Ката — это не танец. Каждый шаг на линии эмбусэн — это решение реального поединка, где жизнь и смерть разделены долей секунды.»
+                </p>
+                <span className="scroll-banner__author">— Мастер Анко Итосу, реформатор окинавского каратэ</span>
+              </div>
+
+              <div className="scroll-banner__axis-box">
+                <div className="scroll-banner__axis-header">
+                  <span>4 Направления боя (Сихо · 四方)</span>
+                  <HankoSeal text="方" size="sm" variant="gold" shape="circle" />
                 </div>
-                <div className="scroll-banner__axis-item">
-                  <strong>Миги (右)</strong> · Правый фланг (90°)
-                </div>
-                <div className="scroll-banner__axis-item">
-                  <strong>Хидари (左)</strong> · Левый фланг (270°)
+                <div className="scroll-banner__axis-grid">
+                  <div className="scroll-banner__axis-item">
+                    <strong>Сёмэн (正面)</strong> · Фронт (0°)
+                  </div>
+                  <div className="scroll-banner__axis-item">
+                    <strong>Усиро (後ろ)</strong> · Тыл (180°)
+                  </div>
+                  <div className="scroll-banner__axis-item">
+                    <strong>Миги (右)</strong> · Правый фланг (90°)
+                  </div>
+                  <div className="scroll-banner__axis-item">
+                    <strong>Хидари (左)</strong> · Левый фланг (270°)
+                  </div>
                 </div>
               </div>
             </div>
+            <div className="scroll-banner__roller scroll-banner__roller--bottom" />
           </div>
-          <div className="scroll-banner__roller scroll-banner__roller--bottom" />
-        </div>
-      </section>
+        </section>
+      </LazySection>
 
-      {/* 5. МАСТЕРСКАЯ БОЕВОГО МОДЕЛИРОВАНИЯ (СТУДИЯ БУНКАЙ) */}
-      <section className="studio-callout-section">
-        <div className="container studio-callout__container">
-          <div className="studio-callout__text">
-            <div className="studio-callout__crest-row">
-              <ShotokanTiger size={42} color="var(--gold)" />
-            </div>
-            <span className="section-kicker">Трёхмерная симуляция поединка · 応用分解</span>
-            <h2 className="studio-callout__title">
-              Студия боевого анализа Bunkai
-            </h2>
-            <p className="studio-callout__desc">
-              Конструируйте собственные цепочки поединка, регулируйте углы атаки нападающего и
-              дистанцию Ма-ай в трёхмерной симуляции двух и трёх каратек в реальном времени.
-            </p>
-            <div className="studio-callout__actions">
-              <Link to="/bunkai/new" className="btn btn-vermilion">
-                <span>Открыть мастерскую бункай</span>
-                <HankoSeal text="鍛" size="sm" variant="gold" shape="square" />
-              </Link>
+      {/* 5. МАСТЕРСКАЯ БОЕВОГО МОДЕЛИРОВАНИЯ (СТУДИЯ БУНКАЙ) — Отложенная догрузка */}
+      <LazySection minHeight="320px" rootMargin="300px">
+        <section className="studio-callout-section">
+          <div className="container studio-callout__container">
+            <div className="studio-callout__text">
+              <div className="studio-callout__crest-row">
+                <ShotokanTiger size={42} color="var(--gold)" />
+              </div>
+              <span className="section-kicker">Трёхмерная симуляция поединка · 応用分解</span>
+              <h2 className="studio-callout__title">
+                Студия боевого анализа Bunkai
+              </h2>
+              <p className="studio-callout__desc">
+                Конструируйте собственные цепочки поединка, регулируйте углы атаки нападающего и
+                дистанцию Ма-ай в трёхмерной симуляции двух и трёх каратек в реальном времени.
+              </p>
+              <div className="studio-callout__actions">
+                <Link to="/bunkai/new" className="btn btn-vermilion">
+                  <span>Открыть мастерскую бункай</span>
+                  <HankoSeal text="鍛" size="sm" variant="gold" shape="square" />
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </LazySection>
 
-      {/* 6. ФИЛОСОФСКОЕ НАСТАВЛЕНИЕ МАСТЕРА ФУНАКОСИ (НИДЗЮ КУН) */}
-      <section className="quote-section container">
-        <div className="quote-editorial-plaque">
-          <div className="quote-editorial-plaque__crest">
-            <ShotokanTiger size={32} color="var(--gold-soft)" />
+      {/* 6. ФИЛОСОФСКОЕ НАСТАВЛЕНИЕ МАСТЕРА ФУНАКОСИ (НИДЗЮ КУН) — Отложенная догрузка */}
+      <LazySection minHeight="200px" rootMargin="300px">
+        <section className="quote-section container">
+          <div className="quote-editorial-plaque">
+            <div className="quote-editorial-plaque__crest">
+              <ShotokanTiger size={32} color="var(--gold-soft)" />
+            </div>
+            <blockquote className="quote-editorial">
+              <p className="quote-text">
+                «Каратэ начинается и заканчивается с поклона. В каратэ нет первого нападения (Каратэ ни сэнтэ наси).»
+              </p>
+              <cite className="quote-author">
+                <span className="quote-author-name">— Гитин Фунакоси, основатель стиля Шотокан</span>
+                <span className="quote-author-jp">船越 義珍 · 二十条</span>
+              </cite>
+            </blockquote>
+            <HankoSeal text="松濤" size="md" variant="vermilion" shape="square" className="quote-editorial-plaque__seal" />
           </div>
-          <blockquote className="quote-editorial">
-            <p className="quote-text">
-              «Каратэ начинается и заканчивается с поклона. В каратэ нет первого нападения (Каратэ ни сэнтэ наси).»
-            </p>
-            <cite className="quote-author">
-              <span className="quote-author-name">— Гитин Фунакоси, основатель стиля Сётокан</span>
-              <span className="quote-author-jp">船越 義珍 · 二十条</span>
-            </cite>
-          </blockquote>
-          <HankoSeal text="松濤" size="md" variant="vermilion" shape="square" className="quote-editorial-plaque__seal" />
-        </div>
-      </section>
+        </section>
+      </LazySection>
     </div>
   );
 }

@@ -160,6 +160,30 @@ graph TD
 | **Реалтайм** | Socket.IO 4.7 (Client & Server) | Двусторонний транспорт сообщений чатов |
 | **Аутентификация** | JWT (`jsonwebtoken`), `bcryptjs`, Cookie-Parser | Access/Refresh токены, безопасное хеширование |
 | **База данных** | Microsoft SQL Server (MSSQL), `tedious`, `sequelize` | Реляционная СУБД, выполнение хранимых процедур |
+| **Веб-прокси & Кэш** | Nginx Alpine, Gzip, HTTP/1.1 Keepalive | Обратный прокси, раздача статики, сжатие и кэширование |
+
+---
+
+## ⚡ Оптимизация производительности: «Первый экран» и Nginx Reverse Proxy
+
+### 1. Стратегия загрузки «Первый экран» (Above-the-Fold & Lazy Hydration)
+* **Приоритетная отрисовка 1-го экрана**: немедленный рендеринг критических элементов интерфейса (Header, Hero-баннер, Spotlight, органы управления), доступных пользователю сразу после открытия страницы.
+* **Компонент `LazySection`**: отложенный монтаж DOM-дерева секций ниже линии сгиба экрана (Below-the-fold) на базе `IntersectionObserver` (с упреждающим `rootMargin: 250px-350px`) и фоновой догрузкой через `requestIdleCallback`.
+* **Оптимизация изображений**:
+  * Фоновое изображение сенсея сжато с 684 КБ до 132 КБ (экономия 80%) с опережающим `<link rel="preload" as="image" fetchpriority="high">`.
+  * Миниатюры 26 ката переведены на оптимизированный формат, сэкономив свыше 12 МБ сетевого трафика.
+  * Все изображения карточек снабжены атрибутами `loading="lazy"` и `decoding="async"`.
+* **Отложенная инициализация Three.js**:
+  * Устранена избыточная синхронная фоновая предзагрузка 3D-моделей весом 37+ МБ (`karateka_lowpoly.glb`, `karateka_techniques_v4.glb`, `dojo.glb`). Модели скачиваются только по фактическому запросу 3D-рендеринга.
+  * Компоненты 3D-арены (`BunkaiMultiAvatarPlayer`, `ModularMotionMixer`) вынесены в динамические чанки `React.lazy()` с аккуратными плейсхолдерами во избежание сдвигов разметки (CLS = 0).
+
+### 2. Nginx Reverse Proxy & HTTP Кэш-сервер (Порты 80 и 8080)
+* **Агрессивное HTTP-кэширование**:
+  * Hashed production assets (`/assets/*`): `Cache-Control: public, max-age=31536000, immutable` (1 год).
+  * 3D-модели (`.glb`, `.gltf`) и JSON-анимации (`/anims/*`): `Cache-Control: public, max-age=2592000` (30 дней).
+  * `index.html`: `Cache-Control: no-cache, no-store, must-revalidate` (мгновенное получение обновлений).
+* **Потоковое Gzip-сжатие**: сжатие HTML, CSS, JS, SVG, JSON и бинарных GLB моделей с уровнем сжатия 6, уменьшающее объем передаваемых данных на 65–75%.
+* **Единый доменный шлюз**: устранение накладных расходов на предзапросы CORS (`OPTIONS`) за счет прямого проксирования `/api/` и WebSocket `/socket.io/` к Node.js, а также захвата движений `/studio/` к Python MoCap Studio.
 
 ---
 
@@ -189,18 +213,22 @@ sqlcmd -S localhost -U sa -P '<пароль>' -d BunkaiExplorer -i database/proc
 
 Больше **не требуется** запускать сторонние `.bat` файлы — все сервисы стартуют автоматически:
 
-#### Вариант А: Запуск через Docker (5 контейнеров в единой сети)
+#### Вариант А: Запуск через Docker (6 контейнеров с Nginx Reverse Proxy)
 ```bash
 docker compose up -d --build
 # или через npm:
 npm run docker:up
 ```
-Поднимает 5 контейнеров:
+Поднимает 6 контейнеров:
 1. `bunkai-explorer-mssql` (MSSQL Server 2025, порт 1433)
 2. `bunkai-explorer-server` (Node.js API, порт 5000)
 3. `bunkai-explorer-client` (React Three.js UI, порт 5173)
-4. `bunkai-explorer-gateway` (HTTPS Шлюз для камер телефонов, порт 8443)
-5. `bunkai-explorer-mocap-studio` (Python AI MoCap Server, порты 8000 и 8088)
+4. `bunkai-explorer-nginx` (Nginx Reverse Proxy & HTTP Cache, порты 80 и 8080)
+5. `bunkai-explorer-gateway` (HTTPS Шлюз для камер телефонов, порт 8443)
+6. `bunkai-explorer-mocap-studio` (Python AI MoCap Server, порты 8000 и 8088)
+
+* **Основной быстрый веб-вход**: `http://localhost` (или `http://localhost:8080`) — обслуживается Nginx с Gzip-сжатием и HTTP-кэшированием ассетов.
+* **Порт разработки Vite**: `http://localhost:5173` — для HMR в реальном времени.
 
 #### Вариант Б: Локальный запуск без сторонних bat-файлов
 ```bash

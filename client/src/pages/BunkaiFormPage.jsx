@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { getBunkai, createBunkai, updateBunkai, getBunkaiSteps, saveBunkaiSteps } from '../api/bunkai';
 import { listKata } from '../api/kata';
 import { listClips } from '../api/animations';
 import TechniquePicker from '../components/TechniquePicker';
-import BunkaiMultiAvatarPlayer from '../three/BunkaiMultiAvatarPlayer';
+import { X, Swords, Trophy, Layers, Plus, Trash2, Zap, BookOpen, Ruler, AlertTriangle } from 'lucide-react';
+const BunkaiMultiAvatarPlayer = lazy(() => import('../three/BunkaiMultiAvatarPlayer'));
 import './BunkaiEditor.css';
 
 const TORI_CLIPS = [
@@ -242,7 +243,7 @@ export default function BunkaiFormPage() {
     setError(null);
 
     if (!form.kataId || isNaN(Number(form.kataId)) || Number(form.kataId) <= 0) {
-      setError('Пожалуйста, выберите связанное ката Сётокан из списка.');
+      setError('Пожалуйста, выберите связанное ката Шотокан из списка.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -257,8 +258,8 @@ export default function BunkaiFormPage() {
 
     const modeLabel =
       participantMode === '3-person'
-        ? '🏆 Соревновательный командный бункай (3 участника: Тори + Укэ 1 + Укэ 2)'
-        : '🥋 Традиционный парный бункай (2 участника: Тори + Укэ)';
+        ? 'Соревновательный командный бункай (3 участника: Тори + Укэ 1 + Укэ 2)'
+        : 'Традиционный парный бункай (2 участника: Тори + Укэ)';
 
     let formattedApplication = `${modeLabel}\n\n`;
     episodes.forEach((ep, i) => {
@@ -380,7 +381,7 @@ export default function BunkaiFormPage() {
               fontSize: '0.9rem',
               fontWeight: 500,
             }}>
-              ⚠️ {error}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><AlertTriangle size={15} color='#ef4444' /> {error}</span>
             </div>
           )}
         </div>
@@ -399,7 +400,7 @@ export default function BunkaiFormPage() {
       <section className="bunkai-studio__meta-panel">
         <div className="bunkai-studio__meta-grid">
           <div className="field" style={{ margin: 0 }}>
-            <label>Связанное ката Сётокан *</label>
+            <label>Связанное ката Шотокан *</label>
             <select required value={form.kataId} onChange={update('kataId')} disabled={isEdit}>
               <option value="">Выберите ката из списка…</option>
               {kataOptions.map((k) => (
@@ -416,7 +417,7 @@ export default function BunkaiFormPage() {
               required
               value={form.title}
               onChange={update('title')}
-              placeholder="Например: Разбор начальной связки Хэйан Сёдан против захвата и удара"
+              placeholder="Например: Разбор начальной связки Хэйан Шодан против захвата и удара"
             />
           </div>
 
@@ -441,7 +442,7 @@ export default function BunkaiFormPage() {
               className={`bunkai-mode-option ${participantMode === '2-person' ? 'active' : ''}`}
               onClick={() => setParticipantMode('2-person')}
             >
-              <span style={{ fontSize: '1.4rem' }}>🥋</span>
+              <Swords size={28} color='var(--gold)' />
               <div>
                 <strong style={{ color: '#fff', fontSize: '0.92rem' }}>Дуэт (2 участника)</strong>
                 <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
@@ -454,7 +455,7 @@ export default function BunkaiFormPage() {
               className={`bunkai-mode-option bunkai-mode-option--3p ${participantMode === '3-person' ? 'active' : ''}`}
               onClick={() => setParticipantMode('3-person')}
             >
-              <span style={{ fontSize: '1.4rem' }}>🏆</span>
+              <Trophy size={28} color='var(--gold)' />
               <div>
                 <strong style={{ color: '#fff', fontSize: '0.92rem' }}>Трио (3 участника — Соревновательный бункай)</strong>
                 <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
@@ -507,7 +508,7 @@ export default function BunkaiFormPage() {
       <section className="bunkai-studio__arena-wrap">
         <div className="bunkai-studio__arena-bar">
           <div className="bunkai-studio__arena-title">
-            <span>🥋</span>
+            <Layers size={14} />
             <span>Интерактивная 3D-арена боевого взаимодействия (Тори и Укэ)</span>
           </div>
           <span style={{ fontSize: '0.8rem', color: 'var(--gold)', fontWeight: 600 }}>
@@ -515,18 +516,20 @@ export default function BunkaiFormPage() {
           </span>
         </div>
 
-        <BunkaiMultiAvatarPlayer
-          steps={previewSteps}
-          defaultParticipantMode={participantMode}
-          height={480}
-        />
+        <Suspense fallback={<div className="bunkai-preview-stage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D студии бункай…</div>}>
+          <BunkaiMultiAvatarPlayer
+            steps={previewSteps}
+            defaultParticipantMode={participantMode}
+            height={480}
+          />
+        </Suspense>
       </section>
 
       {/* ГОРИЗОНТАЛЬНЫЙ ТАЙМЛАЙН БОЕВЫХ ЭПИЗОДОВ */}
       <section className="bunkai-timeline">
         <div className="bunkai-timeline__header">
           <h3 className="bunkai-timeline__title">
-            <span>⚔️</span>
+            <Swords size={14} />
             <span>Хронология боевых эпизодов (Кэйко-дзюн / 稽古順)</span>
             <span style={{ fontSize: '0.82rem', color: 'var(--washi-dim)', fontWeight: 400 }}>
               (Всего эпизодов: {episodes.length})
@@ -563,19 +566,19 @@ export default function BunkaiFormPage() {
                 </div>
 
                 <div className="bunkai-step-pill__footer">
-                  <span>{ep.attacker.includes('2') ? '🔴 Укэ 2' : '🔵 Укэ 1'} ({ep.attackAngleDeg}°)</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: ep.attacker.includes('2') ? '#ef4444' : '#3b82f6', display: 'inline-block' }} /> {ep.attacker.includes('2') ? 'Укэ 2' : 'Укэ 1'} ({ep.attackAngleDeg}°)</span>
                   {episodes.length > 1 && (
                     <button
                       type="button"
                       className="btn btn-danger"
-                      style={{ padding: '2px 6px', fontSize: '0.7rem' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeEpisode(idx);
                       }}
                       title="Удалить этот эпизод"
+                      style={{ padding: '2px 6px', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                      ✕
+                      <X size={12} />
                     </button>
                   )}
                 </div>
@@ -584,7 +587,7 @@ export default function BunkaiFormPage() {
           })}
 
           <div className="bunkai-step-add-card" onClick={addEpisode}>
-            <span style={{ fontSize: '1.4rem' }}>➕</span>
+            <Plus size={24} />
             <span>Новый шаг</span>
           </div>
         </div>
@@ -611,7 +614,7 @@ export default function BunkaiFormPage() {
                 style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem' }}
                 onClick={() => removeEpisode(activeEpisodeIdx)}
               >
-                ✕ Удалить эпизод
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Trash2 size={13} /> Удалить эпизод</span>
               </button>
             )}
           </div>
@@ -621,7 +624,7 @@ export default function BunkaiFormPage() {
           {/* КОЛОНКА 1: АТАКА ПРОТИВНИКА (УКЭ) */}
           <div className="bunkai-card-column">
             <h4 className="bunkai-card-column__title bunkai-card-column__title--attack">
-              <span>💥</span>
+              <Zap size={14} />
               <span>Атака противника (Укэ / 攻撃)</span>
             </h4>
 
@@ -689,7 +692,7 @@ export default function BunkaiFormPage() {
                   style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
                   onClick={() => setPickerTarget({ index: activeEpisodeIdx, field: 'attack' })}
                 >
-                  📖 Справочник
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><BookOpen size={13} /> Справочник</span>
                 </button>
               </div>
               <input
@@ -727,7 +730,7 @@ export default function BunkaiFormPage() {
           {/* КОЛОНКА 2: ДИСТАНЦИЯ МА-АЙ (間合い) */}
           <div className="bunkai-card-column">
             <h4 className="bunkai-card-column__title bunkai-card-column__title--maai">
-              <span>📏</span>
+              <Ruler size={14} />
               <span>Дистанция контакта (Ма-ай / 間合い)</span>
             </h4>
 
@@ -786,7 +789,7 @@ export default function BunkaiFormPage() {
           {/* КОЛОНКА 3: ЗАЩИТА И КОНТРАТАКА (ТОРИ) */}
           <div className="bunkai-card-column">
             <h4 className="bunkai-card-column__title bunkai-card-column__title--counter">
-              <span>🥋</span>
+              <Layers size={14} />
               <span>Защита и контрудар (Тори / 防御・反撃)</span>
             </h4>
 
@@ -830,7 +833,7 @@ export default function BunkaiFormPage() {
                   style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
                   onClick={() => setPickerTarget({ index: activeEpisodeIdx, field: 'counter' })}
                 >
-                  📖 Справочник
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><BookOpen size={13} /> Справочник</span>
                 </button>
               </div>
               <input
@@ -877,7 +880,7 @@ export default function BunkaiFormPage() {
             disabled={saving}
             style={{ maxWidth: '100%', whiteSpace: 'normal', textAlign: 'center' }}
           >
-            {saving ? 'Сохранение в базе данных…' : isEdit ? 'Обновить бункай' : '🥋 Опубликовать бункай Сётокан'}
+            {saving ? 'Сохранение в базе данных…' : isEdit ? 'Обновить бункай' : 'Опубликовать бункай Шотокан'}
           </button>
         </div>
       </footer>

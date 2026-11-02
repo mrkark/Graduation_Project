@@ -6,15 +6,17 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
+import LazySection from '../components/ui/LazySection';
 import { resolveKataSlug } from '../three/kataMotionUtils';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
+import { Heart, Check } from 'lucide-react';
 import './KataDetailPage.css';
 
 // Динамическая отложенная загрузка тяжелого 3D секвенсора (оптимизация загрузки страниц)
 const KataSequencer = lazy(() => import('../three/KataSequencer'));
 
 const DIFFICULTY_LABELS = {
-  beginner: 'Начальный уровень (Сёдан · 9–7 Кю)',
+  beginner: 'Начальный уровень (Шодан · 9–7 Кю)',
   intermediate: 'Средний уровень (Тюдан · 6–4 Кю)',
   advanced: 'Продвинутый уровень (Дзёдан · 3–1 Кю)',
   master: 'Мастерский уровень (Мэнкё · Дан)',
@@ -190,7 +192,7 @@ export default function KataDetailPage() {
               onClick={() => toggleFavorite('kata', id)}
               style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
             >
-              {isKataFavorite(id) ? '❤️ В избранном' : '🤍 В избранное'}
+              {isKataFavorite(id) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
             </button>
             <HankoSeal
               text={kata.Title?.match(/[\u4e00-\u9faf]{1,2}/)?.[0] || '型'}
@@ -309,7 +311,7 @@ export default function KataDetailPage() {
             onClick={() => setActiveStepIdx((prev) => Math.min(stepsCount - 1, prev + 1))}
             disabled={activeStepIdx === stepsCount - 1}
           >
-            {activeStepIdx === stepsCount - 1 ? 'Завершено ✔' : 'След. шаг →'}
+            {activeStepIdx === stepsCount - 1 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>Завершено <Check size={14} /></span> : 'След. шаг →'}
           </button>
         </div>
 
@@ -334,7 +336,8 @@ export default function KataDetailPage() {
       </section>
 
       {/* 4. ПРОГРЕССИВНОЕ РАСКРЫТИЕ ДОПОЛНИТЕЛЬНОЙ ИНФОРМАЦИИ (ДЭНСЁ) */}
-      <section className="kata-study__details">
+      <LazySection minHeight="320px" rootMargin="250px">
+        <section className="kata-study__details">
         <div className="tabs kata-study__tabs">
           <button
             type="button"
@@ -429,6 +432,7 @@ export default function KataDetailPage() {
           )}
         </div>
       </section>
+      </LazySection>
     </div>
   );
 }

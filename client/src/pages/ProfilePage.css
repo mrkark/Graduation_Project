@@ -48,9 +48,17 @@
   line-height: 1;
 }
 
-.profile-avatar-wrap {
+/* Контейнер аватара и мини-кнопка камеры */
+.profile-avatar-container {
+  position: relative;
   width: 68px;
   height: 68px;
+  flex-shrink: 0;
+}
+
+.profile-avatar-wrap {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   border: 2px solid var(--gold);
   overflow: hidden;
@@ -62,7 +70,6 @@
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 1.6rem;
-  flex-shrink: 0;
   box-shadow: 0 0 12px rgba(191, 161, 95, 0.2);
 }
 
@@ -70,6 +77,74 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.profile-avatar-wrap--clickable {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-avatar-wrap--clickable:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 16px rgba(191, 161, 95, 0.45);
+}
+
+.profile-avatar-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: #f5f0e1;
+  border-radius: 50%;
+}
+
+.profile-avatar-hover-icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 2.2px;
+  display: block;
+}
+
+.profile-avatar-wrap--clickable:hover .profile-avatar-hover-overlay {
+  opacity: 1;
+}
+
+.profile-avatar-corner-btn {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #141311;
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.profile-avatar-corner-btn:hover {
+  background: var(--gold);
+  color: #100f0d;
+  transform: scale(1.1);
+}
+
+.profile-avatar-corner-icon {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.2px;
+  display: block;
 }
 
 .profile-info {
@@ -143,6 +218,81 @@
   border: 1px solid #235332;
 }
 
+/* Кнопка загрузки и действия с аватаром */
+.profile-avatar-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.profile-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.6rem 1.15rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1.2;
+  vertical-align: middle;
+}
+
+.profile-upload-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke-width: 2.2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Оптическая центровка камеры относительно базовой линии шрифта */
+  margin-top: -1px;
+}
+
+.profile-upload-icon--spin {
+  animation: profileSpin 0.9s linear infinite;
+}
+
+@keyframes profileSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.profile-remove-avatar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-muted, #a0a0a0);
+  font-size: 0.82rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+}
+
+.profile-remove-avatar-btn:hover {
+  color: #ef4444;
+}
+
+.profile-remove-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2px;
+  margin-top: -1px;
+}
+
+.profile-avatar-subtext {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted, #8a8a8a);
+  margin-bottom: 0.35rem;
+}
+
 /* Панель формы профиля */
 .profile-form-panel {
   background: var(--bg-surface);
@@ -151,6 +301,10 @@
   padding: 2rem 2.25rem;
   margin-bottom: 2rem;
   box-shadow: var(--shadow-card);
+}
+
+.profile-form-panel textarea {
+  resize: none !important;
 }
 
 .profile-form-panel h3 {

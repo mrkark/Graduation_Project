@@ -12,6 +12,8 @@ import {
   BELT_GRADATION,
   getKataBeltInfo,
 } from '../components/ui/JapaneseDecor';
+import { Heart, Star, Video, X, Layers, BookOpen } from 'lucide-react';
+import LazySection from '../components/ui/LazySection';
 import './KataListPage.css';
 
 // Каллиграфическая роспись для 26 канонических ката
@@ -44,7 +46,7 @@ const KATA_KANJI_MAP = {
   'chinte': '珍手',
 };
 
-// Канонические павильоны Сётокан
+// Канонические павильоны Шотокан
 const CANON_PAVILIONS = [
   {
     id: 'heian',
@@ -64,7 +66,7 @@ const CANON_PAVILIONS = [
     kanji: '選定形 · 3–1 Кю / 1 Дан',
     seal: '選',
     badgeText: '4 Главных Ката',
-    description: 'Обязательные классические формы канона Сётокан: Бассай-дай («Взятие крепости»), Дзион, Эмпи, Канку-дай («Взгляд в небеса»).',
+    description: 'Обязательные классические формы канона Шотокан: Бассай-дай («Взятие крепости»), Дзион, Эмпи, Канку-дай («Взгляд в небеса»).',
     matcher: (item) => {
       const t = (item.Title || '').toLowerCase();
       return (
@@ -84,7 +86,7 @@ const CANON_PAVILIONS = [
     kanji: '有段者 · 1–5 Даны',
     seal: '極',
     badgeText: '21 Высшее Ката',
-    description: 'Все 21 высшие формы канона Сётокан (все ката кроме Хэйан 1–5): Тэкки, Бассай-дай, Канку-дай, Дзион, Эмпи, Хангэцу, Ганкаку, Сочин, Нидзюсихо, Унсу и другие.',
+    description: 'Все 21 высшие формы канона Шотокан (все ката кроме Хэйан 1–5): Тэкки, Бассай-дай, Канку-дай, Дзион, Эмпи, Хангэцу, Ганкаку, Сочин, Нидзюсихо, Унсу и другие.',
     matcher: (item) => {
       const t = (item.Title || '').toLowerCase();
       return !t.includes('heian') && !t.includes('хэйан');
@@ -115,7 +117,7 @@ function isHeroKata(item) {
   return (
     t.includes('heian shodan') ||
     t.includes('хэйан шодан') ||
-    t.includes('хэйан сёдан') ||
+    t.includes('хэйан шодан') ||
     t.includes('tekki shodan') ||
     t.includes('тэкки шодан') ||
     t.includes('bassai-dai') ||
@@ -444,7 +446,7 @@ export default function KataListPage() {
       <header className="atlas-header">
         <div className="atlas-header__brand-block">
           <div className="atlas-header__eyebrow-row">
-            <span className="atlas-header__eyebrow">Сётокан Каратэдо · Традиционный канон (型)</span>
+            <span className="atlas-header__eyebrow">Шотокан Каратэдо · Традиционный канон (型)</span>
             <HankoSeal text="型" size="sm" variant="vermilion" shape="square" />
           </div>
           <div className="atlas-header__title-row">
@@ -508,8 +510,9 @@ export default function KataListPage() {
                   setShowSuggestions(false);
                 }}
                 title="Очистить поиск"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                ✕
+                <X size={14} />
               </button>
             )}
 
@@ -525,7 +528,7 @@ export default function KataListPage() {
                     className="atlas-suggestion-item"
                     onMouseDown={() => handleSelectSuggestion(k)}
                   >
-                    <span className="atlas-suggestion-icon">🥋</span>
+                    <span className="atlas-suggestion-icon"><BookOpen size={14} /></span>
                     <div className="atlas-suggestion-text">
                       <span className="atlas-suggestion-title">{k.Title}</span>
                       <span className="atlas-suggestion-meta">
@@ -587,7 +590,7 @@ export default function KataListPage() {
           className={`pavilion-tab ${selectedPavilion === 'all' ? 'active' : ''}`}
           onClick={() => handleSelectPavilion('all')}
         >
-          <span className="tab-title">Все 26 Ката Сётокан</span>
+          <span className="tab-title">Все 26 Ката Шотокан</span>
           <span className="tab-count">26 форм</span>
         </button>
         {CANON_PAVILIONS.map((pav) => {
@@ -611,7 +614,7 @@ export default function KataListPage() {
           onClick={() => handleSelectPavilion('favorites')}
           title="Только избранные ката"
         >
-          <span className="tab-seal">❤️</span>
+          <span className="tab-seal" style={{ display: "inline-flex", verticalAlign: "middle" }}><Heart size={13} fill="#ef4444" color="#ef4444" /></span>
           <span className="tab-title">Избранное</span>
           <span className="tab-count">({kataFavorites.length})</span>
         </button>
@@ -684,7 +687,7 @@ export default function KataListPage() {
                   <h2 className="atlas-spotlight__title">{activeKata.Title}</h2>
                   <p className="atlas-spotlight__desc">
                     {activeKata.Description ||
-                      'Каноническая форма Сётокан с выверенной биомеханикой перемещений и концентрацией силы кимэ.'}
+                      'Каноническая форма Шотокан с выверенной биомеханикой перемещений и концентрацией силы кимэ.'}
                   </p>
                 </div>
 
@@ -698,7 +701,7 @@ export default function KataListPage() {
                     </div>
                     <div className="atlas-spotlight__stat-item">
                       <span className="atlas-spotlight__stat-val">
-                        {activeKata.Style || 'Сётокан'}
+                        {activeKata.Style || 'Шотокан'}
                       </span>
                       <span className="atlas-spotlight__stat-lbl">Стиль / Традиция</span>
                     </div>
@@ -722,7 +725,7 @@ export default function KataListPage() {
                       onClick={() => toggleFavorite('kata', activeKata.Kata_ID)}
                       title={isKataFavorite(activeKata.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                     >
-                      {isKataFavorite(activeKata.Kata_ID) ? '❤️ В избранном' : '🤍 В избранное'}
+                      {isKataFavorite(activeKata.Kata_ID) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
                     </button>
                     {activeKata.Video_URL && (
                       <button
@@ -756,6 +759,9 @@ export default function KataListPage() {
                   src={getKataThumbnail(activeKata)}
                   alt={activeKata.Title}
                   className="atlas-spotlight__img"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="async"
                 />
                 <div className="atlas-spotlight__watermark">
                   <span>{getKataKanji(activeKata)}</span>
@@ -772,7 +778,7 @@ export default function KataListPage() {
                   <HankoSeal text="愛" size="md" variant="gold" shape="square" />
                   <div>
                     <h3 className="atlas-pavilion__title">
-                      <span>Избранные Ката Сётокан</span>
+                      <span>Избранные Ката Шотокан</span>
                       <span className="atlas-pavilion__kanji">愛好 · {filteredItems.length} форм</span>
                     </h3>
                     <p className="atlas-pavilion__desc">
@@ -785,7 +791,7 @@ export default function KataListPage() {
 
               {filteredItems.length === 0 ? (
                 <div className="empty-state-box" style={{ padding: '2.5rem 1rem', marginTop: '1rem' }}>
-                  <p style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>🤍</p>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}><Heart size={36} color='var(--gold-soft)' /></div>
                   <h3>В избранном пока нет ката</h3>
                   <p style={{ color: 'var(--text-muted)' }}>
                     Нажмите на сердечко на карточке любой ката в каталоге, чтобы добавить её в избранное.
@@ -828,7 +834,7 @@ export default function KataListPage() {
                           title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                           aria-label="Избранное"
                         >
-                          {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                          {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
                         </button>
 
                         <div className="atlas-card__media">
@@ -837,6 +843,7 @@ export default function KataListPage() {
                             alt={item.Title}
                             className="atlas-card__img"
                             loading="lazy"
+                            decoding="async"
                           />
                           <div className="atlas-card__media-overlay" />
                           <div
@@ -848,7 +855,7 @@ export default function KataListPage() {
 
                           <div className="atlas-card__media-badges">
                             <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
-                            {isHero && <span className="atlas-card__hero-badge">★ Ключевая форма</span>}
+                            {isHero && <span className="atlas-card__hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Star size={11} fill='currentColor' /> Ключевая форма</span>}
                           </div>
                         </div>
 
@@ -864,7 +871,7 @@ export default function KataListPage() {
                           <p className="atlas-card__desc">
                             {item.Description
                               ? (isHero ? item.Description.slice(0, 140) : item.Description.slice(0, 75)) + '…'
-                              : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
+                              : 'Каноническая форма Шотокан с выверенной биомеханикой перемещений.'}
                           </p>
 
                           <div className="atlas-card__footer">
@@ -886,7 +893,7 @@ export default function KataListPage() {
                                 }}
                                 title="Смотреть эталонное видео мастеров JKS"
                               >
-                                🎥 Видео JKS
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} /> Видео JKS</span>
                               </button>
                             )}
                           </div>
@@ -898,12 +905,12 @@ export default function KataListPage() {
               )}
             </section>
           ) : (
-            CANON_PAVILIONS.filter((pav) => (!search.trim() ? (selectedPavilion === 'all' || pav.id === selectedPavilion) : true)).map((pav) => {
+            CANON_PAVILIONS.filter((pav) => (!search.trim() ? (selectedPavilion === 'all' || pav.id === selectedPavilion) : true)).map((pav, pavIndex) => {
               const matcherFn = selectedPavilion === pav.id ? pav.matcher : (pav.sectionMatcher || pav.matcher);
               const pavItems = filteredItems.filter(matcherFn);
               if (pavItems.length === 0) return null;
 
-              return (
+              const pavilionContent = (
                 <section key={pav.id} className="atlas-pavilion">
                   {/* Заголовок павильона */}
                   <div className="atlas-pavilion__header">
@@ -957,7 +964,7 @@ export default function KataListPage() {
                             title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                             aria-label="Избранное"
                           >
-                            {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                            {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
                           </button>
 
                           {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
@@ -967,6 +974,7 @@ export default function KataListPage() {
                               alt={item.Title}
                               className="atlas-card__img"
                               loading="lazy"
+                              decoding="async"
                             />
                             <div className="atlas-card__media-overlay" />
                             <div
@@ -980,7 +988,7 @@ export default function KataListPage() {
                             {/* Бейдж номера формы и ранга */}
                             <div className="atlas-card__media-badges">
                               <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
-                              {isHero && <span className="atlas-card__hero-badge">★ Ключевая форма</span>}
+                              {isHero && <span className="atlas-card__hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Star size={11} fill='currentColor' /> Ключевая форма</span>}
                             </div>
                           </div>
 
@@ -997,7 +1005,7 @@ export default function KataListPage() {
                             <p className="atlas-card__desc">
                               {item.Description
                                 ? (isHero ? item.Description.slice(0, 140) : item.Description.slice(0, 75)) + '…'
-                                : 'Каноническая форма Сётокан с выверенной биомеханикой перемещений.'}
+                                : 'Каноническая форма Шотокан с выверенной биомеханикой перемещений.'}
                             </p>
 
                             {/* Нижняя панель с мета-информацией */}
@@ -1020,7 +1028,7 @@ export default function KataListPage() {
                                   }}
                                   title="Смотреть эталонное видео мастеров JKS"
                                 >
-                                  🎥 Видео JKS
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} /> Видео JKS</span>
                                 </button>
                               )}
                             </div>
@@ -1030,6 +1038,17 @@ export default function KataListPage() {
                     })}
                   </div>
                 </section>
+              );
+
+              // 1-й павильон (Хэйан) рендерим сразу на первом экране; остальные павильоны (Сэнтэй, Юданся) — отложенно
+              if (pavIndex === 0) {
+                return pavilionContent;
+              }
+
+              return (
+                <LazySection key={pav.id} minHeight="450px" rootMargin="350px">
+                  {pavilionContent}
+                </LazySection>
               );
             })
           )}
@@ -1058,6 +1077,8 @@ export default function KataListPage() {
                       src={getKataThumbnail(item)}
                       alt={item.Title}
                       className="atlas-table__thumb"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </td>
                   <td>
@@ -1069,7 +1090,7 @@ export default function KataListPage() {
                   <td>
                     <BeltBadge belt={getKataBeltInfo(item)} size="sm" />
                   </td>
-                  <td>{item.Style || 'Сётокан'}</td>
+                  <td>{item.Style || 'Шотокан'}</td>
                   <td>{item.Steps?.length || (item.Difficulty === 'beginner' ? 21 : 34)}</td>
                   <td>
                     <button
@@ -1079,7 +1100,7 @@ export default function KataListPage() {
                       onClick={() => toggleFavorite('kata', item.Kata_ID)}
                       title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'В избранное'}
                     >
-                      {isKataFavorite(item.Kata_ID) ? '❤️' : '🤍'}
+                      {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
                     </button>
                     {item.Video_URL && (
                       <button

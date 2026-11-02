@@ -1272,7 +1272,7 @@ export function drawNeonHandSkeleton(ctx, handLandmarks, handednessLabel = 'Righ
     ctx.strokeStyle = 'rgba(212, 162, 76, 0.65)';
     ctx.lineWidth = 1;
     const isL = handednessLabel === 'Left' || handednessLabel === 'left';
-    const tag = isL ? '🥋 Кисть L' : '🥋 Кисть R';
+    const tag = isL ? 'Кисть L' : 'Кисть R';
     const tagW = ctx.measureText(tag).width + 12;
     if (ctx.roundRect) ctx.roundRect(pts[0].x - tagW / 2, pts[0].y - 20, tagW, 16, 4);
     else ctx.rect(pts[0].x - tagW / 2, pts[0].y - 20, tagW, 16);
@@ -1512,7 +1512,7 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
 
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('⚡ AI MOCAP SKELETON (1:1 АНАТОМИЯ)', 20, 27);
+    ctx.fillText('AI MOCAP SKELETON (1:1 АНАТОМИЯ)', 20, 27);
 
     if (biomechanics?.overallScore) {
       ctx.fillStyle = '#10b981';
@@ -1534,10 +1534,10 @@ export function drawNeonKarateSkeleton(ctx, landmarks, width, height, biomechani
     };
 
     if (pts[27]?.v < 0.20 && pts[28]?.v < 0.20) {
-      drawWarning('⚠ Стопы не полностью в кадре (отойдите назад)');
+      drawWarning('Стопы не полностью в кадре (отойдите назад)');
     }
     if (pts[15]?.v < 0.20 && pts[16]?.v < 0.20) {
-      drawWarning('⚠ Кисти рук вне поля зрения камеры');
+      drawWarning('Кисти рук вне поля зрения камеры');
     }
     ctx.restore();
   }

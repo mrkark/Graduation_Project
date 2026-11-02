@@ -9,6 +9,7 @@ import {
   acceptFriendRequest,
   rejectFriendRequest,
 } from '../api/friends';
+import { Users, Mail, UserPlus, Search, Check, MessageSquare } from 'lucide-react';
 import './FriendsPage.css';
 
 const TABS = [
@@ -111,7 +112,7 @@ export default function FriendsPage() {
           {tab === 'friends' &&
             (friends.length === 0 ? (
               <div className="friends-empty">
-                <div className="friends-empty__icon">🥋</div>
+                <div className="friends-empty__icon"><Users size={44} color="var(--gold-soft)" /></div>
                 <h3 className="friends-empty__title">Пока нет соратников</h3>
                 <p className="friends-empty__desc">
                   В Додзё тренируются мастера со всего мира. Найдите единомышленников во вкладке «Поиск каратэка».
@@ -146,7 +147,7 @@ export default function FriendsPage() {
           {tab === 'incoming' &&
             (incoming.length === 0 ? (
               <div className="friends-empty">
-                <div className="friends-empty__icon">📨</div>
+                <div className="friends-empty__icon"><Mail size={44} color="var(--gold-soft)" /></div>
                 <h3 className="friends-empty__title">Нет входящих заявок</h3>
                 <p className="friends-empty__desc">Новые запросы в соратники от других учеников появятся здесь.</p>
               </div>
@@ -179,7 +180,7 @@ export default function FriendsPage() {
           {tab === 'outgoing' &&
             (outgoing.length === 0 ? (
               <div className="friends-empty">
-                <div className="friends-empty__icon">🪶</div>
+                <div className="friends-empty__icon"><UserPlus size={44} color="var(--gold-soft)" /></div>
                 <h3 className="friends-empty__title">Нет отправленных заявок</h3>
                 <p className="friends-empty__desc">Вы ещё не отправляли приглашений в соратники.</p>
               </div>
@@ -222,7 +223,7 @@ export default function FriendsPage() {
                   fontWeight: 600,
                   fontSize: '0.88rem',
                 }}>
-                  <span>✓</span> <span>{noticeMessage}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><Check size={14} color="#10b981" /> <span>{noticeMessage}</span></span>
                 </div>
               )}
 
@@ -237,7 +238,7 @@ export default function FriendsPage() {
 
               {query.trim().length >= 2 && results.length === 0 && (
                 <div className="friends-empty">
-                  <div className="friends-empty__icon">🔍</div>
+                  <div className="friends-empty__icon"><Search size={44} color="var(--gold-soft)" /></div>
                   <h3 className="friends-empty__title">Каратэка не найден</h3>
                   <p className="friends-empty__desc">Попробуйте ввести другой позывной или логин ученика.</p>
                 </div>
@@ -262,15 +263,15 @@ export default function FriendsPage() {
                       {isAlreadyFriend ? (
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                           <span className="btn btn-subtle" style={{ pointerEvents: 'none', opacity: 0.85, fontSize: '0.82rem' }}>
-                            ✓ В соратниках
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> В соратниках</span>
                           </span>
                           <Link to={`/chat?friendId=${u.User_ID}`} className="btn btn-primary" style={{ fontSize: '0.82rem', padding: '0.35rem 0.75rem', textDecoration: 'none' }}>
-                            💬 Написать
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MessageSquare size={13} /> Написать</span>
                           </Link>
                         </div>
                       ) : isSent ? (
                         <span className="btn" style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#10b981', pointerEvents: 'none', fontSize: '0.82rem' }}>
-                          ✓ Заявка отправлена
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Заявка отправлена</span>
                         </span>
                       ) : (
                         <button className="btn btn-gold" onClick={() => onSend(u.User_ID)} style={{ fontSize: '0.82rem' }}>

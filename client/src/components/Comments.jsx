@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { listComments, createComment, deleteComment } from '../api/comments';
 import { useAuthStore } from '../store/authStore';
 import { HankoSeal } from './ui/JapaneseDecor';
+import { Send, X, Trash2 } from 'lucide-react';
 import './Comments.css';
 
 // Задача 22: Формат даты "ДД.ММ.ГГГГ" (только дата, без времени)
@@ -164,7 +165,7 @@ export default function Comments({ kataId, bunkaiId }) {
                           onClick={() => onDelete(c.Comment_ID)}
                           title="Удалить сообщение"
                         >
-                          ✕
+                          <Trash2 size={13} />
                         </button>
                       )}
                     </div>
@@ -212,7 +213,7 @@ export default function Comments({ kataId, bunkaiId }) {
               onClick={() => setReplyingTo(null)}
               title="Отменить ответ"
             >
-              ✕
+              <X size={14} />
             </button>
           </div>
         )}
@@ -243,7 +244,7 @@ export default function Comments({ kataId, bunkaiId }) {
             disabled={!text.trim()}
             title="Отправить сообщение"
           >
-            ➤
+            <Send size={15} />
           </button>
         </div>
         {error && <p className="error-text" style={{ marginTop: '0.4rem' }}>{error}</p>}

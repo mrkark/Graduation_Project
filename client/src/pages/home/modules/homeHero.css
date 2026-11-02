@@ -1,0 +1,243 @@
+/* =========================================================
+   HOMEPAGE.CSS — Главная страница в эстетике традиционного Додзё
+   Фоновое изображение мастера карате, свиток какэмоно,
+   состаренное дерево, татами и киноварные печати ханко
+   ========================================================= */
+
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 5.5rem;
+}
+
+@media (max-width: 768px) {
+  .home {
+    gap: 4rem;
+  }
+}
+
+/* =========================================================
+   1. ПЕРВЫЙ ЭКРАН (HERO): МАСТЕР В ДОДЗЁ + СВИТОК КАКЭМОНО
+   ========================================================= */
+
+.hero-dojo {
+  position: relative;
+  min-height: 88vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background-color: #0c0a09;
+}
+
+/* Верхний деревянный карниз Додзё */
+.hero-dojo__timber-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #1b1612 0%, var(--gold-border) 30%, var(--gold) 50%, var(--gold-border) 70%, #1b1612 100%);
+  z-index: 10;
+  opacity: 0.85;
+}
+
+/* Фоновый слой с фотографией мастера в традиционном додзё */
+.hero-dojo__bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/karate_master_realistic.jpg');
+  background-size: cover;
+  background-position: right 18% center;
+  background-repeat: no-repeat;
+  filter: contrast(1.08) brightness(0.92);
+  z-index: 1;
+}
+
+.hero-dojo__bg-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right 18% center;
+  filter: contrast(1.08) brightness(0.92);
+  pointer-events: none;
+}
+
+/* Деликатный многослойный градиент для идеальной читаемости текста слева */
+.hero-dojo__scrim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    linear-gradient(90deg, #0c0a09 0%, rgba(12, 10, 9, 0.96) 44%, rgba(12, 10, 9, 0.65) 70%, rgba(12, 10, 9, 0.25) 100%),
+    linear-gradient(180deg, rgba(12, 10, 9, 0.6) 0%, transparent 25%, transparent 75%, #0c0a09 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+@media (max-width: 960px) {
+  .hero-dojo {
+    min-height: 82vh;
+    padding: 3.5rem 0;
+  }
+  .hero-dojo__bg {
+    background-position: center top;
+  }
+  .hero-dojo__scrim {
+    background: 
+      linear-gradient(180deg, rgba(12, 10, 9, 0.45) 0%, rgba(12, 10, 9, 0.88) 45%, #0c0a09 90%),
+      linear-gradient(90deg, rgba(12, 10, 9, 0.92) 0%, rgba(12, 10, 9, 0.7) 100%);
+  }
+}
+
+/* Контейнер первого экрана */
+.hero-dojo__container {
+  position: relative;
+  z-index: 3;
+  padding-top: 3.5rem;
+  padding-bottom: 3.5rem;
+}
+
+/* Композиция: Свиток Какэмоно + Текстовый контент */
+.hero-dojo__composite {
+  display: flex;
+  align-items: flex-start;
+  gap: 3rem;
+  max-width: 780px;
+}
+
+.hero-dojo__scroll-col {
+  flex-shrink: 0;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .hero-dojo__composite {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .hero-dojo__scroll-col {
+    display: none; /* На мобильных экранах свиток скрывается, чтобы текст занимал всю ширину */
+  }
+}
+
+.hero-dojo__content {
+  flex: 1;
+}
+
+/* Кикер с печатью */
+.hero-dojo__kicker-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.hero-dojo__kicker {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.hero-dojo__headline {
+  font-size: clamp(2.3rem, 4.2vw, 3.8rem);
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin-bottom: 1.4rem;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+.hero-dojo__description {
+  font-size: 1.08rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 580px;
+  margin-bottom: 2rem;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* Телеметрия традиционного додзё */
+.hero-dojo__telemetry {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.65rem 1.1rem;
+  background: rgba(22, 18, 14, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-xs);
+  font-size: 0.84rem;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
+  margin-bottom: 2.2rem;
+  flex-wrap: wrap;
+  width: fit-content;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.hero-dojo__telemetry-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.hero-dojo__telemetry-kanji {
+  font-family: var(--font-kanji);
+  font-size: 0.9rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.hero-dojo__telemetry strong {
+  color: var(--text-primary);
+}
+
+.hero-dojo__telemetry-sep {
+  color: var(--gold-border);
+}
+
+.hero-dojo__actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.hero-dojo__btn-main {
+  font-size: 0.96rem;
+  padding: 0.85rem 1.95rem;
+}
+
+.btn-arrow {
+  transition: transform 0.16s ease;
+}
+
+.hero-dojo__btn-main:hover .btn-arrow {
+  transform: translateX(3px);
+}
+
+.hero-dojo__btn-secondary {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: rgba(21, 18, 15, 0.85);
+  border-color: var(--border);
+}
+
+.hero-dojo__btn-secondary:hover {
+  border-color: var(--accent-red);
+}

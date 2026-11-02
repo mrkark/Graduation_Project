@@ -1,3 +1,4 @@
+import { Check, RefreshCw, Eye } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { listKata, approveKata, rejectKata } from '../../api/kata';
@@ -74,7 +75,7 @@ export default function AdminKataPage() {
       {notice && (
         <div className={`admin-alert-banner admin-alert-banner--${notice.type}`}>
           <span>{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)}>✕</button>
+          <button type="button" onClick={() => setNotice(null)}><X size={14} /></button>
         </div>
       )}
 
@@ -83,7 +84,7 @@ export default function AdminKataPage() {
           <div>
             <h3>Каталог и модерация форм Ката</h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Управление каноническими формами Сётокан и модерация пользовательских версий
+              Управление каноническими формами Шотокан и модерация пользовательских версий
             </p>
           </div>
         </div>
@@ -95,7 +96,7 @@ export default function AdminKataPage() {
               className={`admin-status-tab ${status === 'approved' ? 'active' : ''}`}
               onClick={() => setStatus('approved')}
             >
-              ✔ Одобренные
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Одобренные</span>
             </button>
             <button
               type="button"
@@ -109,7 +110,7 @@ export default function AdminKataPage() {
               className={`admin-status-tab ${status === 'rejected' ? 'active' : ''}`}
               onClick={() => setStatus('rejected')}
             >
-              ✕ Отклонённые
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} /> Отклонённые</span>
             </button>
           </div>
 
@@ -128,7 +129,7 @@ export default function AdminKataPage() {
             Всего форм в списке: <strong>{filteredItems.length}</strong>
           </span>
           <button type="button" className="btn btn-subtle" onClick={load} disabled={loading}>
-            {loading ? 'Обновление…' : '🔄 Обновить'}
+            {loading ? 'Обновление…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={13} /> Обновить</span>}
           </button>
         </div>
       </div>
@@ -183,7 +184,7 @@ export default function AdminKataPage() {
                             onClick={() => onApprove(k.Kata_ID, k.Title)}
                             disabled={isBusy}
                           >
-                            ✔ Одобрить
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Одобрить</span>
                           </button>
                         )}
                         {k.Status !== 'rejected' && (
@@ -193,11 +194,11 @@ export default function AdminKataPage() {
                             onClick={() => onReject(k.Kata_ID, k.Title)}
                             disabled={isBusy}
                           >
-                            ✕ Отклонить
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} /> Отклонить</span>
                           </button>
                         )}
                         <Link to={`/kata/${k.Kata_ID}`} className="btn btn-subtle">
-                          👁 3D
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Eye size={13} /> 3D</span>
                         </Link>
                       </div>
                     </td>

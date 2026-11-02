@@ -503,6 +503,17 @@ async def startup_event():
 
 
 # ---------------------------------------------------------------------------
+# Studio Ready-Made Lucide Vector Icons (Official Lucide Icon Suite)
+# ---------------------------------------------------------------------------
+ICON_PHONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-smartphone" style="flex-shrink:0;"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>'
+ICON_TARGET_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-target" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+ICON_TPOSE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-person-standing" style="flex-shrink:0;"><circle cx="12" cy="5" r="1"/><path d="m9 20 3-6 3 6"/><path d="m6 8 6 2 6-2"/><path d="M12 10v4"/></svg>'
+ICON_SWORDS_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-swords" style="flex-shrink:0;"><path d="m13 19 6-6"/><path d="M14.5 17.5 3.586 6.586A2 2 0 0 1 3 5.172V3h2.172a2 2 0 0 1 1.414.586L17.5 14.5"/><path d="m14.828 6.172 2.586-2.586A2 2 0 0 1 18.828 3H21v2.172a2 2 0 0 1-.586 1.414l-2.586 2.586"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/><path d="m5 14 4 4"/><path d="m5 21-2-2"/><path d="M7.5 16.5 4 20"/></svg>'
+ICON_VIDEO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-video" style="flex-shrink:0;"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>'
+ICON_CUBE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-box" style="flex-shrink:0;"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
+ICON_MODAL_QR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code" style="flex-shrink:0;"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>'
+
+# ---------------------------------------------------------------------------
 # HTML Studio Dashboard
 # ---------------------------------------------------------------------------
 def build_studio_html(host_ip: str) -> str:
@@ -511,6 +522,7 @@ def build_studio_html(host_ip: str) -> str:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <title>Karate Motion Studio — Мульти-Камерный AI Мокап</title>
   <style>
     :root {{
@@ -764,7 +776,7 @@ def build_studio_html(host_ip: str) -> str:
 <body>
   <header>
     <div class="brand">
-      <span class="brand-icon">🥋</span>
+      <span class="brand-icon">{ICON_SWORDS_SVG}</span>
       <div>
         <div class="brand-title">KARATE MOTION STUDIO</div>
         <div class="brand-sub">Мульти-Камерный AI Мокап (1 Модель · до 3 Камер)</div>
@@ -788,16 +800,19 @@ def build_studio_html(host_ip: str) -> str:
     </div>
 
     <div class="top-controls">
-      <button class="btn btn-green" onclick="openQrModal()">
-        <span>📱</span> <span>Подключить Смартфоны (QR)</span>
+      <button class="btn btn-green" onclick="openQrModal()" title="Подключить смартфоны через QR-код">
+        {ICON_PHONE_SVG}
+        <span>Подключить Смартфоны (QR)</span>
       </button>
 
-      <button class="btn" id="btn-mirror" onclick="toggleMirror()">
-        <span>🎯</span> <span id="mirror-text">Прямой</span>
+      <button class="btn" id="btn-mirror" onclick="toggleMirror()" title="Режим отзеркаливания движений">
+        {ICON_TARGET_SVG}
+        <span id="mirror-text">Прямой</span>
       </button>
 
-      <button class="btn" onclick="sendViewerCommand('resetPose')">
-        <span>🧘</span> <span>T-Pose</span>
+      <button class="btn" onclick="sendViewerCommand('resetPose')" title="Сбросить позу в исходную T-Pose">
+        {ICON_TPOSE_SVG}
+        <span>T-Pose</span>
       </button>
 
       <div style="border-left: 1px solid #374151; height: 18px; margin: 0 4px;"></div>
@@ -813,7 +828,7 @@ def build_studio_html(host_ip: str) -> str:
     <!-- LEFT PANEL: Multi-Camera Live Composite Video Feed -->
     <div class="panel-box">
       <div class="panel-header">
-        <span>🎥 Мульти-Камерный Видеопоток (OpenCV Скелет)</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">{ICON_VIDEO_SVG} <span>Мульти-Камерный Видеопоток (OpenCV Скелет)</span></span>
         <span id="active-cams-count" style="color: #10b981; font-family: monospace;">0 Камер</span>
       </div>
       <div class="panel-content">
@@ -824,7 +839,7 @@ def build_studio_html(host_ip: str) -> str:
     <!-- RIGHT PANEL: Single 3D Master Avatar Model -->
     <div class="panel-box">
       <div class="panel-header">
-        <span>🥋 Единый 3D Аватар Мастера (Синхронный Fused Rig)</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">{ICON_CUBE_SVG} <span>Единый 3D Аватар Мастера (Синхронный Fused Rig)</span></span>
         <span style="color: #9ca3af; font-size: 11px;">1 Модель · Мульти-Ракурс</span>
       </div>
       <div class="panel-content">
@@ -852,7 +867,7 @@ def build_studio_html(host_ip: str) -> str:
   <!-- Multi-Cam QR Modal -->
   <div id="qr-modal" class="modal-overlay" onclick="closeQrModal(event)">
     <div class="modal-card" onclick="event.stopPropagation()">
-      <h3 style="color: #fff; font-size: 17px; margin-bottom: 4px;">📱 Подключение Смартфонов (до 3 камер)</h3>
+      <h3 style="color: #fff; font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 7px;">{ICON_MODAL_QR_SVG} <span>Подключение Смартфонов (до 3 камер)</span></h3>
       <p style="color: #9ca3af; font-size: 12px;">Выберите камеру и отсканируйте QR-код смартфоном в Wi-Fi сети:</p>
 
       <div class="cam-tabs">

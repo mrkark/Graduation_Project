@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -78,7 +79,9 @@ export default function AdminLayout() {
         </aside>
 
         <main className="admin-content">
-          <Outlet />
+          <Suspense fallback={<div className="page-loader"><div className="dojo-spinner" /></div>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

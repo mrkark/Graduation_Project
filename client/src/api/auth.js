@@ -29,3 +29,10 @@ export async function deleteAccount(password) {
   const { data } = await api.delete('/auth/delete-account', { data: { password } });
   return data.data;
 }
+
+export async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append('avatar', file);
+  const { data } = await api.post('/auth/avatar', formData);
+  return data.data;
+}

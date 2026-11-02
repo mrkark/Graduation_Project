@@ -1,0 +1,337 @@
+/* =========================================================
+   MAINLAYOUT.CSS — Навигация и Подвал Додзё (Dojo Architecture)
+   Морёное дерево, латунные крепления, решетка кумико, печати ханко
+   ========================================================= */
+
+.site-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-canvas);
+}
+
+.site-content {
+  flex: 1;
+  padding-top: 2rem;
+  padding-bottom: 4rem;
+}
+
+/* --- ВЕРХНЯЯ НАВИГАЦИОННАЯ ПАНЕЛЬ (72px) --- */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  height: 72px;
+  background: rgba(18, 15, 12, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* Верхняя тонкая золотая кромка (Камидза) */
+.navbar__top-trim {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold-border) 20%, var(--gold) 50%, var(--gold-border) 80%, transparent 100%);
+  opacity: 0.8;
+}
+
+/* Нижний тонкий японский орнамент Кумико */
+.navbar__bottom-border {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(194, 159, 85, 0.25) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+.navbar__container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Логотип Bunkai Explorer: Тигр Сётокан + Название + Печать */
+.navbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  transition: transform 0.18s ease;
+}
+
+.navbar__brand:hover {
+  transform: translateY(-1px);
+}
+
+.navbar__logo-icon-wrap {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1f1a14 0%, #14110d 100%);
+  border: 1px solid var(--gold-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 10px rgba(194, 159, 85, 0.15);
+  flex-shrink: 0;
+}
+
+.navbar__logo-tiger {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+.navbar__logo-text-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar__logo-text {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.navbar__logo-subtext {
+  font-family: var(--font-kanji);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gold-soft);
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 520px) {
+  .navbar__brand {
+    gap: 0.5rem;
+  }
+  .navbar__logo-icon-wrap {
+    width: 32px;
+    height: 32px;
+  }
+  .navbar__logo-text {
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+  }
+  .navbar__logo-subtext {
+    display: none;
+  }
+}
+
+.navbar__logo-seal {
+  margin-left: 0.2rem;
+}
+
+/* Меню разделов */
+.navbar__menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+@media (max-width: 920px) {
+  .navbar__menu {
+    display: none;
+  }
+}
+
+.navbar__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 0.2rem;
+  position: relative;
+  transition: all 0.18s ease;
+  letter-spacing: 0.02em;
+}
+
+/* Скрытие страницы Мокап 3D на планшетах и сенсорных экранах */
+@media (max-width: 1180px), (pointer: coarse) {
+  .navbar__link--desktop-only,
+  .footer-desktop-link {
+    display: none !important;
+  }
+}
+
+.navbar__link-title {
+  font-family: var(--font-sans);
+}
+
+.navbar__link-kanji {
+  font-family: var(--font-kanji);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+  transition: color 0.18s ease;
+}
+
+.navbar__link:hover {
+  color: var(--text-primary);
+}
+
+.navbar__link:hover .navbar__link-kanji {
+  color: var(--gold);
+}
+
+.navbar__link.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.navbar__link.active .navbar__link-kanji {
+  color: var(--accent-red);
+}
+
+.navbar__link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-red) 50%, transparent 100%);
+  border-radius: 1px;
+}
+
+/* Действия справа */
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .navbar__actions {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar__actions {
+    gap: 0.35rem;
+  }
+}
+
+.navbar__auth-links {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.navbar__auth-links .btn {
+  padding: 0.5rem 1.15rem;
+  font-size: 0.85rem;
+}
+
+/* Капсула пользователя и выпадающий список */
+.navbar__user-menu {
+  position: relative;
+}
+
+.navbar__user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  background: #191512;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.navbar__user-btn:hover {
+  border-color: var(--gold-border);
+  background: #211c17;
+}
+
+.navbar__user-avatar-mini {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-canvas);
+  border: 1px solid var(--gold-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--gold-soft);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.navbar__user-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.navbar__user-name {
+  max-width: 130px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .navbar__user-name {
+    max-width: 80px;
+  }
+}
+
+@media (max-width: 520px) {
+  .navbar__user-name {
+    display: none;
+  }
+}
+
+.navbar__staff-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-xs);
+  background: var(--accent-red-subtle);
+  color: #ff8888;
+  border: 1px solid var(--accent-red-border);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .navbar__staff-pill {
+    display: none;
+  }
+}
+
+.navbar__staff-kanji {
+  font-family: var(--font-kanji);
+  color: var(--accent-red);
+}
+
+.navbar__chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}

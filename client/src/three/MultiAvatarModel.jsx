@@ -366,4 +366,4 @@ export default function MultiAvatarModel({
   );
 }
 
-useGLTF.preload('/models/karateka_techniques_v4.glb');
+// Оптимизация: загрузка модели по требованию при монтировании

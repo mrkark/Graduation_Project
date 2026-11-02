@@ -5,6 +5,7 @@ import { getGeneralRoom, listRooms, listMessages, createPrivateRoom, getOrCreate
 import { listFriends } from '../api/friends';
 import { listMyDojos } from '../api/dojos';
 import { useAuthStore } from '../store/authStore';
+import { Home, User, X, Pin, MessageSquare, Edit3 } from 'lucide-react';
 import './ChatPage.css';
 
 export default function ChatPage() {
@@ -148,12 +149,12 @@ export default function ChatPage() {
 
   function roomLabel(room) {
     if (!room) return '';
-    if (room.Room_Type === 'general') return '⛩️ Глобальное Додзё';
+    if (room.Room_Type === 'general') return 'Глобальное Додзё';
     if (room.Room_Type === 'dojo') {
-      return `🥋 Додзё: ${room.Dojo?.Name || room.Name || 'Школа'}`;
+      return `Додзё: ${room.Dojo?.Name || room.Name || 'Школа'}`;
     }
     if (room.Friend?.Display_Name || room.Friend?.Username) {
-      return `👤 ${room.Friend.Display_Name || room.Friend.Username}`;
+      return `${room.Friend.Display_Name || room.Friend.Username}`;
     }
     return 'Личный диалог';
   }
@@ -243,7 +244,7 @@ export default function ChatPage() {
         <div className="chat-rooms">
           <div className="chat-rooms__heading" style={{ justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span>⛩️</span>
+              <Home size={15} />
               <span>Беседы</span>
             </div>
             {/* Задача 43: Быстрое создание чата */}
@@ -267,8 +268,9 @@ export default function ChatPage() {
                   type="button"
                   className="chat-new-modal__close"
                   onClick={() => setShowNewChatModal(false)}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
 
@@ -278,14 +280,14 @@ export default function ChatPage() {
                   className={`chat-modal-tab ${newChatTab === 'dojo' ? 'active' : ''}`}
                   onClick={() => setNewChatTab('dojo')}
                 >
-                  🥋 Чат Додзё
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Home size={14} /> Чат Додзё</span>
                 </button>
                 <button
                   type="button"
                   className={`chat-modal-tab ${newChatTab === 'friend' ? 'active' : ''}`}
                   onClick={() => setNewChatTab('friend')}
                 >
-                  👤 С соратником
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><User size={14} /> С соратником</span>
                 </button>
               </div>
 
@@ -383,7 +385,7 @@ export default function ChatPage() {
                   onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.opacity = isPinned ? '1' : '0.3'; }}
                 >
-                  📌
+                  <Pin size={12} />
                 </button>
               </div>
             );
@@ -413,7 +415,7 @@ export default function ChatPage() {
           <div className="chat-window__messages" ref={messagesBoxRef}>
             {messages.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto', fontSize: '0.9rem' }}>
-                <p style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>🍵</p>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.6rem' }}><MessageSquare size={36} color='var(--gold-soft)' /></div>
                 В этом зале пока тихо. Напишите первое приветствие соратникам.
               </div>
             ) : (
@@ -425,8 +427,8 @@ export default function ChatPage() {
                       {new Date(m.Created_At).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     {(m.Author?.User_ID === user?.User_ID || role === 'admin') && (
-                      <button className="chat-msg__delete-btn" onClick={() => onDelete(m.Message_ID)} title="Удалить">
-                        ✕
+                      <button className="chat-msg__delete-btn" onClick={() => onDelete(m.Message_ID)} title="Удалить" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <X size={12} />
                       </button>
                     )}
                   </div>
@@ -436,7 +438,7 @@ export default function ChatPage() {
             )}
           </div>
 
-          <div className="chat-window__typing">{typingUser ? `✍️ ${typingUser} пишет свиток…` : ''}</div>
+          <div className="chat-window__typing">{typingUser ? `${typingUser} пишет сообщение…` : ''}</div>
 
           {error && <p className="error-text" style={{ padding: '0 1.25rem', margin: '0.4rem 0' }}>{error}</p>}
 

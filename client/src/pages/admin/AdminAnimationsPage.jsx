@@ -1,3 +1,4 @@
+import { RefreshCw, CheckCircle, Flame } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { listMissingRequests } from '../../api/animations';
 
@@ -42,7 +43,7 @@ export default function AdminAnimationsPage() {
           </select>
 
           <button className="btn" onClick={fetchRequests} disabled={loading}>
-            🔄 Обновить
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={13} /> Обновить</span>
           </button>
         </div>
       </div>
@@ -53,7 +54,7 @@ export default function AdminAnimationsPage() {
       ) : requests.length === 0 ? (
         <div className="panel" style={{ textAlign: 'center', padding: '2rem' }}>
           <p style={{ color: 'var(--color-text-muted)', margin: 0 }}>
-            🎉 Нет зарегистрированных запросов на недостающие анимации. Библиотека клипов покрывает все действия.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><CheckCircle size={15} color='#10b981' /> Нет зарегистрированных запросов</span> на недостающие анимации. Библиотека клипов покрывает все действия.
           </p>
         </div>
       ) : (
@@ -84,7 +85,7 @@ export default function AdminAnimationsPage() {
                         fontSize: '0.78rem',
                       }}
                     >
-                      🔥 {r.Request_Count}x
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Flame size={12} color='#ef4444' /> {r.Request_Count}x</span>
                     </span>
                   </td>
                   <td>

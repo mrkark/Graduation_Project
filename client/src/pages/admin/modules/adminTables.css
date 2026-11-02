@@ -1,0 +1,387 @@
+/* 7. ТАБЛИЦЫ АДМИНКИ */
+.admin-table-wrap {
+  background: linear-gradient(180deg, #181512 0%, #120f0d 100%);
+  border: 1px solid rgba(212, 162, 76, 0.28);
+  border-radius: 8px;
+  overflow-x: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Устранение горизонтального скролла в разделе пользователей и отступ кнопок */
+.admin-users-page .admin-table-wrap {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.admin-users-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 0.85rem 0.85rem;
+  vertical-align: middle;
+}
+
+.admin-users-table td:nth-child(2),
+.admin-users-table td:nth-child(3),
+.admin-users-table td:nth-child(4) {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.admin-users-table th:last-child,
+.admin-users-table td:last-child,
+.admin-users-table .admin-actions-cell {
+  padding-right: 2rem !important; /* Отодвигаем кнопки назначения ролей от правого края */
+  text-align: right;
+  overflow: visible;
+}
+
+.admin-users-table .admin-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.admin-users-table .btn-sm {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+}
+
+.admin-user-email {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+}
+
+.admin-spin {
+  animation: adminSpin 1s linear infinite;
+}
+
+@keyframes adminSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.admin-table th {
+  padding: 0.9rem 1.2rem;
+  background: rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid rgba(212, 162, 76, 0.2);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold, #d4a24c);
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary, #d6d3d1);
+  vertical-align: middle;
+}
+
+.admin-table tr:hover td {
+  background: rgba(212, 162, 76, 0.04);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Ячейка пользователя */
+.admin-user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(212, 162, 76, 0.15);
+  border: 1px solid rgba(212, 162, 76, 0.35);
+  color: var(--gold, #d4a24c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.admin-user-names {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-user-login {
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.admin-user-display {
+  font-size: 0.78rem;
+  color: var(--text-muted, #78716c);
+}
+
+/* Бейджи ролей */
+.admin-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.admin-role-badge--admin {
+  background: rgba(212, 162, 76, 0.15);
+  border: 1px solid rgba(212, 162, 76, 0.4);
+  color: var(--gold, #d4a24c);
+}
+
+.admin-role-badge--moderator {
+  background: rgba(14, 165, 233, 0.14);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #38bdf8;
+}
+
+.admin-role-badge--user {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary, #d6d3d1);
+}
+
+/* Бейджи статуса */
+.admin-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.admin-status-badge--active {
+  color: #34d399;
+}
+
+.admin-status-badge--active .admin-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 6px #34d399;
+}
+
+.admin-status-badge--blocked {
+  color: #ef4444;
+}
+
+.admin-status-badge--blocked .admin-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+/* Бейджи действий журнала аудита */
+.admin-action-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.admin-action-badge--info {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+.admin-action-badge--success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.admin-action-badge--danger {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+/* Кнопки действий строк */
+.admin-row-actions {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.btn-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-success:hover {
+  background: #10b981;
+  color: #064e3b;
+}
+
+.btn-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-warning:hover {
+  background: #f59e0b;
+  color: #451a03;
+}
+
+.btn-gold {
+  background: rgba(212, 162, 76, 0.15);
+  border: 1px solid rgba(212, 162, 76, 0.4);
+  color: var(--gold, #d4a24c);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-gold:hover {
+  background: var(--gold, #d4a24c);
+  color: #120f0d;
+}
+
+.btn-info {
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  color: #38bdf8;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-info:hover {
+  background: #0ea5e9;
+  color: #0c4a6e;
+}
+
+/* 8. УВЕДОМЛЕНИЯ / АЛЕРТЫ */
+.admin-alert-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.25rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.admin-alert-banner--success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.admin-alert-banner--warning {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.admin-alert-banner--error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.admin-alert-banner button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 0.4rem;
+}
+
+/* 9. ПАГИНАЦИЯ */
+.admin-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.88rem;
+  color: var(--text-muted, #78716c);
+}
+
+/* 10. ПУСТОЙ БЛОК */
+.admin-empty-box {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(212, 162, 76, 0.25);
+  border-radius: 8px;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted, #78716c);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 600px) {
+  .admin-wrapper {
+    padding: 0 0.75rem 3rem;
+  }
+  .admin-controls-card {
+    padding: 1.1rem;
+  }
+  .admin-controls-card__grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 0.85rem;
+  }
+  .admin-row-actions {
+    justify-content: flex-start;
+  }
+}

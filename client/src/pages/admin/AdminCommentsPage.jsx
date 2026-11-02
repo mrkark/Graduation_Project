@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Trash2, Search, MessageSquare } from 'lucide-react';
+import { Trash2, Search, MessageSquare, RefreshCw, X } from 'lucide-react';
 import { fetchAdminComments, deleteAdminComment } from '../../api/admin';
 
 export default function AdminCommentsPage() {
@@ -68,7 +68,7 @@ export default function AdminCommentsPage() {
       {notice && (
         <div className={`admin-alert-banner admin-alert-banner--${notice.type}`}>
           <span>{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)}>✕</button>
+          <button type="button" onClick={() => setNotice(null)}><X size={13} /></button>
         </div>
       )}
 
@@ -113,7 +113,7 @@ export default function AdminCommentsPage() {
             Найдено сообщений: <strong>{filteredComments.length}</strong>
           </span>
           <button type="button" className="btn btn-subtle" onClick={load} disabled={loading}>
-            {loading ? 'Обновление…' : '🔄 Обновить'}
+            {loading ? 'Обновление…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><RefreshCw size={13} /> Обновить</span>}
           </button>
         </div>
       </div>

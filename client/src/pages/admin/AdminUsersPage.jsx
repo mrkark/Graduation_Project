@@ -8,6 +8,7 @@ import {
   Trash2,
   RefreshCw,
   Search,
+  X,
 } from 'lucide-react';
 import { listUsers, blockUser, unblockUser, changeUserRole, deleteUser } from '../../api/admin';
 import { useAuthStore } from '../../store/authStore';
@@ -151,7 +152,7 @@ export default function AdminUsersPage() {
       {notice && (
         <div className={`admin-alert-banner admin-alert-banner--${notice.type}`}>
           <span>{notice.text}</span>
-          <button type="button" onClick={() => setNotice(null)}>✕</button>
+          <button type="button" onClick={() => setNotice(null)}><X size={14} /></button>
         </div>
       )}
 

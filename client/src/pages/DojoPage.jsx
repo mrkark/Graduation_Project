@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { listMyDojos, createDojo, getDojoDetails, inviteUserToDojo, respondDojoInvite, updateDojo, deleteDojo } from '../api/dojos';
 import { searchUsers, listFriends } from '../api/friends';
 import { HankoSeal } from '../components/ui/JapaneseDecor';
+import { Home, Inbox, Plus, MessageSquare, Edit3, Trash2, Check, X, Mail, Users, UserCheck } from 'lucide-react';
 import './DojoPage.css';
 
 function getSealFontSize(kanji) {
@@ -233,7 +234,7 @@ export default function DojoPage() {
         <div className="catalog-header__top">
           <div className="catalog-header__badge">
             <span className="catalog-header__badge-dot" />
-            <span>Школы и братства Сётокан</span>
+            <span>Школы и братства Шотокан</span>
           </div>
           <HankoSeal text="道場" size="md" variant="gold" shape="round" />
         </div>
@@ -253,21 +254,21 @@ export default function DojoPage() {
           className={`btn ${activeTab === 'my' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => switchTab('my')}
         >
-          🥋 Мои Додзё ({activeDojos.length})
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Home size={14} /> Мои Додзё ({activeDojos.length})</span>
         </button>
         <button
           type="button"
           className={`btn ${activeTab === 'invites' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => switchTab('invites')}
         >
-          📬 Приглашения {invitedDojos.length > 0 && `(${invitedDojos.length})`}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Inbox size={14} /> Приглашения {invitedDojos.length > 0 && `(${invitedDojos.length})`}</span>
         </button>
         <button
           type="button"
           className={`btn ${activeTab === 'create' ? 'btn-primary' : 'btn-secondary'}`}
           onClick={() => switchTab('create')}
         >
-          ➕ Основать Додзё
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><Plus size={14} /> Основать Додзё</span>
         </button>
       </div>
 
@@ -288,7 +289,7 @@ export default function DojoPage() {
             <div>
               {activeDojos.length === 0 ? (
                 <div className="empty-catalog" style={{ textAlign: 'center', padding: '3rem' }}>
-                  <span style={{ fontSize: '2.5rem' }}>⛩️</span>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><Home size={42} color='var(--gold-soft)' /></div>
                   <h3>Вы пока не состоите ни в одном Додзё</h3>
                   <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                     Основать собственную школу или дождитесь приглашения от сэнсэя.
@@ -314,13 +315,13 @@ export default function DojoPage() {
                       </div>
 
                       <div className="dojo-card__desc">
-                        {d.Description || 'Традиционные тренировки ката и бункай Сётокан каратэдо.'}
+                        {d.Description || 'Традиционные тренировки ката и бункай Шотокан каратэдо.'}
                       </div>
 
                       <div className="dojo-card__meta">
                         <span>Участников: <strong>{d.MemberCount || d.MembersCount || 1}</strong></span>
                         <span style={{ textTransform: 'uppercase', fontSize: '0.75rem', color: 'var(--gold)' }}>
-                          {(d.Role || d.MyRole) === 'sensei' ? '🥋 Сэнсэй' : '🥋 Ученик'}
+                          {(d.Role || d.MyRole) === 'sensei' ? 'Сэнсэй' : 'Ученик'}
                         </span>
                       </div>
 
@@ -331,7 +332,7 @@ export default function DojoPage() {
                           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem', padding: '6px 12px' }}
                           onClick={() => navigate(`/chat?dojoId=${d.Dojo_ID}`)}
                         >
-                          💬 Чат Додзё
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><MessageSquare size={13} /> Чат Додзё</span>
                         </button>
 
                         <button
@@ -351,7 +352,7 @@ export default function DojoPage() {
                               style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                               onClick={() => handleStartEdit(d)}
                             >
-                              ✏️ Изменить
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Edit3 size={13} /> Изменить</span>
                             </button>
                             <button
                               type="button"
@@ -359,7 +360,7 @@ export default function DojoPage() {
                               style={{ padding: '4px 8px', fontSize: '0.78rem' }}
                               onClick={() => handleDeleteDojo(d.Dojo_ID, d.Name)}
                             >
-                              🗑️ Распустить
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Trash2 size={13} /> Распустить</span>
                             </button>
                           </div>
                         )}
@@ -376,7 +377,7 @@ export default function DojoPage() {
             <div>
               {invitedDojos.length === 0 ? (
                 <div className="empty-catalog" style={{ textAlign: 'center', padding: '3rem' }}>
-                  <span style={{ fontSize: '2.5rem' }}>📭</span>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}><Inbox size={42} color='var(--text-muted)' /></div>
                   <h3>Новых приглашений нет</h3>
                   <p style={{ color: 'var(--text-muted)' }}>
                     Когда вас пригласят в Додзё, здесь появится свиток с вызовом.
@@ -408,14 +409,14 @@ export default function DojoPage() {
                           className="btn btn-primary"
                           onClick={() => handleRespondInvite(d.Dojo_ID, true)}
                         >
-                          ✓ Вступить
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Вступить</span>
                         </button>
                         <button
                           type="button"
                           className="btn btn-danger"
                           onClick={() => handleRespondInvite(d.Dojo_ID, false)}
                         >
-                          ✕ Отклонить
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} /> Отклонить</span>
                         </button>
                       </div>
                     </div>
@@ -429,7 +430,7 @@ export default function DojoPage() {
           {activeTab === 'create' && (
             <div style={{ maxWidth: '640px', margin: '0 auto', background: 'var(--bg-surface)', padding: '2rem', borderRadius: '4px', border: '1px solid var(--border)' }}>
               <h2 style={{ color: 'var(--gold)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>⛩️</span> Основание новой школы
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Home size={16} /> Основание новой школы</span>
               </h2>
               <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                 Основатель Додзё автоматически становится его Сэнсэем и может приглашать соратников.
@@ -486,7 +487,7 @@ export default function DojoPage() {
                   disabled={submitting || !createName.trim()}
                   style={{ width: '100%', padding: '0.85rem', fontSize: '1rem' }}
                 >
-                  {submitting ? 'Основание...' : '⛩️ Утвердить и открыть Додзё'}
+                  {submitting ? 'Основание...' : 'Утвердить и открыть Додзё'}
                 </button>
               </form>
             </div>
@@ -501,7 +502,7 @@ export default function DojoPage() {
             <div className="dojo-modal__header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
                 <div className="dojo-modal__title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  ⛩️ {selectedDojoData?.Name || selectedDojoData?.dojo?.Name || 'Додзё'}
+                  {selectedDojoData?.Name || selectedDojoData?.dojo?.Name || 'Додзё'}
                 </div>
                 {((selectedDojoData?.MyRole === 'sensei') || (selectedDojoData?.Creator_ID === user?.User_ID)) && (
                   <div style={{ display: 'flex', gap: '0.4rem', marginLeft: 'auto', marginRight: '0.5rem' }}>
@@ -511,7 +512,7 @@ export default function DojoPage() {
                       style={{ padding: '3px 8px', fontSize: '0.72rem' }}
                       onClick={() => handleStartEdit(selectedDojoData?.dojo || selectedDojoData)}
                     >
-                      ✏️ Изменить
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Edit3 size={13} /> Изменить</span>
                     </button>
                     <button
                       type="button"
@@ -519,12 +520,12 @@ export default function DojoPage() {
                       style={{ padding: '3px 8px', fontSize: '0.72rem' }}
                       onClick={() => handleDeleteDojo(selectedDojoId, selectedDojoData?.Name || selectedDojoData?.dojo?.Name)}
                     >
-                      🗑️ Распустить
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Trash2 size={13} /> Распустить</span>
                     </button>
                   </div>
                 )}
               </div>
-              <button type="button" className="dojo-modal__close" onClick={closeDojoModal}>✕</button>
+              <button type="button" className="dojo-modal__close" onClick={closeDojoModal}><X size={16} /></button>
             </div>
 
             <div className="dojo-modal__body">
@@ -533,7 +534,7 @@ export default function DojoPage() {
               ) : selectedDojoData ? (
                 <>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-                    {selectedDojoData?.Description || selectedDojoData?.dojo?.Description || 'Совместные тренировки и изучение традиционного Сётокан.'}
+                    {selectedDojoData?.Description || selectedDojoData?.dojo?.Description || 'Совместные тренировки и изучение традиционного Шотокан.'}
                   </p>
 
                   <button
@@ -545,10 +546,10 @@ export default function DojoPage() {
                       navigate(`/chat?dojoId=${selectedDojoId}`);
                     }}
                   >
-                    💬 Войти в чат Додзё
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><MessageSquare size={13} /> Войти в чат Додзё</span>
                   </button>
 
-                  <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem' }}>🥋 Участники школы ({selectedDojoData.members?.length || 0})</h4>
+                  <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={16} /> Участники школы ({selectedDojoData.members?.length || 0})</h4>
                   <div className="dojo-members-list">
                     {selectedDojoData.members?.map((m) => (
                       <div key={m.User_ID} className="dojo-member-item">
@@ -577,12 +578,12 @@ export default function DojoPage() {
 
                   {/* Пригласить пользователя */}
                   <div style={{ marginTop: '2rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem' }}>
-                    <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem' }}>✉️ Пригласить соратника в Додзё</h4>
+                    <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={16} /> Пригласить соратника в Додзё</h4>
 
                     {/* Быстрый выбор из друзей */}
                     <div style={{ marginBottom: '1.25rem', background: 'rgba(0,0,0,0.25)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
                       <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--gold-soft)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <span>👥</span> Быстрый выбор из друзей ({friendsList.length}):
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Users size={15} /> Быстрый выбор из друзей</span> ({friendsList.length}):
                       </div>
                       {loadingFriends ? (
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Загрузка соратников...</div>
@@ -621,7 +622,7 @@ export default function DojoPage() {
                                 </div>
 
                                 {isActive ? (
-                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>✓ В Додзё</span>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={12} /> В Додзё</span>
                                 ) : isInvited ? (
                                   <span style={{ fontSize: '0.7rem', color: '#eab308' }}>Приглашён</span>
                                 ) : (
@@ -683,7 +684,7 @@ export default function DojoPage() {
                                   disabled={state === 'sending' || state === 'sent'}
                                   onClick={() => handleInviteUser(u.User_ID)}
                                 >
-                                  {state === 'sending' ? 'Отправка...' : state === 'sent' ? '✓ Приглашён' : '+ Пригласить'}
+                                  {state === 'sending' ? 'Отправка...' : state === 'sent' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={13} /> Приглашён</span> : '+ Пригласить'}
                                 </button>
                               )}
                             </div>
@@ -704,8 +705,8 @@ export default function DojoPage() {
         <div className="dojo-modal-overlay" onClick={() => setEditingDojo(null)}>
           <div className="dojo-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="dojo-modal__header">
-              <div className="dojo-modal__title">✏️ Редактирование Додзё</div>
-              <button type="button" className="dojo-modal__close" onClick={() => setEditingDojo(null)}>✕</button>
+              <div className="dojo-modal__title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Edit3 size={16} /> Редактирование Додзё</div>
+              <button type="button" className="dojo-modal__close" onClick={() => setEditingDojo(null)}><X size={16} /></button>
             </div>
             <div className="dojo-modal__body">
               <form onSubmit={handleSaveEdit}>

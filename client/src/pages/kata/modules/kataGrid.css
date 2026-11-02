@@ -1,0 +1,328 @@
+/* --- 6. ПАВИЛЬОНЫ И ДИНАМИЧЕСКИЙ BENTO-АТЛАС --- */
+.atlas-pavilion {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.atlas-pavilion__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.9rem;
+}
+
+.atlas-pavilion__title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.atlas-pavilion__title {
+  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.atlas-pavilion__kanji {
+  font-family: var(--font-kanji);
+  font-size: 1.05rem;
+  color: var(--gold);
+}
+
+.atlas-pavilion__desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0.35rem 0 0;
+  line-height: 1.5;
+  max-width: 720px;
+}
+
+.atlas-pavilion__count {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-subtle);
+  padding: 3px 9px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* ДИНАМИЧЕСКИЙ BENTO-ФЛЕКС: линии ВСЕГДА 100% полные (карточки масштабируются по ширине) */
+.atlas-bento-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.35rem;
+}
+
+/* Базовый стиль карточки ката */
+.atlas-card {
+  flex: 1 1 270px;
+  min-width: 250px;
+  max-width: 100%;
+  background: #171310;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.atlas-card:hover {
+  border-color: var(--gold-border);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), 0 0 14px rgba(212, 162, 76, 0.22);
+}
+
+.atlas-card.active {
+  border-color: var(--accent-red);
+  box-shadow: 0 0 0 1px var(--accent-red), 0 6px 20px rgba(0, 0, 0, 0.65);
+}
+
+/* БОЛЬШАЯ HERO-КАРТОЧКА КАТА (Занимает пропорционально в 2 раза больше места на строке) */
+.atlas-card--hero {
+  flex: 2 1 540px;
+  min-width: 320px;
+}
+
+.atlas-card--hero .atlas-card__media {
+  aspect-ratio: 16 / 9;
+  height: auto;
+}
+
+.atlas-card--hero .atlas-card__title {
+  font-size: 1.35rem;
+}
+
+/* Медиа-шапка карточки с изображением (16:9 Widescreen, полностью без обрезки) */
+.atlas-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 155px;
+  background: #0c0a08;
+  overflow: hidden;
+}
+
+.atlas-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  transition: transform 0.4s ease;
+  display: block;
+}
+
+.atlas-card:hover .atlas-card__img {
+  transform: scale(1.04);
+}
+
+.atlas-card__media-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.05) 60%, rgba(20, 16, 13, 0.65) 100%);
+  pointer-events: none;
+}
+
+/* Цветная полоса пояса на карточке */
+.atlas-card__belt-ribbon {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-top: 1px solid rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Водяной каллиграфический знак на постере */
+.atlas-card__watermark-kanji {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-family: var(--font-kanji);
+  font-size: 2.8rem;
+  color: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.atlas-card--hero .atlas-card__watermark-kanji {
+  font-size: 4rem;
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.atlas-card__media-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 2;
+}
+
+.atlas-card__idx-pill {
+  font-family: var(--font-display);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--gold-bright);
+  background: rgba(14, 11, 8, 0.88);
+  border: 1px solid rgba(212, 162, 76, 0.35);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.atlas-card__hero-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ba261b 0%, #8a1c14 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+/* Тело карточки */
+.atlas-card__body {
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.atlas-card__header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 0.45rem;
+}
+
+.atlas-card__titles {
+  display: flex;
+  flex-direction: column;
+}
+
+.atlas-card__kanji-subtitle {
+  font-family: var(--font-kanji);
+  font-size: 0.82rem;
+  color: var(--gold);
+}
+
+.atlas-card__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 2px 0 0;
+  line-height: 1.25;
+}
+
+.atlas-card__desc {
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0.4rem 0 1rem;
+}
+
+/* Подвал карточки */
+.atlas-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.atlas-card__meta-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.atlas-card__steps-pill {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.atlas-card__dojo-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(212, 162, 76, 0.1);
+  border: 1px solid rgba(212, 162, 76, 0.28);
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.atlas-card:hover .atlas-card__dojo-tag {
+  background: var(--gold);
+  color: #12100e;
+  border-color: var(--gold-bright);
+}
+
+.atlas-card:hover .dojo-tag-arrow {
+  transform: translateX(3px);
+}
+
+.dojo-tag-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+/* Пустое состояние */
+.empty-state-box {
+  background: #171310;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.empty-state-box h3 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.empty-state-box p {
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 440px;
+}

@@ -23,7 +23,7 @@ async function verify() {
   console.log(`✔ 4. Репозиторий Ката: найдено ${katas.items.length} Ката Шотокан.`);
   if (katas.items.length < 26) throw new Error(`Ката меньше 26: ${katas.items.length}`);
 
-  // Проверка шагов первого ката (Хэйан Сёдан)
+  // Проверка шагов первого ката (Хэйан Шодан)
   const firstKata = await kataRepo.getById(katas.items[0].Kata_ID);
   console.log(`✔ 5. Первое Ката «${firstKata.Title}»: шагов ${firstKata.Steps?.length || 0}. Первый шаг привязан к клипу: ${firstKata.Steps?.[0]?.Clip_Name || 'None'}`);
 

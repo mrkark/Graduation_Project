@@ -5,6 +5,8 @@ import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoModal from '../components/VideoModal';
 import { HankoSeal, ShotokanTiger, DojoDivider, SearchIcon } from '../components/ui/JapaneseDecor';
+import { Heart, Video, X, Swords } from 'lucide-react';
+import LazySection from '../components/ui/LazySection';
 import './BunkaiListPage.css';
 
 // Задача 16: Уровни сложности бункаев
@@ -182,8 +184,9 @@ export default function BunkaiListPage() {
               }}
               title="Очистить поиск"
               aria-label="Очистить поиск"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              ✕
+              <X size={14} />
             </button>
           )}
 
@@ -199,7 +202,7 @@ export default function BunkaiListPage() {
                   className="bunkai-suggestion-item"
                   onMouseDown={() => handleSelectSuggestion(b)}
                 >
-                  <span className="bunkai-suggestion-icon">⚔️</span>
+                  <span className="bunkai-suggestion-icon"><Swords size={14} /></span>
                   <div className="bunkai-suggestion-text">
                     <span className="bunkai-suggestion-title">{b.Title}</span>
                     <span className="bunkai-suggestion-meta">
@@ -221,7 +224,7 @@ export default function BunkaiListPage() {
               onClick={() => setOnlyFavorites(!onlyFavorites)}
               title={onlyFavorites ? 'Показать все сценарии' : 'Показать только избранные'}
             >
-              <span className="bunkai-fav-toggle-icon">{onlyFavorites ? '❤️' : '🤍'}</span>
+              <span className="bunkai-fav-toggle-icon">{onlyFavorites ? <Heart size={14} fill='#ef4444' color='#ef4444' /> : <Heart size={14} />}</span>
               <span>{onlyFavorites ? 'Только избранные' : 'Избранное'}</span>
               <span className="bunkai-fav-toggle-badge">{bunkaiFavorites.length}</span>
             </button>
@@ -286,7 +289,8 @@ export default function BunkaiListPage() {
         <p className="empty-state">Боевые сценарии бункай не найдены.</p>
       ) : (
         <div className="bunkai-grid">
-          {filteredItems.map((b) => {
+          {/* 1-й экран: первые 6 сценариев загружаются немедленно */}
+          {filteredItems.slice(0, 6).map((b) => {
             const diffKey = getBunkaiDifficulty(b);
             const diffLabel = DIFFICULTY_MAP[diffKey] || 'Практика';
             const standard = isStandardBunkai(b);
@@ -319,7 +323,7 @@ export default function BunkaiListPage() {
                         title={isBunkaiFavorite(b.Bunkai_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                         aria-label="Избранное"
                       >
-                        {isBunkaiFavorite(b.Bunkai_ID) ? '❤️' : '🤍'}
+                        {isBunkaiFavorite(b.Bunkai_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
                       </button>
                     </div>
                   </div>
@@ -356,7 +360,7 @@ export default function BunkaiListPage() {
                         }}
                         title="Смотреть видеоразбор бункая мастеров JKS с таймкода"
                       >
-                        🎥 Видео JKS
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} /> Видео JKS</span>
                       </button>
                     )}
                   </div>

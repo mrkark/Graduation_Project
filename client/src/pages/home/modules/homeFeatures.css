@@ -1,0 +1,277 @@
+/* =========================================================
+   2. ТРИ СТОЛПА ДОДЗЁ (ФОРМА, СМЫСЛ, ДИСТАНЦИЯ)
+   ========================================================= */
+
+.pillars-section {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 5.5rem 0;
+  background: linear-gradient(180deg, #14110e 0%, #171410 100%);
+  position: relative;
+}
+
+.section-head-dojo {
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.section-title-dojo {
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0.4rem 0 0;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+}
+
+@media (max-width: 900px) {
+  .pillars-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.pillar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: #1a1612;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2.2rem 2rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.pillar-item:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold-border);
+  box-shadow: var(--shadow-lift);
+}
+
+.pillar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.pillar-num {
+  font-family: var(--font-kanji);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.pillar-title {
+  font-size: 1.35rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin-bottom: 0.8rem;
+  color: var(--text-primary);
+}
+
+.pillar-text {
+  font-size: 0.94rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin-bottom: 1.5rem;
+  flex: 1;
+}
+
+.pillar-link {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: all 0.16s ease;
+}
+
+.pillar-link-arr {
+  color: var(--gold);
+  transition: transform 0.16s ease;
+}
+
+.pillar-link:hover {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold-bright);
+}
+
+.pillar-link:hover .pillar-link-arr {
+  transform: translateX(3px);
+}
+
+/* =========================================================
+   3. ВИТРИНА НАЧАЛЬНЫХ ФОРМ ХЭЙАН
+   ========================================================= */
+
+.showcase-section {
+  padding-top: 1rem;
+}
+
+.showcase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.section-kicker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.showcase-title {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 600;
+}
+
+.showcase-all-link {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.16s ease;
+}
+
+.showcase-all-arr {
+  color: var(--gold);
+  transition: transform 0.16s ease;
+}
+
+.showcase-all-link:hover {
+  color: var(--gold-bright);
+}
+
+.showcase-all-link:hover .showcase-all-arr {
+  transform: translateX(3px);
+}
+
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+
+@media (max-width: 860px) {
+  .showcase-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.showcase-card {
+  background: #171411;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2.2rem;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+}
+
+.showcase-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--gold-border);
+  box-shadow: var(--shadow-lift);
+}
+
+.showcase-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.1rem;
+}
+
+.showcase-card__tag {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+}
+
+.showcase-card__tag--white {
+  background: rgba(234, 230, 221, 0.12);
+  color: #f0ece3;
+  border-color: rgba(234, 230, 221, 0.25);
+}
+
+.showcase-card__tag--green {
+  background: rgba(44, 140, 74, 0.15);
+  color: #72cf93;
+  border-color: rgba(44, 140, 74, 0.35);
+}
+
+.showcase-card__tag--blue {
+  background: rgba(46, 116, 191, 0.15);
+  color: #79b4f2;
+  border-color: rgba(46, 116, 191, 0.35);
+}
+
+.showcase-card__title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.showcase-card__jp {
+  font-family: var(--font-kanji);
+  font-size: 0.95rem;
+  color: var(--gold-soft);
+  margin-top: 0.35rem;
+  margin-bottom: 1.2rem;
+  display: block;
+}
+
+.showcase-card__desc {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  flex: 1;
+}
+
+.showcase-card__action {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.16s ease;
+}
+
+.showcase-card:hover .showcase-card__action {
+  color: var(--gold);
+}

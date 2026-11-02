@@ -1,6 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import QRCode from 'qrcode';
+import {
+  Monitor,
+  Smartphone,
+  Camera,
+  Video,
+  Layers,
+  Home,
+  CheckCircle2,
+  AlertCircle,
+  Wifi,
+  Lock,
+  Unlock,
+  Shield,
+  Zap,
+  Edit3,
+  Copy,
+  Check,
+  X,
+  RefreshCw,
+  Globe,
+  Maximize2,
+  QrCode,
+  Info,
+  BookOpen,
+} from 'lucide-react';
+const ModularMotionMixer = lazy(() => import('../three/ModularMotionMixer'));
 
 function checkIsMobileOrTablet() {
   if (typeof window === 'undefined') return false;
@@ -14,6 +40,7 @@ function checkIsMobileOrTablet() {
 
 export default function KarateStudioPage() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(checkIsMobileOrTablet);
+  const [activeStudioTab, setActiveStudioTab] = useState('mocap'); // 'mocap' | 'modular'
 
   const [showQr, setShowQr] = useState(false);
   const [selectedCam, setSelectedCam] = useState('cam1');
@@ -182,7 +209,9 @@ export default function KarateStudioPage() {
           padding: '2.5rem 1.8rem',
           boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)',
         }}>
-          <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>💻</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.2rem' }}>
+            <Monitor size={56} color="#f59e0b" />
+          </div>
           <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#f59e0b', margin: '0 0 0.8rem' }}>
             Доступно только на компьютерах
           </h2>
@@ -196,17 +225,23 @@ export default function KarateStudioPage() {
             padding: '1rem',
             marginBottom: '1.8rem',
             textAlign: 'left',
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'flex-start',
           }}>
+            <Smartphone size={20} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
             <p style={{ fontSize: '0.88rem', color: '#fef3c7', margin: 0, lineHeight: 1.5 }}>
-              📱 <strong>Как использовать телефон:</strong> откройте эту страницу на компьютере и отсканируйте камерой телефона QR-код — телефон подключится как беспроводная камера захвата движений!
+              <strong>Как использовать телефон:</strong> откройте эту страницу на компьютере и отсканируйте камерой телефона QR-код — телефон подключится как беспроводная камера захвата движений!
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link to="/kata" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none' }}>
-              🥋 В каталог Ката
+            <Link to="/kata" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <BookOpen size={15} />
+              <span>В каталог Ката</span>
             </Link>
-            <Link to="/" className="btn btn-subtle" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none' }}>
-              ⛩️ На главную
+            <Link to="/" className="btn btn-subtle" style={{ padding: '0.65rem 1.4rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Home size={15} />
+              <span>На главную</span>
             </Link>
           </div>
         </div>
@@ -229,12 +264,12 @@ export default function KarateStudioPage() {
         zIndex: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <Link to="/kata" style={{ color: 'var(--color-gold, #f59e0b)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+          <Link to="/kata" style={{ color: 'var(--color-gold, #f59e0b)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
             <span>←</span> <span>В каталог Ката</span>
           </Link>
           <span style={{ color: '#4b5563' }}>|</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>🥋</span>
+            <Video size={18} color="#f59e0b" />
             <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '14px', letterSpacing: '0.4px' }}>
               KARATE MOTION STUDIO
             </span>
@@ -247,8 +282,12 @@ export default function KarateStudioPage() {
                 border: '1px solid #10b981',
                 color: '#10b981',
                 fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}>
-                🟢 AI Python Движок Активен (8000 / 8088)
+                <CheckCircle2 size={11} />
+                <span>AI Python Движок Активен (8000 / 8088)</span>
               </span>
             ) : (
               <span style={{
@@ -259,8 +298,12 @@ export default function KarateStudioPage() {
                 border: '1px solid #ef4444',
                 color: '#ef4444',
                 fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}>
-                🔴 Оффлайн (запустите start_python_mocap.bat)
+                <AlertCircle size={11} />
+                <span>Оффлайн (запустите start_python_mocap.bat)</span>
               </span>
             )}
           </div>
@@ -293,6 +336,50 @@ export default function KarateStudioPage() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Переключатель режимов: Камеры MoCap / Модульный конструктор */}
+          <div style={{ display: 'flex', gap: '4px', background: '#0e1017', padding: '3px', borderRadius: '8px', border: '1px solid #282d3c' }}>
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('mocap')}
+              style={{
+                background: activeStudioTab === 'mocap' ? '#2563eb' : 'transparent',
+                color: activeStudioTab === 'mocap' ? '#ffffff' : '#9ca3af',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Camera size={13} />
+              <span>Камеры MoCap</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('modular')}
+              style={{
+                background: activeStudioTab === 'modular' ? '#f59e0b' : 'transparent',
+                color: activeStudioTab === 'modular' ? '#000000' : '#9ca3af',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Layers size={13} />
+              <span>Модульная студия & Запись</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setShowQr(!showQr)}
@@ -311,7 +398,7 @@ export default function KarateStudioPage() {
               boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)',
             }}
           >
-            <span>📱</span>
+            <QrCode size={14} />
             <span>{showQr ? 'Скрыть QR' : 'QR для телефона (Камера)'}</span>
           </button>
 
@@ -333,7 +420,7 @@ export default function KarateStudioPage() {
               gap: '6px',
             }}
           >
-            <span>🚀</span>
+            <Maximize2 size={13} />
             <span>Открыть во весь экран</span>
           </a>
         </div>
@@ -369,22 +456,20 @@ export default function KarateStudioPage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
+                opacity: isTunnelAvailable ? 1 : 0.6,
               }}
+              title={isTunnelAvailable ? 'Подключение через глобальный интернет туннель' : 'Публичный туннель не активен'}
             >
-              <span>🌐</span>
-              <span>4G / LTE (Любая сеть / Интернет)</span>
-              {isTunnelAvailable ? (
-                <span style={{ fontSize: '10px', background: '#10b981', color: '#000', padding: '1px 5px', borderRadius: '4px' }}>АКТИВЕН</span>
-              ) : (
-                <span style={{ fontSize: '10px', background: '#eab308', color: '#000', padding: '1px 5px', borderRadius: '4px' }}>ОФФЛАЙН</span>
-              )}
+              <Globe size={13} />
+              <span>Публичный туннель (4G / удаленно)</span>
+              {isTunnelAvailable && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />}
             </button>
             <button
               type="button"
               onClick={() => setNetworkMode('local')}
               style={{
-                background: activeMode === 'local' ? '#10b981' : 'transparent',
-                color: activeMode === 'local' ? '#000000' : '#9ca3af',
+                background: activeMode === 'local' ? '#059669' : 'transparent',
+                color: activeMode === 'local' ? '#ffffff' : '#9ca3af',
                 border: 'none',
                 borderRadius: '6px',
                 padding: '5px 12px',
@@ -396,7 +481,7 @@ export default function KarateStudioPage() {
                 gap: '5px',
               }}
             >
-              <span>🏠</span>
+              <Wifi size={13} />
               <span>Локальный Wi-Fi (В одной сети с ПК)</span>
             </button>
           </div>
@@ -416,9 +501,13 @@ export default function KarateStudioPage() {
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              🔒 HTTPS (8088)
+              <Lock size={11} />
+              <span>HTTPS (8088)</span>
             </button>
             <button
               type="button"
@@ -432,9 +521,13 @@ export default function KarateStudioPage() {
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              🛡️ Шлюз (8443)
+              <Shield size={11} />
+              <span>Шлюз (8443)</span>
             </button>
             <button
               type="button"
@@ -448,9 +541,13 @@ export default function KarateStudioPage() {
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              ⚡ Web (5173)
+              <Zap size={11} />
+              <span>Web (5173)</span>
             </button>
             <button
               type="button"
@@ -464,9 +561,13 @@ export default function KarateStudioPage() {
                 fontSize: '11px',
                 fontWeight: 700,
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              🔓 HTTP (8000)
+              <Unlock size={11} />
+              <span>HTTP (8000)</span>
             </button>
 
             <span style={{ color: '#4b5563', margin: '0 4px' }}>|</span>
@@ -515,16 +616,16 @@ export default function KarateStudioPage() {
                 <button
                   type="button"
                   onClick={() => handleSaveCustomIp()}
-                  style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
                 >
-                  ✓
+                  <Check size={11} />
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditingIp(false)}
-                  style={{ background: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '11px' }}
+                  style={{ background: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center' }}
                 >
-                  ✕
+                  <X size={11} />
                 </button>
               </div>
             ) : (
@@ -541,12 +642,16 @@ export default function KarateStudioPage() {
                     border: '1px solid #374151',
                     color: '#9ca3af',
                     borderRadius: '4px',
-                    padding: '1px 5px',
+                    padding: '2px 6px',
                     fontSize: '10px',
                     cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
                   }}
                 >
-                  ✏️ Сменить
+                  <Edit3 size={10} />
+                  <span>Сменить</span>
                 </button>
               </div>
             )}
@@ -572,11 +677,17 @@ export default function KarateStudioPage() {
                     fontWeight: 700,
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
-                  {cid === 'cam1' && '🟢 Камера 1 (Фронт · T-база)'}
-                  {cid === 'cam2' && '🔵 Камера 2 (Слева 90° · T-плечо)'}
-                  {cid === 'cam3' && '🟣 Камера 3 (Справа 90° · T-плечо)'}
+                  <Camera size={13} />
+                  <span>
+                    {cid === 'cam1' && 'Камера 1 (Фронт · T-база)'}
+                    {cid === 'cam2' && 'Камера 2 (Слева 90° · T-плечо)'}
+                    {cid === 'cam3' && 'Камера 3 (Справа 90° · T-плечо)'}
+                  </span>
                 </button>
               );
             })}
@@ -636,21 +747,29 @@ export default function KarateStudioPage() {
                     fontSize: '11px',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  {copied ? '✓ Скопировано' : '📋 Копия'}
+                  {copied ? <Check size={11} /> : <Copy size={11} />}
+                  <span>{copied ? 'Скопировано' : 'Копия'}</span>
                 </button>
               </div>
 
               {/* Пошаговая инструкция для успешного подключения */}
               <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '10px 14px', fontSize: '11.5px', color: '#d1d5db', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '3px' }}>📱 Быстрое подключение телефона:</div>
+                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Smartphone size={13} />
+                  <span>Быстрое подключение телефона:</span>
+                </div>
                 <div>1. Телефон должен быть в одной сети Wi-Fi с ПК (или в режиме точки доступа).</div>
                 <div>2. Отсканируйте QR-код и откройте ссылку в мобильном браузере (Chrome / Safari).</div>
                 <div>3. При предупреждении о сертификате: на <strong>Android</strong> нажмите <em>«Дополнительно» → «Перейти на сайт ({displayHost})»</em>; на <strong>iPhone</strong> нажмите <em>«Показать подробности» → «Посетить сайт»</em>.</div>
                 <div>4. Нажмите <strong>«Разрешить»</strong> для камеры — захват сразу отобразится на 3D-аватаре!</div>
-                <div style={{ marginTop: '4px', fontSize: '11px', color: '#fcd34d' }}>
-                  💡 Если порт 8088 не отвечает на вашем роутере, нажмите на кнопку <strong>«Шлюз (8443)»</strong> выше.
+                <div style={{ marginTop: '4px', fontSize: '11px', color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Info size={11} />
+                  <span>Если порт 8088 не отвечает на вашем роутере, нажмите на кнопку <strong>«Шлюз (8443)»</strong> выше.</span>
                 </div>
               </div>
             </div>
@@ -667,16 +786,26 @@ export default function KarateStudioPage() {
                 cursor: 'pointer',
                 fontSize: '12px',
                 alignSelf: 'flex-start',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
               }}
             >
-              ✕ Закрыть
+              <X size={12} />
+              <span>Закрыть</span>
             </button>
           </div>
         </div>
       )}
 
       {/* Main Viewport */}
-      {studioOnline ? (
+      {activeStudioTab === 'modular' ? (
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: '#0d0e12' }}>
+          <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D микшера движений…</div>}>
+            <ModularMotionMixer />
+          </Suspense>
+        </div>
+      ) : studioOnline ? (
         <iframe
           src={studioUrl}
           title="Karate Motion Studio"
@@ -699,7 +828,9 @@ export default function KarateStudioPage() {
           textAlign: 'center',
           color: '#e5e7eb',
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🥋</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+            <Video size={48} color="#f59e0b" />
+          </div>
           <h2 style={{ fontSize: '1.4rem', color: '#f59e0b', marginBottom: '10px' }}>
             Python AI Сервер MoCap не запущен
           </h2>
@@ -711,9 +842,19 @@ export default function KarateStudioPage() {
               type="button"
               className="btn btn-primary"
               onClick={() => window.location.reload()}
-              style={{ padding: '10px 24px' }}
+              style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              🔄 Проверить подключение
+              <RefreshCw size={14} />
+              <span>Проверить подключение</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setActiveStudioTab('modular')}
+              style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Layers size={14} />
+              <span>Открыть Модульную студию & Запись</span>
             </button>
           </div>
         </div>

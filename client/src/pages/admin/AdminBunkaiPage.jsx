@@ -216,7 +216,7 @@ export default function AdminBunkaiPage() {
                     </td>
                     <td>
                       <span className="admin-role-badge admin-role-badge--user">
-                        {b.Kata?.Title || 'Ката Сётокан'}
+                        {b.Kata?.Title || 'Ката Шотокан'}
                       </span>
                     </td>
                     <td>

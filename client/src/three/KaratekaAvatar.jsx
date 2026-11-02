@@ -51,57 +51,57 @@ export const SHOTOKAN_STANCES = {
  */
 export const KARATE_TECHNIQUES = [
   // Удары руками (Цуки и Учи)
-  { id: 'oi_zuki_right',      label: '👊 Ой-цуки (Правый)', category: 'hands' },
-  { id: 'oi_zuki_left',       label: '👊 Ой-цуки (Левый)', category: 'hands' },
-  { id: 'gyaku_zuki_right',   label: '💥 Гяку-цуки (Правый реверс)', category: 'hands' },
-  { id: 'gyaku_zuki_left',    label: '💥 Гяку-цуки (Левый реверс)', category: 'hands' },
-  { id: 'chudan_zuki_right',  label: '👊 Чудан-цуки (Корпус)', category: 'hands' },
-  { id: 'jodan_zuki_right',   label: '🎯 Дзёдан-цуки (Голова)', category: 'hands' },
-  { id: 'choku_zuki',         label: '👊 Чоку-цуки (Прямой)', category: 'hands' },
-  { id: 'kizami_zuki',        label: '⚡ Кизами-цуки (Джеб)', category: 'hands' },
-  { id: 'ren_zuki',           label: '🔄 Рэн-цуки (Двойка)', category: 'hands' },
-  { id: 'uraken_uchi',        label: '🥊 Уракэн-учи (Бэкфист)', category: 'hands' },
-  { id: 'tetsui_uchi',        label: '🔨 Тэтцуи-учи (Молот)', category: 'hands' },
-  { id: 'empi_uchi',          label: '💥 Эмпи-учи (Локоть)', category: 'hands' },
-  { id: 'shuto_uchi',         label: '✋ Сюто-учи (Ладонь)', category: 'hands' },
+  { id: 'oi_zuki_right',      label: 'Ой-цуки (Правый)', category: 'hands' },
+  { id: 'oi_zuki_left',       label: 'Ой-цуки (Левый)', category: 'hands' },
+  { id: 'gyaku_zuki_right',   label: 'Гяку-цуки (Правый реверс)', category: 'hands' },
+  { id: 'gyaku_zuki_left',    label: 'Гяку-цуки (Левый реверс)', category: 'hands' },
+  { id: 'chudan_zuki_right',  label: 'Чудан-цуки (Корпус)', category: 'hands' },
+  { id: 'jodan_zuki_right',   label: 'Дзёдан-цуки (Голова)', category: 'hands' },
+  { id: 'choku_zuki',         label: 'Чоку-цуки (Прямой)', category: 'hands' },
+  { id: 'kizami_zuki',        label: 'Кизами-цуки (Джеб)', category: 'hands' },
+  { id: 'ren_zuki',           label: 'Рэн-цуки (Двойка)', category: 'hands' },
+  { id: 'uraken_uchi',        label: 'Уракэн-учи (Бэкфист)', category: 'hands' },
+  { id: 'tetsui_uchi',        label: 'Тэтцуи-учи (Молот)', category: 'hands' },
+  { id: 'empi_uchi',          label: 'Эмпи-учи (Локоть)', category: 'hands' },
+  { id: 'shuto_uchi',         label: 'Сюто-учи (Ладонь)', category: 'hands' },
 
   // Защитные блоки
-  { id: 'gedan_barai_left',   label: '🥋 Гэдан-барай (Левый смет)', category: 'blocks' },
-  { id: 'gedan_barai_right',  label: '🥋 Гэдан-барай (Правый смет)', category: 'blocks' },
-  { id: 'age_uke_left',       label: '🛡️ Агэ-укэ (Левый верхний)', category: 'blocks' },
-  { id: 'age_uke_right',      label: '🛡️ Агэ-укэ (Правый верхний)', category: 'blocks' },
-  { id: 'soto_uke',           label: '🛡️ Сото-укэ (Снаружи-внутрь)', category: 'blocks' },
-  { id: 'uchi_uke',           label: '🛡️ Ути-укэ (Изнутри-наружу)', category: 'blocks' },
-  { id: 'shuto_uke',          label: '✋ Сюто-укэ (Ребро ладони)', category: 'blocks' },
+  { id: 'gedan_barai_left',   label: 'Гэдан-барай (Левый смет)', category: 'blocks' },
+  { id: 'gedan_barai_right',  label: 'Гэдан-барай (Правый смет)', category: 'blocks' },
+  { id: 'age_uke_left',       label: '️ Агэ-укэ (Левый верхний)', category: 'blocks' },
+  { id: 'age_uke_right',      label: '️ Агэ-укэ (Правый верхний)', category: 'blocks' },
+  { id: 'soto_uke',           label: '️ Сото-укэ (Снаружи-внутрь)', category: 'blocks' },
+  { id: 'uchi_uke',           label: '️ Ути-укэ (Изнутри-наружу)', category: 'blocks' },
+  { id: 'shuto_uke',          label: 'Сюто-укэ (Ребро ладони)', category: 'blocks' },
 
   // Удары ногами
-  { id: 'mae_geri_right',     label: '🦶 Маэ-гэри (Правый прямой)', category: 'kicks' },
-  { id: 'mae_geri_left',      label: '🦶 Маэ-гэри (Левый прямой)', category: 'kicks' },
-  { id: 'mae_geri_chamber_right', label: '🦵 Камаэ колена Маэ-гэри', category: 'kicks' },
-  { id: 'yoko_geri',          label: '🦶 Ёко-гэри (Боковой)', category: 'kicks' },
-  { id: 'mawashi_geri',       label: '🔄 Маваси-гэри (Круговой)', category: 'kicks' },
-  { id: 'ushiro_geri',        label: '🦶 Усиро-гэри (Назад)', category: 'kicks' },
+  { id: 'mae_geri_right',     label: 'Маэ-гэри (Правый прямой)', category: 'kicks' },
+  { id: 'mae_geri_left',      label: 'Маэ-гэри (Левый прямой)', category: 'kicks' },
+  { id: 'mae_geri_chamber_right', label: 'Камаэ колена Маэ-гэри', category: 'kicks' },
+  { id: 'yoko_geri',          label: 'Ёко-гэри (Боковой)', category: 'kicks' },
+  { id: 'mawashi_geri',       label: 'Маваси-гэри (Круговой)', category: 'kicks' },
+  { id: 'ushiro_geri',        label: 'Усиро-гэри (Назад)', category: 'kicks' },
 
   // Локомоция (Шаги и перемещения)
-  { id: 'step_forward',       label: '👣 Шаг вперед (Сури-аси)', category: 'moves' },
-  { id: 'step_backward',      label: '👣 Шаг назад', category: 'moves' },
-  { id: 'slide_forward',      label: '🥋 Цуги-аси (Скольжение вперед)', category: 'moves' },
-  { id: 'slide_backward',     label: '🥋 Скольжение назад', category: 'moves' },
+  { id: 'step_forward',       label: 'Шаг вперед (Сури-аси)', category: 'moves' },
+  { id: 'step_backward',      label: 'Шаг назад', category: 'moves' },
+  { id: 'slide_forward',      label: 'Цуги-аси (Скольжение вперед)', category: 'moves' },
+  { id: 'slide_backward',     label: 'Скольжение назад', category: 'moves' },
 
   // Развороты и пивоты
-  { id: 'turn_left',          label: '🔄 Разворот влево (45°)', category: 'moves' },
-  { id: 'turn_right',         label: '🔄 Разворот вправо (45°)', category: 'moves' },
-  { id: 'pivot_left',         label: '📐 Пивот таза Koshi влево', category: 'moves' },
-  { id: 'pivot_right',        label: '📐 Пивот таза Koshi вправо', category: 'moves' },
-  { id: 'turn_with_step_left',label: '👣 Разворот с шагом', category: 'moves' },
+  { id: 'turn_left',          label: 'Разворот влево (45°)', category: 'moves' },
+  { id: 'turn_right',         label: 'Разворот вправо (45°)', category: 'moves' },
+  { id: 'pivot_left',         label: 'Пивот таза Koshi влево', category: 'moves' },
+  { id: 'pivot_right',        label: 'Пивот таза Koshi вправо', category: 'moves' },
+  { id: 'turn_with_step_left',label: 'Разворот с шагом', category: 'moves' },
 
   // Хикитэ и взведения
-  { id: 'hikite_right',       label: '⚡ Хикитэ правый к ребрам', category: 'moves' },
-  { id: 'hikite_left',        label: '⚡ Хикитэ левый к ребрам', category: 'moves' },
-  { id: 'chamber_left',       label: '🛡️ Чембер на блок', category: 'moves' },
+  { id: 'hikite_right',       label: 'Хикитэ правый к ребрам', category: 'moves' },
+  { id: 'hikite_left',        label: 'Хикитэ левый к ребрам', category: 'moves' },
+  { id: 'chamber_left',       label: '️ Чембер на блок', category: 'moves' },
 
   // Ката целиком
-  { id: 'heian_shodan_preview', label: '📜 Хэйан Шодан (Превью формы)', category: 'moves' },
+  { id: 'heian_shodan_preview', label: 'Хэйан Шодан (Превью формы)', category: 'moves' },
 ];
 
 function RotatingGroup({ animate, children }) {
@@ -206,7 +206,7 @@ export default function KaratekaAvatar({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-gold, #c59b27)', fontWeight: 700 }}>
-              🥋 Хонбу Додзё • Мастер Каратэ Шотокан
+              Хонбу Додзё • Мастер Каратэ Шотокан
             </span>
           </div>
           <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-washi, #f4eee2)', marginTop: 3 }}>
@@ -262,7 +262,7 @@ export default function KaratekaAvatar({
                 onClick={() => setAnimate((a) => !a)}
                 title="Автоматическое вращение камеры 360°"
               >
-                {animate ? '⏸ Пауза' : '🔄 360°'}
+                {animate ? '⏸ Пауза' : '360°'}
               </button>
               <button
                 type="button"

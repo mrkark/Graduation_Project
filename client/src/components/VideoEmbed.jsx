@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, ExternalLink, RefreshCw } from 'lucide-react';
+import { Play, ExternalLink, RefreshCw, Video, Copy, Check, FlipHorizontal } from 'lucide-react';
 import './VideoEmbed.css';
 
 export function getYouTubeEmbedInfo(url) {
@@ -89,7 +89,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
 
               <div className="video-embed-facade__header">
                 <div className="video-embed-facade__badge">
-                  <span>🇯🇵 JKS JAPAN KARATE</span>
+                  <span>JKS JAPAN KARATE</span>
                 </div>
                 {info.start > 0 && (
                   <span style={{ fontSize: '0.8rem', color: '#fef08a', background: 'rgba(0,0,0,0.7)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
@@ -116,7 +116,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
             <iframe
               className="video-embed-iframe"
               src={activeSrc}
-              title={title || 'Видео техники Сётокан'}
+              title={title || 'Видео техники Шотокан'}
               loading="lazy"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
@@ -127,7 +127,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
         {/* Панель обхода ограничений и прямой доступ */}
         <div className="video-embed-toolbar">
           <div className="video-embed-toolbar__left">
-            <span>🎥 <strong>{masterName}</strong></span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}><Video size={14} /> <strong>{masterName}</strong></span>
           </div>
 
           <div className="video-embed-toolbar__actions">
@@ -151,7 +151,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
               }}
               title="Переключить домен плеера при блокировках"
             >
-              {useMirror ? 'Обычный плеер' : '🪞 Альтернативное зеркало'}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}><FlipHorizontal size={13} /> {useMirror ? "Обычный плеер" : "Альтернативное зеркало"}</span>
             </button>
 
             <button
@@ -160,7 +160,7 @@ export default function VideoEmbed({ url, autoLoad = false, masterName = 'Мас
               onClick={copyUrl}
               title="Скопировать ссылку на видео"
             >
-              {copied ? '✔ Скопировано' : '📋 Ссылка'}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>{copied ? <Check size={12} /> : <Copy size={12} />} {copied ? "Скопировано" : "Ссылка"}</span>
             </button>
           </div>
         </div>

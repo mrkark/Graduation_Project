@@ -4,6 +4,18 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {
+  synthesizeModularClip,
+  extractLowerBodyClip,
+  extractUpperBodyClip,
+} from './modularAnimationEngine.js';
+
+export {
+  synthesizeModularClip,
+  extractLowerBodyClip,
+  extractUpperBodyClip,
+  registerCustomClip,
+};
 
 /**
  * Словарь клипов анимаций: каноническая техника каратэ Шотокан и стойки
@@ -156,6 +168,12 @@ function getStanceClipName(stanceName) {
 const globalClipCache = new Map();
 let globalClipPromise = null;
 
+function registerCustomClip(name, clip) {
+  if (!name || !clip) return;
+  globalClipCache.set(name, clip);
+  if (clip.name) globalClipCache.set(clip.name, clip);
+}
+
 const gltfLoader = new GLTFLoader();
 const loadedKataPromises = new Map();
 
@@ -306,6 +324,10 @@ export default function KaratekaLowpolyModel({
   angles = null,
   activeClip = null,
   stepClip = null,
+  modularLowerClip = null,
+  modularUpperClip = null,
+  modularTurn = null,
+  modularLoop = false,
   blendDuration = 0.25,
   speed = 1.0,
   position = [0, 0, 0],
@@ -431,9 +453,10 @@ export default function KaratekaLowpolyModel({
   const activeClipRef = useRef(null);
   const prevReplayTriggerRef = useRef(replayTrigger);
 
-  // Динамическая загрузка GLB мастер-анимации ката при выборе любого из 26 ката Shotokan
+  // Динамическая загрузка GLB мастер-анимации ката при выборе любого из 26 ката Shotokan (только для режима MoCap)
   useEffect(() => {
     if (!kataMode || !kataClipName) return;
+    if (kataExecutionMode === 'composed') return; // В едином композитном режиме не загружаем 26 монолитных GLB!
 
     const existing =
       resolveClip(kataClipName) ||
@@ -476,9 +499,10 @@ export default function KaratekaLowpolyModel({
     });
   }, [animations]);
 
-  // Переключение стойки (stance) — только если НЕ активен kataMode (стойка Йой)
+  // Переключение стойки (stance) — только если НЕ активен kataMode и НЕ активен модульный режим
   useEffect(() => {
     if (kataMode || !clipsLoaded || !mixer) return;
+    if (modularLowerClip || modularUpperClip) return;
 
     const clipName = getStanceClipName(stance || 'ready');
     const rawClip = resolveClip(clipName) || globalClipCache.get(clipName);
@@ -502,11 +526,75 @@ export default function KaratekaLowpolyModel({
       groupRef.current.position.set(0, 0, 0);
       groupRef.current.rotation.set(0, 0, 0);
     }
-  }, [kataMode, stance, clipsLoaded, mixer, speed, getFilteredClip]);
+  }, [kataMode, stance, clipsLoaded, mixer, speed, getFilteredClip, modularLowerClip, modularUpperClip]);
+
+  // Модульный режим (Modular Layered Motion):
+  // Синтез независимого нижнего слоя стойки/шага и верхнего слоя техники
+  useEffect(() => {
+    if (kataMode || !clipsLoaded || !mixer) return;
+    if (!modularLowerClip && !modularUpperClip) return;
+
+    const lowerRaw = modularLowerClip
+      ? (typeof modularLowerClip === 'object' && modularLowerClip?.tracks ? modularLowerClip : (resolveClip(modularLowerClip) || globalClipCache.get(modularLowerClip)))
+      : (resolveClip(getStanceClipName(stance || 'ready')) || globalClipCache.get(getStanceClipName(stance || 'ready')));
+
+    const upperRaw = modularUpperClip
+      ? (typeof modularUpperClip === 'object' && modularUpperClip?.tracks ? modularUpperClip : (resolveClip(modularUpperClip) || globalClipCache.get(modularUpperClip)))
+      : null;
+
+    if (!lowerRaw && !upperRaw) return;
+
+    let composite = null;
+    if (lowerRaw && upperRaw) {
+      composite = synthesizeModularClip({
+        lowerClip: lowerRaw,
+        upperClip: upperRaw,
+        zeroHorizontalRoot: true,
+      });
+    } else {
+      composite = lowerRaw || upperRaw;
+    }
+
+    if (!composite) return;
+    const clip = getFilteredClip(composite);
+    if (!clip || clip.tracks.length === 0) return;
+
+    mixer.stopAllAction();
+    const action = mixer.clipAction(clip);
+    action.reset();
+    action.setLoop(modularLoop ? THREE.LoopRepeat : THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+    action.timeScale = speed;
+
+    if (currentActionRef.current && currentActionRef.current !== action) {
+      action.crossFadeFrom(currentActionRef.current, 0.15, true);
+    }
+    action.play();
+    currentActionRef.current = action;
+    activeClipRef.current = action;
+
+    if (groupRef.current && typeof modularTurn === 'number') {
+      const rad = THREE.MathUtils.degToRad(modularTurn);
+      groupRef.current.rotation.y = rad;
+    }
+  }, [
+    kataMode,
+    clipsLoaded,
+    mixer,
+    modularLowerClip,
+    modularUpperClip,
+    modularTurn,
+    modularLoop,
+    stance,
+    speed,
+    getFilteredClip,
+    replayTrigger,
+  ]);
 
   // Запуск динамического приема (activeClip: choku_zuki, oi_zuki_right, mae_geri, heian_shodan_preview, etc.)
   useEffect(() => {
     if (kataMode || !clipsLoaded || !mixer || !activeClip) return;
+    if (modularLowerClip || modularUpperClip) return;
 
     const rawClip = resolveClip(activeClip) || globalClipCache.get(activeClip);
     if (!rawClip) return;
@@ -557,7 +645,7 @@ export default function KaratekaLowpolyModel({
     if (!kataMode || !clipsLoaded || !mixer) return;
 
     let targetClip = null;
-    const isFullMode = kataExecutionMode === 'full' || (!stepClip && kataExecutionMode !== 'composed');
+    const isFullMode = kataExecutionMode === 'full';
 
     if (isFullMode) {
       // Вариант 1: Полный мастер-клип ката (heian_shodan_preview для Heian Shodan или /models/katas/kata_${kataSlug}.glb)
@@ -780,5 +868,4 @@ export default function KaratekaLowpolyModel({
   );
 }
 
-useGLTF.preload('/models/karateka_techniques_v4.glb');
-useGLTF.preload('/models/karateka_lowpoly.glb');
+// Оптимизация: useGLTF загружает модели по требованию внутри компонента, исключая принудительную фоновую предзагрузку 37 МБ на старте.

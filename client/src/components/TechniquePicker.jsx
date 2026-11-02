@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { SHOTOKAN_CATEGORIES, SHOTOKAN_TECHNIQUES } from '../data/shotokanTechniques';
+import { X } from 'lucide-react';
 import './TechniquePicker.css';
 
 export default function TechniquePicker({ onSelect, onCancel }) {
@@ -28,10 +29,10 @@ export default function TechniquePicker({ onSelect, onCancel }) {
       <div className="tech-picker__header">
         <div className="tech-picker__title-row">
           <span className="hanko">松濤館</span>
-          <h3>Каталог техник Сётокан каратэдо</h3>
+          <h3>Каталог техник Шотокан каратэдо</h3>
           {onCancel && (
-            <button type="button" className="btn btn-close-picker" onClick={onCancel}>
-              ✕
+            <button type="button" className="btn btn-close-picker" onClick={onCancel} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={16} />
             </button>
           )}
         </div>
@@ -54,8 +55,9 @@ export default function TechniquePicker({ onSelect, onCancel }) {
               type="button"
               className="tech-picker__clear-btn"
               onClick={() => setSearch('')}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              ✕
+              <X size={14} />
             </button>
           )}
         </div>
@@ -81,7 +83,7 @@ export default function TechniquePicker({ onSelect, onCancel }) {
         {filteredTechniques.length === 0 ? (
           <div className="tech-picker__empty">
             <span className="empty-kanji">無</span>
-            <p>Техника с названием «{search}» не найдена в каноне Сётокан.</p>
+            <p>Техника с названием «{search}» не найдена в каноне Шотокан.</p>
             <small>Попробуйте ввести базовое название на русском или ромадзи.</small>
           </div>
         ) : (

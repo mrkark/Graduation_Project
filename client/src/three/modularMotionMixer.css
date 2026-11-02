@@ -1,0 +1,495 @@
+/* =========================================================
+   MODULAR MOTION MIXER — Стили модульного конструктора
+   ========================================================= */
+
+.modular-mixer-container {
+  display: flex;
+  gap: 1.5rem;
+  background: var(--bg-surface, #141311);
+  border: 1px solid var(--gold-border, rgba(191, 161, 95, 0.3));
+  border-radius: var(--radius-sm, 6px);
+  padding: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  margin-bottom: 2rem;
+  min-height: 640px;
+}
+
+@media (max-width: 1024px) {
+  .modular-mixer-container {
+    flex-direction: column;
+  }
+}
+
+.modular-mixer-viewport {
+  flex: 1.2;
+  min-height: 480px;
+  background: #0d0c0a;
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modular-viewport-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(16, 15, 13, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--gold, #bfa15f);
+  color: var(--gold-soft, #dfd0ab);
+  padding: 0.45rem 0.85rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+
+.modular-viewport-badge strong {
+  color: #fff;
+}
+
+.modular-mixer-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.modular-controls-header h3 {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-display, serif);
+  font-size: 1.25rem;
+  color: var(--text-primary, #f5f0e1);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.modular-controls-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #999);
+}
+
+.modular-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modular-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #e2ded5);
+}
+
+.badge-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.badge-tag--lower {
+  background: #1b2838;
+  color: #64b5f6;
+  border: 1px solid #2b496e;
+}
+
+.badge-tag--upper {
+  background: #331f1f;
+  color: #ff8a80;
+  border: 1px solid #6b2f2f;
+}
+
+.modular-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.45rem;
+  max-height: 145px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.modular-preset-btn {
+  background: #191815;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.45rem 0.65rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.modular-preset-btn:hover {
+  background: #23221e;
+  border-color: rgba(191, 161, 95, 0.4);
+}
+
+.modular-preset-btn.active {
+  background: rgba(191, 161, 95, 0.15);
+  border-color: var(--gold, #bfa15f);
+  box-shadow: 0 0 10px rgba(191, 161, 95, 0.25);
+}
+
+.modular-preset-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary, #f0ece1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modular-preset-type {
+  font-size: 0.7rem;
+  color: var(--text-muted, #888);
+}
+
+.modular-turn-selector {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.modular-turn-btn {
+  background: #191815;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #aaa);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modular-turn-btn:hover {
+  background: #23221e;
+  color: #fff;
+}
+
+.modular-turn-btn.active {
+  background: var(--gold, #bfa15f);
+  color: #100f0d;
+  font-weight: 600;
+  border-color: var(--gold, #bfa15f);
+}
+
+.modular-player-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modular-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.84rem;
+}
+
+.modular-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #bbb);
+  cursor: pointer;
+}
+
+.modular-speed-pills {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.modular-speed-pill {
+  background: #1a1917;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #aaa);
+  cursor: pointer;
+}
+
+.modular-speed-pill.active {
+  background: rgba(191, 161, 95, 0.25);
+  color: var(--gold, #bfa15f);
+  border-color: var(--gold, #bfa15f);
+}
+
+.modular-export-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: auto;
+}
+
+.modular-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  padding: 0.55rem 1rem;
+  flex: 1;
+  justify-content: center;
+}
+
+/* =========================================================
+   СТУДИЙНЫЕ ВКЛАДКИ И РЕЖИМЫ СОЗДАНИЯ/ЗАПИСИ АНИМАЦИИ
+   ========================================================= */
+
+.modular-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 0.35rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 0.8rem;
+  overflow-x: auto;
+}
+
+.modular-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #a8a29e);
+  padding: 0.45rem 0.85rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.modular-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.modular-tab-btn.active {
+  background: var(--gold, #bfa15f);
+  color: #11100e;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(191, 161, 95, 0.35);
+}
+
+/* Блок записи с камеры */
+.mocap-recorder-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.recorder-cam-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.recorder-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.recorder-canvas-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  transform: scaleX(-1);
+}
+
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+.countdown-num {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--gold, #ffd700);
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  animation: pulseCountdown 1s infinite;
+}
+
+@keyframes pulseCountdown {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.record-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
+  animation: pulseDot 1s infinite alternate;
+}
+
+@keyframes pulseDot {
+  from { opacity: 0.4; }
+  to { opacity: 1; }
+}
+
+/* Конструктор поз */
+.pose-creator-box {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pose-phase-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
+.pose-phase-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary, #999);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: center;
+}
+
+.pose-phase-btn.active {
+  background: rgba(191, 161, 95, 0.2);
+  border-color: var(--gold, #bfa15f);
+  color: var(--gold, #bfa15f);
+  font-weight: 700;
+}
+
+.pose-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 0.85rem;
+}
+
+.pose-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pose-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: var(--text-secondary, #a8a29e);
+}
+
+.pose-slider-header strong {
+  color: #fff;
+}
+
+.pose-range-input {
+  width: 100%;
+  accent-color: var(--gold, #bfa15f);
+  cursor: pointer;
+}
+
+/* Библиотека пользовательских слоев */
+.custom-layers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.custom-layer-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  transition: all 0.15s ease;
+}
+
+.custom-layer-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--gold, #bfa15f);
+}
+
+.custom-layer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.custom-layer-meta strong {
+  font-size: 0.88rem;
+  color: #fff;
+}
+
+.custom-layer-sub {
+  font-size: 0.74rem;
+  color: var(--text-secondary, #999);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.custom-layer-actions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+

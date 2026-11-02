@@ -1,0 +1,115 @@
+/* =========================================================
+   KATALISTPAGE.CSS — Атлас 26 Ката Шотокан (Dojo Editorial)
+   Динамический Bento-Атлас: Hero-карточки, Мэйфуда, свитки Дэнсё
+   ========================================================= */
+
+.kata-atlas {
+  display: flex;
+  flex-direction: column;
+  gap: 2.8rem;
+  padding-bottom: 5rem;
+}
+
+/* --- 1. ШАПКА АТЛАСА КАТА --- */
+.atlas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.atlas-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 140px;
+  height: 2px;
+  background: var(--accent-red);
+}
+
+.atlas-header__brand-block {
+  max-width: 680px;
+}
+
+.atlas-header__eyebrow-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.atlas-header__eyebrow {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.atlas-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.atlas-header__tiger {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+  flex-shrink: 0;
+}
+
+.atlas-header__title {
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.atlas-header__subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  margin: 0.35rem 0 0;
+  line-height: 1.6;
+}
+
+.atlas-header__controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Переключатель режимов (Атлас / Таблица) */
+.atlas-view-toggle {
+  display: inline-flex;
+  background: #191512;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.atlas-view-toggle__btn {
+  border: none;
+  background: transparent;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.atlas-view-toggle__btn.active {
+  background: var(--text-primary);
+  color: #120e0b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}

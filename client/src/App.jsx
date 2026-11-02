@@ -34,21 +34,8 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function PageSkeleton() {
   return (
-    <div
-      style={{
-        minHeight: '50vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--gold, #d4a24c)',
-      }}
-    >
-      <div style={{ textAlign: 'center', padding: '2rem' }}>
-        <div style={{ fontSize: '2rem', marginBottom: '0.4rem' }}>⛩️</div>
-        <div style={{ fontSize: '0.85rem', letterSpacing: '0.08em', color: 'var(--text-muted, #a8a29e)' }}>
-          Склоняем поклон перед залом Додзё…
-        </div>
-      </div>
+    <div className="page-loader">
+      <div className="dojo-spinner" />
     </div>
   );
 }

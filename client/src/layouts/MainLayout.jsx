@@ -1,12 +1,26 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { listFriendRequests } from '../api/friends';
 import { listNotifications, markNotificationRead } from '../api/notifications';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
-import { Bell, MessageSquare, ChevronDown } from 'lucide-react';
+import { Bell, MessageSquare, ChevronDown, UserPlus, Home, Layers, Inbox, X } from 'lucide-react';
 import './MainLayout.css';
+
+
+function getNotifIconNode(type) {
+  switch (type) {
+    case 'message':
+      return <MessageSquare size={16} />;
+    case 'dojo_invite':
+      return <Home size={16} />;
+    case 'bunkai_new':
+      return <Layers size={16} />;
+    default:
+      return <UserPlus size={16} />;
+  }
+}
 
 export default function MainLayout() {
   const { user, role, logout } = useAuthStore();
@@ -132,7 +146,7 @@ export default function MainLayout() {
       };
       setNotifications((prev) => [notifItem, ...prev.slice(0, 29)]);
 
-      const icon = notif.type === 'dojo_invite' ? '⛩️' : notif.type === 'bunkai_new' ? '🥋' : '🤝';
+      const icon = getNotifIconNode(notif.type);
       const actionText = notif.type === 'dojo_invite' ? 'Открыть вызов в Додзё →' : notif.type === 'bunkai_new' ? 'Смотреть разбор →' : 'Перейти к событию →';
       setToast({
         id: notifItem.id,
@@ -165,7 +179,7 @@ export default function MainLayout() {
       if (location.pathname !== '/chat') {
         setToast({
           id: notifItem.id,
-          icon: '💬',
+          icon: <MessageSquare size={16} />,
           title: `Сообщение от ${notif.authorName || 'соратника'}`,
           message: notif.snippet || 'Новое сообщение в чате',
           actionText: 'Открыть беседу →',
@@ -196,7 +210,7 @@ export default function MainLayout() {
       <header className="navbar">
         <div className="navbar__top-trim" />
         <div className="container navbar__container">
-          {/* Логотип Bunkai Explorer: Тигр Сётокан + Название */}
+          {/* Логотип Bunkai Explorer: Тигр Шотокан + Название */}
           <Link to="/" className="navbar__brand" title="Bunkai Explorer — Главная Додзё">
             <div className="navbar__logo-icon-wrap">
               <ShotokanTiger size={30} color="var(--gold)" className="navbar__logo-tiger" />
@@ -286,7 +300,7 @@ export default function MainLayout() {
                               navigate('/friends?tab=incoming');
                             }}
                           >
-                            <span className="navbar__notification-item-icon">🤝</span>
+                            <span className="navbar__notification-item-icon"><UserPlus size={16} /></span>
                             <div className="navbar__notification-body">
                               <div className="navbar__notification-item-title">Заявки в соратники</div>
                               <div className="navbar__notification-item-text">
@@ -303,7 +317,7 @@ export default function MainLayout() {
                             onClick={() => handleNotificationClick(n)}
                           >
                             <span className="navbar__notification-item-icon">
-                              {n.type === 'message' ? '💬' : n.type === 'dojo_invite' ? '⛩️' : n.type === 'bunkai_new' ? '🥋' : '🤝'}
+                              {getNotifIconNode(n.type)}
                             </span>
                             <div className="navbar__notification-body">
                               <div className="navbar__notification-item-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -318,7 +332,7 @@ export default function MainLayout() {
 
                         {notifications.length === 0 && incomingRequestsCount === 0 && (
                           <div className="navbar__notifications-empty">
-                            <span style={{ fontSize: '1.4rem' }}>📭</span>
+                            <span style={{ display: 'flex', justifyContent: 'center', marginBottom: '6px' }}><Inbox size={26} color='var(--text-muted)' /></span>
                             <div>Новых уведомлений нет</div>
                           </div>
                         )}
@@ -500,8 +514,9 @@ export default function MainLayout() {
                 setToast(null);
               }}
               aria-label="Закрыть уведомление"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              ✕
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -522,7 +537,7 @@ export default function MainLayout() {
                 </div>
               </div>
               <p className="dojo-footer__desc">
-                Интерактивная среда для глубокого освоения 26 канонических ката Сётокан,
+                Интерактивная среда для глубокого освоения 26 канонических ката Шотокан,
                 пространственного анализа траекторий эмбусэн и боевой биомеханики бункай.
               </p>
               <div className="dojo-footer__motto">
@@ -551,7 +566,7 @@ export default function MainLayout() {
             {/* 3. Канон и традиция */}
             <div className="dojo-footer__col">
               <h4 className="dojo-footer__heading">
-                <span>Канон Сётокан</span>
+                <span>Канон Шотокан</span>
                 <span className="dojo-footer__heading-kanji">道</span>
               </h4>
               <ul className="dojo-footer__list">
@@ -590,7 +605,7 @@ export default function MainLayout() {
           {/* Нижняя полоса с копирайтом и традиционной печатью */}
           <div className="dojo-footer__bottom">
             <div className="dojo-footer__copy">
-              © {new Date().getFullYear()} Bunkai Explorer. Традиционная школа Сётокан каратэдо. Все права сохранены.
+              © {new Date().getFullYear()} Bunkai Explorer. Традиционная школа Шотокан каратэдо. Все права сохранены.
             </div>
             <div className="dojo-footer__seal-wrap">
               <span className="dojo-footer__seal-label">伝統の継承 · 百錬自得</span>

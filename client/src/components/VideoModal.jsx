@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import VideoEmbed from './VideoEmbed';
 import { HankoSeal } from './ui/JapaneseDecor';
+import { X } from 'lucide-react';
 
 export default function VideoModal({ isOpen, onClose, videoUrl, title, subtitle }) {
   useEffect(() => {
@@ -73,18 +74,18 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, subtitle 
           <button
             type="button"
             onClick={onClose}
+            title="Закрыть"
             style={{
               background: 'transparent',
               border: 'none',
               color: 'var(--text-muted, #a8a29e)',
-              fontSize: '1.4rem',
               cursor: 'pointer',
               padding: '0.4rem',
-              lineHeight: 1,
-            }}
-            title="Закрыть"
-          >
-            ✕
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+            <X size={18} />
           </button>
         </div>
 
@@ -106,7 +107,7 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, subtitle 
           }}
         >
           <span style={{ color: 'var(--text-muted, #a8a29e)' }}>
-            Японская Федерация Сётокан (JKS) · Шеф-инструктор Масао Кагава (9 Дан)
+            Японская Федерация Шотокан (JKS) · Шеф-инструктор Масао Кагава (9 Дан)
           </span>
 
           <div style={{ display: 'flex', gap: '0.8rem' }}>

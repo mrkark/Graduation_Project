@@ -7,13 +7,14 @@ $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $CurrentDir
 
 Write-Host "========================================================" -ForegroundColor Cyan
-Write-Host "  Karate Bunkai Explorer — Сборка и запуск 5 контейнеров" -ForegroundColor Cyan
+Write-Host "  Karate Bunkai Explorer — Сборка и запуск 6 контейнеров (с Nginx Proxy)" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 Write-Host "1. MSSQL 2025      -> Порт 1433" -ForegroundColor Yellow
 Write-Host "2. Backend API     -> Порт 5000" -ForegroundColor Yellow
 Write-Host "3. Frontend UI     -> Порт 5173" -ForegroundColor Yellow
-Write-Host "4. MoCap Gateway   -> Порт 8443 (HTTPS для подключения смартфонов по QR)" -ForegroundColor Yellow
-Write-Host "5. Python MoCap    -> Порты 8000 и 8088 (ИИ захват движения и 3D студия)" -ForegroundColor Yellow
+Write-Host "4. Nginx Proxy     -> Порты 80 и 8080 (High-Speed Cache, Gzip, SPA Gateway)" -ForegroundColor Yellow
+Write-Host "5. MoCap Gateway   -> Порт 8443 (HTTPS для подключения смартфонов по QR)" -ForegroundColor Yellow
+Write-Host "6. Python MoCap    -> Порты 8000 и 8088 (ИИ захват движения и 3D студия)" -ForegroundColor Yellow
 Write-Host "--------------------------------------------------------"
 
 # 1. Автоматическое определение активного локального IP-адреса Wi-Fi / LAN
@@ -129,7 +130,9 @@ if ($LASTEXITCODE -eq 0) {
 
     Write-Host ""
     Write-Host "[✔] Все сервисы и контейнеры успешно запущены и работают!" -ForegroundColor Green
-    Write-Host "  💻 Фронтенд Додзё (ПК):       http://localhost:5173/motion-lab" -ForegroundColor Cyan
+    Write-Host "  🚀 Nginx Web Proxy (Порт 80): http://localhost" -ForegroundColor Green
+    Write-Host "  🚀 Nginx Web Proxy (Альтерн): http://localhost:8080" -ForegroundColor Green
+    Write-Host "  💻 Фронтенд Додзё (Vite Dev): http://localhost:5173" -ForegroundColor Cyan
     Write-Host "  🥋 Python AI MoCap (Порт 8000): http://localhost:8000/studio" -ForegroundColor Green
     Write-Host "  📱 Камера смартфона (HTTPS Wi-Fi): https://${activeIp}:8088/cam1" -ForegroundColor Yellow
     Write-Host "  🌐 Подключение через 4G/LTE (чужая сеть): запустите start_mocap_tunnel.bat" -ForegroundColor Magenta

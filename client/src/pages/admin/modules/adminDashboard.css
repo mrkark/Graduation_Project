@@ -1,0 +1,176 @@
+/* 3. КАРТОЧКА ПРИВЕТСТВИЯ / ДАШБОРД */
+.admin-welcome-card {
+  background: linear-gradient(180deg, #181512 0%, #120f0d 100%);
+  border: 1px solid rgba(212, 162, 76, 0.28);
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.admin-welcome-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-welcome-card h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+  font-family: var(--font-display, inherit);
+  color: var(--text-primary, #fff);
+}
+
+.admin-welcome-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #a8a29e);
+}
+
+.admin-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.admin-status-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+/* 4. СЕТКА МЕТРИК */
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.admin-metric-card {
+  background: linear-gradient(180deg, #181512 0%, #120f0d 100%);
+  border: 1px solid rgba(212, 162, 76, 0.22);
+  border-top: 3px solid rgba(212, 162, 76, 0.4);
+  border-radius: 8px;
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold, #d4a24c);
+}
+
+.admin-metric-card--alert {
+  border-top-color: #ef4444;
+}
+
+.admin-metric-card__icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.admin-metric-card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-metric-card__val {
+  font-size: 1.9rem;
+  font-weight: 700;
+  font-family: var(--font-display, inherit);
+  color: var(--gold, #d4a24c);
+  line-height: 1.1;
+}
+
+.admin-metric-card__lbl {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  margin-top: 0.25rem;
+}
+
+.admin-metric-card__sub {
+  font-size: 0.78rem;
+  color: var(--text-muted, #78716c);
+  margin-top: 0.2rem;
+}
+
+/* 5. БЫСТРЫЕ ДЕЙСТВИЯ */
+.admin-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.admin-section-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: var(--font-display, inherit);
+  color: var(--text-primary, #fff);
+}
+
+.admin-quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.admin-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: linear-gradient(180deg, #181512 0%, #120f0d 100%);
+  border: 1px solid rgba(212, 162, 76, 0.25);
+  border-radius: 8px;
+  padding: 1.4rem;
+  text-decoration: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.admin-action-card:hover {
+  border-color: var(--gold, #d4a24c);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.6);
+}
+
+.admin-action-card__icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.admin-action-card__info h4 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #fff);
+}
+
+.admin-action-card__info p {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #a8a29e);
+  line-height: 1.45;
+}
+
+.admin-action-card__link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold, #d4a24c);
+}

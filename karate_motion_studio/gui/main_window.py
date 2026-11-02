@@ -31,7 +31,7 @@ from gui.metadata_widget import MetadataWidget
 from gui.settings_dialog import SettingsDialog
 from gui.camera_manager_dialog import CameraManagerDialog
 from core.phone_stream_server import PhoneStreamServer
-from exporter.json_exporter import export_capture_file, export_retargeted_file
+from exporter.json_exporter import export_capture_file, export_retargeted_file, export_modular_layer_files
 from exporter.blender_glb_exporter import export_glb_via_blender
 
 DARK_THEME_QSS = """
@@ -421,6 +421,9 @@ class MainWindow(QtWidgets.QMainWindow):
         act_exp_glb = menu_export.addAction("Экспорт GLB клипа через Blender...")
         act_exp_glb.triggered.connect(self.export_glb_dialog)
 
+        act_exp_modular = menu_export.addAction("Экспорт модульных слоёв (Верх / Низ In-Place)...")
+        act_exp_modular.triggered.connect(self.export_modular_layers_dialog)
+
         # Settings Menu
         menu_settings = menubar.addMenu("Настройки")
         act_prefs = menu_settings.addAction("Параметры...")
@@ -502,6 +505,7 @@ class MainWindow(QtWidgets.QMainWindow):
         menu_exp_btn = QtWidgets.QMenu(self)
         menu_exp_btn.addAction("Capture JSON (Суставы)", self.export_capture_json_dialog)
         menu_exp_btn.addAction("Retargeted Animation JSON (Three.js)", self.export_retargeted_json_dialog)
+        menu_exp_btn.addAction("Модульные слои (Верх / Низ In-Place)", self.export_modular_layers_dialog)
         menu_exp_btn.addAction("GLB анимационный клип (Blender)", self.export_glb_dialog)
         btn_export.setMenu(menu_exp_btn)
         btn_export.setPopupMode(QtWidgets.QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -889,6 +893,24 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.retargeter.retarget_project(self.project)
             export_retargeted_file(self.project, f)
             self.status.showMessage(f"Экспортирован Retargeted JSON: {Path(f).name}")
+
+    def export_modular_layers_dialog(self):
+        d = QtWidgets.QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения модульных слоев анимации")
+        if d:
+            if not self.project.retargeting:
+                self.retargeter.retarget_project(self.project)
+            base_name = self.project.metadata.technique or "karate_technique"
+            files = export_modular_layer_files(self.project, d, base_name)
+            QtWidgets.QMessageBox.information(
+                self,
+                "Модульный экспорт завершен",
+                f"Успешно сохранены 3 слоя анимации:\n\n"
+                f"1. {Path(files['lower']).name} — Стойка/Шаг (только ноги и таз, In-Place)\n"
+                f"2. {Path(files['upper']).name} — Техника (руки, торс, позвоночник)\n"
+                f"3. {Path(files['full']).name} — Полная форма\n\n"
+                f"Файлы готовы для модульного движка Three.js."
+            )
+            self.status.showMessage(f"Модульные слои экспортированы в {Path(d).name}")
 
     def export_glb_dialog(self):
         if not self.blender_exe or not Path(self.blender_exe).is_file():
