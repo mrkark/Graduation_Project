@@ -725,7 +725,7 @@ export default function KataListPage() {
                       onClick={() => toggleFavorite('kata', activeKata.Kata_ID)}
                       title={isKataFavorite(activeKata.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                     >
-                      {isKataFavorite(activeKata.Kata_ID) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
+                      {isKataFavorite(activeKata.Kata_ID) ? <><Heart size={15} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={15} color='#f3f4f6' strokeWidth={2} style={{ marginRight: '6px' }} /> В избранное</>}
                     </button>
                     {activeKata.Video_URL && (
                       <button
@@ -834,7 +834,7 @@ export default function KataListPage() {
                           title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                           aria-label="Избранное"
                         >
-                          {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
+                          {isKataFavorite(item.Kata_ID) ? <Heart size={16} fill='#ef4444' color='#ef4444' /> : <Heart size={16} color='#f3f4f6' strokeWidth={2} />}
                         </button>
 
                         <div className="atlas-card__media">
@@ -964,7 +964,7 @@ export default function KataListPage() {
                             title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                             aria-label="Избранное"
                           >
-                            {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
+                            {isKataFavorite(item.Kata_ID) ? <Heart size={16} fill='#ef4444' color='#ef4444' /> : <Heart size={16} color='#f3f4f6' strokeWidth={2} />}
                           </button>
 
                           {/* Фоновое изображение формы (16:9 widescreen, полностью видно без обрезки) */}
@@ -1100,7 +1100,7 @@ export default function KataListPage() {
                       onClick={() => toggleFavorite('kata', item.Kata_ID)}
                       title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'В избранное'}
                     >
-                      {isKataFavorite(item.Kata_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
+                      {isKataFavorite(item.Kata_ID) ? <Heart size={16} fill='#ef4444' color='#ef4444' /> : <Heart size={16} color='#f3f4f6' strokeWidth={2} />}
                     </button>
                     {item.Video_URL && (
                       <button

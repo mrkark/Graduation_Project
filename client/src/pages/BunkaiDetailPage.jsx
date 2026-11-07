@@ -107,7 +107,7 @@ export default function BunkaiDetailPage() {
               onClick={() => toggleFavorite('bunkai', id)}
               style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
             >
-              {isBunkaiFavorite(id) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
+              {isBunkaiFavorite(id) ? <><Heart size={15} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={15} color='#f3f4f6' strokeWidth={2} style={{ marginRight: '6px' }} /> В избранное</>}
             </button>
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>

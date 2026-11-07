@@ -270,7 +270,7 @@ export default function BunkaiListPage() {
               onClick={() => setOnlyFavorites(!onlyFavorites)}
               title={onlyFavorites ? 'Показать все сценарии' : 'Показать только избранные'}
             >
-              <span className="bunkai-fav-toggle-icon">{onlyFavorites ? <Heart size={14} fill='#ef4444' color='#ef4444' /> : <Heart size={14} />}</span>
+              <span className="bunkai-fav-toggle-icon">{onlyFavorites ? <Heart size={14} fill='#ef4444' color='#ef4444' /> : <Heart size={14} color='#fca5a5' strokeWidth={2} />}</span>
               <span>{onlyFavorites ? 'Только избранные' : 'Избранное'}</span>
               <span className="bunkai-fav-toggle-badge">{bunkaiFavorites.length}</span>
             </button>
@@ -416,7 +416,7 @@ export default function BunkaiListPage() {
                         title={isBunkaiFavorite(b.Bunkai_ID) ? 'Удалить из избранного' : 'Добавить в избранное'}
                         aria-label="Избранное"
                       >
-                        {isBunkaiFavorite(b.Bunkai_ID) ? <Heart size={15} fill='#ef4444' color='#ef4444' /> : <Heart size={15} />}
+                        {isBunkaiFavorite(b.Bunkai_ID) ? <Heart size={16} fill='#ef4444' color='#ef4444' /> : <Heart size={16} color='#f3f4f6' strokeWidth={2} />}
                       </button>
                     </div>
                   </div>

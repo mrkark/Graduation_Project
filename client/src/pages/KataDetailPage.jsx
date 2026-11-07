@@ -192,7 +192,7 @@ export default function KataDetailPage() {
               onClick={() => toggleFavorite('kata', id)}
               style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}
             >
-              {isKataFavorite(id) ? <><Heart size={14} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={14} style={{ marginRight: '6px' }} /> В избранное</>}
+              {isKataFavorite(id) ? <><Heart size={15} fill='#ef4444' color='#ef4444' style={{ marginRight: '6px' }} /> В избранном</> : <><Heart size={15} color='#f3f4f6' strokeWidth={2} style={{ marginRight: '6px' }} /> В избранное</>}
             </button>
             <HankoSeal
               text={kata.Title?.match(/[\u4e00-\u9faf]{1,2}/)?.[0] || '型'}
