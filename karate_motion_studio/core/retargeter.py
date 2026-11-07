@@ -154,8 +154,9 @@ class Retargeter:
         """
         Retargets a single FrameData to local bone quaternions [x, y, z, w].
         """
-        joints = frame_data.joints
-        if not joints:
+        joints = frame_data.joints or {}
+        has_fingers = hasattr(frame_data, "fingers") and bool(frame_data.fingers)
+        if not joints and not has_fingers:
             return {}
 
         # Compute synthetic helper points
@@ -245,7 +246,7 @@ class Retargeter:
                 s_key = "L" if side == "left" else "R"
                 f_data = frame_data.fingers.get(side, {})
                 for ftype in ["Thumb", "Index", "Middle", "Ring", "Pinky"]:
-                    curl = f_data.get(ftype.lower(), 0.15) if f_data.get("detected") else 0.15
+                    curl = f_data.get(ftype.lower(), f_data.get("general_curl", 0.15)) if f_data.get("detected") else f_data.get("general_curl", 0.15)
                     for idx in range(1, 4):
                         bname = f"{ftype}{idx}.{s_key}"
                         if ftype == "Thumb":

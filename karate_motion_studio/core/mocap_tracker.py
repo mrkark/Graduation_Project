@@ -764,27 +764,84 @@ class MocapTracker:
             frame_data.fingers[side]["hand_direction"] = [round(float(v), 3) for v in v_fwd]
             frame_data.fingers[side]["detected"] = True
 
-        # Fallback for hands not detected by MediaPipe (e.g. occluded behind back or outside frame)
+        # Multi-Tier Hand Tracking: Fallback to BlazePose Hand Kinematics when 21-landmark model is not resolved
         for side in ["left", "right"]:
             if side not in detected_sides:
-                frame_data.fingers[side]["detected"] = False
                 wrist_name = f"{side}_wrist"
                 elbow_name = f"{side}_elbow"
-                if wrist_name in frame_data.joints and elbow_name in frame_data.joints:
+                idx_name = f"{side}_index"
+                pnk_name = f"{side}_pinky"
+                thb_name = f"{side}_thumb"
+
+                has_wrist = wrist_name in frame_data.joints and elbow_name in frame_data.joints
+                has_fingertips = has_wrist and (idx_name in frame_data.joints or pnk_name in frame_data.joints)
+
+                if has_fingertips:
                     w_p = np.array(frame_data.joints[wrist_name])
                     el_p = np.array(frame_data.joints[elbow_name])
                     v_arm = w_p - el_p
                     len_arm = float(np.linalg.norm(v_arm))
-                    v_fwd = (v_arm / len_arm) if len_arm > 1e-4 else np.array([0.0, 1.0, 0.0])
-                    v_norm = np.array([0.0, 0.0, 1.0])
+                    len_arm = max(0.12, len_arm)
+
+                    # Get index, pinky, thumb (with natural projection fallback if missing)
+                    i_p = np.array(frame_data.joints[idx_name]) if idx_name in frame_data.joints else (w_p + (v_arm / len_arm) * 0.10)
+                    p_p = np.array(frame_data.joints[pnk_name]) if pnk_name in frame_data.joints else (w_p + (v_arm / len_arm) * 0.09)
+                    t_p = np.array(frame_data.joints[thb_name]) if thb_name in frame_data.joints else (w_p + (v_arm / len_arm) * 0.07)
+
+                    # Hand extension ratios relative to forearm length
+                    r_idx = float(np.linalg.norm(i_p - w_p)) / len_arm
+                    r_pnk = float(np.linalg.norm(p_p - w_p)) / len_arm
+                    r_thb = float(np.linalg.norm(t_p - i_p)) / len_arm
+
+                    # Calculate continuous finger curls: 0.0 = fully open hand (Shuto/Nukite), 1.0 = tight clenched fist (Seiken)
+                    curl_idx = float(np.clip((0.48 - r_idx) / (0.48 - 0.22), 0.0, 1.0))
+                    curl_pnk = float(np.clip((0.42 - r_pnk) / (0.42 - 0.18), 0.0, 1.0))
+                    curl_thb = float(np.clip((0.28 - r_thb) / (0.28 - 0.10), 0.0, 1.0))
+                    curl_mid = 0.55 * curl_idx + 0.45 * curl_pnk
+                    curl_rng = 0.45 * curl_idx + 0.55 * curl_pnk
+
+                    # Adaptive temporal smoothing
+                    curls = {
+                        "thumb": curl_thb,
+                        "index": curl_idx,
+                        "middle": curl_mid,
+                        "ring": curl_rng,
+                        "pinky": curl_pnk,
+                    }
+                    for ftype, c_val in curls.items():
+                        prev = self.finger_smooth[side][ftype]
+                        diff = abs(c_val - prev)
+                        alpha = 0.75 if diff > 0.08 else 0.45
+                        smooth = prev * (1.0 - alpha) + c_val * alpha
+                        self.finger_smooth[side][ftype] = smooth
+                        frame_data.fingers[side][ftype] = round(smooth, 2)
+
+                    # Compute 3D palm orientation from Pose landmarks
+                    v_fwd = (i_p + p_p) * 0.5 - w_p
+                    len_fwd = float(np.linalg.norm(v_fwd))
+                    v_fwd = (v_fwd / len_fwd) if len_fwd > 1e-4 else (v_arm / len_arm)
+
+                    v_across = (p_p - i_p) if side == "left" else (i_p - p_p)
+                    len_across = float(np.linalg.norm(v_across))
+                    v_across = (v_across / len_across) if len_across > 1e-4 else np.array([1.0, 0.0, 0.0])
+
+                    v_norm = np.cross(v_across, v_fwd)
+                    len_norm = float(np.linalg.norm(v_norm))
+                    v_norm = (v_norm / len_norm) if len_norm > 1e-4 else np.array([0.0, 0.0, 1.0])
+
                     frame_data.fingers[side]["palm_normal"] = [round(float(v), 3) for v in v_norm]
                     frame_data.fingers[side]["hand_direction"] = [round(float(v), 3) for v in v_fwd]
-
-                # Gracefully decay fingers toward natural Kamae rest posture (0.15)
-                for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
-                    smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
-                    self.finger_smooth[side][ftype] = smooth
-                    frame_data.fingers[side][ftype] = round(smooth, 2)
+                    frame_data.fingers[side]["general_curl"] = round((curl_idx + curl_pnk + curl_thb) / 3.0, 2)
+                    frame_data.fingers[side]["detected"] = True
+                    frame_data.fingers[side]["method"] = "pose_kinematics"
+                else:
+                    # Arm not in frame: gracefully decay toward relaxed Kamae rest posture (0.15)
+                    frame_data.fingers[side]["detected"] = False
+                    for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
+                        smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
+                        self.finger_smooth[side][ftype] = smooth
+                        frame_data.fingers[side][ftype] = round(smooth, 2)
+                    frame_data.fingers[side]["general_curl"] = 0.15
 
         # 4. Populate 2D Hand Landmark Coordinates
         for hand_lms, side in matched_hands:
@@ -871,6 +928,19 @@ class MocapTracker:
         if "right_knee" in coords:
             cv2.putText(frame, f"{metrics['knee_r']:.0f} deg", (coords["right_knee"][0] + 10, coords["right_knee"][1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 180), 1, cv2.LINE_AA)
+
+        # Draw real-time hand curl callouts near wrists
+        if frame_data and frame_data.fingers:
+            for side in ["left", "right"]:
+                wr_key = f"{side}_wrist"
+                f_info = frame_data.fingers.get(side, {})
+                if wr_key in coords and f_info.get("detected"):
+                    curl = f_info.get("general_curl", f_info.get("index", 0.15))
+                    status_str = "КУЛАК" if curl > 0.45 else "ЛАДОНЬ"
+                    col = (0, 140, 255) if curl > 0.45 else (0, 255, 120)
+                    pt = coords[wr_key]
+                    cv2.putText(frame, f"{status_str} {int(curl*100)}%", (pt[0] - 25, pt[1] - 12),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.45, col, 1, cv2.LINE_AA)
 
     def _draw_hand_overlay(
         self,
