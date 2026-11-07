@@ -41,6 +41,8 @@ import {
   Clock,
   ExternalLink,
   Download,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import './modularMotionMixer.css';
 
@@ -558,6 +560,45 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
     setTimeout(() => setAdminStatusMessage(''), 3500);
   };
 
+  // Camera & Viewport Zoom controls (запрет неконтролируемого авто-зума колесиком)
+  const [enableWheelZoom, setEnableWheelZoom] = useState(false);
+  const controlsRef = useRef(null);
+
+  const handleResetCamera = () => {
+    if (controlsRef.current) {
+      const controls = controlsRef.current;
+      controls.target.set(0, 0.90, 0);
+      controls.object.position.set(0, 1.4, 3.4);
+      controls.update();
+    }
+  };
+
+  const handleZoomIn = () => {
+    if (controlsRef.current) {
+      const controls = controlsRef.current;
+      const cam = controls.object;
+      const offset = new THREE.Vector3().subVectors(cam.position, controls.target);
+      const curDist = offset.length();
+      const newDist = Math.max(1.3, curDist - 0.4);
+      offset.setLength(newDist);
+      cam.position.copy(controls.target).add(offset);
+      controls.update();
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (controlsRef.current) {
+      const controls = controlsRef.current;
+      const cam = controls.object;
+      const offset = new THREE.Vector3().subVectors(cam.position, controls.target);
+      const curDist = offset.length();
+      const newDist = Math.min(6.5, curDist + 0.4);
+      offset.setLength(newDist);
+      cam.position.copy(controls.target).add(offset);
+      controls.update();
+    }
+  };
+
   const handleAdminReset = () => {
     resetAdminAnimationOverride(adminSelectedAnim);
     setAdminTrimStart(0.0);
@@ -573,7 +614,44 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
   return (
     <div className="modular-mixer-container">
       {/* 3D Видовой экран Додзё */}
-      <div className="modular-viewport">
+      <div className="modular-mixer-viewport">
+        {/* Панель управления камерой 3D */}
+        <div className="mixer-camera-toolbar">
+          <button
+            type="button"
+            className="mixer-camera-btn"
+            onClick={handleZoomIn}
+            title="Приблизить камеру"
+          >
+            <ZoomIn size={13} />
+          </button>
+          <button
+            type="button"
+            className="mixer-camera-btn"
+            onClick={handleZoomOut}
+            title="Отдалить камеру"
+          >
+            <ZoomOut size={13} />
+          </button>
+          <button
+            type="button"
+            className="mixer-camera-btn"
+            onClick={handleResetCamera}
+            title="Сбросить ракурс камеры"
+          >
+            <RotateCcw size={12} />
+            <span>Сброс</span>
+          </button>
+          <button
+            type="button"
+            className={`mixer-camera-btn ${enableWheelZoom ? 'active' : ''}`}
+            onClick={() => setEnableWheelZoom((v) => !v)}
+            title={enableWheelZoom ? 'Колесико мыши зумирует 3D сцену (кликните, чтобы колесико скроллило страницу)' : 'Колесико мыши скроллит страницу (кликните, чтобы зумировать 3D)'}
+          >
+            <span style={{ fontSize: '10px' }}>{enableWheelZoom ? '🖱️ Зум колесом: ВКЛ' : '🖱️ Зум колесом: ВЫКЛ'}</span>
+          </button>
+        </div>
+
         <Canvas
           shadows
           camera={{ position: [0, 1.4, 3.4], fov: 42 }}
@@ -592,25 +670,29 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
 
           <group position={[0, 0, 0]}>
             <KaratekaLowpolyModel
-              stanceClipName={motionMode === 'modular' ? stanceObj.id : null}
-              techniqueClipName={motionMode === 'modular' ? techObj.id : null}
-              fullBodyDynamicClipName={motionMode === 'fullbody' ? fullBodyObj.id : null}
-              turnAngleDeg={selectedTurn}
-              playbackSpeed={speed}
-              isLooping={isLooping}
+              role="tori"
+              modularLowerClip={motionMode === 'modular' ? selectedStance : null}
+              modularUpperClip={motionMode === 'modular' ? selectedTechnique : null}
+              activeClip={motionMode === 'fullbody' ? (adminActivePreviewClip || selectedFullBody) : null}
+              modularTurn={selectedTurn}
+              modularLoop={isLooping}
+              speed={speed}
               replayTrigger={replayTrigger}
-              activeCustomClip={adminActivePreviewClip}
+              lockInPlace={true}
+              position={[0, 0, 0]}
             />
           </group>
 
           <ContactShadows position={[0, 0, 0]} opacity={0.65} scale={8} blur={1.8} far={4} />
           <OrbitControls
+            ref={controlsRef}
             enableDamping
             dampingFactor={0.06}
-            minDistance={1.2}
-            maxDistance={7.0}
-            maxPolarAngle={Math.PI / 2 + 0.05}
-            target={[0, 0.95, 0]}
+            minDistance={1.3}
+            maxDistance={6.5}
+            maxPolarAngle={Math.PI / 2 - 0.01}
+            target={[0, 0.90, 0]}
+            enableZoom={enableWheelZoom}
           />
         </Canvas>
 

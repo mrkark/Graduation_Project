@@ -139,6 +139,24 @@ export function stabilizeRootPositionTrack(track) {
 }
 
 /**
+ * Преобразует любой AnimationClip в строго стационарный (In-Place):
+ * Обнуляет горизонтальный дрейф таза и корня (X, Z = 0),
+ * гарантируя, что аватар выполняет технику на месте и не шагает в объектив камеры.
+ */
+export function makeClipInPlace(clip, newName = null) {
+  if (!clip) return clip;
+  const name = newName || `${clip.name}_inplace`;
+  const tracks = clip.tracks.map((track) => {
+    const lower = track.name.toLowerCase();
+    if (lower.includes('position') && (lower.includes('hips') || lower.includes('root') || lower.includes('pelvis'))) {
+      return stabilizeRootPositionTrack(track);
+    }
+    return track.clone();
+  });
+  return new THREE.AnimationClip(name, clip.duration, tracks);
+}
+
+/**
  * Извлекает слой стойки / шага (ноги и таз) из полного клипа
  */
 export function extractLowerBodyClip(clip, newName = null, zeroHorizontalRoot = true) {

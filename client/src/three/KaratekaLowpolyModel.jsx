@@ -8,6 +8,7 @@ import {
   synthesizeModularClip,
   extractLowerBodyClip,
   extractUpperBodyClip,
+  makeClipInPlace,
 } from './modularAnimationEngine.js';
 import { generateUnsuJump360Clip } from './customMotionManager.js';
 
@@ -350,6 +351,7 @@ export default function KaratekaLowpolyModel({
   isPlaying = true,
   isLooping = false,
   replayTrigger = 0,
+  lockInPlace = false,
   currentStep = null,
   prevStep = null,
   onStepEnd = null,
@@ -609,13 +611,17 @@ export default function KaratekaLowpolyModel({
     if (kataMode || !clipsLoaded || !mixer || !activeClip) return;
     if (modularLowerClip || modularUpperClip) return;
 
-    let rawClip = resolveClip(activeClip) || globalClipCache.get(activeClip);
+    let rawClip = typeof activeClip === 'object' && activeClip?.tracks
+      ? activeClip
+      : (resolveClip(activeClip) || globalClipCache.get(activeClip));
+
     if (!rawClip) {
-      if (activeClip.startsWith('kata_') || activeClip === 'unsu') {
+      if (typeof activeClip === 'string' && (activeClip.startsWith('kata_') || activeClip === 'unsu')) {
         const slug = activeClip.replace(/^kata_/, '');
         ensureKataClipLoaded(slug).then((loaded) => {
           if (loaded && mixer && !modularLowerClip && !modularUpperClip) {
-            const c = getFilteredClip(loaded);
+            const finalLoaded = lockInPlace ? makeClipInPlace(loaded) : loaded;
+            const c = getFilteredClip(finalLoaded);
             if (!c || c.tracks.length === 0) return;
             mixer.stopAllAction();
             try { mixer.uncacheClip(c); } catch (_) {}
@@ -630,6 +636,10 @@ export default function KaratekaLowpolyModel({
         });
       }
       return;
+    }
+
+    if (lockInPlace) {
+      rawClip = makeClipInPlace(rawClip);
     }
     const clip = getFilteredClip(rawClip);
     if (!clip || clip.tracks.length === 0) return;
@@ -684,7 +694,7 @@ export default function KaratekaLowpolyModel({
         mixer.removeEventListener('finished', onFinished);
       };
     }
-  }, [kataMode, activeClip, clipsLoaded, mixer, stance, speed, getFilteredClip, modularLowerClip, modularUpperClip, modularLoop, modularTurn, replayTrigger]);
+  }, [kataMode, activeClip, clipsLoaded, mixer, stance, speed, getFilteredClip, modularLowerClip, modularUpperClip, modularLoop, modularTurn, replayTrigger, lockInPlace]);
 
   // Режим Ката (Kata Mode): Клиповая композиция шагов либо MoCap мастер-прогон
   useEffect(() => {

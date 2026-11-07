@@ -20,7 +20,8 @@
   }
 }
 
-.modular-mixer-viewport {
+.modular-mixer-viewport,
+.modular-viewport {
   flex: 1.2;
   min-height: 480px;
   background: #0d0c0a;
@@ -28,6 +29,52 @@
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Панель управления камерой 3D Viewport */
+.mixer-camera-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(191, 161, 95, 0.4);
+  border-radius: 8px;
+  padding: 4px 8px;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.mixer-camera-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e2e8f0;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.mixer-camera-btn:hover {
+  background: rgba(191, 161, 95, 0.25);
+  border-color: #bfa15f;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.mixer-camera-btn.active {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  color: #34d399;
 }
 
 .modular-viewport-badge {
