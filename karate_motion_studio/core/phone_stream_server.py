@@ -1370,6 +1370,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     let lastSendTime = 0;
     let frameSendTime = 0;
     let lastFrameTime = performance.now();
+    let isNextFrameScheduled = false;
 
     function connectWebSocket() {
       if (reconnectTimeout) {
@@ -1399,6 +1400,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         isStreaming = true;
         isEncoding = false;
         inFlightCount = 0;
+        isNextFrameScheduled = false;
         lastSendTime = 0;
         lastFrameTime = performance.now();
         requestWakeLock();
@@ -1411,6 +1413,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         isStreaming = false;
         isEncoding = false;
         inFlightCount = 0;
+        isNextFrameScheduled = false;
 
         if (userStoppedStreaming) {
           statusText.textContent = 'Готов';
@@ -1465,16 +1468,17 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     function scheduleNextFrame() {
       if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-      // Drop frame if encoder is busy or TCP buffer is backlogged (> 48 KB) or more than 1 in flight
-      if (isEncoding || ws.bufferedAmount > 49152 || inFlightCount >= 2) {
-        requestNextFrame();
+      // Strict zero-lag backpressure:
+      // If a frame is in flight, or encoder is busy, or TCP output buffer has unsent bytes
+      if (inFlightCount > 0 || isEncoding || ws.bufferedAmount > 0) {
         return;
       }
 
       const now = performance.now();
-      // Cap maximum framerate at ~33 FPS (min 28ms interval) to prevent overloading phone hardware
-      if (now - lastSendTime < 28) {
-        requestNextFrame();
+      // Cap framerate at ~30 FPS (min 30ms interval) to prevent device thermal throttling
+      const elapsed = now - lastSendTime;
+      if (elapsed < 30) {
+        setTimeout(() => requestNextFrame(), Math.max(1, 30 - elapsed));
         return;
       }
 
@@ -1485,17 +1489,17 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
           const resChoice = resSelect.value;
           const isSideCam = (roleSelect.value === 'cam2' || roleSelect.value === 'cam3');
-          let quality = isSideCam ? 0.38 : 0.44;
-          if (resChoice === '1080p') quality = 0.65;
-          else if (resChoice === '720p') quality = 0.52;
-          else if (resChoice === '540p') quality = isSideCam ? 0.40 : 0.46;
+          let quality = isSideCam ? 0.35 : 0.42;
+          if (resChoice === '1080p') quality = 0.60;
+          else if (resChoice === '720p') quality = 0.50;
+          else if (resChoice === '540p') quality = isSideCam ? 0.38 : 0.44;
 
           canvas.toBlob((blob) => {
             isEncoding = false;
             try {
               if (blob && isStreaming && ws && ws.readyState === WebSocket.OPEN) {
-                if (ws.bufferedAmount <= 49152) {
-                  inFlightCount++;
+                if (ws.bufferedAmount === 0 && inFlightCount === 0) {
+                  inFlightCount = 1;
                   lastSendTime = performance.now();
                   frameSendTime = lastSendTime;
                   ws.send(blob);
@@ -1513,10 +1517,11 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
                 }
               }
             } catch (err) {
-              inFlightCount = Math.max(0, inFlightCount - 1);
+              inFlightCount = 0;
               console.warn('Frame send error:', err);
+              requestNextFrame();
             }
-            requestNextFrame();
+            // Strict 1-in-flight: we wait for the server's ACK in ws.onmessage!
           }, 'image/jpeg', quality);
         } catch (e) {
           isEncoding = false;
@@ -1528,30 +1533,36 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     }
 
     function requestNextFrame() {
-      if (!isStreaming) return;
+      if (!isStreaming || isNextFrameScheduled) return;
+      isNextFrameScheduled = true;
       if ('requestVideoFrameCallback' in video) {
-        video.requestVideoFrameCallback(() => scheduleNextFrame());
+        video.requestVideoFrameCallback(() => {
+          isNextFrameScheduled = false;
+          scheduleNextFrame();
+        });
       } else {
-        requestAnimationFrame(() => scheduleNextFrame());
+        requestAnimationFrame(() => {
+          isNextFrameScheduled = false;
+          scheduleNextFrame();
+        });
       }
     }
 
-    // Hardware Watchdog: if stream stalls for > 150ms, kickstart next frame
+    // Reliable network watchdog: handles dropped ACKs or paused camera feeds without callback runaway
     setInterval(() => {
-      if (isStreaming && ws && ws.readyState === WebSocket.OPEN && performance.now() - lastFrameTime > 150) {
-        isEncoding = false;
-        inFlightCount = 0;
-        scheduleNextFrame();
+      if (isStreaming && ws && ws.readyState === WebSocket.OPEN) {
+        const now = performance.now();
+        // If a frame was sent but no ACK received for > 120ms (e.g. Wi-Fi packet drop)
+        if (inFlightCount > 0 && (now - frameSendTime > 120)) {
+          inFlightCount = 0;
+          isEncoding = false;
+          requestNextFrame();
+        } else if (inFlightCount === 0 && !isEncoding && !isNextFrameScheduled && (now - lastFrameTime > 150)) {
+          // Stream is idle or camera stalled
+          requestNextFrame();
+        }
       }
-    }, 60);
-
-    // Fast ACK watchdog: if server ACK lost on Wi-Fi (> 60ms), release inFlightCount
-    setInterval(() => {
-      if (isStreaming && inFlightCount > 0 && (performance.now() - frameSendTime > 60)) {
-        inFlightCount = 0;
-        scheduleNextFrame();
-      }
-    }, 25);
+    }, 50);
 
     streamBtn.addEventListener('click', async () => {
       if (!isStreaming) {

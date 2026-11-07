@@ -280,8 +280,8 @@ def fuse_multicam_landmarks(
         f2 = fdata2
         rotated_joints = {}
         for k, v in f2.joints.items():
-            rotated_joints[k] = [round(-v[2], 4), round(v[1], 4), round(v[0], 4)]
-        root_rot = [-f2.rootPosition[2], f2.rootPosition[1], f2.rootPosition[0]] if f2.rootPosition else [0, 0.9, 0]
+            rotated_joints[k] = [round(v[2], 4), round(v[1], 4), round(-v[0], 4)]
+        root_rot = [f2.rootPosition[2], f2.rootPosition[1], -f2.rootPosition[0]] if f2.rootPosition else [0, 0.9, 0]
         return FrameData(
             frame=f2.frame, time=f2.time, rootPosition=root_rot, rootRotation=f2.rootRotation,
             joints=rotated_joints, confidence=f2.confidence, tracking_loss=False,
@@ -293,12 +293,56 @@ def fuse_multicam_landmarks(
         f3 = fdata3
         rotated_joints = {}
         for k, v in f3.joints.items():
-            rotated_joints[k] = [round(v[2], 4), round(v[1], 4), round(-v[0], 4)]
-        root_rot = [f3.rootPosition[2], f3.rootPosition[1], -f3.rootPosition[0]] if f3.rootPosition else [0, 0.9, 0]
+            rotated_joints[k] = [round(-v[2], 4), round(v[1], 4), round(v[0], 4)]
+        root_rot = [-f3.rootPosition[2], f3.rootPosition[1], f3.rootPosition[0]] if f3.rootPosition else [0, 0.9, 0]
         return FrameData(
             frame=f3.frame, time=f3.time, rootPosition=root_rot, rootRotation=f3.rootRotation,
             joints=rotated_joints, confidence=f3.confidence, tracking_loss=False,
             head=f3.head, fingers=f3.fingers
+        )
+
+    if not c1_ok and c2_ok and c3_ok:
+        # Cam 2 + Cam 3 (both profiles without front camera): rotate both to world-front and fuse
+        f2 = fdata2
+        f3 = fdata3
+        fused_joints = {}
+        fused_conf = {}
+        all_keys = set(f2.joints.keys()) | set(f3.joints.keys())
+        for k in all_keys:
+            has_2 = k in f2.joints
+            has_3 = k in f3.joints
+            if has_2 and has_3:
+                c2 = f2.confidence.get(k, 0.5)
+                c3 = f3.confidence.get(k, 0.5)
+                w2 = c2 / (c2 + c3 + 1e-6)
+                w3 = c3 / (c2 + c3 + 1e-6)
+                p2 = [f2.joints[k][2], f2.joints[k][1], -f2.joints[k][0]]
+                p3 = [-f3.joints[k][2], f3.joints[k][1], f3.joints[k][0]]
+                fused_joints[k] = [
+                    round(w2 * p2[0] + w3 * p3[0], 4),
+                    round(w2 * p2[1] + w3 * p3[1], 4),
+                    round(w2 * p2[2] + w3 * p3[2], 4),
+                ]
+                fused_conf[k] = round(max(c2, c3), 3)
+            elif has_2:
+                p2 = [f2.joints[k][2], f2.joints[k][1], -f2.joints[k][0]]
+                fused_joints[k] = [round(p2[0], 4), round(p2[1], 4), round(p2[2], 4)]
+                fused_conf[k] = f2.confidence.get(k, 0.5)
+            else:
+                p3 = [-f3.joints[k][2], f3.joints[k][1], f3.joints[k][0]]
+                fused_joints[k] = [round(p3[0], 4), round(p3[1], 4), round(p3[2], 4)]
+                fused_conf[k] = f3.confidence.get(k, 0.5)
+
+        root_rot = [
+            round(0.5 * (f2.rootPosition[2] - f3.rootPosition[2]), 4),
+            round(0.5 * (f2.rootPosition[1] + f3.rootPosition[1]), 4),
+            round(0.5 * (-f2.rootPosition[0] + f3.rootPosition[0]), 4),
+        ] if (f2.rootPosition and f3.rootPosition) else [0, 0.9, 0]
+
+        return FrameData(
+            frame=f2.frame, time=f2.time, rootPosition=root_rot, rootRotation=f2.rootRotation,
+            joints=fused_joints, confidence=fused_conf, tracking_loss=False,
+            head=f2.head, fingers=f2.fingers
         )
 
     # Base anchor selection: prefer Cam 1 (Frontal), else Cam 2, else Cam 3
@@ -325,12 +369,20 @@ def fuse_multicam_landmarks(
             "left_knee", "right_knee", "left_ankle", "right_ankle",
             "left_heel", "right_heel", "left_foot_index", "right_foot_index",
         ]
+        # In a 2-phone setup (Cam 1 + Cam 2), if Cam 2 clearly sees right arm forward (c2 >= 0.60),
+        # allow Cam 2 profile depth to reinforce right arm forward reach as well!
+        if not c3_ok:
+            for r_arm_j in ["right_elbow", "right_wrist", "right_index"]:
+                if r_arm_j in s_joints and s_conf.get(r_arm_j, 0.0) >= 0.60:
+                    left_side_joints.append(r_arm_j)
 
         for j in left_side_joints:
             if j in s_joints and j in fused_joints:
                 c2 = s_conf.get(j, 0.0)
                 if c2 > 0.30:
-                    dz_side = s_joints[j][0] - hip_side_x
+                    # In Cam 2 profile view, forward towards Cam 1 is -X, backward is +X.
+                    # Depth +Z is forward in world space:
+                    dz_side = -(s_joints[j][0] - hip_side_x)
                     target_z = hip_base_z + dz_side
 
                     # Arm behind head detection: when arm is elevated and behind spine/neck
@@ -355,14 +407,23 @@ def fuse_multicam_landmarks(
         right_side_joints = [
             "right_shoulder", "right_elbow", "right_wrist",
             "right_pinky", "right_index", "right_thumb",
-            "right_knee", "right_ankle", "right_heel", "right_foot_index",
+            "right_knee", "left_knee", "right_ankle", "left_ankle",
+            "right_heel", "left_heel", "right_foot_index", "left_foot_index",
         ]
+        # In a 2-phone setup (Cam 1 + Cam 3), if Cam 3 clearly sees left arm forward (c3 >= 0.60),
+        # allow Cam 3 profile depth to reinforce left arm forward reach as well!
+        if not c2_ok:
+            for l_arm_j in ["left_elbow", "left_wrist", "left_index"]:
+                if l_arm_j in r_joints and r_conf.get(l_arm_j, 0.0) >= 0.60:
+                    right_side_joints.append(l_arm_j)
 
         for j in right_side_joints:
             if j in r_joints and j in fused_joints:
                 c3 = r_conf.get(j, 0.0)
                 if c3 > 0.30:
-                    dz_right = -(r_joints[j][0] - hip_right_x)
+                    # In Cam 3 profile view, forward towards Cam 1 is +X, backward is -X.
+                    # Depth +Z is forward in world space:
+                    dz_right = (r_joints[j][0] - hip_right_x)
                     target_z = hip_base_z + dz_right
 
                     is_elevated_arm = j in ["right_elbow", "right_wrist", "right_index"] and r_joints[j][1] > (sh_mid_y - 0.18)
