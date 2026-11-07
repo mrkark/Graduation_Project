@@ -64,8 +64,8 @@
 
 /* Базовый стиль карточки ката */
 .atlas-card {
-  flex: 1 1 270px;
-  min-width: 250px;
+  flex: 1 1 280px;
+  min-width: 270px;
   max-width: 100%;
   background: #171310;
   border: 1px solid var(--border);
@@ -247,7 +247,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 8px 10px;
+  flex-wrap: wrap;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-subtle);
 }
@@ -256,8 +257,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .atlas-card__steps-pill {
@@ -325,4 +326,9 @@
   color: var(--text-secondary);
   margin: 0;
   max-width: 440px;
+}
+
+
+.atlas-card--standard .atlas-card__body {
+  padding: 1rem 1.15rem;
 }

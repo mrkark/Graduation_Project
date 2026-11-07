@@ -109,8 +109,10 @@
   border: 1px solid var(--gold, #d4a24c);
   color: var(--gold, #d4a24c);
   border-radius: 4px;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.78rem;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  max-width: 100%;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -124,4 +126,16 @@
   color: #120f0d;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(212, 162, 76, 0.35);
+}
+
+
+.atlas-card--standard .atlas-card__video-badge-btn {
+  margin-left: auto;
+}
+
+@media (max-width: 330px) {
+  .atlas-card--standard .atlas-card__video-badge-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }

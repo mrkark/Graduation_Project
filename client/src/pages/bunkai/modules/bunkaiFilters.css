@@ -364,3 +364,57 @@
     width: 100%;
   }
 }
+
+/* Селектор формы Ката и сброс фильтров */
+.bunkai-kata-filter-wrap {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.bunkai-kata-select {
+  padding: 0.55rem 2.2rem 0.55rem 0.95rem;
+  background-color: #14110f;
+  border: 1px solid rgba(212, 162, 76, 0.35);
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  max-width: 240px;
+}
+
+.bunkai-kata-select:hover {
+  border-color: var(--gold);
+}
+
+.bunkai-kata-select:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.bunkai-reset-filters-btn {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  color: #fca5a5;
+  border-radius: 6px;
+  padding: 0.52rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bunkai-reset-filters-btn:hover {
+  background: rgba(239, 68, 68, 0.26);
+  border-color: #ef4444;
+  color: #ffffff;
+  transform: translateY(-1px);
+}

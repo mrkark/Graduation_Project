@@ -47,7 +47,7 @@ function handleError(err, next, res) {
 async function list(req, res, next) {
   try {
     const { search, kataId, difficulty, status, sort = 'newest', page = 1, pageSize = 12 } = req.query;
-    const limit = Math.min(Number(pageSize) || 12, 50);
+    const limit = Math.min(Number(pageSize) || 12, 200);
     const offset = (Math.max(Number(page) || 1, 1) - 1) * limit;
 
     const { items, total } = await bunkaiRepo.list({

@@ -124,7 +124,7 @@
   --shadow-dojo: 0 16px 50px rgba(0, 0, 0, 0.85);
 
   /* --- Z-индексы --- */
-  --z-header: 100;
-  --z-drawer: 200;
-  --z-modal: 300;
+  --z-header: 1000;
+  --z-drawer: 1100;
+  --z-modal: 2000;
 }

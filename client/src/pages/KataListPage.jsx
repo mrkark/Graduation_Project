@@ -893,7 +893,7 @@ export default function KataListPage() {
                                 }}
                                 title="Смотреть эталонное видео мастеров JKS"
                               >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} /> Видео JKS</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} style={{ flexShrink: 0 }} /> Видео JKS</span>
                               </button>
                             )}
                           </div>
@@ -1028,7 +1028,7 @@ export default function KataListPage() {
                                   }}
                                   title="Смотреть эталонное видео мастеров JKS"
                                 >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} /> Видео JKS</span>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} style={{ flexShrink: 0 }} /> Видео JKS</span>
                                 </button>
                               )}
                             </div>

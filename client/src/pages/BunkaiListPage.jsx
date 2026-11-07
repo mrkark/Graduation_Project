@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listBunkai } from '../api/bunkai';
+import { listKata } from '../api/kata';
 import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
 import VideoModal from '../components/VideoModal';
@@ -50,6 +51,45 @@ export default function BunkaiListPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeVideo, setActiveVideo] = useState(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
+  const [selectedKataId, setSelectedKataId] = useState(params.get('kataId') || 'all');
+  const [kataList, setKataList] = useState([]);
+
+  useEffect(() => {
+    listKata({ pageSize: 50 })
+      .then((res) => {
+        if (res && res.data) setKataList(res.data);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const kId = params.get('kataId');
+    if (kId && kId !== selectedKataId) {
+      setSelectedKataId(kId);
+    } else if (!kId && selectedKataId !== 'all') {
+      setSelectedKataId('all');
+    }
+  }, [params]);
+
+  const availableKatas = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(kataList)) {
+      kataList.forEach((k) => {
+        const id = String(k.Kata_ID || k.id);
+        map.set(id, { id, title: k.Title || k.name || `Ката #${id}` });
+      });
+    }
+    if (Array.isArray(items)) {
+      items.forEach((b) => {
+        const id = String(b.Kata_ID || b.Kata?.Kata_ID || '');
+        const title = b.Kata?.Title || b.Kata_Title;
+        if (id && title && !map.has(id)) {
+          map.set(id, { id, title });
+        }
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => Number(a.id) - Number(b.id));
+  }, [kataList, items]);
   const searchBoxRef = useRef(null);
   const [onlyFavorites, setOnlyFavorites] = useState(false);
 
@@ -67,7 +107,7 @@ export default function BunkaiListPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listBunkai({ sort, page: 1, pageSize: 60 })
+    listBunkai({ sort, page: 1, pageSize: 150 })
       .then((res) => {
         if (cancelled) return;
         setItems(res.data || []);
@@ -122,11 +162,17 @@ export default function BunkaiListPage() {
         const diff = getBunkaiDifficulty(b);
         if (diff !== selectedDifficulty) return false;
       }
+      if (selectedKataId !== 'all') {
+        const kId = String(b.Kata_ID || b.Kata?.Kata_ID || '');
+        if (kId !== String(selectedKataId)) return false;
+      }
       if (!q) return true;
       const title = (b.Title || '').toLowerCase();
-      return title.includes(q);
+      const kataTitle = (b.Kata?.Title || b.Kata_Title || '').toLowerCase();
+      const desc = (b.Description || '').toLowerCase();
+      return title.includes(q) || kataTitle.includes(q) || desc.includes(q);
     });
-  }, [items, search, onlyFavorites, bunkaiFavorites, selectedDifficulty]);
+  }, [items, search, onlyFavorites, bunkaiFavorites, selectedDifficulty, selectedKataId]);
 
   return (
     <div className="container bunkai-catalog">
@@ -215,7 +261,7 @@ export default function BunkaiListPage() {
           )}
         </div>
 
-        {/* Нижняя строка: Фильтры (Избранное, Уровни сложности), Сортировка и Счетчик */}
+        {/* Нижняя строка: Фильтры (Избранное, Ката, Уровни сложности), Сортировка и Счетчик */}
         <div className="bunkai-filters-toolbar">
           <div className="bunkai-filters-toolbar__left">
             <button
@@ -228,6 +274,31 @@ export default function BunkaiListPage() {
               <span>{onlyFavorites ? 'Только избранные' : 'Избранное'}</span>
               <span className="bunkai-fav-toggle-badge">{bunkaiFavorites.length}</span>
             </button>
+
+            {/* Фильтр по Ката */}
+            <div className="bunkai-kata-filter-wrap">
+              <select
+                id="bunkai-kata-select"
+                className="bunkai-kata-select"
+                value={selectedKataId}
+                onChange={(e) => {
+                  setSelectedKataId(e.target.value);
+                  updateParam('kataId', e.target.value === 'all' ? '' : e.target.value);
+                }}
+                aria-label="Фильтр сценариев по ката"
+                title="Фильтровать по форме ката"
+              >
+                <option value="all">Все формы ката ({items.length})</option>
+                {availableKatas.map((k) => {
+                  const count = items.filter((b) => String(b.Kata_ID || b.Kata?.Kata_ID || '') === k.id).length;
+                  return (
+                    <option key={k.id} value={k.id}>
+                      {k.title} {count > 0 ? `(${count})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
 
             <div className="bunkai-difficulty-pills">
               <button
@@ -259,11 +330,34 @@ export default function BunkaiListPage() {
                 Мастерский (Дан)
               </button>
             </div>
+
+            {/* Кнопка сброса фильтра к полному списку (если что-то выбрано) */}
+            {(search || onlyFavorites || selectedDifficulty !== 'all' || selectedKataId !== 'all') && (
+              <button
+                type="button"
+                className="bunkai-reset-filters-btn"
+                onClick={() => {
+                  updateParam('search', '');
+                  updateParam('kataId', '');
+                  setSelectedKataId('all');
+                  setSelectedDifficulty('all');
+                  setOnlyFavorites(false);
+                  setShowSuggestions(false);
+                }}
+                title="Сбросить фильтры и показать все боевые сценарии бункай"
+              >
+                <X size={13} />
+                <span>Сбросить ({filteredItems.length}/{items.length})</span>
+              </button>
+            )}
           </div>
 
           <div className="bunkai-filters-toolbar__right">
             <span className="bunkai-results-count">
-              Найдено: <strong>{filteredItems.length}</strong> {filteredItems.length === 1 ? 'сценарий' : 'сценариев'}
+              {items.length === filteredItems.length
+                ? <>Всего сценариев: <strong>{items.length}</strong></>
+                : <>Найдено: <strong>{filteredItems.length}</strong> из {items.length}</>
+              }
             </span>
 
             <div className="bunkai-sort-wrap">
@@ -289,8 +383,7 @@ export default function BunkaiListPage() {
         <p className="empty-state">Боевые сценарии бункай не найдены.</p>
       ) : (
         <div className="bunkai-grid">
-          {/* 1-й экран: первые 6 сценариев загружаются немедленно */}
-          {filteredItems.slice(0, 6).map((b) => {
+                    {filteredItems.map((b) => {
             const diffKey = getBunkaiDifficulty(b);
             const diffLabel = DIFFICULTY_MAP[diffKey] || 'Практика';
             const standard = isStandardBunkai(b);
