@@ -34,37 +34,41 @@ const KEY_PATH = path.join(SSL_DIR, 'ssl_key.pem');
 
 // 1. Динамическое определение активного локального IP-адреса Wi-Fi / LAN
 function detectLocalIp() {
-  if (process.env.HOST_IP && process.env.HOST_IP.trim() && process.env.HOST_IP !== '127.0.0.1' && process.env.HOST_IP !== '10.131.233.47') {
-    return Promise.resolve(process.env.HOST_IP.trim());
-  }
-
+  // Приоритет 1: актуальный файл статуса, записанный скриптом хоста (всегда содержит реальный IP хоста)
   try {
     if (fs.existsSync(STATUS_FILE)) {
       const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
-      if (data?.localIp && !data.localIp.startsWith('172.') && !data.localIp.startsWith('127.') && !data.localIp.startsWith('10.131.')) {
+      if (data?.localIp && !data.localIp.startsWith('172.') && !data.localIp.startsWith('127.')) {
         return Promise.resolve(data.localIp);
       }
     }
   } catch (e) {}
 
+  // Приоритет 2: переменная HOST_IP (если задана не 127.0.0.1 и не докерная сеть 172.)
+  if (process.env.HOST_IP && process.env.HOST_IP.trim() && process.env.HOST_IP !== '127.0.0.1' && !process.env.HOST_IP.startsWith('172.')) {
+    return Promise.resolve(process.env.HOST_IP.trim());
+  }
+
+  // Приоритет 3: определение через сокет (если запускается вне Docker на хосте)
   return new Promise((resolve) => {
     try {
       const socket = dgram.createSocket('udp4');
       socket.connect(80, '8.8.8.8', () => {
         const ip = socket.address().address;
         socket.close();
-        if (ip.startsWith('172.') || ip.startsWith('127.') || ip.startsWith('10.131.')) {
-          resolve('192.168.100.6');
+        if (ip.startsWith('172.') || ip.startsWith('127.')) {
+          // Если внутри Docker и нет данных хоста, ищем в STATUS_FILE
+          resolve('127.0.0.1');
         } else {
           resolve(ip);
         }
       });
       socket.on('error', () => {
         try { socket.close(); } catch (e) {}
-        resolve('192.168.100.6');
+        resolve('127.0.0.1');
       });
     } catch (e) {
-      resolve('192.168.100.6');
+      resolve('127.0.0.1');
     }
   });
 }
@@ -82,19 +86,29 @@ function updateGatewayStatus(info) {
     }
   } catch (e) {}
 
+  const finalIp = (existing.localIp && !existing.localIp.startsWith('172.') && !existing.localIp.startsWith('127.'))
+    ? existing.localIp
+    : info.localIp;
+
   const payload = {
     ...existing,
     active: true,
-    localIp: info.localIp,
-    httpsPort: HTTPS_PORT,
-    httpsUrl: `https://${info.localIp}:${HTTPS_PORT}`,
+    localIp: finalIp,
+    gatewayPort: HTTPS_PORT,
+    gatewayUrl: `https://${finalIp}:${HTTPS_PORT}`,
+    httpsPort: existing.httpsPort || 8088,
+    httpsUrl: existing.httpsUrl || `https://${finalIp}:8088`,
     httpPort: VITE_PORT,
-    httpUrl: `http://${info.localIp}:${VITE_PORT}`,
-    url: `https://${info.localIp}:${HTTPS_PORT}`,
-    localIps: [
-      { name: 'Wi-Fi (Активный LAN)', ip: info.localIp, isPrimary: true },
-      { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
-    ],
+    httpUrl: `http://${finalIp}:${VITE_PORT}`,
+    studioPort: 8000,
+    studioUrl: `http://${finalIp}:8000/studio`,
+    url: existing.httpsUrl || `https://${finalIp}:8088`,
+    localIps: (Array.isArray(existing.localIps) && existing.localIps.length > 0)
+      ? existing.localIps
+      : [
+          { name: 'Wi-Fi (Активный LAN)', ip: finalIp, isPrimary: true },
+          { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
+        ],
     updatedAt: new Date().toISOString(),
   };
 

@@ -3,6 +3,7 @@ const net = require('net');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { detectActiveNetwork, updateEnvFile, updateTunnelInfo, ensureSslCertificates } = require('./ensure-network-and-ssl');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const SERVER_DIR = path.join(ROOT_DIR, 'server');
@@ -146,11 +147,15 @@ process.on('SIGTERM', cleanup);
 process.on('exit', cleanup);
 
 async function main() {
-  const localIp = getLocalIp();
-
   console.log('========================================================');
   console.log('  🥋 Karate Bunkai Explorer — Полный запуск проекта');
   console.log('========================================================');
+
+  const netInfo = await detectActiveNetwork();
+  const localIp = netInfo.primaryIp;
+  updateEnvFile(localIp);
+  updateTunnelInfo(localIp, netInfo.candidates);
+  ensureSslCertificates(localIp, netInfo.candidates);
 
   await startMoCapStudio();
   startBackend();

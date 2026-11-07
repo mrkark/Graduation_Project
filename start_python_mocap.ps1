@@ -1,5 +1,11 @@
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+if (Test-Path (Join-Path $ScriptDir "scripts\ensure-network-and-ssl.js")) {
+    Write-Host "[+] Автоопределение сети и генерация SSL сертификатов..." -ForegroundColor Cyan
+    node (Join-Path $ScriptDir "scripts\ensure-network-and-ssl.js")
+}
+
 Set-Location (Join-Path $ScriptDir "karate_motion_studio")
 
 Write-Host "=========================================================================" -ForegroundColor Cyan

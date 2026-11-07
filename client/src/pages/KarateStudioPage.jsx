@@ -23,9 +23,16 @@ import {
   Globe,
   Maximize2,
   QrCode,
-  Info,
   BookOpen,
+  Play,
+  Square,
+  Download,
+  Film,
+  Sparkles,
+  Trash2,
 } from 'lucide-react';
+
+import './KarateStudio.css';
 const ModularMotionMixer = lazy(() => import('../three/ModularMotionMixer'));
 
 function checkIsMobileOrTablet() {
@@ -40,41 +47,112 @@ function checkIsMobileOrTablet() {
 
 export default function KarateStudioPage() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(checkIsMobileOrTablet);
-  const [showMultiCamStream, setShowMultiCamStream] = useState(false);
+  const [activeStudioTab, setActiveStudioTab] = useState('live_mocap');
 
+  // Recording State: Exactly TWO modes: 'full' (целиком) vs 'layered' (по слоям)
+  const [recMode, setRecMode] = useState('full'); // 'full' | 'layered'
+  const [activeLayer, setActiveLayer] = useState('lower'); // 'lower' | 'upper' | 'head_fingers'
+  const [isRecording, setIsRecording] = useState(false);
+  const [recDuration, setRecDuration] = useState(0);
+  const [lastSavedFile, setLastSavedFile] = useState(null);
+  const [isSubmittingRec, setIsSubmittingRec] = useState(false);
+  const [layersData, setLayersData] = useState({
+    lower: { recorded: false, frames_count: 0, duration: 0 },
+    upper: { recorded: false, frames_count: 0, duration: 0 },
+    head_fingers: { recorded: false, frames_count: 0, duration: 0 },
+  });
+
+  // QR Modal State
   const [showQr, setShowQr] = useState(false);
   const [selectedCam, setSelectedCam] = useState('cam1');
   const [studioOnline, setStudioOnline] = useState(true);
   const [availableIps, setAvailableIps] = useState([]);
   const [publicTunnelUrl, setPublicTunnelUrl] = useState('');
   const [tunnelActive, setTunnelActive] = useState(false);
-  const [networkMode, setNetworkMode] = useState('local'); // 'local' по умолчанию для домашнего Wi-Fi
-  const [selectedPort, setSelectedPort] = useState('8088'); // '8088' | '8443' | '5173' | '8000'
+  const [networkMode, setNetworkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('mocap_network_mode');
+      if (saved) return saved;
+    }
+    return 'tunnel';
+  });
+  const [selectedPort, setSelectedPort] = useState('8088');
   const [copied, setCopied] = useState(false);
   const [isEditingIp, setIsEditingIp] = useState(false);
   const [customIpInput, setCustomIpInput] = useState('');
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrRefreshCounter, setQrRefreshCounter] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [realIp, setRealIp] = useState(() => {
     if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlIp = searchParams.get('ip');
+      if (urlIp && urlIp !== '127.0.0.1' && !urlIp.startsWith('172.')) return urlIp;
       if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
         return window.location.hostname;
       }
       const saved = localStorage.getItem('mocap_user_ip');
-      if (saved && saved !== '127.0.0.1' && saved !== '10.131.233.47' && saved !== '192.168.100.28') return saved;
+      if (saved && saved !== '127.0.0.1' && !saved.startsWith('172.') && saved !== '192.168.100.28' && saved !== '192.168.100.6') return saved;
     }
-    return '192.168.100.6';
+    return '';
   });
 
+  const layerMeta = {
+    lower: {
+      name: 'Ноги и стойки',
+      short: '1. Ноги',
+      icon: '🦵',
+      desc: 'Стойки, приседания, перемещения по татами',
+      color: '#10b981',
+    },
+    upper: {
+      name: 'Корпус и руки',
+      short: '2. Руки',
+      icon: '🥋',
+      desc: 'Удары руками, блоки, повороты корпуса',
+      color: '#3b82f6',
+    },
+    head_fingers: {
+      name: 'Голова и пальцы',
+      short: '3. Голова',
+      icon: '👤',
+      desc: 'Взгляд, наклон головы, кулаки и ладони',
+      color: '#a855f7',
+    },
+  };
+
+  const camDescriptions = {
+    cam1: {
+      title: 'Камера 1 — Фронтальная (0°)',
+      short: 'Фронт (0°)',
+      desc: 'Установите телефон спереди во весь рост по центру. Считывает ширину X, высоту Y, лицо, плечи и прямые удары.',
+      badgeColor: '#10b981',
+      role: 'Главная база захвата',
+    },
+    cam2: {
+      title: 'Камера 2 — Левая боковая (+90°)',
+      short: 'Слева (+90°)',
+      desc: 'Установите телефон слева под 90°. Считывает физическую глубину Z, стойки и заведение рук за голову.',
+      badgeColor: '#06b6d4',
+      role: 'Левый 3D профиль Z',
+    },
+    cam3: {
+      title: 'Камера 3 — Правая боковая (-90°)',
+      short: 'Справа (-90°)',
+      desc: 'Установите телефон справа под 90°. Считывает физическую глубину Z правой стороны и кулак в хикитэ.',
+      badgeColor: '#a855f7',
+      role: 'Правый 3D профиль Z',
+    },
+  };
+
+  // Status check loop
   useEffect(() => {
     let mounted = true;
     const checkStatus = async () => {
       try {
         const res = await fetch('/status');
         if (res.ok) {
-          const data = await res.json();
-          if (mounted) {
-            setStudioOnline(true);
-          }
+          if (mounted) setStudioOnline(true);
         } else if (mounted) {
           setStudioOnline(false);
         }
@@ -82,22 +160,52 @@ export default function KarateStudioPage() {
         if (mounted) setStudioOnline(false);
       }
 
+      // Record status
+      try {
+        const rRec = await fetch('/api/record/status');
+        if (rRec.ok) {
+          const dRec = await rRec.json();
+          if (mounted) {
+            setIsRecording(Boolean(dRec.is_recording));
+            if (typeof dRec.duration === 'number') setRecDuration(dRec.duration);
+            if (dRec.last_recording) setLastSavedFile(dRec.last_recording);
+          }
+        }
+      } catch {}
+
+      // Layer status
+      try {
+        const rLayer = await fetch('/api/record/layer/status');
+        if (rLayer.ok) {
+          const dLayer = await rLayer.json();
+          if (mounted && dLayer?.layers) {
+            setLayersData(dLayer.layers);
+            if (dLayer.recording_mode) setRecMode(dLayer.recording_mode);
+            if (dLayer.active_layer) setActiveLayer(dLayer.active_layer);
+          }
+        }
+      } catch {}
+
+      // Tunnel info
       try {
         const r = await fetch('/api/mocap/tunnel');
         if (r.ok) {
           const j = await r.json();
-          if (mounted) {
-            const lIp = j?.data?.localIp;
-            if (lIp && lIp !== '127.0.0.1' && lIp !== '10.131.233.47' && !lIp.startsWith('172.')) {
-              setRealIp(lIp);
+          if (mounted && j?.data) {
+            const lIp = j.data.localIp;
+            if (lIp && lIp !== '127.0.0.1' && !lIp.startsWith('172.')) {
+              setRealIp((prev) => (prev && prev !== '192.168.100.6' ? prev : lIp));
             }
-            if (Array.isArray(j?.data?.localIps) && j.data.localIps.length > 0) {
-              const filtered = j.data.localIps.filter((item) => item.ip !== '10.131.233.47');
-              setAvailableIps(filtered);
+            if (Array.isArray(j.data.localIps) && j.data.localIps.length > 0) {
+              setAvailableIps(j.data.localIps);
             }
-            if (j?.data?.publicUrl) {
+            if (j.data.publicUrl) {
               setPublicTunnelUrl(j.data.publicUrl);
-              setTunnelActive(Boolean(j.data.tunnelActive));
+              const isAct = Boolean(j.data.tunnelActive);
+              setTunnelActive(isAct);
+              if (isAct && !localStorage.getItem('mocap_network_mode')) {
+                setNetworkMode('tunnel');
+              }
             }
           }
         }
@@ -105,24 +213,124 @@ export default function KarateStudioPage() {
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, 3500);
+    const interval = setInterval(checkStatus, 3000);
     return () => {
       mounted = false;
       clearInterval(interval);
     };
   }, []);
 
-  const displayHost = (realIp && realIp !== '10.131.233.47' && realIp !== '127.0.0.1')
+  // Duration timer
+  useEffect(() => {
+    let t = null;
+    if (isRecording) {
+      t = setInterval(() => {
+        setRecDuration((d) => d + 1);
+      }, 1000);
+    }
+    return () => {
+      if (t) clearInterval(t);
+    };
+  }, [isRecording]);
+
+  // Mode switch
+  const handleSwitchMode = async (mode) => {
+    setRecMode(mode);
+    try {
+      await fetch(`/api/record/mode?mode=${mode}`, { method: 'POST' });
+    } catch (e) {
+      console.error('Error switching recording mode:', e);
+    }
+  };
+
+  // Toggle record
+  const handleToggleRecord = async () => {
+    if (isSubmittingRec) return;
+    setIsSubmittingRec(true);
+    try {
+      if (!isRecording) {
+        const url = recMode === 'layered'
+          ? `/api/record/layer/start?layer=${activeLayer}`
+          : '/api/record/start';
+        const res = await fetch(url, { method: 'POST' });
+        if (res.ok) {
+          setIsRecording(true);
+          setRecDuration(0);
+        }
+      } else {
+        const url = recMode === 'layered'
+          ? '/api/record/layer/stop'
+          : '/api/record/stop';
+        const res = await fetch(url, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          setIsRecording(false);
+          if (data && data.filename) {
+            setLastSavedFile(data);
+          }
+          if (recMode === 'layered') {
+            const rL = await fetch('/api/record/layer/status');
+            if (rL.ok) {
+              const dL = await rL.json();
+              if (dL?.layers) setLayersData(dL.layers);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error toggling record:', e);
+    } finally {
+      setIsSubmittingRec(false);
+    }
+  };
+
+  // Merge layers
+  const handleMergeLayers = async () => {
+    if (isSubmittingRec) return;
+    setIsSubmittingRec(true);
+    try {
+      const res = await fetch('/api/record/layer/merge', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.filename) {
+          setLastSavedFile(data);
+        }
+      }
+    } catch (e) {
+      console.error('Error merging layers:', e);
+    } finally {
+      setIsSubmittingRec(false);
+    }
+  };
+
+  // Clear layers
+  const handleClearLayers = async () => {
+    try {
+      const res = await fetch('/api/record/layer/clear', { method: 'POST' });
+      if (res.ok) {
+        setLayersData({
+          lower: { recorded: false, frames_count: 0, duration: 0 },
+          upper: { recorded: false, frames_count: 0, duration: 0 },
+          head_fingers: { recorded: false, frames_count: 0, duration: 0 },
+        });
+      }
+    } catch (e) {
+      console.error('Error clearing layers:', e);
+    }
+  };
+
+  const displayHost = (realIp && realIp !== '127.0.0.1' && !realIp.startsWith('172.'))
     ? realIp
     : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
         ? window.location.hostname
-        : '192.168.100.6');
+        : (availableIps[0]?.ip || '10.129.167.47'));
 
-  const studioUrl = '/studio';
+  // Use embedded mode so iframe doesn't render duplicate headers/buttons
+  const studioEmbeddedUrl = '/studio?embedded=1';
+  const studioStandaloneUrl = '/studio';
 
   const isTunnelAvailable = Boolean(publicTunnelUrl && tunnelActive);
-  const activeMode = (networkMode === 'tunnel' && isTunnelAvailable) ? 'tunnel' : (isTunnelAvailable ? networkMode : 'local');
-
+  const activeMode = (networkMode === 'local') ? 'local' : (isTunnelAvailable ? 'tunnel' : 'local');
   const portProtocol = (selectedPort === '8000' || selectedPort === '5173') ? 'http' : 'https';
   const activeCamUrl = (activeMode === 'tunnel' && publicTunnelUrl)
     ? `${publicTunnelUrl}/${selectedCam}`
@@ -136,7 +344,32 @@ export default function KarateStudioPage() {
     }
   };
 
-  const handleSaveCustomIp = (ipToSave) => {
+  const handleRefreshQrAndIp = async () => {
+    setIsRefreshing(true);
+    try {
+      const r = await fetch('/api/mocap/refresh', { method: 'POST' });
+      if (r.ok) {
+        const j = await r.json();
+        if (j?.data?.localIp) {
+          setRealIp(j.data.localIp);
+          if (Array.isArray(j.data.localIps)) setAvailableIps(j.data.localIps);
+        }
+      }
+    } catch {
+      try {
+        const r2 = await fetch('/api/mocap/tunnel');
+        if (r2.ok) {
+          const j2 = await r2.json();
+          if (j2?.data?.localIp) setRealIp(j2.data.localIp);
+        }
+      } catch {}
+    } finally {
+      setQrRefreshCounter((c) => c + 1);
+      setTimeout(() => setIsRefreshing(false), 700);
+    }
+  };
+
+  const handleSaveCustomIp = async (ipToSave) => {
     const trimmed = (ipToSave || customIpInput).trim();
     if (trimmed) {
       setRealIp(trimmed);
@@ -144,41 +377,36 @@ export default function KarateStudioPage() {
         localStorage.setItem('mocap_user_ip', trimmed);
       }
       setIsEditingIp(false);
+      try {
+        await fetch('/api/mocap/tunnel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localIp: trimmed }),
+        });
+      } catch {}
+      setQrRefreshCounter((c) => c + 1);
     }
   };
 
-  // Генерация динамического QR-кода при смене ссылки
+  // Dynamic QR generation
   useEffect(() => {
     let active = true;
-    QRCode.toDataURL(activeCamUrl, { width: 256, margin: 1, color: { dark: '#000000', light: '#ffffff' } })
+    QRCode.toDataURL(activeCamUrl, {
+      width: 260,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#000000', light: '#ffffff' },
+    })
       .then((url) => {
         if (active) setQrDataUrl(url);
       })
       .catch(() => {
-        if (active) setQrDataUrl(`/qr/${selectedCam}.png`);
+        if (active) setQrDataUrl(`/qr/${selectedCam}.png?ip=${displayHost}&port=${selectedPort}&t=${Date.now()}`);
       });
     return () => {
       active = false;
     };
-  }, [activeCamUrl, selectedCam]);
-
-  const camDescriptions = {
-    cam1: {
-      title: 'Камера 1 — Фронтальная (0° · Основание буквы T)',
-      desc: 'Установите телефон спереди во весь рост по центру. Отвечает за оси X и Y, лицо, плечи и прямые удары.',
-      badgeColor: '#10b981',
-    },
-    cam2: {
-      title: 'Камера 2 — Левая боковая (+90° · Левое плечо буквы T)',
-      desc: 'Установите телефон слева под 90°. Считывает физическую глубину Z левой стороны и движения левой руки при прижатии к корпусу.',
-      badgeColor: '#06b6d4',
-    },
-    cam3: {
-      title: 'Камера 3 — Правая боковая (-90° · Правое плечо буквы T)',
-      desc: 'Установите третий телефон справа под 90°. Считывает физическую глубину Z правой стороны и позицию правого кулака в хикитэ у бедра.',
-      badgeColor: '#a855f7',
-    },
-  };
+  }, [activeCamUrl, selectedCam, qrRefreshCounter]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -187,6 +415,9 @@ export default function KarateStudioPage() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const countRecordedLayers = Object.values(layersData).filter((l) => l && l.recorded).length;
+  const timeFormatted = Math.floor(recDuration / 60).toString().padStart(2, '0') + ':' + Math.floor(recDuration % 60).toString().padStart(2, '0');
 
   if (isMobileOrTablet) {
     return (
@@ -216,7 +447,7 @@ export default function KarateStudioPage() {
             Доступно только на компьютерах
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '0.95rem', lineHeight: 1.6, margin: '0 0 1.6rem' }}>
-            Страница <strong>Мокап 3D (Karate Motion Studio)</strong> предназначена исключительно для мониторов ПК и ноутбуков. На планшетах и телефонах 3D-студией с множественными камерами пользоваться неудобно.
+            Страница <strong>Мокап 3D (Karate Motion Studio)</strong> предназначена для мониторов ПК и ноутбуков. На смартфонах и планшетах открывайте QR-код камеры.
           </p>
           <div style={{
             background: 'rgba(245, 158, 11, 0.08)',
@@ -231,7 +462,7 @@ export default function KarateStudioPage() {
           }}>
             <Smartphone size={20} color="#f59e0b" style={{ flexShrink: 0, marginTop: '2px' }} />
             <p style={{ fontSize: '0.88rem', color: '#fef3c7', margin: 0, lineHeight: 1.5 }}>
-              <strong>Как использовать телефон:</strong> откройте эту страницу на компьютере и отсканируйте камерой телефона QR-код — телефон подключится как беспроводная камера захвата движений!
+              <strong>Как подключить телефон:</strong> откройте эту страницу на ПК и отсканируйте камерой телефона QR-код — телефон сразу подключится как камера захвата!
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -250,607 +481,519 @@ export default function KarateStudioPage() {
   }
 
   return (
-    <div style={{ width: '100%', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', background: '#0d0e12', overflow: 'hidden' }}>
-      {/* Top Banner Toolbar */}
-      <div style={{
-        background: '#161822',
-        borderBottom: '1px solid #282d3c',
-        padding: '8px 18px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '10px',
-        zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <Link to="/kata" style={{ color: 'var(--color-gold, #f59e0b)', textDecoration: 'none', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600 }}>
-            <span>←</span> <span>В каталог Ката</span>
+    <div style={{ width: '100%', height: 'calc(100vh - 72px)', display: 'flex', flexDirection: 'column', background: '#0b0c10', overflow: 'hidden' }}>
+      
+      {/* SINGLE UNIFIED TOP TOOLBAR */}
+      <div className="studio-topbar">
+        {/* Left: Navigation & Branding */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link to="/kata" className="studio-btn-back">
+            <span>←</span> <span>Ката</span>
           </Link>
-          <span style={{ color: '#4b5563' }}>|</span>
+          <span style={{ color: '#374151' }}>|</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Video size={18} color="#f59e0b" />
-            <span style={{ fontWeight: 800, color: '#ffffff', fontSize: '14px', letterSpacing: '0.4px' }}>
-              KARATE MOTION STUDIO
+            <Video size={17} color="#f59e0b" />
+            <span className="studio-title-badge">
+              KARATE MOCAP STUDIO
             </span>
-            {studioOnline ? (
-              <span style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                background: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid #10b981',
-                color: '#10b981',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}>
-                <CheckCircle2 size={11} />
-                <span>AI Python Движок Активен (8000 / 8088)</span>
-              </span>
-            ) : (
-              <span style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: '12px',
-                background: 'rgba(239, 68, 68, 0.15)',
-                border: '1px solid #ef4444',
-                color: '#ef4444',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}>
-                <AlertCircle size={11} />
-                <span>Оффлайн (запустите start_python_mocap.bat)</span>
-              </span>
-            )}
+            <span className={`studio-status-pill ${studioOnline ? 'online' : 'offline'}`}>
+              {studioOnline ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+              <span>{studioOnline ? 'AI готов' : 'Оффлайн'}</span>
+            </span>
           </div>
-          {availableIps.length > 1 ? (
-            <select
-              value={realIp}
-              onChange={(e) => setRealIp(e.target.value)}
-              title="Выберите сетевой IP для подключения телефона"
-              style={{
-                background: '#1f2430',
-                color: '#6ee7b7',
-                border: '1px solid #374151',
-                borderRadius: '6px',
-                padding: '3px 8px',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
+        </div>
+
+        {/* Center: THE CLEAN RECORDING CONTROLS */}
+        <div className="studio-controls-dock">
+          {/* Segmented Switch: ONLY TWO CHOICES */}
+          <div className="studio-mode-deck">
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('full')}
+              className={`studio-mode-pill ${recMode === 'full' ? 'active full' : ''}`}
+              title="Записать всю анимацию целиком за один дубль"
             >
-              {availableIps.map((item) => (
-                <option key={item.ip} value={item.ip}>
-                  {item.name}: {item.ip}
-                </option>
-              ))}
-            </select>
+              <Film size={12} />
+              <span>Целиком</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchMode('layered')}
+              className={`studio-mode-pill ${recMode === 'layered' ? 'active layered' : ''}`}
+              title="Создавать анимацию послойно: сначала стойки, потом удары и голову"
+            >
+              <Layers size={12} />
+              <span>По слоям ({countRecordedLayers}/3)</span>
+            </button>
+          </div>
+
+          {/* Conditional Control Area */}
+          {recMode === 'full' ? (
+            /* Mode 1: Full-Body Recording */
+            <button
+              type="button"
+              onClick={handleToggleRecord}
+              disabled={isSubmittingRec}
+              className={`studio-rec-btn ${isRecording ? 'recording' : 'idle'}`}
+            >
+              {isRecording ? <Square size={12} fill="#ef4444" /> : <Play size={12} fill="#ffffff" />}
+              <span>{isRecording ? `СТОП ЗАПИСЬ (${timeFormatted})` : 'НАЧАТЬ ЗАПИСЬ (REC)'}</span>
+            </button>
           ) : (
-            <span style={{ color: '#9ca3af', fontSize: '12px', fontFamily: 'monospace' }}>
-              IP: {displayHost}
-            </span>
+            /* Mode 2: Layered Recording */
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {/* Layer Selection Pills */}
+              <div className="studio-layers-deck">
+                {['lower', 'upper', 'head_fingers'].map((key) => {
+                  const meta = layerMeta[key];
+                  const isSelected = activeLayer === key;
+                  const isDone = Boolean(layersData[key]?.recorded);
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setActiveLayer(key)}
+                      className={`studio-layer-chip ${isSelected ? 'active' : ''} ${isDone ? 'done' : ''}`}
+                      style={{
+                        background: isSelected ? meta.color : undefined,
+                        color: isSelected ? (key === 'lower' ? '#000000' : '#ffffff') : undefined,
+                      }}
+                      title={meta.desc}
+                    >
+                      <span>{meta.icon}</span>
+                      <span>{meta.short}</span>
+                      {isDone && <span style={{ fontWeight: 800 }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Record current layer button */}
+              <button
+                type="button"
+                onClick={handleToggleRecord}
+                disabled={isSubmittingRec}
+                className={`studio-rec-btn ${isRecording ? 'recording' : 'idle'}`}
+              >
+                {isRecording ? <Square size={11} fill="#ef4444" /> : <Play size={11} fill="#ffffff" />}
+                <span>{isRecording ? `СТОП СЛОЙ (${timeFormatted})` : `Записать ${layerMeta[activeLayer].name}`}</span>
+              </button>
+
+              {/* Merge into Kata Button */}
+              {countRecordedLayers > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMergeLayers}
+                  disabled={isSubmittingRec}
+                  className="studio-btn-merge"
+                  title="Объединить слои в один итоговый файл анимации Ката"
+                >
+                  <Sparkles size={12} />
+                  <span>Собрать Ката</span>
+                </button>
+              )}
+
+              {/* Reset Layers Button */}
+              {countRecordedLayers > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearLayers}
+                  className="studio-btn-clear"
+                  title="Сбросить записанные слои"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Кнопка потока мульти-камер Python MoCap (Сплит-режим) */}
-          <button
-            type="button"
-            onClick={() => setShowMultiCamStream(!showMultiCamStream)}
-            style={{
-              background: showMultiCamStream ? 'rgba(37, 99, 235, 0.2)' : 'transparent',
-              color: showMultiCamStream ? '#60a5fa' : '#9ca3af',
-              border: showMultiCamStream ? '1px solid #2563eb' : '1px solid #374151',
-              borderRadius: '6px',
-              padding: '6px 12px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Camera size={13} color={showMultiCamStream ? '#60a5fa' : '#9ca3af'} />
-            <span>{showMultiCamStream ? 'Скрыть камеры Python' : 'Поток камер (Python)'}</span>
-          </button>
+        {/* Right: Studio Tabs, QR button & Fullscreen */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Tab Switcher */}
+          <div className="studio-tab-deck">
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('live_mocap')}
+              className={`studio-tab-btn ${activeStudioTab === 'live_mocap' ? 'active dojo' : ''}`}
+            >
+              <Camera size={12} />
+              <span>3D Додзё</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveStudioTab('mixer')}
+              className={`studio-tab-btn ${activeStudioTab === 'mixer' ? 'active mixer' : ''}`}
+            >
+              <Layers size={12} />
+              <span>Микшер</span>
+            </button>
+          </div>
 
+          {/* QR Button */}
           <button
             type="button"
             onClick={() => setShowQr(!showQr)}
-            style={{
-              background: 'linear-gradient(135deg, #059669, #10b981)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '7px 14px',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 0 12px rgba(16, 185, 129, 0.3)',
-            }}
+            className={`studio-btn-qr ${showQr ? 'active' : ''}`}
           >
-            <QrCode size={14} />
-            <span>{showQr ? 'Скрыть QR' : 'QR для телефона (Камера)'}</span>
+            <QrCode size={13} />
+            <span>{showQr ? 'Скрыть QR' : 'Камера телефона (QR)'}</span>
           </button>
 
+          {/* Fullscreen external */}
           <a
-            href={studioUrl}
+            href={studioStandaloneUrl}
             target="_blank"
             rel="noreferrer"
-            style={{
-              background: '#252936',
-              border: '1px solid #374151',
-              color: '#e5e7eb',
-              borderRadius: '6px',
-              padding: '7px 14px',
-              fontSize: '12.5px',
-              fontWeight: 600,
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
+            className="studio-btn-external"
+            title="Открыть MoCap студию в отдельном окне"
           >
             <Maximize2 size={13} />
-            <span>Открыть во весь экран</span>
           </a>
         </div>
       </div>
 
-      {/* Multi-Camera QR Code Flyout */}
+      {/* REDESIGNED CYBER-DOJO QR CODE MODAL WITH INTERACTIVE T-SCHEME */}
       {showQr && (
         <div style={{
-          background: 'rgba(17, 20, 29, 0.98)',
-          borderBottom: '1px solid #282d3c',
-          padding: '14px 20px',
+          background: 'rgba(11, 13, 20, 0.98)',
+          borderBottom: '2px solid rgba(245, 158, 11, 0.35)',
+          padding: '16px 20px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '12px',
-          backdropFilter: 'blur(10px)',
+          gap: '14px',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 12px 36px rgba(0, 0, 0, 0.85)',
           zIndex: 9,
+          maxHeight: '82vh',
+          overflowY: 'auto',
         }}>
-          {/* Network Mode Switcher: 4G/LTE Global vs Local Wi-Fi */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#0e1017', padding: '4px', borderRadius: '8px', border: '1px solid #2d3345' }}>
+          {/* Modal Header */}
+          <div style={{ width: '100%', maxWidth: '860px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px' }}>🥋</span>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '14.5px', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.4px' }}>
+                  ПОДКЛЮЧЕНИЕ СМАРТФОНОВ · Т-СХЕМА КАМЕР ДОДЗЁ
+                </h3>
+                <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+                  Работает с <strong>любым количеством телефонов (1, 2 или 3)</strong>: можно начать даже с одного!
+                </span>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => setNetworkMode('tunnel')}
-              style={{
-                background: activeMode === 'tunnel' ? '#2563eb' : 'transparent',
-                color: activeMode === 'tunnel' ? '#ffffff' : '#9ca3af',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '5px 12px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                opacity: isTunnelAvailable ? 1 : 0.6,
-              }}
-              title={isTunnelAvailable ? 'Подключение через глобальный интернет туннель' : 'Публичный туннель не активен'}
+              onClick={() => setShowQr(false)}
+              className="studio-modal-close-btn"
             >
-              <Globe size={13} />
-              <span>Публичный туннель (4G / удаленно)</span>
+              <X size={13} />
+              <span>Закрыть</span>
+            </button>
+          </div>
+
+          {/* INTERACTIVE TOP-DOWN T-SCHEME CAMERA MAP */}
+          <div style={{
+            width: '100%',
+            maxWidth: '860px',
+            background: 'radial-gradient(ellipse at center, #171b29 0%, #0d0f17 100%)',
+            border: '1px solid #283045',
+            borderRadius: '12px',
+            padding: '14px 18px',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                📐 Нажмите на камеру на схеме, чтобы сгенерировать QR-код:
+              </span>
+            </div>
+
+            {/* T-Scheme Grid */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+              {/* Top: Cam 1 (Frontal 0°) */}
+              <button
+                type="button"
+                onClick={() => setSelectedCam('cam1')}
+                className={`studio-t-cam-card cam1 ${selectedCam === 'cam1' ? 'active' : ''}`}
+              >
+                <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ color: '#10b981', fontWeight: 800, fontSize: '12px' }}>
+                    📹 КАМЕРА 1 (ФРОНТ · 0°)
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '10px' }}>
+                    Основание T · Во весь рост спереди (X/Y оси, лицо, кулаки)
+                  </div>
+                </div>
+                {selectedCam === 'cam1' && (
+                  <span style={{ background: '#10b981', color: '#000', fontSize: '9px', fontWeight: 800, padding: '2px 5px', borderRadius: '4px' }}>
+                    ВЫБРАНА
+                  </span>
+                )}
+              </button>
+
+              {/* Vertical connector line */}
+              <div style={{ width: '2px', height: '18px', background: 'linear-gradient(to bottom, #10b981, #f59e0b)' }} />
+
+              {/* Middle row: Cam 2 (Left) --- Karateka Center --- Cam 3 (Right) */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', flexWrap: 'wrap' }}>
+                {/* Cam 2 Left */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCam('cam2')}
+                  className={`studio-t-cam-card cam2 ${selectedCam === 'cam2' ? 'active' : ''}`}
+                >
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 6px #06b6d4' }} />
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ color: '#06b6d4', fontWeight: 800, fontSize: '11.5px' }}>
+                      📹 КАМЕРА 2 (СЛЕВА · +90°)
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '9.5px' }}>
+                      Левый 3D профиль Z · Заведение за голову
+                    </div>
+                  </div>
+                  {selectedCam === 'cam2' && (
+                    <span style={{ background: '#06b6d4', color: '#000', fontSize: '8.5px', fontWeight: 800, padding: '2px 4px', borderRadius: '4px' }}>
+                      ВЫБРАНА
+                    </span>
+                  )}
+                </button>
+
+                {/* Horizontal Connector Left */}
+                <div style={{ width: '22px', height: '2px', background: 'linear-gradient(to right, #06b6d4, #f59e0b)' }} />
+
+                {/* Center: Dojo Athlete */}
+                <div style={{
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '2px dashed #f59e0b',
+                  borderRadius: '10px',
+                  padding: '6px 14px',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '18px' }}>🥋</div>
+                  <div style={{ color: '#fef08a', fontWeight: 800, fontSize: '10.5px' }}>
+                    Каратист
+                  </div>
+                  <div style={{ color: '#f59e0b', fontSize: '9px' }}>
+                    Лицом к Камере 1
+                  </div>
+                </div>
+
+                {/* Horizontal Connector Right */}
+                <div style={{ width: '22px', height: '2px', background: 'linear-gradient(to right, #f59e0b, #a855f7)' }} />
+
+                {/* Cam 3 Right */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCam('cam3')}
+                  className={`studio-t-cam-card cam3 ${selectedCam === 'cam3' ? 'active' : ''}`}
+                >
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 6px #a855f7' }} />
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ color: '#a855f7', fontWeight: 800, fontSize: '11.5px' }}>
+                      📹 КАМЕРА 3 (СПРАВА · -90°)
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '9.5px' }}>
+                      Правый 3D профиль Z · Кулак в хикитэ
+                    </div>
+                  </div>
+                  {selectedCam === 'cam3' && (
+                    <span style={{ background: '#a855f7', color: '#fff', fontSize: '8.5px', fontWeight: 800, padding: '2px 4px', borderRadius: '4px' }}>
+                      ВЫБРАНА
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Network Switcher: 4G Global vs Local Wi-Fi */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0e1017', padding: '3px', borderRadius: '8px', border: '1px solid #2d3345' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setNetworkMode('tunnel');
+                if (typeof window !== 'undefined') localStorage.setItem('mocap_network_mode', 'tunnel');
+              }}
+              className={`studio-net-pill ${activeMode === 'tunnel' ? 'active' : ''}`}
+            >
+              <Globe size={12} />
+              <span>Интернет 4G / LTE (Разные сети)</span>
               {isTunnelAvailable && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />}
             </button>
             <button
               type="button"
-              onClick={() => setNetworkMode('local')}
-              style={{
-                background: activeMode === 'local' ? '#059669' : 'transparent',
-                color: activeMode === 'local' ? '#ffffff' : '#9ca3af',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '5px 12px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
+              onClick={() => {
+                setNetworkMode('local');
+                if (typeof window !== 'undefined') localStorage.setItem('mocap_network_mode', 'local');
               }}
+              className={`studio-net-pill ${activeMode === 'local' ? 'active' : ''}`}
             >
-              <Wifi size={13} />
-              <span>Локальный Wi-Fi (В одной сети с ПК)</span>
+              <Wifi size={12} />
+              <span>Один Wi-Fi (Одна сеть)</span>
             </button>
           </div>
 
-          {/* Селектор протокола и настройка IP адреса */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', background: '#13151f', padding: '6px 12px', borderRadius: '8px', border: '1px solid #232738' }}>
-            <span style={{ fontSize: '11.5px', color: '#9ca3af' }}>Порт:</span>
-            <button
-              type="button"
-              onClick={() => setSelectedPort('8088')}
-              style={{
-                background: selectedPort === '8088' ? '#10b981' : '#1e2230',
-                color: selectedPort === '8088' ? '#000' : '#d1d5db',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Lock size={11} />
-              <span>HTTPS (8088)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPort('8443')}
-              style={{
-                background: selectedPort === '8443' ? '#3b82f6' : '#1e2230',
-                color: selectedPort === '8443' ? '#fff' : '#d1d5db',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Shield size={11} />
-              <span>Шлюз (8443)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPort('5173')}
-              style={{
-                background: selectedPort === '5173' ? '#8b5cf6' : '#1e2230',
-                color: selectedPort === '5173' ? '#fff' : '#d1d5db',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Zap size={11} />
-              <span>Web (5173)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedPort('8000')}
-              style={{
-                background: selectedPort === '8000' ? '#f59e0b' : '#1e2230',
-                color: selectedPort === '8000' ? '#000' : '#d1d5db',
-                border: 'none',
-                borderRadius: '4px',
-                padding: '3px 8px',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              <Unlock size={11} />
-              <span>HTTP (8000)</span>
-            </button>
-
-            <span style={{ color: '#4b5563', margin: '0 4px' }}>|</span>
-
-            {availableIps.length > 0 && !isEditingIp && (
-              <select
-                value={displayHost}
-                onChange={(e) => handleSaveCustomIp(e.target.value)}
-                style={{
-                  background: '#0d0e14',
-                  border: '1px solid #374151',
-                  color: '#6ee7b7',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  fontSize: '11px',
-                  fontFamily: 'monospace',
-                  cursor: 'pointer',
-                  marginRight: '4px',
-                }}
-              >
-                {availableIps.map((it) => (
-                  <option key={it.ip} value={it.ip}>
-                    {it.name || it.ip}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {isEditingIp ? (
-              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  placeholder="192.168.100.6"
-                  value={customIpInput}
-                  onChange={(e) => setCustomIpInput(e.target.value)}
-                  style={{
-                    background: '#0d0e14',
-                    border: '1px solid #10b981',
-                    color: '#fff',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '11px',
-                    width: '120px',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSaveCustomIp()}
-                  style={{ background: '#10b981', color: '#000', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
-                >
-                  <Check size={11} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingIp(false)}
-                  style={{ background: 'transparent', color: '#9ca3af', border: 'none', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center' }}
-                >
-                  <X size={11} />
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '11.5px', color: '#6ee7b7', fontFamily: 'monospace' }}>IP: {displayHost}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomIpInput(displayHost);
-                    setIsEditingIp(true);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid #374151',
-                    color: '#9ca3af',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                  }}
-                >
-                  <Edit3 size={10} />
-                  <span>Сменить</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Camera Switcher Tabs */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {['cam1', 'cam2', 'cam3'].map((cid) => {
-              const active = selectedCam === cid;
-              const info = camDescriptions[cid];
-              return (
-                <button
-                  key={cid}
-                  type="button"
-                  onClick={() => setSelectedCam(cid)}
-                  style={{
-                    background: active ? info.badgeColor : '#1e2230',
-                    color: active ? '#000000' : '#d1d5db',
-                    border: `1px solid ${active ? info.badgeColor : '#374151'}`,
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Camera size={13} />
-                  <span>
-                    {cid === 'cam1' && 'Камера 1 (Фронт · T-база)'}
-                    {cid === 'cam2' && 'Камера 2 (Слева 90° · T-плечо)'}
-                    {cid === 'cam3' && 'Камера 3 (Справа 90° · T-плечо)'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
+          {/* QR Code Presentation Box */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '24px',
+            gap: '20px',
             flexWrap: 'wrap',
-            maxWidth: '780px',
+            maxWidth: '800px',
+            background: '#111420',
+            border: `1px solid ${camDescriptions[selectedCam].badgeColor}40`,
+            borderRadius: '12px',
+            padding: '14px 18px',
           }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-              <img
-                src={qrDataUrl || `/qr/${selectedCam}.png`}
-                onError={(e) => { e.currentTarget.src = `http://${displayHost}:8000/qr/${selectedCam}.png`; }}
-                alt="QR Code"
-                style={{
-                  width: '140px',
-                  height: '140px',
-                  borderRadius: '8px',
-                  background: '#fff',
-                  padding: '4px',
-                  border: `2px solid ${camDescriptions[selectedCam].badgeColor}`,
-                }}
-              />
-              <span style={{ fontSize: '11px', color: '#9ca3af' }}>Сканируйте камерой</span>
+            {/* Left: High-Contrast QR Code */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+              <div style={{
+                padding: '5px',
+                background: '#ffffff',
+                borderRadius: '8px',
+                boxShadow: `0 0 16px ${camDescriptions[selectedCam].badgeColor}33`,
+              }}>
+                <img
+                  src={qrDataUrl || `http://${displayHost}:8000/qr/${selectedCam}.png?port=${selectedPort}&t=${qrRefreshCounter}`}
+                  onError={(e) => { e.currentTarget.src = `http://${displayHost}:8000/qr/${selectedCam}.png?port=${selectedPort}&t=` + Date.now(); }}
+                  alt="QR Code"
+                  style={{
+                    width: '140px',
+                    height: '140px',
+                    display: 'block',
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '10.5px', color: '#9ca3af', fontWeight: 600 }}>
+                Наведите камеру смартфона
+              </span>
             </div>
 
-            <div style={{ flex: 1, minWidth: '300px' }}>
-              <h4 style={{ color: camDescriptions[selectedCam].badgeColor, fontSize: '15px', marginBottom: '4px', fontWeight: 800 }}>
-                {camDescriptions[selectedCam].title}
-              </h4>
-              <p style={{ color: '#d1d5db', fontSize: '12.5px', lineHeight: 1.45, marginBottom: '8px' }}>
+            {/* Right: Camera Details, Direct Link & Instructions */}
+            <div style={{ flex: 1, minWidth: '280px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
+                <span style={{
+                  background: camDescriptions[selectedCam].badgeColor,
+                  color: selectedCam === 'cam3' ? '#ffffff' : '#000000',
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                }}>
+                  {camDescriptions[selectedCam].role}
+                </span>
+                <h4 style={{ color: camDescriptions[selectedCam].badgeColor, fontSize: '14px', margin: 0, fontWeight: 800 }}>
+                  {camDescriptions[selectedCam].title}
+                </h4>
+              </div>
+              <p style={{ color: '#d1d5db', fontSize: '11.5px', lineHeight: 1.45, marginBottom: '8px' }}>
                 {camDescriptions[selectedCam].desc}
               </p>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', background: '#12151e', padding: '6px 10px', borderRadius: '6px', border: '1px solid #232a3b' }}>
+              {/* Direct Copyable Link */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', background: '#090b10', padding: '5px 8px', borderRadius: '6px', border: '1px solid #232a3b' }}>
                 <a
                   href={activeCamUrl}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: '#6ee7b7', fontWeight: 700, textDecoration: 'underline', fontSize: '12px', fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}
+                  style={{ color: '#6ee7b7', fontWeight: 700, textDecoration: 'underline', fontSize: '11.5px', fontFamily: 'monospace', flex: 1, wordBreak: 'break-all' }}
                 >
                   {activeCamUrl}
                 </a>
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  style={{
-                    background: copied ? '#10b981' : '#1f2430',
-                    color: copied ? '#000' : '#e2e8f0',
-                    border: '1px solid #374151',
-                    borderRadius: '4px',
-                    padding: '3px 8px',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
+                  className={`studio-btn-copy ${copied ? 'copied' : 'idle'}`}
                 >
                   {copied ? <Check size={11} /> : <Copy size={11} />}
-                  <span>{copied ? 'Скопировано' : 'Копия'}</span>
+                  <span>{copied ? 'Скопировано!' : 'Копировать'}</span>
                 </button>
               </div>
 
-              {/* Пошаговая инструкция для успешного подключения */}
-              <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '6px', padding: '10px 14px', fontSize: '11.5px', color: '#d1d5db', lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, color: '#10b981', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Smartphone size={13} />
-                  <span>Быстрое подключение телефона:</span>
-                </div>
-                <div>1. Телефон должен быть в одной сети Wi-Fi с ПК (или в режиме точки доступа).</div>
-                <div>2. Отсканируйте QR-код и откройте ссылку в мобильном браузере (Chrome / Safari).</div>
-                <div>3. При предупреждении о сертификате: на <strong>Android</strong> нажмите <em>«Дополнительно» → «Перейти на сайт ({displayHost})»</em>; на <strong>iPhone</strong> нажмите <em>«Показать подробности» → «Посетить сайт»</em>.</div>
-                <div>4. Нажмите <strong>«Разрешить»</strong> для камеры — захват сразу отобразится на 3D-аватаре!</div>
-                <div style={{ marginTop: '4px', fontSize: '11px', color: '#fcd34d', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Info size={11} />
-                  <span>Если порт 8088 не отвечает на вашем роутере, нажмите на кнопку <strong>«Шлюз (8443)»</strong> выше.</span>
-                </div>
+              {/* Mobile Quick Steps */}
+              <div style={{ background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px', padding: '7px 10px', fontSize: '10.5px', color: '#cbd5e1', lineHeight: 1.4 }}>
+                1. Отсканируйте QR или перейдите по ссылке выше в <strong>Safari / Chrome</strong> на телефоне.<br />
+                2. Нажмите <strong>«Разрешить»</strong> для доступа к камере — видеопоток сразу оживит 3D каратиста на ПК!
               </div>
             </div>
+          </div>
+        </div>
+      )}
 
-            <button
-              type="button"
-              onClick={() => setShowQr(false)}
+      {/* SAVED RECORDING NOTIFICATION TOAST */}
+      {lastSavedFile && (
+        <div style={{
+          background: 'rgba(16, 185, 129, 0.15)',
+          borderBottom: '1px solid #10b981',
+          padding: '7px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: '#d1fae5',
+          fontSize: '12px',
+          zIndex: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle2 size={15} color="#10b981" />
+            <span>
+              <strong>Ката анимация сохранена:</strong> {lastSavedFile.filename} ({lastSavedFile.frames || 0} кадров{lastSavedFile.duration ? ', ' + lastSavedFile.duration + ' сек' : ''})
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <a
+              href={lastSavedFile.download_url || ('/uploads/recordings/' + lastSavedFile.filename)}
+              download={lastSavedFile.filename}
               style={{
-                background: 'transparent',
-                border: '1px solid #4b5563',
-                color: '#d1d5db',
-                borderRadius: '6px',
-                padding: '6px 12px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                alignSelf: 'flex-start',
+                background: '#10b981',
+                color: '#000000',
+                padding: '4px 10px',
+                borderRadius: '5px',
+                fontWeight: 800,
+                fontSize: '11px',
+                textDecoration: 'none',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
               }}
             >
-              <X size={12} />
-              <span>Закрыть</span>
+              <Download size={11} />
+              <span>Скачать JSON</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => setLastSavedFile(null)}
+              style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '2px' }}
+            >
+              <X size={13} />
             </button>
           </div>
         </div>
       )}
 
-      {/* Main Unified Viewport (3D Studio + Опциональный сплит с Python MoCap) */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#0d0e12' }}>
-        {showMultiCamStream && (
-          <div style={{
-            width: '420px',
-            maxWidth: '45%',
-            height: '100%',
-            borderRight: '1px solid #282d3c',
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#111216',
-            position: 'relative',
-          }}>
-            <div style={{
-              padding: '6px 12px',
-              background: '#161822',
-              borderBottom: '1px solid #282d3c',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontSize: '11.5px',
-              color: '#d1d5db',
-            }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontWeight: 700, color: '#60a5fa' }}>
-                <Camera size={13} />
-                <span>Поток Python MoCap ({selectedCam.toUpperCase()})</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowMultiCamStream(false)}
-                style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 2 }}
-              >
-                <X size={13} />
-              </button>
-            </div>
-
-            {studioOnline ? (
-              <iframe
-                src={studioUrl}
-                title="Karate Motion Studio Cameras"
-                style={{
-                  width: '100%',
-                  flex: 1,
-                  border: 'none',
-                  background: '#0d0e12',
-                }}
-                allow="camera; microphone; accelerometer; gyroscope"
-              />
-            ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '0.82rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                <AlertCircle size={32} color="#f59e0b" style={{ marginBottom: 10 }} />
-                <p style={{ margin: '0 0 10px', color: '#e5e7eb', fontWeight: 600 }}>Python MoCap сервер не запущен</p>
-                <p style={{ margin: '0 0 14px', fontSize: '0.78rem' }}>
-                  Для работы мульти-камер запустите <code>start_python_mocap.bat</code>. Запись через веб-камеру в студии справа работает независимо прямо в браузере!
-                </p>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => window.location.reload()}
-                  style={{ fontSize: '0.75rem', padding: '5px 12px' }}
-                >
-                  <RefreshCw size={12} />
-                  <span>Проверить снова</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: '#0d0e12' }}>
-          <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D студии движений…</div>}>
+      {/* MAIN VIEWPORT: Clean, Full-Height 3D Dojo Viewport */}
+      {activeStudioTab === 'live_mocap' ? (
+        <div style={{ flex: 1, position: 'relative', background: '#0b0c10', overflow: 'hidden' }}>
+          <iframe
+            src={studioEmbeddedUrl}
+            title="Karate Motion Studio Viewport"
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              background: '#0b0c10',
+            }}
+            allow="camera; microphone; accelerometer; gyroscope"
+          />
+        </div>
+      ) : (
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: '#0b0c10' }}>
+          <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D микшера…</div>}>
             <ModularMotionMixer />
           </Suspense>
         </div>
-      </div>
+      )}
     </div>
   );
 }

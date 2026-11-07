@@ -1,0 +1,489 @@
+/* ==========================================================================
+   Karate Motion Studio — Cyber-Dojo Unified Button & Controls Design System
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Top Bar Container
+   -------------------------------------------------------------------------- */
+.studio-topbar {
+  background: rgba(15, 18, 28, 0.96);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  z-index: 20;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Navigation: Back Button & Branding
+   -------------------------------------------------------------------------- */
+.studio-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.studio-btn-back:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+  transform: translateX(-2px);
+  color: #fbbf24;
+}
+
+.studio-title-badge {
+  font-weight: 800;
+  color: #ffffff;
+  font-size: 13.5px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.studio-status-pill {
+  font-size: 10.5px;
+  padding: 2.5px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.2px;
+  transition: all 0.2s ease;
+}
+.studio-status-pill.online {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+.studio-status-pill.offline {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+/* --------------------------------------------------------------------------
+   Center Controls Deck
+   -------------------------------------------------------------------------- */
+.studio-controls-dock {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10, 13, 20, 0.85);
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Mode Switcher Segment (Целиком vs По слоям) */
+.studio-mode-deck {
+  display: inline-flex;
+  background: #111522;
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 2px;
+}
+.studio-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8b95a8;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.studio-mode-pill:hover:not(.active) {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.05);
+}
+.studio-mode-pill.active.full {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+.studio-mode-pill.active.layered {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   Big Recording Action Buttons (REC)
+   -------------------------------------------------------------------------- */
+.studio-rec-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 18px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.studio-rec-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.studio-rec-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+.studio-rec-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Idle State: High-voltage red glow */
+.studio-rec-btn.idle {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+.studio-rec-btn.idle:hover {
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.55);
+}
+
+/* Recording Active State: High-tech cockpit pulse */
+.studio-rec-btn.recording {
+  background: #151824;
+  border: 2px solid #ef4444;
+  color: #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.65);
+  animation: studioRecGlowPulse 1.2s infinite ease-in-out;
+}
+@keyframes studioRecGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 7px rgba(239, 68, 68, 0.3);
+    transform: scale(0.985);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Layered Recording Deck & Layer Chips
+   -------------------------------------------------------------------------- */
+.studio-layers-deck {
+  display: inline-flex;
+  align-items: center;
+  background: #121520;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 2px;
+}
+.studio-layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.studio-layer-chip:hover:not(.active) {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+.studio-layer-chip.active {
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+}
+.studio-layer-chip.done {
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Action: Merge Layers into Kata Animation */
+.studio-btn-merge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.studio-btn-merge:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.55);
+  filter: brightness(1.1);
+}
+.studio-btn-merge:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Action: Reset Layers */
+.studio-btn-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 36, 50, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.studio-btn-clear:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* --------------------------------------------------------------------------
+   Top Right Studio Tab Switcher & QR Button
+   -------------------------------------------------------------------------- */
+.studio-tab-deck {
+  display: inline-flex;
+  background: #0d1017;
+  border-radius: 8px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 2px;
+}
+.studio-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.studio-tab-btn:hover:not(.active) {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+}
+.studio-tab-btn.active.dojo {
+  background: #10b981;
+  color: #000000;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+}
+.studio-tab-btn.active.mixer {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.35);
+}
+
+/* QR Connection Modal Trigger Button */
+.studio-btn-qr {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(5, 150, 105, 0.28));
+  color: #34d399;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+.studio-btn-qr:hover {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.26), rgba(5, 150, 105, 0.4));
+  border-color: #10b981;
+  color: #ffffff;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
+}
+.studio-btn-qr.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.45);
+}
+
+/* Standalone external window button */
+.studio-btn-external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #181d2a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d1d5db;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+.studio-btn-external:hover {
+  background: #232a3d;
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   Interactive T-Scheme Camera Cards inside QR Modal
+   -------------------------------------------------------------------------- */
+.studio-t-cam-card {
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #121520;
+  border: 2px solid #283044;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+.studio-t-cam-card:hover {
+  transform: translateY(-1px);
+}
+.studio-t-cam-card.cam1:hover {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.1);
+}
+.studio-t-cam-card.cam1.active {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.5);
+}
+
+.studio-t-cam-card.cam2:hover {
+  border-color: rgba(6, 182, 212, 0.6);
+  background: rgba(6, 182, 212, 0.1);
+}
+.studio-t-cam-card.cam2.active {
+  background: rgba(6, 182, 212, 0.22);
+  border-color: #06b6d4;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.5);
+}
+
+.studio-t-cam-card.cam3:hover {
+  border-color: rgba(168, 85, 247, 0.6);
+  background: rgba(168, 85, 247, 0.1);
+}
+.studio-t-cam-card.cam3.active {
+  background: rgba(168, 85, 247, 0.22);
+  border-color: #a855f7;
+  box-shadow: 0 0 18px rgba(168, 85, 247, 0.5);
+}
+
+/* Copy Link Pill Button */
+.studio-btn-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.studio-btn-copy.copied {
+  background: #10b981;
+  color: #000000;
+  border-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+.studio-btn-copy.idle {
+  background: #1b212f;
+  color: #cbd5e1;
+}
+.studio-btn-copy.idle:hover {
+  background: #252d40;
+  color: #ffffff;
+}
+
+/* Network Mode Switcher Pills (Tunnel vs LAN) */
+.studio-net-pill {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.studio-net-pill:hover:not(.active) {
+  color: #e2e8f0;
+}
+.studio-net-pill.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+}
+
+/* Modal Close Button */
+.studio-modal-close-btn {
+  background: #181d2a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  border-radius: 7px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+.studio-modal-close-btn:hover {
+  background: #252d40;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}

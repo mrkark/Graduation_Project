@@ -103,21 +103,22 @@ app.get('/api/health', (req, res) => res.json({ success: true, data: { status: '
 
 // Получение и обновление статуса локального HTTPS шлюза для подключения телефонов
 app.get('/api/mocap/tunnel', (req, res) => {
-  const defaultHost = process.env.HOST_IP || '192.168.100.6';
   try {
     const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
     if (fs.existsSync(tunnelPath)) {
       const data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
-      if (!data.localIp || data.localIp === '10.131.233.47' || data.localIp.startsWith('172.')) {
-        data.localIp = defaultHost;
-        data.url = `https://${defaultHost}:8088`;
-        data.httpsUrl = `https://${defaultHost}:8088`;
+      if (data && data.localIp && !data.localIp.startsWith('172.') && data.localIp !== '127.0.0.1') {
+        return res.json({ success: true, data });
       }
-      return res.json({ success: true, data });
     }
   } catch (e) {
     // игнорируем ошибку чтения файла
   }
+
+  const defaultHost = (process.env.HOST_IP && process.env.HOST_IP !== '127.0.0.1' && !process.env.HOST_IP.startsWith('172.'))
+    ? process.env.HOST_IP
+    : '10.129.167.47';
+
   return res.json({
     success: true,
     data: {
@@ -125,14 +126,32 @@ app.get('/api/mocap/tunnel', (req, res) => {
       url: `https://${defaultHost}:8088`,
       httpsUrl: `https://${defaultHost}:8088`,
       httpsPort: 8088,
+      gatewayPort: 8443,
+      gatewayUrl: `https://${defaultHost}:8443`,
+      studioPort: 8000,
+      studioUrl: `http://${defaultHost}:8000/studio`,
       localIp: defaultHost,
       localIps: [
-        { name: 'Wi-Fi (192.168.100.6)', ip: '192.168.100.6', isPrimary: true },
-        { name: 'Ethernet (192.168.100.28)', ip: '192.168.100.28', isPrimary: false },
+        { name: 'Wi-Fi (Активный LAN)', ip: defaultHost, isPrimary: true },
         { name: 'Localhost (ПК)', ip: '127.0.0.1', isPrimary: false },
       ],
     },
   });
+});
+
+app.post('/api/mocap/refresh', (req, res) => {
+  try {
+    const tunnelPath = path.join(uploadsPath, 'tunnel-info.json');
+    let data = {};
+    if (fs.existsSync(tunnelPath)) {
+      try {
+        data = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
+      } catch {}
+    }
+    return res.json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.post('/api/mocap/tunnel', (req, res) => {
@@ -145,6 +164,7 @@ app.post('/api/mocap/tunnel', (req, res) => {
         existing = JSON.parse(fs.readFileSync(tunnelPath, 'utf8'));
       } catch (e) {}
     }
+    const finalIp = localIp || existing.localIp || process.env.HOST_IP || '10.129.167.47';
     const finalPublicUrl = publicUrl !== undefined ? publicUrl : (tunnelUrl !== undefined ? tunnelUrl : (existing.publicUrl || existing.tunnelUrl || null));
     const finalTunnelActive = tunnelActive !== undefined ? Boolean(tunnelActive) : (existing.tunnelActive !== undefined ? existing.tunnelActive : false);
     const data = {
@@ -153,10 +173,14 @@ app.post('/api/mocap/tunnel', (req, res) => {
       publicUrl: finalPublicUrl,
       tunnelUrl: finalPublicUrl,
       tunnelActive: finalTunnelActive,
-      url: httpsUrl || existing.url || (localIp ? `https://${localIp}:8443` : existing.httpsUrl),
-      httpsUrl: httpsUrl || existing.httpsUrl,
-      httpsPort: httpsPort || existing.httpsPort || 8443,
-      localIp: localIp || existing.localIp,
+      localIp: finalIp,
+      httpsPort: httpsPort || existing.httpsPort || 8088,
+      httpsUrl: httpsUrl || `https://${finalIp}:${httpsPort || existing.httpsPort || 8088}`,
+      gatewayPort: existing.gatewayPort || 8443,
+      gatewayUrl: existing.gatewayUrl || `https://${finalIp}:8443`,
+      studioPort: existing.studioPort || 8000,
+      studioUrl: existing.studioUrl || `http://${finalIp}:8000/studio`,
+      url: httpsUrl || `https://${finalIp}:8088`,
       localIps: localIps || existing.localIps,
       updatedAt: new Date().toISOString(),
     };
@@ -165,6 +189,43 @@ app.post('/api/mocap/tunnel', (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
+});
+
+// Проксирование запросов записи анимации к Python AI MoCap Studio (порт 8000)
+app.all(['/api/record*', '/record*'], async (req, res) => {
+  const http = require('http');
+  const mocapHost = process.env.MOCAP_HOST || (process.env.NODE_ENV === 'production' ? 'mocap-studio' : '127.0.0.1');
+  const targetPath = req.originalUrl;
+  
+  const forwardReq = (host, port, onFail) => {
+    const proxyReq = http.request(
+      {
+        hostname: host,
+        port: port,
+        path: targetPath,
+        method: req.method,
+        headers: { ...req.headers, host: `${host}:${port}` },
+        timeout: 5000,
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode, proxyRes.headers);
+        proxyRes.pipe(res);
+      }
+    );
+    proxyReq.on('error', onFail);
+    if (req.body && Object.keys(req.body).length > 0) {
+      proxyReq.write(JSON.stringify(req.body));
+    }
+    proxyReq.end();
+  };
+
+  forwardReq(mocapHost, 8000, () => {
+    forwardReq('127.0.0.1', 8000, (err2) => {
+      if (!res.headersSent) {
+        res.status(502).json({ error: 'MoCap Studio unreachable', message: err2.message });
+      }
+    });
+  });
 });
 
 // --- Публичные и защищённые маршруты API ---

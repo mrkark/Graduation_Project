@@ -17,37 +17,36 @@ Write-Host "5. MoCap Gateway   -> Порт 8443 (HTTPS для подключен
 Write-Host "6. Python MoCap    -> Порты 8000 и 8088 (ИИ захват движения и 3D студия)" -ForegroundColor Yellow
 Write-Host "--------------------------------------------------------"
 
-# 1. Автоматическое определение активного локального IP-адреса Wi-Fi / LAN
-$defaultInterface = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Sort-Object RouteMetric | Select-Object -First 1).InterfaceAlias
-$activeIp = $null
-if ($defaultInterface) {
-    $activeIp = (Get-NetIPAddress -InterfaceAlias $defaultInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.IPAddress -notlike "169.254*" } | Select-Object -ExpandProperty IPAddress -First 1)
+# 1. Автоматическое определение активного локального IP-адреса Wi-Fi / LAN и обновление SSL
+Write-Host "[+] Автоопределение сети и генерация SSL сертификатов (ensure-network-and-ssl.js)..." -ForegroundColor Cyan
+if (Test-Path "scripts/ensure-network-and-ssl.js") {
+    node scripts/ensure-network-and-ssl.js
 }
 
-if (-not $activeIp) {
-    # Fallback поиск первого не-виртуального интерфейса
-    $activeIp = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { 
-        $_.InterfaceAlias -notlike "*Loopback*" -and 
-        $_.InterfaceAlias -notlike "*vEthernet*" -and 
-        $_.InterfaceAlias -notlike "*VMware*" -and 
-        $_.InterfaceAlias -notlike "*Virtual*" -and 
-        $_.InterfaceAlias -notlike "*Host-Only*" -and 
-        $_.IPAddress -notlike "169.254*" -and
-        $_.IPAddress -notlike "192.168.56.*" -and
-        $_.IPAddress -notlike "127.*"
-    } | Select-Object -ExpandProperty IPAddress -First 1)
+$envFile = Join-Path $CurrentDir ".env"
+$activeIp = "10.129.167.47"
+if (Test-Path $envFile) {
+    $envIpLine = (Get-Content $envFile | Where-Object { $_ -match '^HOST_IP=' } | Select-Object -First 1)
+    if ($envIpLine) {
+        $activeIp = ($envIpLine -replace '^HOST_IP=', '').Trim()
+    }
 }
 
-if (-not $activeIp) {
-    $activeIp = "192.168.100.6"
-}
+Write-Host "[+] Активный IP компьютера в сети: $activeIp" -ForegroundColor Green
 
-Write-Host "[+] Активный IP компьютера в сети: $activeIp ($defaultInterface)" -ForegroundColor Cyan
-
-# Сбор всех сетевых адаптеров для кнопок быстрого выбора в веб-интерфейсе
+# 2. Сбор всех сетевых адаптеров для кнопок быстрого выбора в веб-интерфейсе
 $candidateIps = @()
 $candidateIps += @{ name = "Wi-Fi (Активный LAN)"; ip = $activeIp; isPrimary = $true }
 Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object {
+    $_.IPAddress -ne $activeIp -and
+    $_.IPAddress -notlike "127.*" -and
+    $_.IPAddress -notlike "169.254*" -and
+    $_.InterfaceAlias -notlike "*Loopback*" -and
+    $_.InterfaceAlias -notlike "*vEthernet*"
+} | ForEach-Object {
+    $candidateIps += @{ name = $_.InterfaceAlias; ip = $_.IPAddress; isPrimary = $false }
+}
+$candidateIps += @{ name = "Localhost (ПК)"; ip = "127.0.0.1"; isPrimary = $false }
     $_.IPAddress -ne $activeIp -and
     $_.IPAddress -notlike "127.*" -and
     $_.IPAddress -notlike "169.254*" -and

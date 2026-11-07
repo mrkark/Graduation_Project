@@ -11,12 +11,15 @@ _FONT_CACHE: Dict[Tuple[int, bool], ImageFont.FreeTypeFont] = {}
 
 
 def get_font(size: int = 16, bold: bool = True) -> ImageFont.FreeTypeFont:
-    """Returns cached TrueType font with Cyrillic support (Segoe UI / Arial / Calibri)."""
+    """Returns cached TrueType font with Cyrillic support (DejaVu Sans / Segoe UI / Arial)."""
     key = (size, bold)
     if key in _FONT_CACHE:
         return _FONT_CACHE[key]
 
     font_candidates = [
+        "/usr/local/lib/python3.11/site-packages/cv2/qt/fonts/DejaVuSans-Bold.ttf" if bold else "/usr/local/lib/python3.11/site-packages/cv2/qt/fonts/DejaVuSans.ttf",
+        "/usr/local/lib/python3.11/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans-Bold.ttf" if bold else "/usr/local/lib/python3.11/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "segoeuib.ttf" if bold else "segoeui.ttf",
         "arialbd.ttf" if bold else "arial.ttf",
         "calibrib.ttf" if bold else "calibri.ttf",

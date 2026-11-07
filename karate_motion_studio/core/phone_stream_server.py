@@ -1026,17 +1026,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
     btnRecordAnim.addEventListener('click', toggleRecordingFromPhone);
 
-    setInterval(async () => {
-      if (isStreaming) {
-        try {
-          const res = await fetch('/api/record/status');
-          const data = await res.json();
-          if (data.is_recording !== isRecordingAnim) {
-            setRecordingUI(data.is_recording, data.frames || 0);
-          }
-        } catch (e) {}
-      }
-    }, 1500);
+
 
     let currentStream = null;
     let ws = null;
@@ -1048,13 +1038,15 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     let fpsTimer = performance.now();
     let wakeLock = null;
 
-    // Detect role from URL path (e.g. /cam1 or /cam2)
+    // Detect role from URL path or query params (e.g. /cam1, /cam2, /cam3 or ?cam=cam3)
     function autoDetectRoleFromUrl() {
       const path = window.location.pathname.toLowerCase();
-      if (path.includes('cam2')) {
-        roleSelect.value = 'cam2';
-      } else if (path.includes('cam3')) {
+      const params = new URLSearchParams(window.location.search);
+      const qCam = (params.get('cam') || params.get('camera') || params.get('role') || '').toLowerCase();
+      if (qCam === 'cam3' || path.includes('cam3')) {
         roleSelect.value = 'cam3';
+      } else if (qCam === 'cam2' || path.includes('cam2')) {
+        roleSelect.value = 'cam2';
       } else {
         roleSelect.value = 'cam1';
       }
@@ -1087,7 +1079,9 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     });
 
     // Check secure context (HTTPS / localhost required for getUserMedia on phones)
-    const httpsUrl = `https://${window.location.hostname}:${window.location.port}${window.location.pathname}`;
+    const targetHttpsPort = (window.location.port === '8000') ? '8088' : ((window.location.port === '80' || !window.location.port) ? '8443' : (window.location.port === '5173' ? '8443' : (window.location.port || '8088')));
+    const httpsPortPart = (targetHttpsPort && targetHttpsPort !== '443') ? `:${targetHttpsPort}` : '';
+    const httpsUrl = `https://${window.location.hostname}${httpsPortPart}${window.location.pathname}${window.location.search}`;
     httpsSwitchLink.href = httpsUrl;
     permHttpsLink.href = httpsUrl;
 
@@ -1240,9 +1234,29 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         video.classList.toggle('mirrored', facingMode === 'user');
 
         const track = currentStream.getVideoTracks()[0];
-        const settings = track.getSettings ? track.getSettings() : {};
-        canvas.width = settings.width || video.videoWidth || width;
-        canvas.height = settings.height || video.videoHeight || height;
+        const vw = video.videoWidth || width;
+        const vh = video.videoHeight || height;
+
+        // Strict ultra-low latency canvas sizing:
+        // Cap maximum dimension to 640px (or 480px for 480p mode), preserving aspect ratio
+        const roleVal = roleSelect.value;
+        const isSideCam = (roleVal === 'cam2' || roleVal === 'cam3');
+        let maxDim = (resChoice === '720p') ? 960 : ((resChoice === '1080p') ? 1280 : 640);
+        if (resChoice === '480p') maxDim = isSideCam ? 426 : 480;
+
+        let cWidth = vw;
+        let cHeight = vh;
+        if (cWidth > maxDim || cHeight > maxDim) {
+          if (cWidth >= cHeight) {
+            cHeight = Math.round((cHeight / cWidth) * maxDim);
+            cWidth = maxDim;
+          } else {
+            cWidth = Math.round((cWidth / cHeight) * maxDim);
+            cHeight = maxDim;
+          }
+        }
+        canvas.width = cWidth;
+        canvas.height = cHeight;
         chipRes.textContent = `📏 ${canvas.width}x${canvas.height}`;
 
         // Check torch capabilities
@@ -1351,6 +1365,9 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     let userStoppedStreaming = false;
     let reconnectTimeout = null;
     let isEncoding = false;
+    let inFlightCount = 0;
+    let lastSendTime = 0;
+    let frameSendTime = 0;
     let lastFrameTime = performance.now();
 
     function connectWebSocket() {
@@ -1366,7 +1383,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       const role = roleSelect.value;
       const host = window.location.host;
       const protocol = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${host}/ws/stream/${role}`;
+      const wsUrl = protocol + '//' + host + '/ws/stream/' + role;
 
       ws = new WebSocket(wsUrl);
       ws.binaryType = 'blob';
@@ -1380,6 +1397,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         document.body.classList.add('is-live');
         isStreaming = true;
         isEncoding = false;
+        inFlightCount = 0;
+        lastSendTime = 0;
         lastFrameTime = performance.now();
         requestWakeLock();
         requestNextFrame();
@@ -1390,6 +1409,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         document.body.classList.remove('is-live');
         isStreaming = false;
         isEncoding = false;
+        inFlightCount = 0;
 
         if (userStoppedStreaming) {
           statusText.textContent = 'Готов';
@@ -1410,9 +1430,24 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       };
 
       ws.onmessage = (event) => {
+        // Ultra-low latency: handle binary ACK (0x06) as Blob or ArrayBuffer or text ACK
+        if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+          inFlightCount = Math.max(0, inFlightCount - 1);
+          const rtt = Math.round(performance.now() - frameSendTime);
+          chipCount.textContent = '📶 ' + rtt + ' ms · ' + totalFramesSent + ' кадр.';
+          requestNextFrame();
+          return;
+        }
         try {
           if (typeof event.data === 'string') {
             const msg = JSON.parse(event.data);
+            if (msg.type === 'ack') {
+              inFlightCount = Math.max(0, inFlightCount - 1);
+              const rtt = Math.round(performance.now() - frameSendTime);
+              chipCount.textContent = '📶 ' + rtt + ' ms · ' + totalFramesSent + ' кадр.';
+              requestNextFrame();
+              return;
+            }
             if (msg.type === 'record_status') {
               if (msg.is_recording !== isRecordingAnim) {
                 setRecordingUI(msg.is_recording, msg.saved_frames || 0);
@@ -1430,9 +1465,15 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     function scheduleNextFrame() {
       if (!isStreaming || !ws || ws.readyState !== WebSocket.OPEN) return;
 
-      // Zero-Buffer Backpressure: skip capture only if queue is seriously backed up (> 256KB)
-      // This guarantees minimal latency without stalling on normal Wi-Fi frame sizes
-      if (ws.bufferedAmount > 262144 || isEncoding) {
+      // Drop frame if encoder is busy or TCP buffer is backlogged (> 48 KB) or more than 1 in flight
+      if (isEncoding || ws.bufferedAmount > 49152 || inFlightCount >= 2) {
+        requestNextFrame();
+        return;
+      }
+
+      const now = performance.now();
+      // Cap maximum framerate at ~33 FPS (min 28ms interval) to prevent overloading phone hardware
+      if (now - lastSendTime < 28) {
         requestNextFrame();
         return;
       }
@@ -1443,32 +1484,36 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           const resChoice = resSelect.value;
-          let quality = 0.58;
-          if (resChoice === '1080p') quality = 0.75;
-          else if (resChoice === '720p') quality = 0.65;
-          else if (resChoice === '480p') quality = 0.50;
+          const isSideCam = (roleSelect.value === 'cam2' || roleSelect.value === 'cam3');
+          let quality = isSideCam ? 0.40 : 0.48;
+          if (resChoice === '1080p') quality = 0.68;
+          else if (resChoice === '720p') quality = 0.58;
+          else if (resChoice === '540p') quality = isSideCam ? 0.44 : 0.52;
 
           canvas.toBlob((blob) => {
             isEncoding = false;
             try {
               if (blob && isStreaming && ws && ws.readyState === WebSocket.OPEN) {
-                if (ws.bufferedAmount <= 262144) {
+                if (ws.bufferedAmount <= 49152) {
+                  inFlightCount++;
+                  lastSendTime = performance.now();
+                  frameSendTime = lastSendTime;
                   ws.send(blob);
-                  lastFrameTime = performance.now();
+                  lastFrameTime = lastSendTime;
                   frameCount++;
                   totalFramesSent++;
-                  chipCount.textContent = `📦 ${totalFramesSent} кадров`;
 
-                  const now = performance.now();
-                  if (now - fpsTimer >= 1000) {
-                    const fps = (frameCount * 1000) / (now - fpsTimer);
-                    chipFps.textContent = `⚡ ${fps.toFixed(1)} FPS`;
+                  const t_fps = performance.now();
+                  if (t_fps - fpsTimer >= 1000) {
+                    const fps = (frameCount * 1000) / (t_fps - fpsTimer);
+                    chipFps.textContent = '⚡ ' + fps.toFixed(1) + ' FPS';
                     frameCount = 0;
-                    fpsTimer = now;
+                    fpsTimer = t_fps;
                   }
                 }
               }
             } catch (err) {
+              inFlightCount = Math.max(0, inFlightCount - 1);
               console.warn('Frame send error:', err);
             }
             requestNextFrame();
@@ -1491,13 +1536,22 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       }
     }
 
-    // Hardware Watchdog: if stream stalls for > 350ms, kickstart next frame
+    // Hardware Watchdog: if stream stalls for > 200ms, kickstart next frame
     setInterval(() => {
-      if (isStreaming && ws && ws.readyState === WebSocket.OPEN && performance.now() - lastFrameTime > 350) {
+      if (isStreaming && ws && ws.readyState === WebSocket.OPEN && performance.now() - lastFrameTime > 200) {
         isEncoding = false;
+        inFlightCount = 0;
         scheduleNextFrame();
       }
-    }, 250);
+    }, 100);
+
+    // Fast ACK watchdog: if server ACK lost on Wi-Fi (> 80ms), release inFlightCount
+    setInterval(() => {
+      if (isStreaming && inFlightCount > 0 && (performance.now() - frameSendTime > 80)) {
+        inFlightCount = 0;
+        scheduleNextFrame();
+      }
+    }, 35);
 
     streamBtn.addEventListener('click', async () => {
       if (!isStreaming) {
@@ -1601,6 +1655,12 @@ class PhoneStreamServer:
         @self.app.get("/qr/cam2.png")
         async def get_qr_cam2_png():
             url = self.get_connection_url("cam2")
+            img_bytes = self.generate_qr_png_bytes(url)
+            return Response(content=img_bytes, media_type="image/png")
+
+        @self.app.get("/qr/cam3.png")
+        async def get_qr_cam3_png():
+            url = self.get_connection_url("cam3")
             img_bytes = self.generate_qr_png_bytes(url)
             return Response(content=img_bytes, media_type="image/png")
 

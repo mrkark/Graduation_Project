@@ -360,32 +360,37 @@ def estimate_fist_curl_from_pose(wrist: List[float], index: List[float], elbow: 
 class MocapTracker:
     """Unified Motion Capture Tracker using MediaPipe Pose & Hands."""
 
-    def __init__(self, track_hands: bool = True, model_complexity: int = 1):
+    def __init__(self, track_hands: bool = True, model_complexity: int = 0):
         self.track_hands = track_hands
         self.model_complexity = model_complexity
 
         # MediaPipe models
         with SilenceStderr():
-            self.mp_pose = mp.solutions.pose.Pose(
-                static_image_mode=False,
-                model_complexity=model_complexity,
-                smooth_landmarks=True,
-                enable_segmentation=False,
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5,
-            )
-
-            self.mp_hands = (
-                mp.solutions.hands.Hands(
+            if track_hands:
+                # MediaPipe Holistic: simultaneously tracks 33 Body Pose & 21-joint Left/Right Hands
+                # with internal ROI cropping and zero-drift tracking!
+                self.holistic = mp.solutions.holistic.Holistic(
                     static_image_mode=False,
-                    max_num_hands=2,
-                    model_complexity=0,
+                    model_complexity=model_complexity,
+                    smooth_landmarks=True,
+                    enable_segmentation=False,
+                    refine_face_landmarks=False,
+                    min_detection_confidence=0.40,
+                    min_tracking_confidence=0.40,
+                )
+                self.mp_pose = None
+                self.mp_hands = None
+            else:
+                self.holistic = None
+                self.mp_pose = mp.solutions.pose.Pose(
+                    static_image_mode=False,
+                    model_complexity=model_complexity,
+                    smooth_landmarks=True,
+                    enable_segmentation=False,
                     min_detection_confidence=0.45,
                     min_tracking_confidence=0.45,
                 )
-                if track_hands
-                else None
-            )
+                self.mp_hands = None
 
         # Real-time 1€ filter per joint: low min_cutoff stops static arm jitter; beta provides instant strike response
         self.joint_filters: Dict[str, Vector3DOneEuroFilter] = {
@@ -464,10 +469,17 @@ class MocapTracker:
         else:
             rgb_inference = rgb_square
 
-        # 1. Process Body Pose and Hands
+        # 1. Process Body Pose and Hands (MediaPipe Holistic or Pose)
         with SilenceStderr():
-            res_pose = self.mp_pose.process(rgb_inference)
-            res_hands = self.mp_hands.process(rgb_inference) if (self.track_hands and self.mp_hands) else None
+            if self.track_hands and self.holistic is not None:
+                res = self.holistic.process(rgb_inference)
+                res_pose = res
+                res_left_hand = res.left_hand_landmarks
+                res_right_hand = res.right_hand_landmarks
+            else:
+                res_pose = self.mp_pose.process(rgb_inference)
+                res_left_hand = None
+                res_right_hand = None
 
         # Display frame: flip horizontally if mirror requested for selfie display
         display_frame = cv2.flip(frame_bgr, 1) if mirror else frame_bgr.copy()
@@ -557,7 +569,10 @@ class MocapTracker:
                                     if dist_lateral < ribcage_half_width:
                                         dist_along_normal = float(np.dot(delta, uz))
                                         min_clearance = 0.08  # 8 cm in front of spine centerline
-                                        if dist_along_normal < min_clearance:
+                                        # Arm behind head detection: when arm is elevated above shoulder line and passing behind neck/head,
+                                        # do not push forward into the face!
+                                        is_behind_head = (t >= 0.88 and pt[1] > (l_sh[1] + r_sh[1]) * 0.5 - 0.05 and dist_along_normal < -0.02)
+                                        if not is_behind_head and dist_along_normal < min_clearance:
                                             cleared_pt = pt + (min_clearance - dist_along_normal) * uz
                                             raw_pts_3d[arm_j] = [
                                                 round(float(cleared_pt[0]), 4),
@@ -654,26 +669,12 @@ class MocapTracker:
                     "roll": round(float(roll), 3),
                 }
 
-        # Match detected hands to anatomical sides (left vs right)
+        # Match detected hands to anatomical sides (guaranteed by Holistic)
         matched_hands = []
-        if res_hands and res_hands.multi_hand_landmarks and res_hands.multi_handedness:
-            for hand_lms, handedness in zip(res_hands.multi_hand_landmarks, res_hands.multi_handedness):
-                label = handedness.classification[0].label
-                hw_x = (hand_lms.landmark[0].x * dim_max - pad_left) / max(1, w)
-                hw_y = (hand_lms.landmark[0].y * dim_max - pad_top) / max(1, h)
-
-                side = None
-                if raw_pts_2d_unmirrored and "left_wrist" in raw_pts_2d_unmirrored and "right_wrist" in raw_pts_2d_unmirrored:
-                    lw = raw_pts_2d_unmirrored["left_wrist"]
-                    rw = raw_pts_2d_unmirrored["right_wrist"]
-                    d_left = (hw_x - lw[0]) ** 2 + (hw_y - lw[1]) ** 2
-                    d_right = (hw_x - rw[0]) ** 2 + (hw_y - rw[1]) ** 2
-                    side = "left" if d_left < d_right else "right"
-
-                if side is None:
-                    # In an unmirrored camera stream, MediaPipe Hands' "Left" is physically person's RIGHT hand
-                    side = "right" if label == "Left" else "left"
-                matched_hands.append((hand_lms, side))
+        if res_left_hand is not None:
+            matched_hands.append((res_left_hand, "left"))
+        if res_right_hand is not None:
+            matched_hands.append((res_right_hand, "right"))
 
         # 3. Finger Tracking (Hybrid: MediaPipe Hands if detected, fallback to Pose distance ratio)
         detected_sides = set()
@@ -763,74 +764,27 @@ class MocapTracker:
             frame_data.fingers[side]["hand_direction"] = [round(float(v), 3) for v in v_fwd]
             frame_data.fingers[side]["detected"] = True
 
-        # Fallback for hands not detected by MediaPipe Hands (e.g. at full-body distance)
+        # Fallback for hands not detected by MediaPipe (e.g. occluded behind back or outside frame)
         for side in ["left", "right"]:
             if side not in detected_sides:
+                frame_data.fingers[side]["detected"] = False
                 wrist_name = f"{side}_wrist"
-                index_name = f"{side}_index"
                 elbow_name = f"{side}_elbow"
-                pinky_name = f"{side}_pinky"
-                thumb_name = f"{side}_thumb"
-                if (
-                    wrist_name in frame_data.joints
-                    and index_name in frame_data.joints
-                    and elbow_name in frame_data.joints
-                ):
-                    vis_w = frame_data.confidence.get(wrist_name, 0.0)
-                    vis_i = frame_data.confidence.get(index_name, 0.0)
-                    if vis_w >= 0.30 and vis_i >= 0.30:
-                        est_curl = estimate_fist_curl_from_pose(
-                            frame_data.joints[wrist_name],
-                            frame_data.joints[index_name],
-                            frame_data.joints[elbow_name],
-                        )
-                        for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
-                            smooth = self.finger_smooth[side][ftype] * 0.70 + est_curl * 0.30
-                            self.finger_smooth[side][ftype] = smooth
-                            frame_data.fingers[side][ftype] = round(smooth, 2)
-                        frame_data.fingers[side]["detected"] = True
-                        frame_data.fingers[side]["general_curl"] = round(est_curl, 2)
+                if wrist_name in frame_data.joints and elbow_name in frame_data.joints:
+                    w_p = np.array(frame_data.joints[wrist_name])
+                    el_p = np.array(frame_data.joints[elbow_name])
+                    v_arm = w_p - el_p
+                    len_arm = float(np.linalg.norm(v_arm))
+                    v_fwd = (v_arm / len_arm) if len_arm > 1e-4 else np.array([0.0, 1.0, 0.0])
+                    v_norm = np.array([0.0, 0.0, 1.0])
+                    frame_data.fingers[side]["palm_normal"] = [round(float(v), 3) for v in v_norm]
+                    frame_data.fingers[side]["hand_direction"] = [round(float(v), 3) for v in v_fwd]
 
-                        # Palm orientation from Pose landmarks
-                        if pinky_name in frame_data.joints:
-                            w_p = np.array(frame_data.joints[wrist_name])
-                            i_p = np.array(frame_data.joints[index_name])
-                            p_p = np.array(frame_data.joints[pinky_name])
-                            t_p = np.array(frame_data.joints.get(thumb_name, i_p))
-
-                            v_fwd = i_p - w_p
-                            len_fwd = float(np.linalg.norm(v_fwd))
-                            if len_fwd > 1e-4:
-                                v_fwd /= len_fwd
-                            else:
-                                v_fwd = np.array([0.0, 1.0, 0.0])
-
-                            v_across = (p_p - t_p) if side == "left" else (t_p - p_p)
-                            len_across = float(np.linalg.norm(v_across))
-                            if len_across > 1e-4:
-                                v_across /= len_across
-                            else:
-                                v_across = np.array([1.0, 0.0, 0.0])
-
-                            v_norm = np.cross(v_across, v_fwd)
-                            len_norm = float(np.linalg.norm(v_norm))
-                            if len_norm > 1e-4:
-                                v_norm /= len_norm
-                            else:
-                                v_norm = np.array([0.0, 0.0, 1.0])
-
-                            frame_data.fingers[side]["palm_normal"] = [round(float(v), 3) for v in v_norm]
-                            frame_data.fingers[side]["hand_direction"] = [round(float(v), 3) for v in v_fwd]
-                    else:
-                        for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
-                            smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
-                            self.finger_smooth[side][ftype] = smooth
-                            frame_data.fingers[side][ftype] = round(smooth, 2)
-                else:
-                    for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
-                        smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
-                        self.finger_smooth[side][ftype] = smooth
-                        frame_data.fingers[side][ftype] = round(smooth, 2)
+                # Gracefully decay fingers toward natural Kamae rest posture (0.15)
+                for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
+                    smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
+                    self.finger_smooth[side][ftype] = smooth
+                    frame_data.fingers[side][ftype] = round(smooth, 2)
 
         # 4. Populate 2D Hand Landmark Coordinates
         for hand_lms, side in matched_hands:
@@ -917,28 +871,6 @@ class MocapTracker:
         if "right_knee" in coords:
             cv2.putText(frame, f"{metrics['knee_r']:.0f} deg", (coords["right_knee"][0] + 10, coords["right_knee"][1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 180), 1, cv2.LINE_AA)
-
-        # Bottom Sensei HUD banner
-        if coords:
-            hud_y = h - 45
-            cv2.rectangle(frame, (15, hud_y - 25), (w - 15, hud_y + 30), (18, 22, 28), -1)
-            cv2.rectangle(frame, (15, hud_y - 25), (w - 15, hud_y + 30), (212, 175, 55), 1)
-
-            hud_title = f"{metrics['stance']} | {metrics['technique']}"
-            hud_score = f"ОЦЕНКА СЕНСЕЯ: {metrics['score']}%"
-            if draw_text_utf8 is not None:
-                draw_text_utf8(frame, hud_title, (25, hud_y - 18), font_size=16, color=(56, 189, 248))
-                draw_text_utf8(frame, hud_score, (w - 260, hud_y - 18), font_size=16, color=(16, 185, 129))
-            else:
-                cv2.putText(frame, f"Sensei Score: {metrics.get('score', 0)}%", (25, hud_y + 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (16, 185, 129), 2, cv2.LINE_AA)
-
-        # Status HUD
-        if fps > 0.0 or coords:
-            status_text = f"FPS: {fps:.1f} | Tracking: OK" if coords else "Searching Pose..."
-            color_hud = (0, 255, 120) if coords else (0, 140, 255)
-            cv2.putText(frame, status_text, (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 3, cv2.LINE_AA)
-            cv2.putText(frame, status_text, (20, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.75, color_hud, 2, cv2.LINE_AA)
 
     def _draw_hand_overlay(
         self,

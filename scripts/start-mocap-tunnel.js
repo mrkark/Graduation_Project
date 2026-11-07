@@ -74,24 +74,48 @@ let currentUrl = null;
 let providerIndex = 0;
 
 const PROVIDERS = [
-  { name: 'Serveo', host: 'serveo.net', args: (p) => ['-o', 'StrictHostKeyChecking=no', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', '-R', `80:127.0.0.1:${p}`, 'serveo.net'] },
-  { name: 'LocalhostRun', host: 'nokey@localhost.run', args: (p) => ['-o', 'StrictHostKeyChecking=no', '-o', 'ServerAliveInterval=15', '-o', 'ServerAliveCountMax=3', '-R', `80:127.0.0.1:${p}`, 'nokey@localhost.run'] },
+  { name: 'LocalhostRun', host: 'nokey@localhost.run', args: (p) => ['-o', 'StrictHostKeyChecking=no', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=5', '-R', `80:127.0.0.1:${p}`, 'nokey@localhost.run'] },
+  { name: 'Serveo', host: 'serveo.net', args: (p) => ['-o', 'StrictHostKeyChecking=no', '-o', 'ServerAliveInterval=30', '-o', 'ServerAliveCountMax=5', '-R', `80:127.0.0.1:${p}`, 'serveo.net'] },
 ];
+
+let consecutiveFailures = 0;
 
 function checkTunnelHealth() {
   if (!currentUrl) return;
   const testUrl = `${currentUrl}/status`;
-  https.get(testUrl, { timeout: 6000 }, (res) => {
-    if (res.statusCode !== 200) {
-      console.warn(`[!] Туннель вернул статус ${res.statusCode}. Перезапуск соединения...`);
+  const req = https.get(testUrl, { timeout: 15000 }, (res) => {
+    if (res.statusCode === 200) {
+      consecutiveFailures = 0;
+    } else {
+      consecutiveFailures++;
+      console.warn(`[!] Туннель вернул статус ${res.statusCode} (сбоев: ${consecutiveFailures}/5)`);
+      if (consecutiveFailures >= 5) {
+        console.warn('[!] 5 сбоев подряд. Перезапуск соединения...');
+        restartTunnel();
+      }
+    }
+  });
+  
+  req.on('timeout', () => {
+    req.destroy();
+    consecutiveFailures++;
+    console.warn(`[!] Таймаут проверки туннеля (сбоев: ${consecutiveFailures}/5)`);
+    if (consecutiveFailures >= 5) {
       restartTunnel();
     }
-  }).on('error', (err) => {
-    console.warn('[!] Туннель недоступен:', err.message);
+  });
+
+  req.on('error', (err) => {
+    consecutiveFailures++;
+    console.warn(`[!] Ошибка проверки туннеля: ${err.message} (сбоев: ${consecutiveFailures}/5)`);
+    if (consecutiveFailures >= 5) {
+      restartTunnel();
+    }
   });
 }
 
 function restartTunnel() {
+  consecutiveFailures = 0;
   if (reconnectTimer) clearTimeout(reconnectTimer);
   if (healthCheckTimer) clearInterval(healthCheckTimer);
   if (currentProcess) {
@@ -139,7 +163,7 @@ function startTunnel() {
       console.log('========================================================\n');
 
       if (healthCheckTimer) clearInterval(healthCheckTimer);
-      healthCheckTimer = setInterval(checkTunnelHealth, 25000);
+      healthCheckTimer = setInterval(checkTunnelHealth, 45000);
     }
   };
 

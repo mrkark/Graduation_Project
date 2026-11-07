@@ -245,15 +245,26 @@ class Retargeter:
                 s_key = "L" if side == "left" else "R"
                 f_data = frame_data.fingers.get(side, {})
                 for ftype in ["Thumb", "Index", "Middle", "Ring", "Pinky"]:
-                    curl = f_data.get(ftype.lower(), 0.0) if f_data.get("detected") else 0.85
+                    curl = f_data.get(ftype.lower(), 0.15) if f_data.get("detected") else 0.15
                     for idx in range(1, 4):
                         bname = f"{ftype}{idx}.{s_key}"
-                        # Rotate around local +X
-                        max_ang = 0.8 if ftype == "Thumb" else (1.4 if idx == 1 else 1.2)
-                        ang = curl * max_ang
-                        # Rotation around +X: [sin(ang/2), 0, 0, cos(ang/2)]
-                        q_flex = np.array([math.sin(ang * 0.5), 0.0, 0.0, math.cos(ang * 0.5)])
-                        local_quats[bname] = [round(float(v), 4) for v in q_flex]
+                        if ftype == "Thumb":
+                            z_sign = 1.0 if s_key == "L" else -1.0
+                            opp = curl * 0.70 * z_sign
+                            flex = curl * 0.60
+                            sx = math.sin(-flex * 0.5)
+                            cx = math.cos(-flex * 0.5)
+                            sz = math.sin(opp * 0.5)
+                            cz = math.cos(opp * 0.5)
+                            q_thumb = np.array([sx * cz, -sx * sz, cx * sz, cx * cz])
+                            q_thumb /= np.linalg.norm(q_thumb)
+                            local_quats[bname] = [round(float(v), 4) for v in q_thumb]
+                        else:
+                            # Natural palmar flexion around local -X
+                            max_ang = 1.35 if idx == 1 else (1.50 if idx == 2 else 1.20)
+                            ang = curl * max_ang
+                            q_flex = np.array([-math.sin(ang * 0.5), 0.0, 0.0, math.cos(ang * 0.5)])
+                            local_quats[bname] = [round(float(v), 4) for v in q_flex]
 
         return local_quats
 

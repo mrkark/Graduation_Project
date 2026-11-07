@@ -95,7 +95,7 @@
   </div>
 
   <div class="telemetry">
-    Режим: <span id="telem-mode">Аватар + Скелет</span> | FPS: <span id="telem-fps">60</span>
+    Режим: <span id="telem-mode">Аватар + Скелет</span> | FPS: <span id="telem-fps">60</span> | Пальцы: <span id="telem-fingers" style="color:#10b981;font-weight:bold;">● AI готов</span>
   </div>
 
   <script>
@@ -263,6 +263,44 @@
           if (node.isMesh) {
             node.castShadow = true;
             node.receiveShadow = true;
+
+            // ANATOMICAL KIMONO LAYER PRIORITY & CLOTH PENETRATION PREVENTION:
+            // Kimono (jacket, pants, obi belt) is physical cloth worn OVER the body skin.
+            if (node.name.includes("Gi") || node.name.includes("Belt") || node.name.includes("Obi")) {
+              node.renderOrder = 2;
+              if (node.material) {
+                node.material.polygonOffset = true;
+                node.material.polygonOffsetFactor = -2.5; // pull kimono forward towards camera in depth buffer
+                node.material.polygonOffsetUnits = -5.0;
+                node.material.depthTest = true;
+                node.material.depthWrite = true;
+              }
+            } else if (node.name.includes("Mesh") || node.name.includes("Skin") || node.name === "Karateka_Mesh") {
+              node.renderOrder = 1;
+              if (node.material) {
+                node.material.polygonOffset = true;
+                node.material.polygonOffsetFactor = 3.0; // push body skin inward in depth buffer
+                node.material.polygonOffsetUnits = 6.0;
+              }
+              // Deflate covered skin vertices in torso and upper thighs (y in [0.15, 1.45], |x| < 0.38)
+              // so skin sits safely inside the loose kimono and never pokes out through cloth folds!
+              if (node.geometry && node.geometry.attributes.position && node.geometry.attributes.normal) {
+                const pos = node.geometry.attributes.position;
+                const norm = node.geometry.attributes.normal;
+                for (let i = 0; i < pos.count; i++) {
+                  const y = pos.getY(i);
+                  const x = pos.getX(i);
+                  if (y > 0.15 && y < 1.45 && Math.abs(x) < 0.38) {
+                    const nx = norm.getX(i);
+                    const ny = norm.getY(i);
+                    const nz = norm.getZ(i);
+                    pos.setXYZ(i, pos.getX(i) - nx * 0.016, pos.getY(i) - ny * 0.016, pos.getZ(i) - nz * 0.016);
+                  }
+                }
+                pos.needsUpdate = true;
+                node.geometry.computeVertexNormals();
+              }
+            }
           }
         });
 
@@ -551,16 +589,19 @@
               if (mirrorAvatar) vHipsLat.x = -vHipsLat.x;
 
               if (vHipsLat.lengthSq() > 1e-4) {
-                // Pelvic Yaw angle around Y
-                const hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
+                // Pelvic Yaw angle around Y (clamped ~65 deg)
+                let hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
+                hipYaw = Math.max(-1.15, Math.min(1.15, hipYaw));
 
                 // Pelvic forward tilt when leaning or bending forward
                 const trunkForwardPitch = Math.atan2(vSpine.z, Math.max(0.08, vSpine.y));
-                // Pelvis absorbs ~35% of trunk forward flexion, hinging naturally at the hips
-                const pelvicTilt = trunkForwardPitch * 0.35;
+                // Pelvis absorbs ~35% of trunk forward flexion, hinging naturally at the hips (clamped ~28 deg)
+                let pelvicTilt = trunkForwardPitch * 0.35;
+                pelvicTilt = Math.max(-0.50, Math.min(0.50, pelvicTilt));
 
-                // Pelvic Roll around Z (weight shift / lateral tilt)
-                const pelvicRoll = Math.atan2(vHipsLat.y, Math.hypot(vHipsLat.x, vHipsLat.z));
+                // Pelvic Roll around Z (weight shift / lateral tilt clamped ~23 deg)
+                let pelvicRoll = Math.atan2(vHipsLat.y, Math.hypot(vHipsLat.x, vHipsLat.z));
+                pelvicRoll = Math.max(-0.40, Math.min(0.40, pelvicRoll));
 
                 const eulerHips = new THREE.Euler(-pelvicTilt, hipYaw, pelvicRoll, 'YXZ');
                 const qPelvisDelta = new THREE.Quaternion().setFromEuler(eulerHips);
@@ -676,8 +717,8 @@
               if (mirrorAvatar) vForearm.x = -vForearm.x;
 
               // ANATOMICAL ELBOW HINGE PROTECTION (Right Arm):
-              // Human elbow can only flex towards the anterior (chest forward) zone.
-              // Hyperextension backwards past the straight arm line is biologically impossible.
+              // Human elbow can only flex towards anterior zone when lowered.
+              // When hand is raised or reaching behind the head/neck, dorsal flexion is anatomically natural!
               if (vArm.lengthSq() > 1e-4 && vForearm.lengthSq() > 1e-4) {
                 const uArm = vArm.clone().normalize();
                 const projAlongArm = vForearm.dot(uArm);
@@ -685,12 +726,16 @@
                 let vBend = vForearm.clone().sub(vParallel);
 
                 if (vBend.lengthSq() > 1e-4) {
-                  const fwdDot = vBend.dot(torsoFwdNormal);
-                  // If elbow flexion points backwards through the thoracic plane:
-                  if (fwdDot < -0.04) {
-                    // Reflect bend vector into natural anterior flexion zone!
-                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
-                    vForearm.copy(vParallel.add(vBend));
+                  const pShR = pts["right_shoulder"];
+                  const pElR = pts["right_elbow"];
+                  const pWrR = pts["right_wrist"];
+                  const isElevatedR = (pElR && pShR && pElR[1] > pShR[1] - 0.20) || (pWrR && pShR && pWrR[1] > pShR[1] - 0.15);
+                  if (!isElevatedR) {
+                    const fwdDot = vBend.dot(torsoFwdNormal);
+                    if (fwdDot < -0.04) {
+                      vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
+                      vForearm.copy(vParallel.add(vBend));
+                    }
                   }
                 }
               }
@@ -751,10 +796,16 @@
                 let vBend = vForearm.clone().sub(vParallel);
 
                 if (vBend.lengthSq() > 1e-4) {
-                  const fwdDot = vBend.dot(torsoFwdNormal);
-                  if (fwdDot < -0.04) {
-                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
-                    vForearm.copy(vParallel.add(vBend));
+                  const pShL = pts["left_shoulder"];
+                  const pElL = pts["left_elbow"];
+                  const pWrL = pts["left_wrist"];
+                  const isElevatedL = (pElL && pShL && pElL[1] > pShL[1] - 0.20) || (pWrL && pShL && pWrL[1] > pShL[1] - 0.15);
+                  if (!isElevatedL) {
+                    const fwdDot = vBend.dot(torsoFwdNormal);
+                    if (fwdDot < -0.04) {
+                      vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
+                      vForearm.copy(vParallel.add(vBend));
+                    }
                   }
                 }
               }
@@ -855,8 +906,8 @@
           const targetRootZ = targetRootY * 0.25 - fwdBendShift;
 
           // Smooth EMA filtering for root translation
-          smoothRootY = smoothRootY * 0.80 + targetRootY * 0.20;
-          smoothRootZ = smoothRootZ * 0.80 + targetRootZ * 0.20;
+          smoothRootY = smoothRootY * 0.50 + targetRootY * 0.50;
+          smoothRootZ = smoothRootZ * 0.50 + targetRootZ * 0.50;
 
           if (avatarModel) {
             avatarModel.position.y = smoothRootY;
@@ -878,6 +929,35 @@
             if (anklePtR) {
               const vShin = new THREE.Vector3(...anklePtR).sub(new THREE.Vector3(...pts["right_knee"]));
               if (mirrorAvatar) vShin.x = -vShin.x;
+
+              // ANATOMICAL KNEE HINGE PROTECTION (Right Leg):
+              // Human knee is a strict uniaxial hinge. The shin can ONLY flex posteriorly (backwards).
+              // It can NEVER hyperextend forwards past the thigh axis into an ostrich leg!
+              if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
+                const uThigh = vThigh.clone().normalize();
+                const projAlongThigh = vShin.dot(uThigh);
+                const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
+                let vBend = vShin.clone().sub(vParallel);
+
+                if (vBend.lengthSq() > 1e-4) {
+                  const fwdDot = vBend.dot(torsoFwdNormal);
+                  // If shin is bending anteriorly (forward relative to torso), reflect it backwards!
+                  if (fwdDot > 0.02) {
+                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(1.95 * fwdDot));
+                    vShin.copy(vParallel.add(vBend));
+                  }
+                }
+
+                // Anatomical maximum knee flexion limit: human knee max flexion is ~155 deg
+                const kneeAngle = uThigh.angleTo(vShin.clone().normalize());
+                if (kneeAngle > 2.70) {
+                  const axis = new THREE.Vector3().crossVectors(uThigh, vShin).normalize();
+                  if (axis.lengthSq() > 1e-4) {
+                    vShin.copy(uThigh.clone().applyAxisAngle(axis, 2.70).multiplyScalar(vShin.length()));
+                  }
+                }
+              }
+
               alignBone(bLowerLegR, vShin, 0.85);
             } else if (bLowerLegR) {
               // Smart Fallback when Ankle is cut off by webcam bottom:
@@ -921,6 +1001,31 @@
             if (anklePtL) {
               const vShin = new THREE.Vector3(...anklePtL).sub(new THREE.Vector3(...pts["left_knee"]));
               if (mirrorAvatar) vShin.x = -vShin.x;
+
+              // ANATOMICAL KNEE HINGE PROTECTION (Left Leg):
+              if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
+                const uThigh = vThigh.clone().normalize();
+                const projAlongThigh = vShin.dot(uThigh);
+                const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
+                let vBend = vShin.clone().sub(vParallel);
+
+                if (vBend.lengthSq() > 1e-4) {
+                  const fwdDot = vBend.dot(torsoFwdNormal);
+                  if (fwdDot > 0.02) {
+                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(1.95 * fwdDot));
+                    vShin.copy(vParallel.add(vBend));
+                  }
+                }
+
+                const kneeAngle = uThigh.angleTo(vShin.clone().normalize());
+                if (kneeAngle > 2.70) {
+                  const axis = new THREE.Vector3().crossVectors(uThigh, vShin).normalize();
+                  if (axis.lengthSq() > 1e-4) {
+                    vShin.copy(uThigh.clone().applyAxisAngle(axis, 2.70).multiplyScalar(vShin.length()));
+                  }
+                }
+              }
+
               alignBone(bLowerLegL, vShin, 0.85);
             } else if (bLowerLegL) {
               // Smart Fallback when Ankle is cut off by webcam bottom:
@@ -971,12 +1076,25 @@
           headBone.quaternion.slerp(targetLocal, 0.70);
         }
 
-        // Finger curls
+        // Finger curls & Real-Time Telemetry
         if (frameData.fingers) {
           const fSideR = mirrorAvatar ? "L" : "R";
           const fSideL = mirrorAvatar ? "R" : "L";
           applyFingers(fSideR, frameData.fingers.right);
           applyFingers(fSideL, frameData.fingers.left);
+
+          const tf = document.getElementById('telem-fingers');
+          if (tf) {
+            const fL = frameData.fingers.left;
+            const fR = frameData.fingers.right;
+            const detL = fL && fL.detected;
+            const detR = fR && fR.detected;
+            const cL = fL ? (fL.index !== undefined ? fL.index : (fL.general_curl || 0.15)) : 0.15;
+            const cR = fR ? (fR.index !== undefined ? fR.index : (fR.general_curl || 0.15)) : 0.15;
+            const iconL = detL ? (cL > 0.45 ? '✊' : '✋') : '⚪';
+            const iconR = detR ? (cR > 0.45 ? '✊' : '✋') : '⚪';
+            tf.innerHTML = `<span style="color:${detL ? '#10b981' : '#9ca3af'}">Л: ${iconL} ${Math.round(cL*100)}%</span> | <span style="color:${detR ? '#10b981' : '#9ca3af'}">П: ${iconR} ${Math.round(cR*100)}%</span>`;
+          }
         }
 
         avatarModel.updateMatrixWorld(true);
@@ -1023,7 +1141,7 @@
         const curl = sState[key];
 
         // Phalange angles: [MCP, PIP, DIP]
-        let targetAngles = [curl * 1.40, curl * 1.65, curl * 1.30];
+        let targetAngles = [curl * 1.35, curl * 1.50, curl * 1.20];
         let targetAbd = 0.0;
 
         if (hasPhalanges && fData.phalanges[key]) {
@@ -1079,7 +1197,8 @@
               }
             } else {
               // Four fingers: MCP, PIP, DIP individual flexion around local -X
-              const flexAng = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * 1.4;
+              const rawFlex = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * (idx === 1 ? 1.35 : (idx === 2 ? 1.50 : 1.20));
+              const flexAng = Math.max(0.0, Math.min(1.55, rawFlex));
               const flexQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), flexAng);
 
               if (idx === 1) {
