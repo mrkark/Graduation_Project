@@ -51,7 +51,7 @@ export default function KarateStudioPage() {
 
   // Recording State: Exactly TWO modes: 'full' (целиком) vs 'layered' (по слоям)
   const [recMode, setRecMode] = useState('full'); // 'full' | 'layered'
-  const [activeLayer, setActiveLayer] = useState('lower'); // 'lower' | 'upper' | 'head_fingers'
+  const [activeLayer, setActiveLayer] = useState('lower'); // 'lower' | 'upper' | 'fingers'
   const [isRecording, setIsRecording] = useState(false);
   const [recDuration, setRecDuration] = useState(0);
   const [lastSavedFile, setLastSavedFile] = useState(null);
@@ -59,7 +59,7 @@ export default function KarateStudioPage() {
   const [layersData, setLayersData] = useState({
     lower: { recorded: false, frames_count: 0, duration: 0 },
     upper: { recorded: false, frames_count: 0, duration: 0 },
-    head_fingers: { recorded: false, frames_count: 0, duration: 0 },
+    fingers: { recorded: false, frames_count: 0, duration: 0 },
   });
 
   // QR Modal State
@@ -106,17 +106,17 @@ export default function KarateStudioPage() {
       color: '#10b981',
     },
     upper: {
-      name: 'Корпус и руки',
-      short: '2. Руки',
+      name: 'Корпус, руки и голова',
+      short: '2. Корпус и голова',
       icon: '🥋',
-      desc: 'Удары руками, блоки, повороты корпуса',
+      desc: 'Удары руками, блоки, повороты корпуса, наклон головы и взгляд (Metsuke)',
       color: '#3b82f6',
     },
-    head_fingers: {
-      name: 'Голова и пальцы',
-      short: '3. Голова',
-      icon: '👤',
-      desc: 'Взгляд, наклон головы, кулаки и ладони',
+    fingers: {
+      name: 'Кисти и пальцы',
+      short: '3. Пальцы (доп.)',
+      icon: '✊',
+      desc: 'Тонкая дозапись кулаков (сэйкэн), ладоней (сюто, нукитэ) и пальцев',
       color: '#a855f7',
     },
   };
@@ -181,7 +181,7 @@ export default function KarateStudioPage() {
           if (mounted && dLayer?.layers) {
             setLayersData(dLayer.layers);
             if (dLayer.recording_mode) setRecMode(dLayer.recording_mode);
-            if (dLayer.active_layer) setActiveLayer(dLayer.active_layer);
+            if (dLayer.active_layer) setActiveLayer(dLayer.active_layer === "head_fingers" ? "fingers" : dLayer.active_layer);
           }
         }
       } catch {}
@@ -311,7 +311,7 @@ export default function KarateStudioPage() {
         setLayersData({
           lower: { recorded: false, frames_count: 0, duration: 0 },
           upper: { recorded: false, frames_count: 0, duration: 0 },
-          head_fingers: { recorded: false, frames_count: 0, duration: 0 },
+          fingers: { recorded: false, frames_count: 0, duration: 0 },
         });
       }
     } catch (e) {
@@ -417,6 +417,7 @@ export default function KarateStudioPage() {
   }, []);
 
   const countRecordedLayers = Object.values(layersData).filter((l) => l && l.recorded).length;
+  const coreRecordedCount = (layersData.lower?.recorded ? 1 : 0) + (layersData.upper?.recorded ? 1 : 0);
   const timeFormatted = Math.floor(recDuration / 60).toString().padStart(2, '0') + ':' + Math.floor(recDuration % 60).toString().padStart(2, '0');
 
   if (isMobileOrTablet) {
@@ -520,10 +521,10 @@ export default function KarateStudioPage() {
               type="button"
               onClick={() => handleSwitchMode('layered')}
               className={`studio-mode-pill ${recMode === 'layered' ? 'active layered' : ''}`}
-              title="Создавать анимацию послойно: сначала стойки, потом удары и голову"
+              title="Создавать анимацию послойно: 1. Ноги и стойки + 2. Корпус с руками и головой (+ опционально пальцы)"
             >
               <Layers size={12} />
-              <span>По слоям ({countRecordedLayers}/3)</span>
+              <span>По слоям ({coreRecordedCount}/2)</span>
             </button>
           </div>
 
@@ -544,10 +545,10 @@ export default function KarateStudioPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {/* Layer Selection Pills */}
               <div className="studio-layers-deck">
-                {['lower', 'upper', 'head_fingers'].map((key) => {
-                  const meta = layerMeta[key];
+                {['lower', 'upper', 'fingers'].map((key) => {
+                  const meta = layerMeta[key] || layerMeta.upper;
                   const isSelected = activeLayer === key;
-                  const isDone = Boolean(layersData[key]?.recorded);
+                  const isDone = Boolean(layersData[key]?.recorded || (key === 'fingers' && layersData.head_fingers?.recorded));
 
                   return (
                     <button
@@ -577,7 +578,7 @@ export default function KarateStudioPage() {
                 className={`studio-rec-btn ${isRecording ? 'recording' : 'idle'}`}
               >
                 {isRecording ? <Square size={11} fill="#ef4444" /> : <Play size={11} fill="#ffffff" />}
-                <span>{isRecording ? `СТОП СЛОЙ (${timeFormatted})` : `Записать ${layerMeta[activeLayer].name}`}</span>
+                <span>{isRecording ? `СТОП СЛОЙ (${timeFormatted})` : `Записать ${(layerMeta[activeLayer] || layerMeta.upper).name}`}</span>
               </button>
 
               {/* Merge into Kata Button */}

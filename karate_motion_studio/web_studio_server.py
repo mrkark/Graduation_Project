@@ -188,21 +188,21 @@ recording_frames: List[Dict[str, Any]] = []
 recording_rotations: List[Dict[str, List[float]]] = []
 last_saved_recording: Optional[Dict[str, Any]] = None
 
-# Layered recording buffers
+# Layered recording buffers (Upper body includes torso, arms, head, and base fingers)
 layer_buffers: Dict[str, List[Dict[str, Any]]] = {
     "lower": [],
     "upper": [],
-    "head_fingers": [],
+    "fingers": [],
 }
 layer_rotations_buffer: Dict[str, List[Dict[str, List[float]]]] = {
     "lower": [],
     "upper": [],
-    "head_fingers": [],
+    "fingers": [],
 }
 stored_layers: Dict[str, Optional[Dict[str, Any]]] = {
     "lower": None,
     "upper": None,
-    "head_fingers": None,
+    "fingers": None,
 }
 
 recording_lock = threading.Lock()
@@ -1234,11 +1234,11 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
         <span id="lstatus-lower" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
       </button>
       <button class="layer-pill-btn" id="lbtn-upper" onclick="selectLayer('upper')">
-        <span>🥋 Слой 2: Руки и удары</span>
+        <span>🥋 Слой 2: Корпус, руки и голова</span>
         <span id="lstatus-upper" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
       </button>
-      <button class="layer-pill-btn" id="lbtn-head" onclick="selectLayer('head_fingers')">
-        <span>👁️ Слой 3: Голова и пальцы</span>
+      <button class="layer-pill-btn" id="lbtn-head" onclick="selectLayer('fingers')">
+        <span>✊ Слой 3: Кисти и пальцы</span>
         <span id="lstatus-head" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
       </button>
     </div>
@@ -1398,7 +1398,7 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
       activeLayer = layer;
       document.getElementById('lbtn-lower').classList.toggle('active', layer === 'lower');
       document.getElementById('lbtn-upper').classList.toggle('active', layer === 'upper');
-      document.getElementById('lbtn-head').classList.toggle('active', layer === 'head_fingers');
+      document.getElementById('lbtn-head').classList.toggle('active', layer === 'fingers' || layer === 'head_fingers');
     }}
 
     function openQrModal() {{ document.getElementById('qr-modal').classList.add('open'); }}
@@ -1589,8 +1589,9 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
             uBtn.classList.remove('recorded');
           }}
 
-          if (layers.head_fingers) {{
-            stHead.innerText = '🟢 Записан: ' + layers.head_fingers.frames_count + ' к';
+          const fg = layers.fingers || layers.head_fingers;
+          if (fg) {{
+            stHead.innerText = '🟢 Записан: ' + fg.frames_count + ' к';
             hBtn.classList.add('recorded');
           }} else {{
             stHead.innerText = '⭕ Не записан';
@@ -1936,7 +1937,9 @@ async def stop_recording_endpoint():
 @app.post("/record/layer/start")
 async def start_layer_recording(layer: str = "lower"):
     global is_recording, recording_mode, active_recording_layer, recording_start_time
-    valid_layers = ["lower", "upper", "head_fingers"]
+    if layer == "head_fingers":
+        layer = "fingers"
+    valid_layers = ["lower", "upper", "fingers"]
     if layer not in valid_layers:
         layer = "lower"
 
@@ -2008,15 +2011,22 @@ async def merge_layers_endpoint():
 
     lower_layer = stored_layers.get("lower")
     upper_layer = stored_layers.get("upper")
-    head_layer = stored_layers.get("head_fingers")
+    fingers_layer = stored_layers.get("fingers") or stored_layers.get("head_fingers")
 
     # Composite joint list per layer
     lower_joints = {"left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle", "left_heel", "right_heel", "left_foot_index", "right_foot_index"}
-    upper_joints = {"left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist", "left_pinky", "right_pinky", "left_index", "right_index", "left_thumb", "right_thumb"}
-    head_joints = {"nose", "left_eye", "right_eye", "left_ear", "right_ear"}
+    # Upper Body Layer captures the entire torso, arms, head, gaze (Metsuke) AND base finger movements:
+    upper_joints = {
+        "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_wrist", "right_wrist",
+        "left_pinky", "right_pinky", "left_index", "right_index", "left_thumb", "right_thumb",
+        "nose", "left_eye", "right_eye", "left_ear", "right_ear"
+    }
 
     lower_bones = {"Root", "Hips", "UpperLeg.L", "UpperLeg.R", "LowerLeg.L", "LowerLeg.R", "Foot.L", "Foot.R", "Toe.L", "Toe.R"}
-    upper_bones = {"Spine", "Spine1", "Chest", "Shoulder.L", "Shoulder.R", "UpperArm.L", "UpperArm.R", "LowerArm.L", "LowerArm.R", "Hand.L", "Hand.R"}
+    upper_bones = {
+        "Spine", "Spine1", "Chest", "Shoulder.L", "Shoulder.R", "UpperArm.L", "UpperArm.R", "LowerArm.L", "LowerArm.R", "Hand.L", "Hand.R",
+        "Neck", "Head"
+    }
 
     for i in range(max_frames):
         rel_t = round(i / max(1.0, fps), 3)
@@ -2046,13 +2056,18 @@ async def merge_layers_endpoint():
                 if b in r_l:
                     combined_bones[b] = r_l[b]
 
-        # 2. Upper Body Layer
+        # 2. Upper Body Layer (Torso, Arms, Head and base Fingers all recorded together!)
         if upper_layer and upper_layer.get("frames"):
             idx_u = i % upper_layer["frames_count"]
             f_u = upper_layer["frames"][idx_u]
             r_u = upper_layer["rotations"][idx_u]
             if not lower_layer:
                 root_pos = f_u.get("rootPosition", root_pos)
+            # Head and Metsuke gaze captured directly with torso:
+            head_data = f_u.get("head", head_data)
+            # Default fingers captured directly with upper body strikes/blocks:
+            if "fingers" in f_u and f_u["fingers"]:
+                fingers_data = f_u["fingers"]
             for j in upper_joints:
                 if j in f_u.get("joints", {}):
                     combined_joints[j] = f_u["joints"][j]
@@ -2060,22 +2075,18 @@ async def merge_layers_endpoint():
             for b in upper_bones:
                 if b in r_u:
                     combined_bones[b] = r_u[b]
+            for b_name, b_val in r_u.items():
+                if any(x in b_name for x in ["Thumb", "Index", "Middle", "Ring", "Pinky"]):
+                    combined_bones[b_name] = b_val
 
-        # 3. Head & Fingers Layer
-        if head_layer and head_layer.get("frames"):
-            idx_h = i % head_layer["frames_count"]
-            f_h = head_layer["frames"][idx_h]
-            r_h = head_layer["rotations"][idx_h]
-            head_data = f_h.get("head", head_data)
-            fingers_data = f_h.get("fingers", fingers_data)
-            for j in head_joints:
-                if j in f_h.get("joints", {}):
-                    combined_joints[j] = f_h["joints"][j]
-                    combined_conf[j] = f_h.get("confidence", {}).get(j, 0.9)
-            for b in ["Neck", "Head"]:
-                if b in r_h:
-                    combined_bones[b] = r_h[b]
-            for b_name, b_val in r_h.items():
+        # 3. Fine-Tuned Fingers Layer (Optional Override for Close-up Hand Details)
+        if fingers_layer and fingers_layer.get("frames"):
+            idx_f = i % fingers_layer["frames_count"]
+            f_f = fingers_layer["frames"][idx_f]
+            r_f = fingers_layer["rotations"][idx_f]
+            if "fingers" in f_f and f_f["fingers"]:
+                fingers_data = f_f["fingers"]
+            for b_name, b_val in r_f.items():
                 if any(x in b_name for x in ["Thumb", "Index", "Middle", "Ring", "Pinky"]):
                     combined_bones[b_name] = b_val
 
@@ -2164,18 +2175,21 @@ async def clear_layers_endpoint():
 @app.get("/api/record/layer/status")
 @app.get("/record/layer/status")
 async def get_layer_status():
+    status_dict = {
+        k: {
+            "recorded": bool(v and v.get("frames_count", 0) > 0),
+            "frames_count": v.get("frames_count", 0) if v else 0,
+            "duration": v.get("duration", 0.0) if v else 0.0,
+        }
+        for k, v in stored_layers.items()
+    }
+    # Provide backward-compatibility alias for clients expecting head_fingers:
+    status_dict["head_fingers"] = status_dict.get("fingers", {"recorded": False, "frames_count": 0, "duration": 0.0})
     return {
         "recording_mode": recording_mode,
         "active_layer": active_recording_layer,
         "is_recording": is_recording,
-        "layers": {
-            k: {
-                "recorded": bool(v and v.get("frames_count", 0) > 0),
-                "frames_count": v.get("frames_count", 0) if v else 0,
-                "duration": v.get("duration", 0.0) if v else 0.0,
-            }
-            for k, v in stored_layers.items()
-        }
+        "layers": status_dict,
     }
 
 
