@@ -194,7 +194,7 @@ app.post('/api/mocap/tunnel', (req, res) => {
 // Проксирование запросов записи анимации к Python AI MoCap Studio (порт 8000)
 app.all(['/api/record*', '/record*'], async (req, res) => {
   const http = require('http');
-  const mocapHost = process.env.MOCAP_HOST || (process.env.NODE_ENV === 'production' ? 'mocap-studio' : '127.0.0.1');
+  const mocapHost = process.env.MOCAP_HOST || (process.platform === 'linux' ? 'mocap-studio' : '127.0.0.1');
   const targetPath = req.originalUrl;
   
   const forwardReq = (host, port, onFail) => {

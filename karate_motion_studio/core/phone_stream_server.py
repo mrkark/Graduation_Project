@@ -910,7 +910,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
   <script>
     const video = document.getElementById('videoPreview');
     const canvas = document.getElementById('captureCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    if (ctx) ctx.imageSmoothingEnabled = false;
     const roleSelect = document.getElementById('roleSelect');
     const resSelect = document.getElementById('resSelect');
     const streamBtn = document.getElementById('streamBtn');
@@ -1241,8 +1242,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         // Cap maximum dimension to 640px (or 480px for 480p mode), preserving aspect ratio
         const roleVal = roleSelect.value;
         const isSideCam = (roleVal === 'cam2' || roleVal === 'cam3');
-        let maxDim = (resChoice === '720p') ? 960 : ((resChoice === '1080p') ? 1280 : 640);
-        if (resChoice === '480p') maxDim = isSideCam ? 426 : 480;
+        let maxDim = (resChoice === '720p') ? 800 : ((resChoice === '1080p') ? 1080 : 480);
+        if (resChoice === '480p') maxDim = isSideCam ? 400 : 480;
 
         let cWidth = vw;
         let cHeight = vh;
@@ -1386,7 +1387,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       const wsUrl = protocol + '//' + host + '/ws/stream/' + role;
 
       ws = new WebSocket(wsUrl);
-      ws.binaryType = 'blob';
+      ws.binaryType = 'arraybuffer';
 
       ws.onopen = () => {
         statusBadge.classList.add('live');
@@ -1430,9 +1431,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       };
 
       ws.onmessage = (event) => {
-        // Ultra-low latency: handle binary ACK (0x06) as Blob or ArrayBuffer or text ACK
-        if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
-          inFlightCount = Math.max(0, inFlightCount - 1);
+        inFlightCount = 0;
+        if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
           const rtt = Math.round(performance.now() - frameSendTime);
           chipCount.textContent = '📶 ' + rtt + ' ms · ' + totalFramesSent + ' кадр.';
           requestNextFrame();
@@ -1485,10 +1485,10 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
           const resChoice = resSelect.value;
           const isSideCam = (roleSelect.value === 'cam2' || roleSelect.value === 'cam3');
-          let quality = isSideCam ? 0.40 : 0.48;
-          if (resChoice === '1080p') quality = 0.68;
-          else if (resChoice === '720p') quality = 0.58;
-          else if (resChoice === '540p') quality = isSideCam ? 0.44 : 0.52;
+          let quality = isSideCam ? 0.38 : 0.44;
+          if (resChoice === '1080p') quality = 0.65;
+          else if (resChoice === '720p') quality = 0.52;
+          else if (resChoice === '540p') quality = isSideCam ? 0.40 : 0.46;
 
           canvas.toBlob((blob) => {
             isEncoding = false;
@@ -1536,22 +1536,22 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       }
     }
 
-    // Hardware Watchdog: if stream stalls for > 200ms, kickstart next frame
+    // Hardware Watchdog: if stream stalls for > 150ms, kickstart next frame
     setInterval(() => {
-      if (isStreaming && ws && ws.readyState === WebSocket.OPEN && performance.now() - lastFrameTime > 200) {
+      if (isStreaming && ws && ws.readyState === WebSocket.OPEN && performance.now() - lastFrameTime > 150) {
         isEncoding = false;
         inFlightCount = 0;
         scheduleNextFrame();
       }
-    }, 100);
+    }, 60);
 
-    // Fast ACK watchdog: if server ACK lost on Wi-Fi (> 80ms), release inFlightCount
+    // Fast ACK watchdog: if server ACK lost on Wi-Fi (> 60ms), release inFlightCount
     setInterval(() => {
-      if (isStreaming && inFlightCount > 0 && (performance.now() - frameSendTime > 80)) {
+      if (isStreaming && inFlightCount > 0 && (performance.now() - frameSendTime > 60)) {
         inFlightCount = 0;
         scheduleNextFrame();
       }
-    }, 35);
+    }, 25);
 
     streamBtn.addEventListener('click', async () => {
       if (!isStreaming) {

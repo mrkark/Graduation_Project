@@ -93,6 +93,12 @@ export default defineConfig({
       interval: 150,
     },
     proxy: {
+      '/api/record': {
+        target: studioTarget,
+        changeOrigin: true,
+        secure: false,
+        configure: handleProxyError,
+      },
       '/api': {
         target: backendTarget,
         changeOrigin: true,

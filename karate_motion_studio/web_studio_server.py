@@ -19,7 +19,8 @@ import threading
 import socket
 from pathlib import Path
 from typing import Dict, Any, Optional, Set, List, Tuple
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Silence noisy C++ / TensorFlow logs
 os.environ["GLOG_minloglevel"] = "3"
