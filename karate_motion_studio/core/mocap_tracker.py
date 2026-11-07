@@ -55,7 +55,7 @@ from core.project_schema import (
     Metadata,
     KarateMotionProject,
 )
-from core.filters import Vector3DOneEuroFilter, OneEuroFilter
+from core.filters import Vector3DOneEuroFilter, Vector2DOneEuroFilter, OneEuroFilter
 
 
 def calculate_joint_angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
@@ -393,6 +393,11 @@ class MocapTracker:
                 self.mp_hands = None
 
         # Real-time 1€ filter per joint: low min_cutoff stops static arm jitter; beta provides instant strike response
+        # 2D Screen landmark temporal filters to eliminate side camera video bone jitter
+        self.landmark_2d_filters: Dict[str, Vector2DOneEuroFilter] = {
+            name: Vector2DOneEuroFilter(freq=30.0, min_cutoff=0.8, beta=0.04)
+            for name in POSE_LM.keys()
+        }
         self.joint_filters: Dict[str, Vector3DOneEuroFilter] = {
             name: Vector3DOneEuroFilter(
                 freq=30.0,
@@ -429,6 +434,8 @@ class MocapTracker:
         self.head_yaw_filter.reset()
         self.head_roll_filter.reset()
         for f in self.joint_filters.values():
+            f.reset()
+        for f in self.landmark_2d_filters.values():
             f.reset()
 
     def process_frame(
@@ -551,7 +558,7 @@ class MocapTracker:
                     if ux_norm > 1e-4:
                         ux /= ux_norm
                         uz = np.cross(ux, uy)  # Chest forward normal from spine through sternum
-                        ribcage_half_width = float(np.linalg.norm(v_lat)) * 0.55
+                        ribcage_half_width = float(np.linalg.norm(v_lat)) * 0.60
 
                         for arm_j in ["left_elbow", "left_wrist", "right_elbow", "right_wrist", "left_index", "right_index"]:
                             if arm_j in raw_pts_3d:
@@ -568,7 +575,7 @@ class MocapTracker:
 
                                     if dist_lateral < ribcage_half_width:
                                         dist_along_normal = float(np.dot(delta, uz))
-                                        min_clearance = 0.08  # 8 cm in front of spine centerline
+                                        min_clearance = 0.16  # 16 cm clearance in front of spine to prevent arms cutting into kimono
                                         # Arm behind head detection: when arm is elevated above shoulder line and passing behind neck/head,
                                         # do not push forward into the face!
                                         is_behind_head = (t >= 0.88 and pt[1] > (l_sh[1] + r_sh[1]) * 0.5 - 0.05 and dist_along_normal < -0.02)
@@ -602,7 +609,12 @@ class MocapTracker:
                     raw_pts_2d_unmirrored[name] = [float(nx), float(ny)]
                     if mirror:
                         nx = 1.0 - nx
-                    pts_2d[name] = [round(float(np.clip(nx, 0.0, 1.0)), 4), round(float(np.clip(ny, 0.0, 1.0)), 4)]
+                    clamped_2d = [float(np.clip(nx, 0.0, 1.0)), float(np.clip(ny, 0.0, 1.0))]
+                    if name in self.landmark_2d_filters:
+                        filtered_2d = self.landmark_2d_filters[name].filter(clamped_2d, timestamp)
+                    else:
+                        filtered_2d = clamped_2d
+                    pts_2d[name] = [round(filtered_2d[0], 4), round(filtered_2d[1], 4)]
             frame_data.landmarks_2d = pts_2d
 
             # Root Position (Hips Center)
@@ -905,16 +917,24 @@ class MocapTracker:
         """Draws high-contrast anti-aliased karate skeleton and biomechanics HUD directly on frame."""
         h, w = frame.shape[:2]
         coords: Dict[str, Tuple[int, int]] = {}
-        for name, idx in POSE_LM.items():
-            if idx < len(lm_2d):
-                p = lm_2d[idx]
-                if getattr(p, "visibility", 1.0) > 0.30:
-                    raw_px = p.x * dim_max - pad_left
-                    raw_py = p.y * dim_max - pad_top
-                    px = int(w - 1 - raw_px) if mirror else int(raw_px)
-                    py = int(raw_py)
-                    if 0 <= px < w and 0 <= py < h:
-                        coords[name] = (px, py)
+        if frame_data and frame_data.landmarks_2d:
+            # Use temporal 1€-filtered 2D coordinates: eliminates camera skeleton twitching/jitter
+            for name, (norm_x, norm_y) in frame_data.landmarks_2d.items():
+                px = int(norm_x * w)
+                py = int(norm_y * h)
+                if 0 <= px < w and 0 <= py < h:
+                    coords[name] = (px, py)
+        else:
+            for name, idx in POSE_LM.items():
+                if idx < len(lm_2d):
+                    p = lm_2d[idx]
+                    if getattr(p, "visibility", 1.0) > 0.30:
+                        raw_px = p.x * dim_max - pad_left
+                        raw_py = p.y * dim_max - pad_top
+                        px = int(w - 1 - raw_px) if mirror else int(raw_px)
+                        py = int(raw_py)
+                        if 0 <= px < w and 0 <= py < h:
+                            coords[name] = (px, py)
 
         # Draw bone connections
         for a, b, color in POSE_DRAW_CONNECTIONS:

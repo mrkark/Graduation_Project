@@ -222,3 +222,21 @@ def smooth_project_frames(
         filtered_frames.append(filtered_frame)
 
     return filtered_frames
+
+
+class Vector2DOneEuroFilter:
+    """2D screen landmark filter maintaining 2 independent 1€ filters for X, Y."""
+
+    def __init__(self, freq: float = 30.0, min_cutoff: float = 1.0, beta: float = 0.05, d_cutoff: float = 1.0):
+        self.fx = OneEuroFilter(freq, min_cutoff, beta, d_cutoff)
+        self.fy = OneEuroFilter(freq, min_cutoff, beta, d_cutoff)
+
+    def filter(self, pt: List[float], timestamp: Optional[float] = None) -> List[float]:
+        return [
+            round(self.fx.filter(pt[0], timestamp), 4),
+            round(self.fy.filter(pt[1], timestamp), 4),
+        ]
+
+    def reset(self):
+        self.fx.reset()
+        self.fy.reset()

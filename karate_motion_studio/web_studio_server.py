@@ -158,7 +158,7 @@ tracking_loop_started = False
 
 retargeter = Retargeter()
 thread_pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="MocapWorker")
-cam_workers_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="CamWorker")
+cam_workers_pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="CamWorker")
 
 # Zero-Lag In-Memory Buffers
 frame_buffer_lock = asyncio.Lock()
@@ -357,6 +357,28 @@ def fuse_multicam_landmarks(
     sh_mid_y = (fused_joints["left_shoulder"][1] + fused_joints["right_shoulder"][1]) * 0.5 if has_sh else 0.5
     spine_mid_z = (fused_joints["left_shoulder"][2] + fused_joints["right_shoulder"][2]) * 0.5 if has_sh else hip_base_z
 
+    # Symmetrical Torso Depth Fusion:
+    # Side cameras provide accurate depth (Z) for the overall torso.
+    # We apply torso displacement symmetrically to BOTH shoulders so that camera noise
+    # NEVER causes phantom torso yaw twist!
+    dz_torso_candidates = []
+    if c2_ok and "left_shoulder" in fdata2.joints and "left_hip" in fdata2.joints and has_hips:
+        s_hip_x = (fdata2.joints["left_hip"][0] + fdata2.joints["right_hip"][0]) * 0.5
+        dz_torso_candidates.append(-(fdata2.joints["left_shoulder"][0] - s_hip_x))
+    if c3_ok and "right_shoulder" in fdata3.joints and "left_hip" in fdata3.joints and has_hips:
+        r_hip_x = (fdata3.joints["left_hip"][0] + fdata3.joints["right_hip"][0]) * 0.5
+        dz_torso_candidates.append(fdata3.joints["right_shoulder"][0] - r_hip_x)
+
+    if dz_torso_candidates and has_sh:
+        mean_dz = sum(dz_torso_candidates) / len(dz_torso_candidates)
+        target_torso_z = hip_base_z + mean_dz
+        dz_diff = target_torso_z - spine_mid_z
+        # Deadband against minor noise (< 1.5 cm)
+        if abs(dz_diff) > 0.015:
+            shift_z = 0.50 * dz_diff
+            fused_joints["left_shoulder"][2] = round(fused_joints["left_shoulder"][2] + shift_z, 4)
+            fused_joints["right_shoulder"][2] = round(fused_joints["right_shoulder"][2] + shift_z, 4)
+
     # 1. Cam 2 Fusion (+90 deg Left profile):
     if c2_ok and "left_hip" in fdata2.joints and "right_hip" in fdata2.joints and has_hips:
         s_joints = fdata2.joints
@@ -364,7 +386,7 @@ def fuse_multicam_landmarks(
         hip_side_x = (s_joints["left_hip"][0] + s_joints["right_hip"][0]) * 0.5
 
         left_side_joints = [
-            "left_shoulder", "left_elbow", "left_wrist",
+            "left_elbow", "left_wrist",
             "left_pinky", "left_index", "left_thumb",
             "left_knee", "right_knee", "left_ankle", "right_ankle",
             "left_heel", "right_heel", "left_foot_index", "right_foot_index",
@@ -392,7 +414,10 @@ def fuse_multicam_landmarks(
                         fused_joints[j][2] = round(0.85 * behind_z + 0.15 * fused_joints[j][2], 4)
                         fused_conf[j] = round(max(fused_conf.get(j, 0.0), c2, 0.75), 3)
                     else:
-                        fused_joints[j][2] = round(0.70 * target_z + 0.30 * fused_joints[j][2], 4)
+                        # Soft blend for micro-shifts to eliminate side camera bone jitter
+                        dz_err = abs(target_z - fused_joints[j][2])
+                        alpha_blend = 0.35 if dz_err < 0.025 else 0.70
+                        fused_joints[j][2] = round(alpha_blend * target_z + (1.0 - alpha_blend) * fused_joints[j][2], 4)
                         fused_conf[j] = round(max(fused_conf.get(j, 0.0), c2), 3)
 
                     if fused_conf.get(j, 0.0) < 0.50:
@@ -405,7 +430,7 @@ def fuse_multicam_landmarks(
         hip_right_x = (r_joints["left_hip"][0] + r_joints["right_hip"][0]) * 0.5
 
         right_side_joints = [
-            "right_shoulder", "right_elbow", "right_wrist",
+            "right_elbow", "right_wrist",
             "right_pinky", "right_index", "right_thumb",
             "right_knee", "left_knee", "right_ankle", "left_ankle",
             "right_heel", "left_heel", "right_foot_index", "left_foot_index",
@@ -432,7 +457,10 @@ def fuse_multicam_landmarks(
                         fused_joints[j][2] = round(0.85 * behind_z + 0.15 * fused_joints[j][2], 4)
                         fused_conf[j] = round(max(fused_conf.get(j, 0.0), c3, 0.75), 3)
                     else:
-                        fused_joints[j][2] = round(0.70 * target_z + 0.30 * fused_joints[j][2], 4)
+                        # Soft blend for micro-shifts to eliminate side camera bone jitter
+                        dz_err = abs(target_z - fused_joints[j][2])
+                        alpha_blend = 0.35 if dz_err < 0.025 else 0.70
+                        fused_joints[j][2] = round(alpha_blend * target_z + (1.0 - alpha_blend) * fused_joints[j][2], 4)
                         fused_conf[j] = round(max(fused_conf.get(j, 0.0), c3), 3)
 
                     if fused_conf.get(j, 0.0) < 0.50:
@@ -673,6 +701,22 @@ async def background_tracking_loop():
         try:
             await new_incoming_event.wait()
             new_incoming_event.clear()
+
+            # Multi-Camera Frame Coalescence Window:
+            # When multiple cameras are actively streaming, wait up to 12ms for all active cameras
+            # to deliver their frame so they process in a single synchronized parallel batch!
+            t_entry = time.time()
+            active_expected = [
+                cid for cid, t_last in camera_last_seen.items()
+                if (t_entry - t_last < 2.0)
+            ]
+            if len(active_expected) > 1:
+                t_coalesce = time.time()
+                while time.time() - t_coalesce < 0.012:
+                    async with frame_buffer_lock:
+                        if all(cid in incoming_frame_buffers for cid in active_expected):
+                            break
+                    await asyncio.sleep(0.002)
 
             async with frame_buffer_lock:
                 if not incoming_frame_buffers:

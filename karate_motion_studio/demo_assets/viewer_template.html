@@ -589,6 +589,12 @@
               if (mirrorAvatar) vHipsLat.x = -vHipsLat.x;
 
               if (vHipsLat.lengthSq() > 1e-4) {
+                // Deadband against depth noise: small Z differences (< 0.035m) do not twist the pelvis
+                if (Math.abs(vHipsLat.z) < 0.035) {
+                  vHipsLat.z = 0.0;
+                } else {
+                  vHipsLat.z = Math.sign(vHipsLat.z) * (Math.abs(vHipsLat.z) - 0.035);
+                }
                 // Pelvic Yaw angle around Y (clamped ~65 deg)
                 let hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
                 hipYaw = Math.max(-1.15, Math.min(1.15, hipYaw));
@@ -628,6 +634,18 @@
               const uy = vSpine.clone().normalize();
               let vLat = new THREE.Vector3(...pLSh).sub(new THREE.Vector3(...pRSh));
               if (mirrorAvatar) vLat.x = -vLat.x;
+              // Torso Yaw Deadband:
+              // When facing front, small depth differences (< 0.04m) between shoulders are sensor noise
+              // and must NOT induce phantom torso rotation!
+              if (Math.abs(vLat.z) < 0.04) {
+                vLat.z = 0.0;
+              } else {
+                vLat.z = Math.sign(vLat.z) * (Math.abs(vLat.z) - 0.04);
+              }
+              if (isUprightStance) {
+                vLat.z *= 0.30;
+                if (Math.abs(vLat.z) < 0.015) vLat.z = 0.0;
+              }
               if (vLat.lengthSq() > 1e-4) {
                 vLat.normalize();
                 // Gram-Schmidt orthogonalization: project lateral vector onto plane normal to spine
@@ -721,6 +739,17 @@
               // When hand is raised or reaching behind the head/neck, dorsal flexion is anatomically natural!
               if (vArm.lengthSq() > 1e-4 && vForearm.lengthSq() > 1e-4) {
                 const uArm = vArm.clone().normalize();
+                const uForearm = vForearm.clone().normalize();
+                const armCollinearDot = uArm.dot(uForearm);
+
+                // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
+                // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
+                if (armCollinearDot > 0.92) {
+                  const straightAlpha = Math.min(1.0, (armCollinearDot - 0.92) / 0.05);
+                  vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
+                }
+
+                // 2. Torso Clearance & Anatomical Elbow Hinge Protection:
                 const projAlongArm = vForearm.dot(uArm);
                 const vParallel = uArm.clone().multiplyScalar(projAlongArm);
                 let vBend = vForearm.clone().sub(vParallel);
@@ -735,6 +764,22 @@
                     if (fwdDot < -0.04) {
                       vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
                       vForearm.copy(vParallel.add(vBend));
+                    }
+                  }
+                }
+
+                // 3. Chest Collision Constraint: ensure forearm/wrist stay in front of kimono torso
+                const pElR = pts["right_elbow"];
+                if (pElR && midHip) {
+                  const elWorld = new THREE.Vector3(mirrorAvatar ? -pElR[0] : pElR[0], pElR[1], pElR[2]);
+                  const wrWorld = elWorld.clone().add(vForearm);
+                  const deltaToHip = wrWorld.clone().sub(midHip);
+                  const spineHeight = deltaToHip.dot(vSpine.clone().normalize());
+                  if (spineHeight >= 0.18 && spineHeight <= 1.05) {
+                    const fwdDist = deltaToHip.dot(torsoFwdNormal);
+                    const minChestClearance = 0.16; // 16 cm clearance in front of spine centerline
+                    if (fwdDist < minChestClearance) {
+                      vForearm.add(torsoFwdNormal.clone().multiplyScalar(minChestClearance - fwdDist));
                     }
                   }
                 }
@@ -791,6 +836,17 @@
               // ANATOMICAL ELBOW HINGE PROTECTION (Left Arm):
               if (vArm.lengthSq() > 1e-4 && vForearm.lengthSq() > 1e-4) {
                 const uArm = vArm.clone().normalize();
+                const uForearm = vForearm.clone().normalize();
+                const armCollinearDot = uArm.dot(uForearm);
+
+                // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
+                // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
+                if (armCollinearDot > 0.92) {
+                  const straightAlpha = Math.min(1.0, (armCollinearDot - 0.92) / 0.05);
+                  vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
+                }
+
+                // 2. Torso Clearance & Anatomical Elbow Hinge Protection:
                 const projAlongArm = vForearm.dot(uArm);
                 const vParallel = uArm.clone().multiplyScalar(projAlongArm);
                 let vBend = vForearm.clone().sub(vParallel);
@@ -805,6 +861,22 @@
                     if (fwdDot < -0.04) {
                       vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
                       vForearm.copy(vParallel.add(vBend));
+                    }
+                  }
+                }
+
+                // 3. Chest Collision Constraint: ensure forearm/wrist stay in front of kimono torso
+                const pElL = pts["left_elbow"];
+                if (pElL && midHip) {
+                  const elWorld = new THREE.Vector3(mirrorAvatar ? -pElL[0] : pElL[0], pElL[1], pElL[2]);
+                  const wrWorld = elWorld.clone().add(vForearm);
+                  const deltaToHip = wrWorld.clone().sub(midHip);
+                  const spineHeight = deltaToHip.dot(vSpine.clone().normalize());
+                  if (spineHeight >= 0.18 && spineHeight <= 1.05) {
+                    const fwdDist = deltaToHip.dot(torsoFwdNormal);
+                    const minChestClearance = 0.16; // 16 cm clearance in front of spine centerline
+                    if (fwdDist < minChestClearance) {
+                      vForearm.add(torsoFwdNormal.clone().multiplyScalar(minChestClearance - fwdDist));
                     }
                   }
                 }
@@ -1074,6 +1146,36 @@
           const euler = new THREE.Euler(pitchAngle, yawAngle, rollAngle, 'YXZ');
           const targetLocal = headBone.restLocalQ.clone().multiply(new THREE.Quaternion().setFromEuler(euler));
           headBone.quaternion.slerp(targetLocal, 0.70);
+        }
+
+        // Strict Ground Floor Collision & Penetration Clamping:
+        // In real life, feet NEVER sink through the floor (tatami ground plane at y = 0.00).
+        // Find the lowest world Y of all foot/toe bones and enforce ground level contact!
+        if (avatarModel) {
+          avatarModel.updateMatrixWorld(true);
+          const footBoneNames = [
+            "Foot.L", "Foot.R", "ToeBase.L", "ToeBase.R",
+            "LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase"
+          ];
+          let lowestFootY = Infinity;
+          const _tmpFootPos = new THREE.Vector3();
+          for (const fbName of footBoneNames) {
+            const b = getBone(fbName);
+            if (b) {
+              b.getWorldPosition(_tmpFootPos);
+              if (_tmpFootPos.y < lowestFootY) {
+                lowestFootY = _tmpFootPos.y;
+              }
+            }
+          }
+          // The sole of the foot extends ~0.038m below the foot bone joint.
+          // Floor surface is at world Y = 0.00. Lowest foot joint must be >= 0.038m!
+          const MIN_GROUND_Y = 0.038;
+          if (lowestFootY < MIN_GROUND_Y && lowestFootY > -2.0) {
+            const liftAmount = MIN_GROUND_Y - lowestFootY;
+            avatarModel.position.y += liftAmount;
+            avatarModel.updateMatrixWorld(true);
+          }
         }
 
         // Finger curls & Real-Time Telemetry

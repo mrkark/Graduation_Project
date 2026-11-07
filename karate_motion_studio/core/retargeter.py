@@ -228,6 +228,23 @@ class Retargeter:
             if np.linalg.norm(v_bone) < 1e-4:
                 continue
 
+            # Straight Arm Snap: when human arm is straight (collinear dot > 0.92, angle < 23 deg),
+            # snap forearm direction collinear with upper arm so elbow is not artificially bent!
+            if bone_name in ["LowerArm.L", "LowerArm.R"]:
+                side_p = "left" if bone_name == "LowerArm.L" else "right"
+                sh_k, el_k, wr_k = f"{side_p}_shoulder", f"{side_p}_elbow", f"{side_p}_wrist"
+                if sh_k in pts and el_k in pts and wr_k in pts:
+                    v_up = np.array(pts[el_k]) - np.array(pts[sh_k])
+                    len_up = float(np.linalg.norm(v_up))
+                    len_low = float(np.linalg.norm(v_bone))
+                    if len_up > 1e-4 and len_low > 1e-4:
+                        u_up = v_up / len_up
+                        u_low = v_bone / len_low
+                        dot_arm = float(np.dot(u_up, u_low))
+                        if dot_arm > 0.92:
+                            snap_alpha = min(1.0, (dot_arm - 0.92) / 0.05)
+                            v_bone = (1.0 - snap_alpha) * v_bone + snap_alpha * (u_up * len_low)
+
             v_rest = np.array(self.rest_world_dirs[bone_name])
             q_bone_world = quat_from_unit_vectors(v_rest, v_bone)
             world_quats[bone_name] = q_bone_world
