@@ -9,35 +9,7 @@
     body, html { width: 100%; height: 100%; overflow: hidden; background: #16171a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     #canvas-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
     
-    /* Overlay HUD */
-    .hud-controls {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      display: flex;
-      gap: 6px;
-      z-index: 100;
-    }
-    .hud-btn {
-      background: rgba(30, 31, 35, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #dfdfe0;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 11px;
-      cursor: pointer;
-      backdrop-filter: blur(4px);
-      transition: all 0.15s ease;
-    }
-    .hud-btn:hover {
-      background: rgba(50, 52, 58, 0.95);
-      border-color: rgba(255, 255, 255, 0.25);
-    }
-    .hud-btn.active {
-      background: #e05260;
-      color: #fff;
-      border-color: #e05260;
-    }
+
 
     .telemetry {
       position: absolute;
@@ -77,22 +49,7 @@
 <body>
   <div id="canvas-container"></div>
 
-  <!-- Camera Presets -->
-  <div class="hud-controls">
-    <button class="hud-btn" id="btn-front" onclick="setCamera('front')">Спереди</button>
-    <button class="hud-btn active" id="btn-34" onclick="setCamera('34')">3/4</button>
-    <button class="hud-btn" id="btn-side" onclick="setCamera('side')">Сбоку</button>
-    <button class="hud-btn" id="btn-back" onclick="setCamera('back')">Сзади</button>
-    <button class="hud-btn" id="btn-mirror" onclick="toggleMirrorAvatar()" title="Переключить прямой или зеркальный режим" style="display:inline-flex;align-items:center;gap:5px;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-      <span id="hud-mirror-text">Прямой</span>
-    </button>
-    <button class="hud-btn" id="btn-head" onclick="calibrateHead()" title="Выровнять уровень взгляда и осанки головы (Metsuke)" style="display:inline-flex;align-items:center;gap:5px;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-      <span id="hud-head-text">Взгляд (Metsuke)</span>
-    </button>
-    <button class="hud-btn" id="btn-tpose" onclick="resetPose()">T-Pose</button>
-  </div>
+
 
   <div class="telemetry">
     Режим: <span id="telem-mode">Аватар + Скелет</span> | FPS: <span id="telem-fps">60</span> | Пальцы: <span id="telem-fingers" style="color:#10b981;font-weight:bold;">● AI готов</span>
@@ -478,6 +435,12 @@
     let seatedWeight = 0.0;
     let smoothRootY = 0.0;
     let smoothRootZ = 0.0;
+
+    // PhysCap Option A: Foot Ground-Locking & Anti-Skate State
+    const footLockState = {
+      R: { isPlanted: true, plantPos: new THREE.Vector3(), prevPos: new THREE.Vector3() },
+      L: { isPlanted: true, plantPos: new THREE.Vector3(), prevPos: new THREE.Vector3() }
+    };
     let nominalLegLen = 0.82;
 
     // View Modes: "avatar" (default), "both", "skeleton"
@@ -748,7 +711,7 @@
                 // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
                 // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
                 if (armCollinearDot > 0.92) {
-                  const straightAlpha = Math.min(1.0, (armCollinearDot - 0.92) / 0.05);
+                  const straightAlpha = Math.max(0.0, Math.min(1.0, (armCollinearDot - 0.95) / 0.04));
                   vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
                 }
 
@@ -771,21 +734,8 @@
                   }
                 }
 
-                // 3. Chest Collision Constraint: ensure forearm/wrist stay in front of kimono torso
-                const pElR = pts["right_elbow"];
-                if (pElR && midHip) {
-                  const elWorld = new THREE.Vector3(mirrorAvatar ? -pElR[0] : pElR[0], pElR[1], pElR[2]);
-                  const wrWorld = elWorld.clone().add(vForearm);
-                  const deltaToHip = wrWorld.clone().sub(midHip);
-                  const spineHeight = deltaToHip.dot(vSpine.clone().normalize());
-                  if (spineHeight >= 0.18 && spineHeight <= 1.05) {
-                    const fwdDist = deltaToHip.dot(torsoFwdNormal);
-                    const minChestClearance = 0.16; // 16 cm clearance in front of spine centerline
-                    if (fwdDist < minChestClearance) {
-                      vForearm.add(torsoFwdNormal.clone().multiplyScalar(minChestClearance - fwdDist));
-                    }
-                  }
-                }
+                // Kimono chest clearance (minChestClearance = 0.16) is safely enforced in mocap_tracker.py
+                // to avoid Three.js bone twisting.
               }
 
               alignBone(bUpperR, vArm, 0.75);
@@ -845,7 +795,7 @@
                 // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
                 // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
                 if (armCollinearDot > 0.92) {
-                  const straightAlpha = Math.min(1.0, (armCollinearDot - 0.92) / 0.05);
+                  const straightAlpha = Math.max(0.0, Math.min(1.0, (armCollinearDot - 0.95) / 0.04));
                   vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
                 }
 
@@ -868,21 +818,8 @@
                   }
                 }
 
-                // 3. Chest Collision Constraint: ensure forearm/wrist stay in front of kimono torso
-                const pElL = pts["left_elbow"];
-                if (pElL && midHip) {
-                  const elWorld = new THREE.Vector3(mirrorAvatar ? -pElL[0] : pElL[0], pElL[1], pElL[2]);
-                  const wrWorld = elWorld.clone().add(vForearm);
-                  const deltaToHip = wrWorld.clone().sub(midHip);
-                  const spineHeight = deltaToHip.dot(vSpine.clone().normalize());
-                  if (spineHeight >= 0.18 && spineHeight <= 1.05) {
-                    const fwdDist = deltaToHip.dot(torsoFwdNormal);
-                    const minChestClearance = 0.16; // 16 cm clearance in front of spine centerline
-                    if (fwdDist < minChestClearance) {
-                      vForearm.add(torsoFwdNormal.clone().multiplyScalar(minChestClearance - fwdDist));
-                    }
-                  }
-                }
+                // Kimono chest clearance (minChestClearance = 0.16) is safely enforced in mocap_tracker.py
+                // to avoid Three.js bone twisting.
               }
 
               alignBone(bUpperL, vArm, 0.75);
@@ -1005,25 +942,35 @@
               const vShin = new THREE.Vector3(...anklePtR).sub(new THREE.Vector3(...pts["right_knee"]));
               if (mirrorAvatar) vShin.x = -vShin.x;
 
-              // ANATOMICAL KNEE HINGE PROTECTION (Right Leg):
-              // Human knee is a strict uniaxial hinge. The shin can ONLY flex posteriorly (backwards).
-              // It can NEVER hyperextend forwards past the thigh axis into an ostrich leg!
+              // PhysCap Option A: Anatomical Thigh-Relative Knee Hinge (Right Leg)
+              // Human knee flexes strictly towards the posterior surface of the femur (hamstring).
+              // By evaluating bend relative to the thigh's local anterior/posterior axis, kicks
+              // in any direction (front, side, roundhouse, back) never hyperextend or invert!
               if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
                 const uThigh = vThigh.clone().normalize();
-                const projAlongThigh = vShin.dot(uThigh);
-                const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
-                let vBend = vShin.clone().sub(vParallel);
+                let uThighLat = new THREE.Vector3().crossVectors(torsoFwdNormal, uThigh);
+                if (uThighLat.lengthSq() < 1e-3 && vSpine) {
+                  uThighLat.crossVectors(vSpine.clone().normalize(), uThigh);
+                }
+                if (uThighLat.lengthSq() > 1e-4) {
+                  uThighLat.normalize();
+                  // Anterior (quadriceps/front of femur):
+                  const uAnterior = new THREE.Vector3().crossVectors(uThigh, uThighLat).normalize();
+                  const projAlongThigh = vShin.dot(uThigh);
+                  const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
+                  let vBend = vShin.clone().sub(vParallel);
 
-                if (vBend.lengthSq() > 1e-4) {
-                  const fwdDot = vBend.dot(torsoFwdNormal);
-                  // If shin is bending anteriorly (forward relative to torso), reflect it backwards!
-                  if (fwdDot > 0.02) {
-                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(1.95 * fwdDot));
-                    vShin.copy(vParallel.add(vBend));
+                  if (vBend.lengthSq() > 1e-4) {
+                    const anteriorDot = vBend.dot(uAnterior);
+                    // Knee cannot hyperextend anteriorly past the femur line
+                    if (anteriorDot > 0.03) {
+                      vBend.sub(uAnterior.clone().multiplyScalar(anteriorDot));
+                      vShin.copy(vParallel.add(vBend));
+                    }
                   }
                 }
 
-                // Anatomical maximum knee flexion limit: human knee max flexion is ~155 deg
+                // Anatomical maximum knee flexion limit: human knee max flexion is ~155 deg (2.70 rad)
                 const kneeAngle = uThigh.angleTo(vShin.clone().normalize());
                 if (kneeAngle > 2.70) {
                   const axis = new THREE.Vector3().crossVectors(uThigh, vShin).normalize();
@@ -1077,18 +1024,26 @@
               const vShin = new THREE.Vector3(...anklePtL).sub(new THREE.Vector3(...pts["left_knee"]));
               if (mirrorAvatar) vShin.x = -vShin.x;
 
-              // ANATOMICAL KNEE HINGE PROTECTION (Left Leg):
+              // PhysCap Option A: Anatomical Thigh-Relative Knee Hinge (Left Leg)
               if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
                 const uThigh = vThigh.clone().normalize();
-                const projAlongThigh = vShin.dot(uThigh);
-                const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
-                let vBend = vShin.clone().sub(vParallel);
+                let uThighLat = new THREE.Vector3().crossVectors(torsoFwdNormal, uThigh);
+                if (uThighLat.lengthSq() < 1e-3 && vSpine) {
+                  uThighLat.crossVectors(vSpine.clone().normalize(), uThigh);
+                }
+                if (uThighLat.lengthSq() > 1e-4) {
+                  uThighLat.normalize();
+                  const uAnterior = new THREE.Vector3().crossVectors(uThigh, uThighLat).normalize();
+                  const projAlongThigh = vShin.dot(uThigh);
+                  const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
+                  let vBend = vShin.clone().sub(vParallel);
 
-                if (vBend.lengthSq() > 1e-4) {
-                  const fwdDot = vBend.dot(torsoFwdNormal);
-                  if (fwdDot > 0.02) {
-                    vBend.sub(torsoFwdNormal.clone().multiplyScalar(1.95 * fwdDot));
-                    vShin.copy(vParallel.add(vBend));
+                  if (vBend.lengthSq() > 1e-4) {
+                    const anteriorDot = vBend.dot(uAnterior);
+                    if (anteriorDot > 0.03) {
+                      vBend.sub(uAnterior.clone().multiplyScalar(anteriorDot));
+                      vShin.copy(vParallel.add(vBend));
+                    }
                   }
                 }
 
@@ -1151,9 +1106,9 @@
           headBone.quaternion.slerp(targetLocal, 0.70);
         }
 
-        // Strict Ground Floor Collision & Penetration Clamping:
-        // In real life, feet NEVER sink through the floor (tatami ground plane at y = 0.00).
-        // Find the lowest world Y of all foot/toe bones and enforce ground level contact!
+        // PhysCap Option A: Foot Ground-Locking, Anti-Skate & Zero Floor Penetration
+        // In real karate kata, supporting feet remain planted on the tatami ground (Y = 0.00)
+        // without sliding (anti-skate) or clipping beneath the floor (zero floor penetration).
         if (avatarModel) {
           avatarModel.updateMatrixWorld(true);
           const footBoneNames = [
@@ -1171,6 +1126,7 @@
               }
             }
           }
+
           // The sole of the foot extends ~0.038m below the foot bone joint.
           // Floor surface is at world Y = 0.00. Lowest foot joint must be >= 0.038m!
           const MIN_GROUND_Y = 0.038;
@@ -1179,6 +1135,38 @@
             avatarModel.position.y += liftAmount;
             avatarModel.updateMatrixWorld(true);
           }
+
+          // Anti-Skate: enforce grounded stability for supporting feet
+          ['L', 'R'].forEach(side => {
+            const fName = side === 'L' ? footNameL : footNameR;
+            const bFoot = getBone(fName);
+            if (bFoot) {
+              bFoot.getWorldPosition(_tmpFootPos);
+              const st = footLockState[side];
+              const isNearGround = _tmpFootPos.y <= (MIN_GROUND_Y + 0.05);
+              const deltaY = Math.abs(_tmpFootPos.y - st.prevPos.y);
+
+              if (isNearGround && deltaY < 0.02) {
+                // Foot is planted on tatami
+                if (!st.isPlanted) {
+                  st.isPlanted = true;
+                  st.plantPos.copy(_tmpFootPos);
+                } else {
+                  // Damp small lateral jitter (anti-skate filter)
+                  const driftDist = _tmpFootPos.distanceTo(st.plantPos);
+                  if (driftDist < 0.045 && driftDist > 1e-4) {
+                    // Suppress micro-jitter sliding on floor
+                    avatarModel.position.x -= (_tmpFootPos.x - st.plantPos.x) * 0.15;
+                    avatarModel.position.z -= (_tmpFootPos.z - st.plantPos.z) * 0.15;
+                  }
+                }
+              } else {
+                // Foot raised in kick, knee strike or step
+                st.isPlanted = false;
+              }
+              st.prevPos.copy(_tmpFootPos);
+            }
+          });
         }
 
         // Finger curls & Real-Time Telemetry
@@ -1375,10 +1363,6 @@
     };
 
     window.setCamera = function(preset) {
-      document.querySelectorAll('.hud-btn').forEach(b => b.classList.remove('active'));
-      const activeBtn = document.getElementById(`btn-${preset}`);
-      if (activeBtn) activeBtn.classList.add('active');
-
       if (preset === 'front') {
         camera.position.set(0, 1.25, 3.2);
         controls.target.set(0, 0.95, 0);
@@ -1452,6 +1436,8 @@
         window.setCamera(preset);
       } else if (type === 'resetPose' && window.resetPose) {
         window.resetPose();
+      } else if (type === 'calibrateHead' && window.calibrateHead) {
+        window.calibrateHead();
       } else if (type === 'setViewMode' && mode && window.setViewMode) {
         window.setViewMode(mode);
       } else if (type === 'setMirrorAvatar' && typeof mirror === 'boolean' && window.setMirrorAvatar) {

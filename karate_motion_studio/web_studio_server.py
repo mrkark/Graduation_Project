@@ -388,8 +388,7 @@ def fuse_multicam_landmarks(
         left_side_joints = [
             "left_elbow", "left_wrist",
             "left_pinky", "left_index", "left_thumb",
-            "left_knee", "right_knee", "left_ankle", "right_ankle",
-            "left_heel", "right_heel", "left_foot_index", "right_foot_index",
+            # Leg joints excluded: side cam X axis != forward/backward body depth
         ]
         # In a 2-phone setup (Cam 1 + Cam 2), if Cam 2 clearly sees right arm forward (c2 >= 0.60),
         # allow Cam 2 profile depth to reinforce right arm forward reach as well!
@@ -432,8 +431,7 @@ def fuse_multicam_landmarks(
         right_side_joints = [
             "right_elbow", "right_wrist",
             "right_pinky", "right_index", "right_thumb",
-            "right_knee", "left_knee", "right_ankle", "left_ankle",
-            "right_heel", "left_heel", "right_foot_index", "left_foot_index",
+            # Leg joints excluded: side cam X axis != forward/backward body depth
         ]
         # In a 2-phone setup (Cam 1 + Cam 3), if Cam 3 clearly sees left arm forward (c3 >= 0.60),
         # allow Cam 3 profile depth to reinforce left arm forward reach as well!
@@ -1312,10 +1310,17 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
         {ICON_TARGET_SVG} <span id="mirror-text">Прямой</span>
       </button>
 
+      <div style="border-left: 1px solid #374151; height: 18px; margin: 0 2px;"></div>
+
       <button class="btn" onclick="sendViewerCommand('resetPose')">T-Pose</button>
-      <button class="btn active" id="btn-cam-34" onclick="sendViewerCommand('setCamera', '34')">3/4</button>
-      <button class="btn" onclick="sendViewerCommand('setCamera', 'front')">Спереди</button>
-      <button class="btn" onclick="sendViewerCommand('setCamera', 'side')">Сбоку</button>
+      <button class="btn" onclick="sendViewerCommand('calibrateHead')" title="Выровнять уровень взгляда (Metsuke)">Metsuke</button>
+
+      <div style="border-left: 1px solid #374151; height: 18px; margin: 0 2px;"></div>
+
+      <button class="btn active" id="btn-cam-34" onclick="setCameraPreset('34')">3/4</button>
+      <button class="btn" id="btn-cam-front" onclick="setCameraPreset('front')">Спереди</button>
+      <button class="btn" id="btn-cam-side" onclick="setCameraPreset('side')">Сбоку</button>
+      <button class="btn" id="btn-cam-back" onclick="setCameraPreset('back')">Сзади</button>
     </div>
   </header>
 
@@ -1704,8 +1709,19 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
           frame.contentWindow.postMessage({{ type: 'resetPose' }}, '*');
         }} else if (type === 'setMirrorAvatar') {{
           frame.contentWindow.postMessage({{ type: 'setMirrorAvatar', mirror: val }}, '*');
+        }} else if (type === 'calibrateHead') {{
+          frame.contentWindow.postMessage({{ type: 'calibrateHead' }}, '*');
         }}
       }}
+    }}
+
+    function setCameraPreset(preset) {{
+      sendViewerCommand('setCamera', preset);
+      // Update active state on parent-side camera buttons
+      ['34','front','side','back'].forEach(p => {{
+        const b = document.getElementById('btn-cam-' + p);
+        if (b) b.classList.toggle('active', p === preset);
+      }});
     }}
 
     setInterval(async () => {{
