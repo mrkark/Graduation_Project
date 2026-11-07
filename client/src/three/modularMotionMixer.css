@@ -624,3 +624,392 @@
   align-items: center;
 }
 
+
+/* =========================================================
+   Banner: Jump to Phone Cameras 3D Dojo
+   ========================================================= */
+.mixer-mocap-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+
+.btn-mocap-banner-action {
+  background: #10b981;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-mocap-banner-action:hover {
+  background: #34d399;
+  transform: translateY(-1px);
+}
+
+.btn-save-preset {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-save-preset:hover {
+  background: linear-gradient(135deg, #34d399, #10b981) !important;
+  transform: translateY(-1px);
+}
+
+/* =========================================================
+   Toast Alert
+   ========================================================= */
+.mixer-toast-alert {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #10b981;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  color: #f8fafc;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+  animation: fadeInDown 0.2s ease-out;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* =========================================================
+   Presets Catalog View
+   ========================================================= */
+.presets-catalog-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.presets-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.presets-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #11100e;
+  border: 1px solid #332f27;
+  border-radius: 6px;
+  padding: 5px 10px;
+}
+
+.presets-search-box input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 11.5px;
+  width: 100%;
+  outline: none;
+}
+
+.btn-clear-search {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+
+.presets-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.preset-cat-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  border-radius: 14px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-cat-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.preset-cat-chip.active {
+  background: #bfa15f;
+  color: #111;
+  border-color: #bfa15f;
+  font-weight: 800;
+}
+
+.presets-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.presets-empty-box {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px dashed #374151;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.shared-preset-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.shared-preset-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(191, 161, 95, 0.5);
+  transform: translateY(-1px);
+}
+
+.shared-preset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preset-badge {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.preset-badge--block { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); }
+.preset-badge--punch { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+.preset-badge--kick { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+.preset-badge--stance { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+.preset-badge--combo { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); }
+.preset-badge--jump { background: rgba(236, 72, 153, 0.2); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.4); }
+.preset-badge--kata { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.4); }
+.preset-badge--mocap { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); }
+
+.shared-preset-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+  line-height: 1.3;
+}
+
+.shared-preset-desc {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+.shared-preset-details {
+  font-size: 10.5px;
+  color: #38bdf8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.shared-preset-footer {
+  margin-top: 4px;
+  display: flex;
+  gap: 6px;
+}
+
+.btn-apply-preset {
+  flex: 1;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.btn-delete-preset {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.btn-delete-preset:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* =========================================================
+   Create Preset Modal
+   ========================================================= */
+.preset-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.preset-modal-content {
+  background: #11100e;
+  border: 1px solid rgba(191, 161, 95, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  border-radius: 10px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  animation: scaleUp 0.18s ease-out;
+}
+
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.preset-modal-header {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.btn-close-modal:hover {
+  color: #fff;
+}
+
+.preset-modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preset-preview-pill {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.preset-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preset-form-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.preset-input, .preset-select, .preset-textarea {
+  background: #181714;
+  border: 1px solid #332f27;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #f8fafc;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.preset-input:focus, .preset-select:focus, .preset-textarea:focus {
+  border-color: #bfa15f;
+  box-shadow: 0 0 0 2px rgba(191, 161, 95, 0.2);
+}
+
+.preset-status-alert {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.preset-status-alert.success { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid #10b981; }
+.preset-status-alert.info { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; }
+.preset-status-alert.error { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid #ef4444; }
+
+.preset-modal-footer {
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

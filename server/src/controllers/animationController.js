@@ -73,9 +73,94 @@ async function listMissingRequests(req, res, next) {
   }
 }
 
+// GET /api/animations/presets - Получить все общедоступные пресеты пользователей
+async function listPresets(req, res, next) {
+  try {
+    const { category, motionMode, search } = req.query;
+    const items = await animationRepo.listPresets({ category, motionMode, search });
+    return ok(res, items);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+// POST /api/animations/presets - Автоматически создать новый пресет (доступный всем пользователям)
+async function createPreset(req, res, next) {
+  try {
+    const {
+      title,
+      description,
+      category,
+      motionMode,
+      stanceId,
+      techniqueId,
+      fullBodyClip,
+      turnAngle,
+      speed,
+      displacementX,
+      displacementZ,
+      presetConfigJson,
+      authorName,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return fail(res, 400, 'Название пресета обязательно', 'PRESET_TITLE_REQUIRED');
+    }
+
+    const record = await animationRepo.createPreset({
+      title: title.trim(),
+      description: description ? description.trim() : null,
+      category: category || 'combo',
+      motionMode: motionMode || 'modular',
+      stanceId,
+      techniqueId,
+      fullBodyClip,
+      turnAngle,
+      speed,
+      displacementX,
+      displacementZ,
+      presetConfigJson,
+      userId: req.user?.User_ID || null,
+      authorName: authorName || req.user?.Username || 'Мастер Додзё',
+    });
+
+    if (req.user) {
+      await logActivity({
+        userId: req.user.User_ID,
+        action: 'create_motion_preset',
+        entityType: 'MotionPreset',
+        details: JSON.stringify({ presetId: record?.Preset_ID, title }),
+        ip: req.ip,
+      });
+    }
+
+    return created(res, record);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
+// DELETE /api/animations/presets/:id
+async function deletePreset(req, res, next) {
+  try {
+    const { id } = req.params;
+    const result = await animationRepo.deletePreset(
+      id,
+      req.user?.User_ID || null,
+      req.user?.Role || 'guest'
+    );
+    return ok(res, result);
+  } catch (err) {
+    return handleError(err, next, res);
+  }
+}
+
 module.exports = {
   listClips,
   listTransitions,
   logMissing,
   listMissingRequests,
+  listPresets,
+  createPreset,
+  deletePreset,
 };

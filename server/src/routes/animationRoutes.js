@@ -14,4 +14,15 @@ router.post('/report-missing', animationController.logMissing);
 // Просмотр сводного реестра отсутствующих анимаций (для админки и анимационного агента)
 router.get('/missing', requireAuth, animationController.listMissingRequests);
 
+// Общедоступные пресеты модульного микшера движений
+router.get('/presets', animationController.listPresets);
+router.post('/presets', (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return requireAuth(req, res, next);
+  }
+  return next();
+}, animationController.createPreset);
+router.delete('/presets/:id', requireAuth, animationController.deletePreset);
+
 module.exports = router;

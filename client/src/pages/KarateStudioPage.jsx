@@ -1019,7 +1019,7 @@ export default function KarateStudioPage() {
       ) : (
         <div style={{ flex: 1, overflow: 'auto', padding: '16px', background: '#0b0c10' }}>
           <Suspense fallback={<div style={{ height: '100%', minHeight: 480, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--gold)' }}>Загрузка 3D микшера…</div>}>
-            <ModularMotionMixer />
+            <ModularMotionMixer onSwitchToMocap={() => setActiveStudioTab('live_mocap')} />
           </Suspense>
         </div>
       )}
