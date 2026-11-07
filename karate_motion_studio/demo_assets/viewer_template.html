@@ -566,20 +566,23 @@
           // reach down, and place hands on knees/legs without distortion.
           let torsoFwdZ = 0.0;
           let torsoFwdNormal = new THREE.Vector3(0, 0, 1);
+          let midHip = null;
+          let midSh = null;
+          let vSpine = new THREE.Vector3(0, 1, 0);
           if (pts["left_hip"] && pts["right_hip"] && pts["left_shoulder"] && pts["right_shoulder"]) {
             const pLSh = pts["left_shoulder"];
             const pRSh = pts["right_shoulder"];
             const pLHp = pts["left_hip"];
             const pRHp = pts["right_hip"];
 
-            const midHip = new THREE.Vector3(...pLHp).add(new THREE.Vector3(...pRHp)).multiplyScalar(0.5);
-            const midSh = new THREE.Vector3(...pLSh).add(new THREE.Vector3(...pRSh)).multiplyScalar(0.5);
+            midHip = new THREE.Vector3(...pLHp).add(new THREE.Vector3(...pRHp)).multiplyScalar(0.5);
+            midSh = new THREE.Vector3(...pLSh).add(new THREE.Vector3(...pRSh)).multiplyScalar(0.5);
             if (mirrorAvatar) {
               midHip.x = -midHip.x;
               midSh.x = -midSh.x;
             }
 
-            const vSpine = midSh.clone().sub(midHip);
+            vSpine.copy(midSh).sub(midHip);
             torsoFwdZ = vSpine.z;
 
             // 1. Pelvis / Hips Orientation Solver
