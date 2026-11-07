@@ -181,7 +181,15 @@ export default function KarateStudioPage() {
           if (mounted && dLayer?.layers) {
             setLayersData(dLayer.layers);
             if (dLayer.recording_mode) setRecMode(dLayer.recording_mode);
-            if (dLayer.active_layer) setActiveLayer(dLayer.active_layer === "head_fingers" ? "fingers" : dLayer.active_layer);
+            const sLayer = dLayer.active_layer === "head_fingers" ? "fingers" : dLayer.active_layer;
+            if (sLayer && ['lower', 'upper', 'fingers'].includes(sLayer)) {
+              setActiveLayer((prev) => {
+                if (['lower', 'upper', 'fingers'].includes(prev) && !dLayer.is_recording) {
+                  return prev;
+                }
+                return sLayer;
+              });
+            }
           }
         }
       } catch {}
@@ -233,11 +241,26 @@ export default function KarateStudioPage() {
     };
   }, [isRecording]);
 
+  // Layer switch
+  const handleSelectLayer = async (layer) => {
+    setActiveLayer(layer);
+    try {
+      await fetch(`/api/record/layer/select?layer=${layer}`, { method: 'POST' });
+    } catch (e) {
+      console.error('Error selecting layer:', e);
+    }
+  };
+
   // Mode switch
   const handleSwitchMode = async (mode) => {
     setRecMode(mode);
     try {
       await fetch(`/api/record/mode?mode=${mode}`, { method: 'POST' });
+      if (mode === 'layered') {
+        const cur = ['lower', 'upper', 'fingers'].includes(activeLayer) ? activeLayer : 'lower';
+        setActiveLayer(cur);
+        await fetch(`/api/record/layer/select?layer=${cur}`, { method: 'POST' });
+      }
     } catch (e) {
       console.error('Error switching recording mode:', e);
     }
@@ -313,6 +336,7 @@ export default function KarateStudioPage() {
           upper: { recorded: false, frames_count: 0, duration: 0 },
           fingers: { recorded: false, frames_count: 0, duration: 0 },
         });
+        handleSelectLayer('lower');
       }
     } catch (e) {
       console.error('Error clearing layers:', e);
@@ -554,7 +578,7 @@ export default function KarateStudioPage() {
                     <button
                       key={key}
                       type="button"
-                      onClick={() => setActiveLayer(key)}
+                      onClick={() => handleSelectLayer(key)}
                       className={`studio-layer-chip ${isSelected ? 'active' : ''} ${isDone ? 'done' : ''}`}
                       style={{
                         background: isSelected ? meta.color : undefined,

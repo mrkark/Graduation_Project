@@ -179,7 +179,7 @@ phone_socket_locks: Dict[WebSocket, asyncio.Lock] = {}
 # Full vs Layered Motion Capture Recording Engine
 # ---------------------------------------------------------------------------
 recording_mode: str = "full"  # "full" | "layered"
-active_recording_layer: str = "all"  # "all" | "lower" | "upper" | "head_fingers"
+active_recording_layer: str = "lower"  # "lower" | "upper" | "fingers"
 is_recording: bool = False
 recording_start_time: float = 0.0
 
@@ -1399,6 +1399,7 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
       document.getElementById('lbtn-lower').classList.toggle('active', layer === 'lower');
       document.getElementById('lbtn-upper').classList.toggle('active', layer === 'upper');
       document.getElementById('lbtn-head').classList.toggle('active', layer === 'fingers' || layer === 'head_fingers');
+      fetch('/api/record/layer/select?layer=' + layer, {{ method: 'POST' }}).catch(() => {{}});
     }}
 
     function openQrModal() {{ document.getElementById('qr-modal').classList.add('open'); }}
@@ -1933,6 +1934,18 @@ async def stop_recording_endpoint():
 # ---------------------------------------------------------------------------
 # Layered Recording Operations (Lower / Upper / Head & Fingers)
 # ---------------------------------------------------------------------------
+@app.post("/api/record/layer/select")
+@app.post("/record/layer/select")
+async def select_layer(layer: str = "lower"):
+    global active_recording_layer
+    if layer == "head_fingers":
+        layer = "fingers"
+    valid_layers = ["lower", "upper", "fingers"]
+    if layer in valid_layers:
+        active_recording_layer = layer
+    return {"status": "ok", "active_layer": active_recording_layer}
+
+
 @app.post("/api/record/layer/start")
 @app.post("/record/layer/start")
 async def start_layer_recording(layer: str = "lower"):
