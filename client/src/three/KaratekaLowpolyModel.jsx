@@ -875,6 +875,19 @@ export default function KaratekaLowpolyModel({
         if (b.spine) b.spine.rotation.y = twistRad;
         if (b.chest) b.chest.rotation.y = twistRad;
       }
+
+      // В стационарном режиме (lockInPlace) жестко фиксируем таз и модель в начале координат, исключая смещение к камере
+      if (lockInPlace && clonedModel) {
+        const hips = hipsBoneRef.current;
+        if (hips) {
+          hips.position.x = 0;
+          hips.position.z = 0;
+        }
+        if (groupRef.current) {
+          groupRef.current.position.x = position[0];
+          groupRef.current.position.z = position[2];
+        }
+      }
     }
     if (currentActionRef.current) {
         let avatarWorldPos = null;

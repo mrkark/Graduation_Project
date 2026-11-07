@@ -46,6 +46,10 @@ import {
 } from 'lucide-react';
 import './modularMotionMixer.css';
 
+// Статические координаты камеры (абсолютная защита от дрейфа и сброса)
+export const MIXER_CAMERA_DEFAULT_POS = [0, 1.4, 3.4];
+export const MIXER_CAMERA_DEFAULT_TARGET = [0, 0.90, 0];
+
 // Пресеты нижнего слоя: Стойки и шаги Шотокан (In-Place)
 export const MODULAR_STANCE_PRESETS = [
   { id: 'zenkutsu_dachi_left', name: 'Дзэнкуцу-дати (Левая)', type: 'stance', desc: 'Вес 70/30 на передней ноге, колено над пальцами' },
@@ -567,8 +571,8 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
   const handleResetCamera = () => {
     if (controlsRef.current) {
       const controls = controlsRef.current;
-      controls.target.set(0, 0.90, 0);
-      controls.object.position.set(0, 1.4, 3.4);
+      controls.target.set(MIXER_CAMERA_DEFAULT_TARGET[0], MIXER_CAMERA_DEFAULT_TARGET[1], MIXER_CAMERA_DEFAULT_TARGET[2]);
+      controls.object.position.set(MIXER_CAMERA_DEFAULT_POS[0], MIXER_CAMERA_DEFAULT_POS[1], MIXER_CAMERA_DEFAULT_POS[2]);
       controls.update();
     }
   };
@@ -686,12 +690,12 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
           <ContactShadows position={[0, 0, 0]} opacity={0.65} scale={8} blur={1.8} far={4} />
           <OrbitControls
             ref={controlsRef}
-            enableDamping
-            dampingFactor={0.06}
-            minDistance={1.3}
-            maxDistance={6.5}
+            makeDefault
+            enableDamping={false}
+            minDistance={1.4}
+            maxDistance={6.0}
             maxPolarAngle={Math.PI / 2 - 0.01}
-            target={[0, 0.90, 0]}
+            target={MIXER_CAMERA_DEFAULT_TARGET}
             enableZoom={enableWheelZoom}
           />
         </Canvas>
