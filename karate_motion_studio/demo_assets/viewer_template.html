@@ -85,7 +85,7 @@
     <button class="hud-btn" id="btn-back" onclick="setCamera('back')">Сзади</button>
     <button class="hud-btn" id="btn-mirror" onclick="toggleMirrorAvatar()" title="Переключить прямой или зеркальный режим" style="display:inline-flex;align-items:center;gap:5px;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
-      <span id="hud-mirror-text">Прямой (без отзеркаливания)</span>
+      <span id="hud-mirror-text">Прямой</span>
     </button>
     <button class="hud-btn" id="btn-head" onclick="calibrateHead()" title="Выровнять уровень взгляда и осанки головы (Metsuke)" style="display:inline-flex;align-items:center;gap:5px;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
@@ -501,7 +501,7 @@
       mirrorAvatar = !!enabled;
       const btn = document.getElementById('btn-mirror');
       if (btn) {
-        const mt = document.getElementById("hud-mirror-text"); if (mt) mt.textContent = mirrorAvatar ? "Зеркало: Вкл" : "Прямой (без отзеркаливания)"; else btn.textContent = mirrorAvatar ? "Зеркало: Вкл" : "Прямой (без отзеркаливания)";
+        const mt = document.getElementById("hud-mirror-text"); if (mt) mt.textContent = mirrorAvatar ? "Зеркало" : "Прямой"; else btn.textContent = mirrorAvatar ? "Зеркало" : "Прямой";
         btn.classList.toggle('active', mirrorAvatar);
       }
     };

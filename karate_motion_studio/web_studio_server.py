@@ -772,17 +772,6 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
     body.embedded header {{ display: none !important; }}
     body.embedded #layered-bar {{ display: none !important; }}
     body.embedded .studio-grid {{ height: calc(100vh - 36px); }}
-    .embedded-controls {{
-      display: none;
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 10;
-      gap: 6px;
-    }}
-    body.embedded .embedded-controls {{
-      display: flex;
-    }}
 
     header {{
       background: #12141c;
@@ -1272,15 +1261,6 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
         <span style="color: #10b981; font-size: 11px; font-weight: 700;">● Живой отклик активен</span>
       </div>
       <div class="panel-content" style="position: relative;">
-        <div class="embedded-controls">
-          <button class="btn btn-sm" id="btn-mirror" onclick="toggleMirror()" style="background: rgba(18,21,32,0.85); backdrop-filter: blur(6px); border: 1px solid #374151; font-size: 11px; padding: 4px 8px;">
-            {ICON_TARGET_SVG} <span id="mirror-text">Прямой</span>
-          </button>
-          <button class="btn btn-sm" onclick="sendViewerCommand('resetPose')" style="background: rgba(18,21,32,0.85); backdrop-filter: blur(6px); border: 1px solid #374151; font-size: 11px; padding: 4px 8px;">T-Pose</button>
-          <button class="btn btn-sm active" id="btn-cam-34" onclick="sendViewerCommand('setCamera', '34')" style="background: rgba(18,21,32,0.85); backdrop-filter: blur(6px); border: 1px solid #374151; font-size: 11px; padding: 4px 8px;">3/4</button>
-          <button class="btn btn-sm" onclick="sendViewerCommand('setCamera', 'front')" style="background: rgba(18,21,32,0.85); backdrop-filter: blur(6px); border: 1px solid #374151; font-size: 11px; padding: 4px 8px;">Спереди</button>
-          <button class="btn btn-sm" onclick="sendViewerCommand('setCamera', 'side')" style="background: rgba(18,21,32,0.85); backdrop-filter: blur(6px); border: 1px solid #374151; font-size: 11px; padding: 4px 8px;">Сбоку</button>
-        </div>
         <iframe id="viewer-frame" src="/viewer"></iframe>
       </div>
     </div>
