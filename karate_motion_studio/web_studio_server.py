@@ -1230,16 +1230,16 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
     <div class="layer-selector">
       <span style="font-size: 11.5px; color: #94a3b8; font-weight: 700; margin-right: 4px;">Слой для записи:</span>
       <button class="layer-pill-btn active" id="lbtn-lower" onclick="selectLayer('lower')">
-        <span>🦵 Слой 1: Ноги и стойки</span>
-        <span id="lstatus-lower" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 4px;"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.6-2 8.5V16a2 2 0 0 1-2 2 2 2 0 0 1-2-2Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.6 2 8.5V20a2 2 0 0 0 2 2 2 2 0 0 0 2-2Z"/></svg>Слой 1: Ноги и стойки</span>
+        <span id="lstatus-lower" style="font-size: 9px; opacity: 0.7;">○ Не записан</span>
       </button>
       <button class="layer-pill-btn" id="lbtn-upper" onclick="selectLayer('upper')">
-        <span>🥋 Слой 2: Корпус, руки и голова</span>
-        <span id="lstatus-upper" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 4px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Слой 2: Корпус, руки и голова</span>
+        <span id="lstatus-upper" style="font-size: 9px; opacity: 0.7;">○ Не записан</span>
       </button>
       <button class="layer-pill-btn" id="lbtn-head" onclick="selectLayer('fingers')">
-        <span>✊ Слой 3: Кисти и пальцы</span>
-        <span id="lstatus-head" style="font-size: 9px; opacity: 0.7;">⭕ Не записан</span>
+        <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 4px;"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>Слой 3: Кисти и пальцы</span>
+        <span id="lstatus-head" style="font-size: 9px; opacity: 0.7;">○ Не записан</span>
       </button>
     </div>
 
@@ -1575,27 +1575,27 @@ def build_studio_html(host_ip: str, embedded: bool = False) -> str:
           const hBtn = document.getElementById('lbtn-head');
 
           if (layers.lower) {{
-            stLower.innerText = '🟢 Записан: ' + layers.lower.frames_count + ' к';
+            stLower.innerText = '● Записан: ' + layers.lower.frames_count + ' к';
             lBtn.classList.add('recorded');
           }} else {{
-            stLower.innerText = '⭕ Не записан';
+            stLower.innerText = '○ Не записан';
             lBtn.classList.remove('recorded');
           }}
 
           if (layers.upper) {{
-            stUpper.innerText = '🟢 Записан: ' + layers.upper.frames_count + ' к';
+            stUpper.innerText = '● Записан: ' + layers.upper.frames_count + ' к';
             uBtn.classList.add('recorded');
           }} else {{
-            stUpper.innerText = '⭕ Не записан';
+            stUpper.innerText = '○ Не записан';
             uBtn.classList.remove('recorded');
           }}
 
           const fg = layers.fingers || layers.head_fingers;
           if (fg) {{
-            stHead.innerText = '🟢 Записан: ' + fg.frames_count + ' к';
+            stHead.innerText = '● Записан: ' + fg.frames_count + ' к';
             hBtn.classList.add('recorded');
           }} else {{
-            stHead.innerText = '⭕ Не записан';
+            stHead.innerText = '○ Не записан';
             hBtn.classList.remove('recorded');
           }}
         }}

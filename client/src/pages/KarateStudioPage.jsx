@@ -30,6 +30,9 @@ import {
   Film,
   Sparkles,
   Trash2,
+  Footprints,
+  User,
+  Hand,
 } from 'lucide-react';
 
 import './KarateStudio.css';
@@ -101,21 +104,21 @@ export default function KarateStudioPage() {
     lower: {
       name: 'Ноги и стойки',
       short: '1. Ноги',
-      icon: '🦵',
+      Icon: Footprints,
       desc: 'Стойки, приседания, перемещения по татами',
       color: '#10b981',
     },
     upper: {
       name: 'Корпус, руки и голова',
       short: '2. Корпус и голова',
-      icon: '🥋',
+      Icon: User,
       desc: 'Удары руками, блоки, повороты корпуса, наклон головы и взгляд (Metsuke)',
       color: '#3b82f6',
     },
     fingers: {
       name: 'Кисти и пальцы',
       short: '3. Пальцы (доп.)',
-      icon: '✊',
+      Icon: Hand,
       desc: 'Тонкая дозапись кулаков (сэйкэн), ладоней (сюто, нукитэ) и пальцев',
       color: '#a855f7',
     },
@@ -573,6 +576,7 @@ export default function KarateStudioPage() {
                   const meta = layerMeta[key] || layerMeta.upper;
                   const isSelected = activeLayer === key;
                   const isDone = Boolean(layersData[key]?.recorded || (key === 'fingers' && layersData.head_fingers?.recorded));
+                  const Icon = meta.Icon;
 
                   return (
                     <button
@@ -586,9 +590,9 @@ export default function KarateStudioPage() {
                       }}
                       title={meta.desc}
                     >
-                      <span>{meta.icon}</span>
+                      <Icon size={13} strokeWidth={2.2} />
                       <span>{meta.short}</span>
-                      {isDone && <span style={{ fontWeight: 800 }}>✓</span>}
+                      {isDone && <Check size={11} strokeWidth={3} />}
                     </button>
                   );
                 })}
@@ -698,7 +702,7 @@ export default function KarateStudioPage() {
           {/* Modal Header */}
           <div style={{ width: '100%', maxWidth: '860px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>🥋</span>
+              <Camera size={20} color="#f59e0b" />
               <div>
                 <h3 style={{ margin: 0, fontSize: '14.5px', fontWeight: 800, color: '#f59e0b', letterSpacing: '0.4px' }}>
                   ПОДКЛЮЧЕНИЕ СМАРТФОНОВ · Т-СХЕМА КАМЕР ДОДЗЁ
@@ -729,7 +733,7 @@ export default function KarateStudioPage() {
           }}>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <span style={{ fontSize: '11px', fontWeight: 700, color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                📐 Нажмите на камеру на схеме, чтобы сгенерировать QR-код:
+                Нажмите на камеру на схеме, чтобы сгенерировать QR-код:
               </span>
             </div>
 
@@ -744,7 +748,7 @@ export default function KarateStudioPage() {
                 <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
                 <div style={{ textAlign: 'left' }}>
                   <div style={{ color: '#10b981', fontWeight: 800, fontSize: '12px' }}>
-                    📹 КАМЕРА 1 (ФРОНТ · 0°)
+                    КАМЕРА 1 (ФРОНТ · 0°)
                   </div>
                   <div style={{ color: '#94a3b8', fontSize: '10px' }}>
                     Основание T · Во весь рост спереди (X/Y оси, лицо, кулаки)
@@ -771,7 +775,7 @@ export default function KarateStudioPage() {
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 6px #06b6d4' }} />
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ color: '#06b6d4', fontWeight: 800, fontSize: '11.5px' }}>
-                      📹 КАМЕРА 2 (СЛЕВА · +90°)
+                      КАМЕРА 2 (СЛЕВА · +90°)
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '9.5px' }}>
                       Левый 3D профиль Z · Заведение за голову
@@ -795,7 +799,7 @@ export default function KarateStudioPage() {
                   padding: '6px 14px',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '18px' }}>🥋</div>
+                  <User size={20} color="#f59e0b" style={{ margin: '0 auto 2px' }} />
                   <div style={{ color: '#fef08a', fontWeight: 800, fontSize: '10.5px' }}>
                     Каратист
                   </div>
@@ -816,7 +820,7 @@ export default function KarateStudioPage() {
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7', boxShadow: '0 0 6px #a855f7' }} />
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ color: '#a855f7', fontWeight: 800, fontSize: '11.5px' }}>
-                      📹 КАМЕРА 3 (СПРАВА · -90°)
+                      КАМЕРА 3 (СПРАВА · -90°)
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '9.5px' }}>
                       Правый 3D профиль Z · Кулак в хикитэ
