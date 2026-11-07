@@ -856,13 +856,14 @@ class MocapTracker:
                     frame_data.fingers[side]["detected"] = True
                     frame_data.fingers[side]["method"] = "pose_kinematics"
                 else:
-                    # Arm not in frame: gracefully decay toward relaxed Kamae rest posture (0.15)
-                    frame_data.fingers[side]["detected"] = False
+                    # When hand is in tight fist (Seiken) or fingertips tucked into palm,
+                    # retain the clench state rather than forcefully resetting to open hand!
+                    frame_data.fingers[side]["detected"] = True
                     for ftype in ["thumb", "index", "middle", "ring", "pinky"]:
-                        smooth = self.finger_smooth[side][ftype] * 0.85 + 0.15 * 0.15
-                        self.finger_smooth[side][ftype] = smooth
+                        # Retain current curl smoothly without abrupt pop to 0.15
+                        smooth = self.finger_smooth[side][ftype]
                         frame_data.fingers[side][ftype] = round(smooth, 2)
-                    frame_data.fingers[side]["general_curl"] = 0.15
+                    frame_data.fingers[side]["general_curl"] = round(sum(self.finger_smooth[side].values()) / 5.0, 2)
 
         # 4. Populate 2D Hand Landmark Coordinates
         for hand_lms, side in matched_hands:
