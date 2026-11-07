@@ -55,7 +55,7 @@ from core.project_schema import (
     Metadata,
     KarateMotionProject,
 )
-from core.filters import Vector3DOneEuroFilter, Vector2DOneEuroFilter, OneEuroFilter
+from core.filters import Vector3DOneEuroFilter, Vector2DOneEuroFilter, OneEuroFilter, AdaptiveKarateKimeFilter, BoneLengthStabilizer, ContinuousAzimuthUnwrapper
 
 
 def calculate_joint_angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float:
@@ -72,8 +72,11 @@ def calculate_joint_angle_deg(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> fl
 
 def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any]:
     """
-    Performs real-time biomechanical analysis of karate posture, angles, and techniques.
-    Returns detected stance, technique, joint angles, and sensei precision score (0-100%).
+    Performs comprehensive real-time biomechanical analysis of Shotokan Karate stances,
+    strikes, blocks, joint angles, and foot-floor grounding.
+    Returns:
+        stance, technique, knee_l, knee_r, elbow_l, elbow_r, score (0-100),
+        grounded_l, grounded_r, lead_leg, stance_width, kime_active
     """
     res = {
         "stance": "Йой-дати (Готовность)",
@@ -83,6 +86,12 @@ def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any
         "elbow_l": 90.0,
         "elbow_r": 90.0,
         "score": 92,
+        "grounded_l": True,
+        "grounded_r": True,
+        "lead_leg": "Нейтральная",
+        "stance_width": 0.35,
+        "kime_active": False,
+        "pelvis_yaw": 0.0,
     }
     if not joints:
         return res
@@ -95,6 +104,8 @@ def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any
     l_sh, r_sh = get_pt("left_shoulder"), get_pt("right_shoulder")
     l_el, r_el = get_pt("left_elbow"), get_pt("right_elbow")
     l_wr, r_wr = get_pt("left_wrist"), get_pt("right_wrist")
+    l_toe = get_pt("left_foot_index")
+    r_toe = get_pt("right_foot_index")
 
     if l_hip is not None and l_knee is not None and l_ankle is not None:
         res["knee_l"] = round(calculate_joint_angle_deg(l_hip, l_knee, l_ankle), 1)
@@ -110,41 +121,140 @@ def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any
     el = res["elbow_l"]
     er = res["elbow_r"]
 
-    # Stance Detection
-    if (kl < 125 and kr > 150) or (kr < 125 and kl > 150):
-        lead_leg = "Левая" if kl < kr else "Правая"
-        lead_knee = min(kl, kr)
-        res["stance"] = f"Дзэнкуцу-дати ({lead_leg})"
-        res["score"] = max(60, min(99, int(100 - abs(lead_knee - 98) * 1.4)))
-    elif 100 <= kl <= 135 and 100 <= kr <= 135:
+    # Calculate spatial parameters
+    sh_width = float(np.linalg.norm(l_sh - r_sh)) if (l_sh is not None and r_sh is not None) else 0.38
+    feet_dist = float(np.linalg.norm(l_ankle - r_ankle)) if (l_ankle is not None and r_ankle is not None) else 0.30
+    res["stance_width"] = round(feet_dist, 2)
+
+    # Foot elevation / Grounding detection
+    hip_y = (l_hip[1] + r_hip[1]) * 0.5 if (l_hip is not None and r_hip is not None) else 0.9
+    l_foot_y = l_ankle[1] if l_ankle is not None else 0.0
+    r_foot_y = r_ankle[1] if r_ankle is not None else 0.0
+    floor_est = min(l_foot_y, r_foot_y) if (l_ankle is not None and r_ankle is not None) else 0.0
+
+    res["grounded_l"] = bool(l_ankle is not None and (l_ankle[1] - floor_est) < 0.12)
+    res["grounded_r"] = bool(r_ankle is not None and (r_ankle[1] - floor_est) < 0.12)
+
+    # Pelvis orientation (Yaw)
+    if l_hip is not None and r_hip is not None:
+        v_hips = l_hip - r_hip
+        yaw_rad = math.atan2(v_hips[2], max(1e-4, abs(v_hips[0])))
+        res["pelvis_yaw"] = round(float(math.degrees(yaw_rad)), 1)
+
+    # 1. Kicking Check (Mae-Geri)
+    is_left_kick = (l_knee is not None and l_hip is not None and l_knee[1] > l_hip[1] - 0.22 and kl > 120 and (l_ankle is not None and l_ankle[1] > floor_est + 0.35))
+    is_right_kick = (r_knee is not None and r_hip is not None and r_knee[1] > r_hip[1] - 0.22 and kr > 120 and (r_ankle is not None and r_ankle[1] > floor_est + 0.35))
+    if is_left_kick or is_right_kick:
+        side_k = "левой" if is_left_kick else "правой"
+        res["stance"] = f"Удар ногой ({side_k})"
+        res["technique"] = f"Маэ-гэри ({side_k} ногой)"
+        res["score"] = 96
+        if is_left_kick:
+            res["grounded_l"] = False
+        if is_right_kick:
+            res["grounded_r"] = False
+        return res
+
+    # 2. Shotokan Stance Detection
+    # Longitudinal feet separation along Z (depth) and lateral separation along X
+    dz_feet = abs(l_ankle[2] - r_ankle[2]) if (l_ankle is not None and r_ankle is not None) else 0.0
+    dx_feet = abs(l_ankle[0] - r_ankle[0]) if (l_ankle is not None and r_ankle is not None) else 0.0
+
+    # A) Kiba-dachi (Horse Riding Stance / Всадник):
+    # Wide lateral stance (> 1.25x shoulder width), knees bent outwards (~105°-138°), feet parallel
+    if (100 <= kl <= 138 and 100 <= kr <= 138) and dx_feet > max(0.48, sh_width * 1.25) and dz_feet < 0.32:
         res["stance"] = "Киба-дати (Всадник)"
         avg_knee = (kl + kr) / 2
-        res["score"] = max(65, min(99, int(100 - abs(avg_knee - 115) * 1.6)))
-    elif (kl < 125 and kr > 138) or (kr < 125 and kl > 138):
-        rear_leg = "Левая" if kl < kr else "Правая"
-        res["stance"] = f"Кокуцу-дати ({rear_leg})"
-        res["score"] = 92
-    else:
+        # Ideal knee flexion in competition Kiba-dachi is ~115°
+        res["score"] = max(65, min(99, int(100 - abs(avg_knee - 115) * 1.5)))
+        res["lead_leg"] = "Обе ноги"
+
+    # B) Zenkutsu-dachi (Front Forward Stance):
+    # One leg deeply bent (90°-128°), rear leg extended (150°-180°), long longitudinal base
+    elif (kl < 130 and kr > 148) or (kr < 130 and kl > 148):
+        lead_left = (kl < kr)
+        lead_leg = "Левая" if lead_left else "Правая"
+        lead_knee = kl if lead_left else kr
+        rear_knee = kr if lead_left else kl
+        res["lead_leg"] = lead_leg
+
+        # Distinguish between Zenkutsu-dachi and Fudo-dachi (Sochin-dachi)
+        # In Fudo-dachi, both knees are bent, but front is ~115° and rear is ~135-148°
+        if rear_knee < 152 and lead_knee > 110:
+            res["stance"] = f"Фудо-дати ({lead_leg})"
+            res["score"] = 94
+        else:
+            res["stance"] = f"Дзэнкуцу-дати ({lead_leg})"
+            # Sensei scoring: front knee over ankle ~98°, rear leg locked straight ~170°
+            score_lead = 100 - abs(lead_knee - 98) * 1.3
+            score_rear = 100 - abs(rear_knee - 170) * 1.1
+            res["score"] = max(60, min(99, int(0.6 * score_lead + 0.4 * score_rear)))
+
+    # C) Kokutsu-dachi (Back Defense Stance):
+    # Rear leg carries 70% weight (knee bent ~110°-138°), front leg extended with light contact
+    elif (kl > 142 and 110 <= kr <= 140) or (kr > 142 and 110 <= kl <= 140):
+        # In Kokutsu-dachi, the rear leg is the one bent, front is extended forward
+        # Determine which foot is rear based on Z depth
+        if l_ankle is not None and r_ankle is not None:
+            if l_ankle[2] < r_ankle[2] - 0.10: # Left foot behind
+                rear_leg = "Левая"
+            elif r_ankle[2] < l_ankle[2] - 0.10: # Right foot behind
+                rear_leg = "Правая"
+            else:
+                rear_leg = "Левая" if kl < kr else "Правая"
+        else:
+            rear_leg = "Левая" if kl < kr else "Правая"
+
+        res["stance"] = f"Кокуцу-дати ({rear_leg} сзади)"
+        res["score"] = 93
+        res["lead_leg"] = "Правая" if rear_leg == "Левая" else "Левая"
+
+    # D) Shizentai / Yoi-dachi (Natural Ready Stance):
+    elif kl >= 155 and kr >= 155:
         res["stance"] = "Йой-дати (Готовность)"
         res["score"] = 95
+        res["lead_leg"] = "Нейтральная"
+    else:
+        res["stance"] = "Камаэ / Переходная стойка"
+        res["score"] = 90
 
-    # Technique & Strike Detection
-    if er > 155 and el < 100:
-        res["technique"] = "Цуки правой (Ой/Гяку)"
+    # 3. Shotokan Techniques & Arm Actions Detection
+    # Check for Kime explosive punch
+    is_punch_r = (er > 152 and el < 105)
+    is_punch_l = (el > 152 and er < 105)
+
+    if is_punch_r or is_punch_l:
+        p_side = "правой" if is_punch_r else "левой"
+        # Determine if Oi-zuki (same side as lead leg) or Gyaku-zuki (reverse side)
+        is_gyaku = (is_punch_r and "Левая" in res["lead_leg"]) or (is_punch_l and "Правая" in res["lead_leg"])
+        t_name = "Гяку-цуки" if is_gyaku else "Ой-цуки"
+        res["technique"] = f"{t_name} {p_side}"
+        res["kime_active"] = True
         res["score"] = min(99, res["score"] + 3)
-    elif el > 155 and er < 100:
-        res["technique"] = "Цуки левой (Ой/Гяку)"
-        res["score"] = min(99, res["score"] + 3)
-    elif (l_wr is not None and l_sh is not None and l_wr[1] < l_sh[1] - 0.12) or \
-         (r_wr is not None and r_sh is not None and r_wr[1] < r_sh[1] - 0.12):
-        res["technique"] = "Агэ-укэ (Верхний блок)"
-    elif (l_knee is not None and l_hip is not None and l_knee[1] < l_hip[1] + 0.08) or \
-         (r_knee is not None and r_hip is not None and r_knee[1] < r_hip[1] + 0.08):
-        res["technique"] = "Маэ-гэри (Удар ногой)"
-    elif el < 90 and er < 90:
+
+    elif (l_wr is not None and l_sh is not None and l_wr[1] > l_sh[1] + 0.05) or \
+         (r_wr is not None and r_sh is not None and r_wr[1] > r_sh[1] + 0.05):
+        side_b = "левой" if (l_wr is not None and l_sh is not None and l_wr[1] > l_sh[1] + 0.05) else "правой"
+        res["technique"] = f"Агэ-укэ ({side_b} верхний блок)"
+        res["score"] = min(99, res["score"] + 2)
+
+    elif (l_wr is not None and l_hip is not None and l_wr[1] < l_hip[1] - 0.05 and 130 <= el <= 170) or \
+         (r_wr is not None and r_hip is not None and r_wr[1] < r_hip[1] - 0.05 and 130 <= er <= 170):
+        side_b = "левой" if (l_wr is not None and l_hip is not None and l_wr[1] < l_hip[1] - 0.05) else "правой"
+        res["technique"] = f"Гэдан-барай ({side_b} нижний блок)"
+        res["score"] = min(99, res["score"] + 2)
+
+    elif (80 <= el <= 118 and l_wr is not None and l_sh is not None and abs(l_wr[1] - l_sh[1]) < 0.18 and l_wr[0] > l_el[0] - 0.05):
+        res["technique"] = "Сото-укэ (Блок снаружи)"
+    elif (80 <= er <= 118 and r_wr is not None and r_sh is not None and abs(r_wr[1] - r_sh[1]) < 0.18 and r_wr[0] < r_el[0] + 0.05):
+        res["technique"] = "Сото-укэ (Блок снаружи)"
+    elif "Кокуцу" in res["stance"] and (el < 115 or er < 115):
+        res["technique"] = "Сюто-укэ (Блок ребром ладони)"
+    elif el < 95 and er < 95:
         res["technique"] = "Хикитэ / Камаэ"
 
     return res
+
 
 # MediaPipe Pose Landmark Indices
 POSE_LM = {name: idx for idx, name in enumerate(STANDARD_JOINTS)}
@@ -407,6 +517,18 @@ class MocapTracker:
             for name in STANDARD_JOINTS
         }
 
+        # Anatomical Bone Length Stabilizer & Karate Kime Filters
+        self.bone_stabilizer = BoneLengthStabilizer(adaptation_frames=20)
+        self.kime_filters: Dict[str, AdaptiveKarateKimeFilter] = {
+            name: AdaptiveKarateKimeFilter(freq=30.0, base_cutoff=0.8, max_cutoff=45.0)
+            for name in [
+                "left_wrist", "right_wrist",
+                "left_elbow", "right_elbow",
+                "left_ankle", "right_ankle",
+                "left_foot_index", "right_foot_index",
+            ]
+        }
+
         # Temporal smoothing for fingers
         self.finger_smooth: Dict[str, Dict[str, float]] = {
             "left": {"thumb": 0.15, "index": 0.15, "middle": 0.15, "ring": 0.15, "pinky": 0.15},
@@ -437,6 +559,10 @@ class MocapTracker:
             f.reset()
         for f in self.landmark_2d_filters.values():
             f.reset()
+        self.bone_stabilizer.reset()
+        for f in self.kime_filters.values():
+            f.reset()
+
 
     def process_frame(
         self,
@@ -587,13 +713,21 @@ class MocapTracker:
                                                 round(float(cleared_pt[2]), 4),
                                             ]
 
-            # Real-time 1€ filter: eliminate sensor micro-jitter while preserving sharp strikes
+            # 1. Anatomical Bone Length Invariance Constraint
+            # Stabilizes limb lengths (shoulders, forearms, thighs, shins, torso) against foreshortening
+            stabilized_pts_3d = self.bone_stabilizer.stabilize_joints(raw_pts_3d, vis_dict)
+
+            # 2. Shotokan Kime Adaptive Filtering (Low speed = jitter suppression; High speed = zero lag)
             pts_3d: Dict[str, List[float]] = {}
-            for name, p in raw_pts_3d.items():
-                if name in self.joint_filters:
+            for name, p in stabilized_pts_3d.items():
+                if name in self.kime_filters:
+                    pts_3d[name] = self.kime_filters[name].filter(p, timestamp)
+                elif name in self.joint_filters:
                     pts_3d[name] = self.joint_filters[name].filter(p, timestamp)
                 else:
                     pts_3d[name] = p
+
+            frame_data.raw_joints = raw_pts_3d
 
             frame_data.joints = pts_3d
             frame_data.confidence = vis_dict
@@ -915,62 +1049,116 @@ class MocapTracker:
         fps: float = 0.0,
         frame_data: Optional[FrameData] = None,
     ):
-        """Draws high-contrast anti-aliased karate skeleton and biomechanics HUD directly on frame."""
+        """
+        Multi-Level Diagnostic Karate Visualization on Video Stream:
+        Level 1: Raw MediaPipe landmarks (hollow cyan/orange indicator rings).
+        Level 2: Biomechanically corrected, length-stabilized skeleton lines (high-contrast neon).
+        Level 3: Joint angles HUD (knees, elbows, stance, foot grounding on tatami, kime indicator).
+        """
         h, w = frame.shape[:2]
         coords: Dict[str, Tuple[int, int]] = {}
+        raw_coords: Dict[str, Tuple[int, int]] = {}
+
+        # Raw landmark 2D coordinates (Level 1)
+        for name, idx in POSE_LM.items():
+            if idx < len(lm_2d):
+                p = lm_2d[idx]
+                if getattr(p, "visibility", 1.0) > 0.25:
+                    raw_px = p.x * dim_max - pad_left
+                    raw_py = p.y * dim_max - pad_top
+                    px = int(w - 1 - raw_px) if mirror else int(raw_px)
+                    py = int(raw_py)
+                    if 0 <= px < w and 0 <= py < h:
+                        raw_coords[name] = (px, py)
+
+        # Filtered & Stabilized 2D coordinates (Level 2)
         if frame_data and frame_data.landmarks_2d:
-            # Use temporal 1€-filtered 2D coordinates: eliminates camera skeleton twitching/jitter
             for name, (norm_x, norm_y) in frame_data.landmarks_2d.items():
                 px = int(norm_x * w)
                 py = int(norm_y * h)
                 if 0 <= px < w and 0 <= py < h:
                     coords[name] = (px, py)
         else:
-            for name, idx in POSE_LM.items():
-                if idx < len(lm_2d):
-                    p = lm_2d[idx]
-                    if getattr(p, "visibility", 1.0) > 0.30:
-                        raw_px = p.x * dim_max - pad_left
-                        raw_py = p.y * dim_max - pad_top
-                        px = int(w - 1 - raw_px) if mirror else int(raw_px)
-                        py = int(raw_py)
-                        if 0 <= px < w and 0 <= py < h:
-                            coords[name] = (px, py)
+            coords = dict(raw_coords)
 
-        # Draw bone connections
+        # LEVEL 1: Draw Raw Detection Rings (Semi-transparent / hollow markers)
+        for name, pt in raw_coords.items():
+            col_raw = (0, 180, 255) if name.startswith("left") else (255, 180, 0)
+            cv2.circle(frame, pt, 7, col_raw, 1, cv2.LINE_AA)
+
+        # LEVEL 2: Draw Biomechanically Corrected Skeleton Bones (High-contrast neon)
         for a, b, color in POSE_DRAW_CONNECTIONS:
             if a in coords and b in coords:
+                cv2.line(frame, coords[a], coords[b], (15, 20, 28), 5, cv2.LINE_AA)  # Black drop outline
                 cv2.line(frame, coords[a], coords[b], color, 3, cv2.LINE_AA)
 
-        # Draw dual-ring high-contrast joint spheres
+        # Draw Solid Joint Centers
         for name, pt in coords.items():
             color = (0, 255, 255) if ("wrist" in name or "ankle" in name) else (255, 255, 255)
             cv2.circle(frame, pt, 5, color, -1, cv2.LINE_AA)
             cv2.circle(frame, pt, 7, (0, 0, 0), 1, cv2.LINE_AA)
 
-        # Real-time Karate Biomechanics & Posture Evaluation
+        # LEVEL 3: Real-Time Karate Biomechanics & Posture Evaluation HUD
         metrics = analyze_karate_biomechanics(frame_data.joints if frame_data else {})
 
-        # Draw angle callouts near knees
+        # Draw Angle Callouts near knees
         if "left_knee" in coords:
-            cv2.putText(frame, f"{metrics['knee_l']:.0f} deg", (coords["left_knee"][0] + 10, coords["left_knee"][1]),
+            cv2.putText(frame, f"{metrics['knee_l']:.0f}°", (coords["left_knee"][0] + 10, coords["left_knee"][1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 180), 1, cv2.LINE_AA)
         if "right_knee" in coords:
-            cv2.putText(frame, f"{metrics['knee_r']:.0f} deg", (coords["right_knee"][0] + 10, coords["right_knee"][1]),
+            cv2.putText(frame, f"{metrics['knee_r']:.0f}°", (coords["right_knee"][0] + 10, coords["right_knee"][1]),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 180), 1, cv2.LINE_AA)
 
-        # Draw real-time hand curl callouts near wrists
+        # Draw Elbow Callouts
+        if "left_elbow" in coords:
+            cv2.putText(frame, f"{metrics['elbow_l']:.0f}°", (coords["left_elbow"][0] + 10, coords["left_elbow"][1]),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 220, 255), 1, cv2.LINE_AA)
+        if "right_elbow" in coords:
+            cv2.putText(frame, f"{metrics['elbow_r']:.0f}°", (coords["right_elbow"][0] + 10, coords["right_elbow"][1]),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 150, 0), 1, cv2.LINE_AA)
+
+        # Foot Grounding Markers near ankles
+        if "left_ankle" in coords:
+            g_str = "ОПОРА" if metrics.get("grounded_l", True) else "В ВОЗДУХЕ"
+            g_col = (0, 255, 120) if metrics.get("grounded_l", True) else (0, 200, 255)
+            cv2.putText(frame, f"L:{g_str}", (coords["left_ankle"][0] - 30, coords["left_ankle"][1] + 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.40, g_col, 1, cv2.LINE_AA)
+        if "right_ankle" in coords:
+            g_str = "ОПОРА" if metrics.get("grounded_r", True) else "В ВОЗДУХЕ"
+            g_col = (0, 255, 120) if metrics.get("grounded_r", True) else (0, 200, 255)
+            cv2.putText(frame, f"R:{g_str}", (coords["right_ankle"][0] - 30, coords["right_ankle"][1] + 20),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.40, g_col, 1, cv2.LINE_AA)
+
+        # Hand Curl Callouts near wrists
         if frame_data and frame_data.fingers:
             for side in ["left", "right"]:
                 wr_key = f"{side}_wrist"
                 f_info = frame_data.fingers.get(side, {})
                 if wr_key in coords and f_info.get("detected"):
                     curl = f_info.get("general_curl", f_info.get("index", 0.15))
-                    status_str = "КУЛАК" if curl > 0.45 else "ЛАДОНЬ"
+                    status_str = "СЭЙКЭН" if curl > 0.45 else "ШУТО"
                     col = (0, 140, 255) if curl > 0.45 else (0, 255, 120)
                     pt = coords[wr_key]
                     cv2.putText(frame, f"{status_str} {int(curl*100)}%", (pt[0] - 25, pt[1] - 12),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, col, 1, cv2.LINE_AA)
+
+        # Top Diagnostic HUD Banner
+        hud_stance = metrics.get("stance", "Йой-дати")
+        hud_tech = metrics.get("technique", "Позиция ожидания")
+        hud_score = metrics.get("score", 92)
+        hud_kime = metrics.get("kime_active", False)
+
+        cv2.rectangle(frame, (10, h - 68), (min(w - 10, 480), h - 10), (12, 14, 20), -1)
+        cv2.rectangle(frame, (10, h - 68), (min(w - 10, 480), h - 10), (45, 55, 72), 1)
+
+        cv2.putText(frame, f"СТОЙКА: {hud_stance}", (20, h - 46),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1, cv2.LINE_AA)
+        tech_col = (0, 255, 255) if hud_kime else (200, 210, 225)
+        kime_tag = " [КИМЭ!]" if hud_kime else ""
+        cv2.putText(frame, f"ТЕХНИКА: {hud_tech}{kime_tag}", (20, h - 26),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.44, tech_col, 1, cv2.LINE_AA)
+        cv2.putText(frame, f"ОЦЕНКА: {hud_score}%", (min(w - 10, 480) - 95, h - 46),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (16, 185, 129), 1, cv2.LINE_AA)
 
     def _draw_hand_overlay(
         self,

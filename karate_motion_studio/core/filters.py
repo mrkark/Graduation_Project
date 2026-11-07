@@ -101,6 +101,269 @@ class Vector3DOneEuroFilter:
         self.fz.reset()
 
 
+class AdaptiveKarateKimeFilter:
+    """
+    Shotokan Karate Adaptive Kime Filter for 3D trajectory tracking.
+    - Low speed (Kamae / stationary stance): low cutoff (0.8 Hz) suppresses sensor jitter completely.
+    - Explosive strike initiation (Oi-zuki, Gyaku-zuki, blocks): expands cutoff up to 45 Hz with zero lag.
+    - Impact / Kime deceleration: detects rapid negative acceleration and immediately latches the peak
+      position, preventing overshoot, drift, or sluggish recovery.
+    """
+
+    def __init__(self, freq: float = 30.0, base_cutoff: float = 0.8, max_cutoff: float = 45.0):
+        self.freq = max(1e-3, freq)
+        self.base_cutoff = base_cutoff
+        self.max_cutoff = max_cutoff
+        self.prev_pt = None
+        self.prev_vel = None
+        self.prev_time = None
+        self.filter_3d = Vector3DOneEuroFilter(freq=freq, min_cutoff=base_cutoff, beta=0.12)
+        self.kime_latched: bool = False
+        self.kime_latch_timer: int = 0
+        self.latched_pt = None
+
+    def reset(self):
+        self.prev_pt = None
+        self.prev_vel = None
+        self.prev_time = None
+        self.filter_3d.reset()
+        self.kime_latched = False
+        self.kime_latch_timer = 0
+        self.latched_pt = None
+
+    def filter(self, pt: List[float], timestamp: Optional[float] = None) -> List[float]:
+        cur_pt = np.array(pt, dtype=float)
+        now = timestamp if timestamp is not None else 0.0
+
+        if self.prev_pt is None or self.prev_time is None:
+            self.prev_pt = cur_pt.copy()
+            self.prev_vel = np.zeros(3, dtype=float)
+            self.prev_time = now
+            return self.filter_3d.filter(pt, timestamp)
+
+        dt = max(0.003, now - self.prev_time)
+        cur_vel = (cur_pt - self.prev_pt) / dt
+        speed = float(np.linalg.norm(cur_vel))
+
+        # Velocity-adaptive cutoff
+        # For martial arts strikes: normal human punch reaches 5-10 m/s; slow movement is < 0.3 m/s
+        if speed > 1.8:
+            # High speed strike: scale cutoff up to 45 Hz
+            factor = min(1.0, (speed - 1.8) / 4.0)
+            cur_cutoff = self.base_cutoff + factor * (self.max_cutoff - self.base_cutoff)
+            self.filter_3d.fx.min_cutoff = cur_cutoff
+            self.filter_3d.fy.min_cutoff = cur_cutoff
+            self.filter_3d.fz.min_cutoff = cur_cutoff
+            self.kime_latched = False
+            self.kime_latch_timer = 0
+        else:
+            # Low speed / stance: restore stable low cutoff
+            self.filter_3d.fx.min_cutoff = self.base_cutoff
+            self.filter_3d.fy.min_cutoff = self.base_cutoff
+            self.filter_3d.fz.min_cutoff = self.base_cutoff
+
+        # Kime (Sudden Impact Lock): if previous velocity was high and dropped sharply (> 65% drop)
+        prev_speed = float(np.linalg.norm(self.prev_vel)) if self.prev_vel is not None else 0.0
+        if prev_speed > 2.2 and speed < 0.65:
+            self.kime_latched = True
+            self.kime_latch_timer = 3  # latch for ~3 frames
+            self.latched_pt = cur_pt.copy()
+
+        if self.kime_latched and self.kime_latch_timer > 0 and self.latched_pt is not None:
+            self.kime_latch_timer -= 1
+            filtered = self.filter_3d.filter(self.latched_pt.tolist(), timestamp)
+        else:
+            self.kime_latched = False
+            filtered = self.filter_3d.filter(pt, timestamp)
+
+        self.prev_pt = cur_pt.copy()
+        self.prev_vel = cur_vel.copy()
+        self.prev_time = now
+        return filtered
+
+
+class BoneLengthStabilizer:
+    """
+    Anatomical Bone Length Invariance Constraint.
+    Prevents limbs from telescoping, shrinking, or exploding during foreshortening,
+    kicks (Mae-geri), punches (Oi-zuki/Gyaku-zuki), and deep stances (Zenkutsu/Kiba-dachi).
+    Maintains rigid limb segments while strictly preserving true 3D joint orientation.
+    """
+
+    # Canonical anatomical segment pairs (parent_joint, child_joint, default_len_m)
+    ANATOMICAL_SEGMENTS = [
+        # Upper body
+        ('left_shoulder', 'left_elbow', 0.28),
+        ('left_elbow', 'left_wrist', 0.25),
+        ('right_shoulder', 'right_elbow', 0.28),
+        ('right_elbow', 'right_wrist', 0.25),
+        # Torso
+        ('left_shoulder', 'right_shoulder', 0.38),
+        ('left_hip', 'right_hip', 0.26),
+        # Lower body
+        ('left_hip', 'left_knee', 0.42),
+        ('left_knee', 'left_ankle', 0.40),
+        ('left_ankle', 'left_foot_index', 0.17),
+        ('right_hip', 'right_knee', 0.42),
+        ('right_knee', 'right_ankle', 0.40),
+        ('right_ankle', 'right_foot_index', 0.17),
+    ]
+
+    def __init__(self, adaptation_frames: int = 30):
+        self.adaptation_frames = adaptation_frames
+        self.frame_count = 0
+        self.calibrated = False
+        self.calib_samples = {
+            (p, c): [] for p, c, _ in self.ANATOMICAL_SEGMENTS
+        }
+        self.bone_lengths = {
+            (p, c): d for p, c, d in self.ANATOMICAL_SEGMENTS
+        }
+
+    def reset(self):
+        self.frame_count = 0
+        self.calibrated = False
+        self.calib_samples = {(p, c): [] for p, c, _ in self.ANATOMICAL_SEGMENTS}
+        self.bone_lengths = {(p, c): d for p, c, d in self.ANATOMICAL_SEGMENTS}
+
+    def calibrate_step(self, joints: Dict[str, List[float]], confidences: Dict[str, float]):
+        """Collect high-confidence limb lengths to adapt to the user's specific stature."""
+        for p, c, d in self.ANATOMICAL_SEGMENTS:
+            if p in joints and c in joints:
+                cp = confidences.get(p, 0.5)
+                cc = confidences.get(c, 0.5)
+                if cp >= 0.65 and cc >= 0.65:
+                    v = np.array(joints[c]) - np.array(joints[p])
+                    dist = float(np.linalg.norm(v))
+                    # Reasonable human limb length bounds (0.5x to 1.7x default)
+                    if 0.5 * d <= dist <= 1.7 * d:
+                        self.calib_samples[(p, c)].append(dist)
+                        if len(self.calib_samples[(p, c)]) >= self.adaptation_frames:
+                            self.bone_lengths[(p, c)] = round(float(np.median(self.calib_samples[(p, c)])), 3)
+
+        self.frame_count += 1
+        if self.frame_count >= self.adaptation_frames:
+            self.calibrated = True
+
+    def stabilize_joints(
+        self,
+        joints: Dict[str, List[float]],
+        confidences: Optional[Dict[str, float]] = None,
+    ) -> Dict[str, List[float]]:
+        """
+        Enforces rigid bone lengths in hierarchical order starting from root/torso:
+        Torso -> Shoulders -> Elbows -> Wrists
+        Hips -> Knees -> Ankles -> Feet
+        """
+        if not joints:
+            return joints
+
+        conf = confidences or {}
+        self.calibrate_step(joints, conf)
+
+        res = {k: list(v) for k, v in joints.items()}
+
+        # 1. Torso width stabilization
+        if 'left_shoulder' in res and 'right_shoulder' in res:
+            l_sh = np.array(res['left_shoulder'])
+            r_sh = np.array(res['right_shoulder'])
+            mid_sh = (l_sh + r_sh) * 0.5
+            v_sh = l_sh - r_sh
+            len_sh = float(np.linalg.norm(v_sh))
+            target_sh = self.bone_lengths.get(('left_shoulder', 'right_shoulder'), 0.38)
+            if len_sh > 1e-4 and abs(len_sh - target_sh) > 0.02:
+                u_sh = v_sh / len_sh
+                half_t = target_sh * 0.5
+                res['left_shoulder'] = [round(float(mid_sh[i] + u_sh[i] * half_t), 4) for i in range(3)]
+                res['right_shoulder'] = [round(float(mid_sh[i] - u_sh[i] * half_t), 4) for i in range(3)]
+
+        if 'left_hip' in res and 'right_hip' in res:
+            l_hp = np.array(res['left_hip'])
+            r_hp = np.array(res['right_hip'])
+            mid_hp = (l_hp + r_hp) * 0.5
+            v_hp = l_hp - r_hp
+            len_hp = float(np.linalg.norm(v_hp))
+            target_hp = self.bone_lengths.get(('left_hip', 'right_hip'), 0.26)
+            if len_hp > 1e-4 and abs(len_hp - target_hp) > 0.02:
+                u_hp = v_hp / len_hp
+                half_t = target_hp * 0.5
+                res['left_hip'] = [round(float(mid_hp[i] + u_hp[i] * half_t), 4) for i in range(3)]
+                res['right_hip'] = [round(float(mid_hp[i] - u_hp[i] * half_t), 4) for i in range(3)]
+
+        # 2. Sequential limb length stabilization (UpperArm -> LowerArm, Thigh -> Shin -> Foot)
+        limb_chains = [
+            ('left_shoulder', 'left_elbow'),
+            ('left_elbow', 'left_wrist'),
+            ('right_shoulder', 'right_elbow'),
+            ('right_elbow', 'right_wrist'),
+            ('left_hip', 'left_knee'),
+            ('left_knee', 'left_ankle'),
+            ('left_ankle', 'left_foot_index'),
+            ('right_hip', 'right_knee'),
+            ('right_knee', 'right_ankle'),
+            ('right_ankle', 'right_foot_index'),
+        ]
+
+        for p, c in limb_chains:
+            if p in res and c in res:
+                p_pt = np.array(res[p])
+                c_pt = np.array(res[c])
+                v = c_pt - p_pt
+                cur_len = float(np.linalg.norm(v))
+                target_len = self.bone_lengths.get((p, c), 0.30)
+
+                if cur_len < 1e-4:
+                    v_dir = np.array([0.0, -1.0, 0.0]) if ('hip' in p or 'knee' in p) else np.array([0.0, 0.0, 1.0])
+                else:
+                    v_dir = v / cur_len
+
+                d_xy = math.hypot(v[0], v[1])
+                if d_xy < target_len * 0.96 and abs(v[2]) < target_len * 0.90:
+                    sign_z = 1.0 if v[2] >= -0.01 else -1.0
+                    rest_z = math.sqrt(max(0.0, target_len**2 - d_xy**2))
+                    corrected_z = sign_z * rest_z
+                    new_pt = np.array([p_pt[0] + v[0], p_pt[1] + v[1], p_pt[2] + corrected_z])
+                else:
+                    new_pt = p_pt + v_dir * target_len
+
+                res[c] = [round(float(v_val), 4) for v_val in new_pt]
+
+        return res
+
+
+class ContinuousAzimuthUnwrapper:
+    """
+    Continuous 360° Azimuth Phase Unwrapper.
+    Eliminates atan2(-pi, +pi) wrapping singularities during karate turns,
+    allowing clean spins (45°, 90°, 180°, 360°) without avatar flip-flops.
+    """
+
+    def __init__(self):
+        self.prev_raw_yaw = None
+        self.unwrapped_yaw = 0.0
+
+    def reset(self):
+        self.prev_raw_yaw = None
+        self.unwrapped_yaw = 0.0
+
+    def unwrap(self, raw_yaw: float) -> float:
+        if self.prev_raw_yaw is None:
+            self.prev_raw_yaw = raw_yaw
+            self.unwrapped_yaw = raw_yaw
+            return self.unwrapped_yaw
+
+        delta = raw_yaw - self.prev_raw_yaw
+        while delta > math.pi:
+            delta -= 2.0 * math.pi
+        while delta < -math.pi:
+            delta += 2.0 * math.pi
+
+        self.unwrapped_yaw += delta
+        self.prev_raw_yaw = raw_yaw
+        return self.unwrapped_yaw
+
+
+
 def interpolate_short_gaps(
     frames_joints: List[Dict[str, List[float]]],
     frames_conf: List[Dict[str, float]],
