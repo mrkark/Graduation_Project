@@ -29,7 +29,7 @@ const listQueryValidator = [
   query('status').optional({ checkFalsy: true }).isIn(['pending', 'approved', 'rejected']),
   query('sort').optional({ checkFalsy: true }).isIn(['newest', 'oldest', 'title']),
   query('page').optional({ checkFalsy: true }).isInt({ min: 1 }),
-  query('pageSize').optional({ checkFalsy: true }).isInt({ min: 1, max: 100 }),
+  query('pageSize').optional({ checkFalsy: true }).isInt({ min: 1, max: 200 }),
 ];
 
 const idParamValidator = [param('id').isInt().withMessage('Некорректный идентификатор')];

@@ -107,7 +107,7 @@ export default function BunkaiListPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listBunkai({ sort, page: 1, pageSize: 150 })
+    listBunkai({ sort, page: 1, pageSize: 100 })
       .then((res) => {
         if (cancelled) return;
         setItems(res.data || []);
