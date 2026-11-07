@@ -250,20 +250,38 @@ class Retargeter:
                     for idx in range(1, 4):
                         bname = f"{ftype}{idx}.{s_key}"
                         if ftype == "Thumb":
-                            z_sign = 1.0 if s_key == "L" else -1.0
-                            opp = curl * 0.70 * z_sign
-                            flex = curl * 0.60
-                            sx = math.sin(-flex * 0.5)
-                            cx = math.cos(-flex * 0.5)
-                            sz = math.sin(opp * 0.5)
-                            cz = math.cos(opp * 0.5)
-                            q_thumb = np.array([sx * cz, -sx * sz, cx * sz, cx * cz])
-                            q_thumb /= np.linalg.norm(q_thumb)
-                            local_quats[bname] = [round(float(v), 4) for v in q_thumb]
+                            side_sign = 1.0 if s_key == "L" else -1.0
+                            # S-curve boost for tight karate fist closure
+                            closed_c = curl
+                            if closed_c > 0.25:
+                                u = min(1.0, (closed_c - 0.25) / 0.50)
+                                closed_c = 0.25 + 0.75 * math.sin(u * math.pi * 0.5)
+
+                            if idx == 1:
+                                # Authentic karate fist opposition axis: Left [-0.76, +0.33, +0.56], Right [-0.76, -0.30, -0.57]
+                                axis = np.array([-0.7575, 0.3361 * side_sign, 0.5597 * side_sign])
+                                axis /= np.linalg.norm(axis)
+                                ang = closed_c * 1.35
+                                s = math.sin(ang * 0.5)
+                                c = math.cos(ang * 0.5)
+                                q_thumb = np.array([axis[0] * s, axis[1] * s, axis[2] * s, c])
+                                local_quats[bname] = [round(float(v), 4) for v in q_thumb]
+                            else:
+                                ang = closed_c * (1.30 if idx == 2 else 0.90)
+                                axis = np.array([-1.0, 0.20 * side_sign, 0.15 * side_sign])
+                                axis /= np.linalg.norm(axis)
+                                s = math.sin(ang * 0.5)
+                                c = math.cos(ang * 0.5)
+                                q_thumb = np.array([axis[0] * s, axis[1] * s, axis[2] * s, c])
+                                local_quats[bname] = [round(float(v), 4) for v in q_thumb]
                         else:
-                            # Natural palmar flexion around local -X
-                            max_ang = 1.35 if idx == 1 else (1.50 if idx == 2 else 1.20)
-                            ang = curl * max_ang
+                            # Natural palmar flexion around local -X with reference angles (Index1: 82 deg, Index2: 98 deg, Index3: 65 deg)
+                            closed_c = curl
+                            if closed_c > 0.25:
+                                u = min(1.0, (closed_c - 0.25) / 0.50)
+                                closed_c = 0.25 + 0.75 * math.sin(u * math.pi * 0.5)
+                            max_ang = 1.45 if idx == 1 else (1.75 if idx == 2 else 1.20)
+                            ang = closed_c * max_ang
                             q_flex = np.array([-math.sin(ang * 0.5), 0.0, 0.0, math.cos(ang * 0.5)])
                             local_quats[bname] = [round(float(v), 4) for v in q_flex]
 

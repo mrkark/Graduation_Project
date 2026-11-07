@@ -222,15 +222,15 @@ def calc_finger_curl(
 
     finger_len = n1 + n2 + n3
     dist_tip_mcp = float(np.linalg.norm(tip - mcp))
-    dist_curl = 1.0 - float(np.clip(dist_tip_mcp / (finger_len * 0.82 + 1e-6), 0.0, 1.0))
+    dist_curl = 1.0 - float(np.clip((dist_tip_mcp - finger_len * 0.10) / (finger_len * 0.72 + 1e-6), 0.0, 1.0))
 
-    ang_curl = float(np.clip(total_ang / 135.0, 0.0, 1.0))
+    ang_curl = float(np.clip(total_ang / 125.0, 0.0, 1.0))
     raw_curl = 0.5 * ang_curl + 0.5 * dist_curl
 
     # Highly responsive curve: sensitive to fine finger twitches and clenches tight to 1.0!
-    curl = raw_curl ** 0.85
-    if curl > 0.55:
-        curl = 0.55 + (curl - 0.55) * 1.55
+    curl = raw_curl ** 0.82
+    if curl > 0.38:
+        curl = 0.38 + (curl - 0.38) * 1.68
     return float(np.clip(curl, 0.0, 1.0))
 
 
@@ -252,18 +252,18 @@ def calc_thumb_curl(
 
     dot = float(np.clip(np.dot(v1, v2) / (n1 * n2), -1.0, 1.0))
     angle = math.degrees(math.acos(dot))
-    ang_curl = float(np.clip(angle / 75.0, 0.0, 1.0))
+    ang_curl = float(np.clip(angle / 68.0, 0.0, 1.0))
 
     if index_mcp is not None:
         thumb_len = n1 + float(np.linalg.norm(ip - mcp)) + n2
         dist_to_index = float(np.linalg.norm(tip - index_mcp))
-        adduct_curl = 1.0 - float(np.clip(dist_to_index / (thumb_len * 1.2 + 1e-6), 0.0, 1.0))
-        curl = 0.45 * ang_curl + 0.55 * adduct_curl
+        adduct_curl = float(np.clip((thumb_len * 1.25 - dist_to_index) / (thumb_len * 0.75 + 1e-6), 0.0, 1.0))
+        curl = 0.40 * ang_curl + 0.60 * adduct_curl
     else:
         curl = ang_curl
 
-    if curl > 0.50:
-        curl = 0.50 + (curl - 0.50) * 1.6
+    if curl > 0.32:
+        curl = 0.32 + (curl - 0.32) * 1.70
     return float(np.clip(curl, 0.0, 1.0))
 
 
@@ -794,9 +794,18 @@ class MocapTracker:
                     r_thb = float(np.linalg.norm(t_p - i_p)) / len_arm
 
                     # Calculate continuous finger curls: 0.0 = fully open hand (Shuto/Nukite), 1.0 = tight clenched fist (Seiken)
-                    curl_idx = float(np.clip((0.48 - r_idx) / (0.48 - 0.22), 0.0, 1.0))
-                    curl_pnk = float(np.clip((0.42 - r_pnk) / (0.42 - 0.18), 0.0, 1.0))
-                    curl_thb = float(np.clip((0.28 - r_thb) / (0.28 - 0.10), 0.0, 1.0))
+                    curl_idx = float(np.clip((0.46 - r_idx) / (0.46 - 0.20), 0.0, 1.0))
+                    curl_pnk = float(np.clip((0.40 - r_pnk) / (0.40 - 0.16), 0.0, 1.0))
+                    curl_thb = float(np.clip((0.32 - r_thb) / (0.32 - 0.08), 0.0, 1.0))
+
+                    # In martial arts (Seiken), fingers clenching into a fist automatically fold the thumb over them
+                    fist_core = 0.55 * curl_idx + 0.45 * curl_pnk
+                    if fist_core > 0.35:
+                        fist_boost = (fist_core - 0.35) / 0.65
+                        curl_thb = max(curl_thb, fist_core * 0.95 + fist_boost * 0.05)
+                        curl_idx = min(1.0, curl_idx * 1.15)
+                        curl_pnk = min(1.0, curl_pnk * 1.15)
+
                     curl_mid = 0.55 * curl_idx + 0.45 * curl_pnk
                     curl_rng = 0.45 * curl_idx + 0.55 * curl_pnk
 

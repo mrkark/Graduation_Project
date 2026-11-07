@@ -1142,15 +1142,45 @@
         sState[key] = prevCurl * (1.0 - alphaCurl) + targetCurl * alphaCurl;
         const curl = sState[key];
 
-        // Phalange angles: [MCP, PIP, DIP]
-        let targetAngles = [curl * 1.35, curl * 1.50, curl * 1.20];
+        // Non-linear martial arts fist closure curve:
+        // Preserves delicate open-hand control in [0.0, 0.25] (Shuto-uke, Nukite),
+        // and smoothly ramps into a rock-solid 100% tight clenched karate fist (Seiken) above 0.35!
+        let closedCurl = curl;
+        if (closedCurl > 0.25) {
+          const u = Math.min(1.0, (closedCurl - 0.25) / 0.45);
+          closedCurl = 0.25 + 0.75 * Math.sin(u * Math.PI * 0.5);
+        }
+
+        // Authentic reference karate fist target angles from Blender (chudan_zuki_left):
+        // Index:  MCP ~82 deg (1.45 rad), PIP ~98 deg (1.75 rad), DIP ~65 deg (1.20 rad)
+        // Middle: MCP ~80 deg (1.42 rad), PIP ~96 deg (1.72 rad), DIP ~66 deg (1.20 rad)
+        // Ring:   MCP ~82 deg (1.43 rad), PIP ~92 deg (1.65 rad), DIP ~63 deg (1.15 rad)
+        // Pinky:  MCP ~80 deg (1.42 rad), PIP ~92 deg (1.65 rad), DIP ~64 deg (1.15 rad)
+        const maxAngles = (t === "Index")  ? [1.45, 1.75, 1.20] :
+                          (t === "Middle") ? [1.42, 1.72, 1.20] :
+                          (t === "Ring")   ? [1.43, 1.65, 1.15] : [1.42, 1.65, 1.15];
+
+        let targetAngles;
         let targetAbd = 0.0;
 
         if (hasPhalanges && fData.phalanges[key]) {
-          targetAngles = fData.phalanges[key];
+          const raw = fData.phalanges[key];
+          // Amplify MediaPipe phalanx angles towards full fist closure
+          const amp = 1.0 + 0.45 * closedCurl;
+          targetAngles = [
+            Math.min(maxAngles[0], raw[0] * amp),
+            Math.min(maxAngles[1], raw[1] * amp),
+            Math.min(maxAngles[2], raw[2] * amp)
+          ];
           if (fData.abduction && typeof fData.abduction[key] === 'number') {
             targetAbd = fData.abduction[key];
           }
+        } else {
+          targetAngles = [
+            closedCurl * maxAngles[0],
+            closedCurl * maxAngles[1],
+            closedCurl * maxAngles[2]
+          ];
         }
 
         if (!sState.phalanges[key]) sState.phalanges[key] = [0.15, 0.15, 0.15];
@@ -1177,28 +1207,29 @@
           if (b && b.restLocalQ) {
             if (t === "Thumb") {
               const sideSign = (side === "L") ? 1.0 : -1.0;
-              const flexVal = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * 1.25;
               if (idx === 1) {
-                // CMC / Trapeziometacarpal: strong opposition (-X flexion and Y/Z roll across palm)
-                const oppVal = hasPhalanges ? Math.max(0.1, smoothAbd) : curl;
-                const rotVec = new THREE.Vector3(-1.10 * flexVal, 0.45 * flexVal * sideSign, -0.22 * oppVal * sideSign);
-                const len = rotVec.length();
-                if (len > 1e-4) {
-                  const flexQ = new THREE.Quaternion().setFromAxisAngle(rotVec.clone().normalize(), len);
-                  b.quaternion.copy(b.restLocalQ.clone().multiply(flexQ));
-                } else {
-                  b.quaternion.copy(b.restLocalQ);
-                }
+                // CMC / Trapeziometacarpal: Authentic karate fist opposition axis from Blender armature
+                // Left: [-0.76, +0.34, +0.56], Right: [-0.76, -0.30, -0.57]
+                const thumbAxis = new THREE.Vector3(-0.7575, 0.3361 * sideSign, 0.5597 * sideSign).normalize();
+                const thumbAngle1 = closedCurl * 1.38; // ~79 deg at full clench
+                const qThumb1 = new THREE.Quaternion().setFromAxisAngle(thumbAxis, thumbAngle1);
+                b.quaternion.copy(b.restLocalQ.clone().multiply(qThumb1));
+              } else if (idx === 2) {
+                // Thumb MCP/IP joint: curls down tightly over the clenched index finger
+                const thumbAngle2 = closedCurl * 1.30; // ~75 deg
+                const thumbAxis2 = new THREE.Vector3(-1.0, 0.20 * sideSign, 0.15 * sideSign).normalize();
+                const qThumb2 = new THREE.Quaternion().setFromAxisAngle(thumbAxis2, thumbAngle2);
+                b.quaternion.copy(b.restLocalQ.clone().multiply(qThumb2));
               } else {
-                // Thumb MCP and IP: curl around -X over index/middle fingers
-                const flexAng = Math.max(0.0, Math.min(1.60, flexVal * 1.20));
-                const flexQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0.15 * sideSign, 0), flexAng);
-                b.quaternion.copy(b.restLocalQ.clone().multiply(flexQ));
+                // Distal tip
+                const thumbAngle3 = closedCurl * 0.90; // ~52 deg
+                const qThumb3 = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1.0, 0.0, 0.0), thumbAngle3);
+                b.quaternion.copy(b.restLocalQ.clone().multiply(qThumb3));
               }
             } else {
               // Four fingers: MCP, PIP, DIP individual flexion around local -X
-              const rawFlex = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * (idx === 1 ? 1.35 : (idx === 2 ? 1.50 : 1.20));
-              const flexAng = Math.max(0.0, Math.min(1.55, rawFlex));
+              const rawFlex = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : closedCurl * maxAngles[idx - 1];
+              const flexAng = Math.max(0.0, Math.min(1.95, rawFlex));
               const flexQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0, 0), flexAng);
 
               if (idx === 1) {
