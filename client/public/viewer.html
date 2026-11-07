@@ -1176,26 +1176,24 @@
           const b = getBone(`${t}${idx}.${side}`);
           if (b && b.restLocalQ) {
             if (t === "Thumb") {
-              const zSign = (side === "L") ? 1.0 : -1.0;
-              const flexVal = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * 1.2;
-              let rotVec;
+              const sideSign = (side === "L") ? 1.0 : -1.0;
+              const flexVal = smoothedAngles[idx - 1] !== undefined ? smoothedAngles[idx - 1] : curl * 1.25;
               if (idx === 1) {
-                // Trapeziometacarpal / CMC: opposition across palm and flexion
-                const oppVal = hasPhalanges ? Math.max(0.0, smoothAbd) : curl;
-                rotVec = new THREE.Vector3(-0.35 * flexVal, 0.0, 0.80 * oppVal * zSign);
-              } else if (idx === 2) {
-                // MCP: flexion
-                rotVec = new THREE.Vector3(-0.80 * flexVal, 0.0, 0.35 * curl * zSign);
+                // CMC / Trapeziometacarpal: strong opposition (-X flexion and Y/Z roll across palm)
+                const oppVal = hasPhalanges ? Math.max(0.1, smoothAbd) : curl;
+                const rotVec = new THREE.Vector3(-1.10 * flexVal, 0.45 * flexVal * sideSign, -0.22 * oppVal * sideSign);
+                const len = rotVec.length();
+                if (len > 1e-4) {
+                  const flexQ = new THREE.Quaternion().setFromAxisAngle(rotVec.clone().normalize(), len);
+                  b.quaternion.copy(b.restLocalQ.clone().multiply(flexQ));
+                } else {
+                  b.quaternion.copy(b.restLocalQ);
+                }
               } else {
-                // IP: distal flexion
-                rotVec = new THREE.Vector3(-0.95 * flexVal, 0.0, 0.15 * zSign);
-              }
-              const len = rotVec.length();
-              if (len > 1e-4) {
-                const flexQ = new THREE.Quaternion().setFromAxisAngle(rotVec.clone().normalize(), len);
+                // Thumb MCP and IP: curl around -X over index/middle fingers
+                const flexAng = Math.max(0.0, Math.min(1.60, flexVal * 1.20));
+                const flexQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(-1, 0.15 * sideSign, 0), flexAng);
                 b.quaternion.copy(b.restLocalQ.clone().multiply(flexQ));
-              } else {
-                b.quaternion.copy(b.restLocalQ);
               }
             } else {
               // Four fingers: MCP, PIP, DIP individual flexion around local -X
@@ -1220,6 +1218,7 @@
                 b.quaternion.copy(b.restLocalQ.clone().multiply(flexQ));
               }
             }
+            b.updateMatrixWorld(true);
           }
         }
       }
