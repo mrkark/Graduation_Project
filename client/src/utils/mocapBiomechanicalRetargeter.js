@@ -646,7 +646,7 @@ export function evaluateThreeSkeletonUtilsRetargeting() {
 }
 
 // ============================================================================
-// 8. ГЛАВНЫЙ БИОМЕХАНИЧЕСКИЙ РЕТАРГЕТЕР СЁТОКАН (MASTER BIOMECHANICAL RETARGETER)
+// 8. ГЛАВНЫЙ БИОМЕХАНИЧЕСКИЙ РЕТАРГЕТЕР ШОТОКАН (MASTER BIOMECHANICAL RETARGETER)
 // ============================================================================
 
 export class MasterBiomechanicalRetargeter {

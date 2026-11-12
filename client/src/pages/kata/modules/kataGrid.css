@@ -242,15 +242,14 @@
   margin: 0.4rem 0 1rem;
 }
 
-/* Подвал карточки */
+/* Подвал карточки: только пояс и число шагов */
 .atlas-card__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 10px;
-  flex-wrap: wrap;
+  gap: 8px;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-subtle);
+  margin-top: auto;
 }
 
 .atlas-card__meta-badges {

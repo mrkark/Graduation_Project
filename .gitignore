@@ -45,3 +45,11 @@ screenshots_*/
 client/capture_*.js
 
 *.exe
+
+# Архивы и резервные копии моделей не помещаются в GitHub
+client/src.zip
+*.glb.bak
+
+# Локальные сертификаты шлюза (приватный ключ)
+ssl/*.pem
+ssl/*.key

@@ -76,8 +76,9 @@ function EmbusenTrajectory({ points = [], currentIdx = 0, onSelectStep = null, e
       {points.map((p, idx) => {
         const isCurrent = idx === currentIdx;
         const isKiai = Boolean(events[idx]?.kiai);
-        const markerColor = isCurrent ? '#ffd700' : (isKiai ? '#ef4444' : '#c5a059');
-        const markerRadius = isCurrent ? 0.08 : 0.045;
+        const isYoi = Boolean(events[idx]?.isYoi || idx === 0 || idx === points.length - 1);
+        const markerColor = isCurrent ? '#ffd700' : (isKiai ? '#ef4444' : (isYoi ? '#60a5fa' : '#c5a059'));
+        const markerRadius = isCurrent ? 0.08 : (isYoi ? 0.06 : 0.045);
 
         return (
           <mesh
@@ -90,7 +91,7 @@ function EmbusenTrajectory({ points = [], currentIdx = 0, onSelectStep = null, e
             }}
           >
             <circleGeometry args={[markerRadius, 16]} />
-            <meshBasicMaterial color={markerColor} opacity={isCurrent ? 0.95 : 0.6} transparent />
+            <meshBasicMaterial color={markerColor} opacity={isCurrent ? 0.95 : (isYoi ? 0.8 : 0.6)} transparent />
           </mesh>
         );
       })}
@@ -180,7 +181,7 @@ export default function KataSequencer({
   const [warningMessage, setWarningMessage] = useState(null);
   const [playbackMode, setPlaybackMode] = useState('steps'); // 'steps' | 'full'
   const kataSlug = useMemo(() => resolveKataSlug(kataTitle), [kataTitle]);
-  const [executionMethod, setExecutionMethod] = useState('composed'); // 'composed' | 'mocap'
+  const [executionMethod, setExecutionMethod] = useState('mocap'); // 'mocap' канонический режим мастера
   const [kataJsonData, setKataJsonData] = useState(null);
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -223,6 +224,10 @@ export default function KataSequencer({
   const composedSteps = composedScenario.steps;
   const embusenPoints = composedScenario.embusenPoints;
   const totalStepsCount = composedSteps.length || 21;
+  const techniqueCount = useMemo(() => {
+    const techs = composedSteps.filter((s) => !s.isYoi && !s.isYoiStart && !s.isYoiEnd);
+    return techs.length > 0 ? techs.length : totalStepsCount;
+  }, [composedSteps, totalStepsCount]);
   const currentStep = composedSteps[currentIdx] || {};
   const currentPosData = currentStep.position
     ? { position: currentStep.position, rotation: currentStep.rotation }
@@ -247,6 +252,20 @@ export default function KataSequencer({
     return (currentStep.Duration || 2.0).toFixed(2);
   }, [currentStep]);
 
+  // Режим исполнения: Клипы v4 (библиотека 213 стоек и техник) либо MoCap мастер-клип
+  const isMasterAvailable = Boolean(kataSlug === 'heian_shodan');
+
+  const effectiveExecutionMode = useMemo(() => {
+    if (executionMethod === 'composed') {
+      return 'composed';
+    }
+    // Для MoCap режима
+    if (playbackMode === 'full') {
+      return 'full';
+    }
+    return 'mocap';
+  }, [playbackMode, executionMethod]);
+
   // При первом переходе из стойки Йой к изучению ката однократно плавно фокусируем мастера
   useEffect(() => {
     if (hasStarted && controlsRef.current) {
@@ -260,16 +279,22 @@ export default function KataSequencer({
     setCurrentIdx(idx);
     setHasStarted(true);
     setIsPlaying(true);
-    setScrubProgress(null);
+    if (playbackMode === 'full' && executionMethod !== 'composed') {
+      const targetStep = composedSteps[idx];
+      const targetTime = targetStep?.mocapStartTime !== undefined ? targetStep.mocapStartTime : (targetStep?.startTime || 0);
+      setCurrentTime(targetTime);
+      setScrubProgress(targetTime / totalDuration);
+    } else {
+      setScrubProgress(null);
+    }
     setReplayTrigger((prev) => prev + 1);
     if (onStepChange) onStepChange(idx);
-  }, [onStepChange]);
+  }, [playbackMode, executionMethod, composedSteps, totalDuration, onStepChange]);
 
   const handleStepEnd = useCallback(() => {
     if (playbackMode === 'steps' || (playbackMode === 'full' && executionMethod === 'composed')) {
       if (!isLooping || playbackMode === 'full') {
         if (currentIdx < totalStepsCount - 1) {
-          // Выдерживаем естественную паузу Дзансин (фиксация техники перед следующим шагом)
           const pauseMs = playbackMode === 'full' ? 140 : 300;
           setTimeout(() => {
             selectStep(currentIdx + 1);
@@ -358,11 +383,11 @@ export default function KataSequencer({
             role="tori"
             kataMode={hasStarted}
             stance={!hasStarted ? 'ready' : (currentStep.stance || 'ready')}
-            stepClip={!hasStarted ? null : (executionMethod === 'composed' ? currentStep.clipName : (playbackMode === 'full' ? null : currentStep.clipName))}
-            blendDuration={currentStep.blendDuration || 0.14}
-            kataExecutionMode={executionMethod === 'composed' ? 'composed' : (playbackMode === 'full' ? 'full' : executionMethod)}
+            stepClip={!hasStarted ? null : currentStep.clipName}
+            blendDuration={effectiveExecutionMode === 'mocap' ? 0.04 : (currentStep.blendDuration || 0.14)}
+            kataExecutionMode={effectiveExecutionMode}
             kataClipName={kataSlug}
-            kataTimeRange={playbackMode === 'steps' && executionMethod === 'mocap' ? kataTimeRange : null}
+            kataTimeRange={effectiveExecutionMode === 'mocap' ? kataTimeRange : null}
             kataScrubProgress={scrubProgress}
             speed={speed}
             isPlaying={hasStarted && isPlaying}
@@ -370,8 +395,8 @@ export default function KataSequencer({
             replayTrigger={replayTrigger}
             currentStep={currentStep}
             prevStep={composedSteps[currentIdx - 1] || null}
-            position={!hasStarted ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.position : [0, 0, 0])}
-            rotation={!hasStarted ? [0, 0, 0] : (executionMethod === 'composed' ? currentPosData.rotation : [0, 0, 0])}
+            position={!hasStarted || effectiveExecutionMode !== 'composed' ? [0, 0, 0] : currentPosData.position}
+            rotation={!hasStarted || effectiveExecutionMode !== 'composed' ? [0, 0, 0] : currentPosData.rotation}
             onStepEnd={handleStepEnd}
             onTimeUpdate={handleTimeUpdate}
           />
@@ -387,7 +412,7 @@ export default function KataSequencer({
           <SmoothCameraRig
             targetPosition={currentPosData.position}
             avatarRealPosRef={avatarRealPosRef}
-            isFullMode={playbackMode === 'full'}
+            isFullMode={effectiveExecutionMode !== 'composed'}
             follow={cameraFollow}
             hasStarted={hasStarted}
             controlsRef={controlsRef}
@@ -406,7 +431,7 @@ export default function KataSequencer({
         </Canvas>
 
         {/* Оверлей приглашения к началу изучения в стойке Йой */}
-        {!hasStarted && (
+        {!hasStarted && currentIdx === 0 && (
           <div
             style={{
               position: 'absolute',
@@ -433,16 +458,20 @@ export default function KataSequencer({
               }}
             >
               <div style={{ fontSize: '0.85rem', color: 'var(--color-gold, #c5a059)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                Стойка Йой (Готовность)
+                Начало формы · Сидзэнтай
               </div>
               <div style={{ fontSize: '0.84rem', color: '#fff', marginBottom: 10 }}>
-                Мастер готов. Нажмите для перехода к изучению шагов формы:
+                Мастер готов. Нажмите для перехода к первому шагу формы:
               </div>
               <button
                 className="btn btn-primary"
                 onClick={() => {
                   setHasStarted(true);
-                  setIsPlaying(true);
+                  if (currentIdx === 0 && composedSteps.length > 1) {
+                    selectStep(1); // Переход к первому боевому шагу (Гэдан-барай)!
+                  } else {
+                    setIsPlaying(true);
+                  }
                 }}
                 style={{
                   padding: '8px 24px',
@@ -456,7 +485,7 @@ export default function KataSequencer({
                   boxShadow: '0 4px 16px rgba(197, 160, 89, 0.4)',
                 }}
               >
-                ▶ Начать изучение шагов
+                ▶ Начать изучение (Шаг 1: {composedSteps[1]?.technique?.split(' ')[0] || 'Гэдан-барай'})
               </button>
             </div>
           </div>
@@ -492,12 +521,14 @@ export default function KataSequencer({
                 {kataTitle}
               </span>
               <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>•</span>
-              <span style={{ fontSize: '0.76rem', color: !hasStarted ? 'var(--color-gold, #c5a059)' : (playbackMode === 'full' ? '#68d391' : 'var(--color-washi, #f4efe6)'), fontWeight: 600 }}>
-                {!hasStarted
-                  ? 'Стойка Йой (Готовность)'
+              <span style={{ fontSize: '0.76rem', color: (!hasStarted || currentStep.isYoiStart || currentStep.isYoiEnd) ? 'var(--color-gold, #c5a059)' : (playbackMode === 'full' ? '#68d391' : 'var(--color-washi, #f4efe6)'), fontWeight: 600 }}>
+                {currentStep.isYoiEnd
+                  ? 'Завершение формы'
+                  : (!hasStarted || currentStep.isYoiStart)
+                  ? 'Начало формы'
                   : (playbackMode === 'full'
                       ? `Мастер-прогон (${currentTime.toFixed(1)}с / ${totalDuration.toFixed(1)}с)`
-                      : `Шаг ${currentIdx + 1} из ${totalStepsCount}`)}
+                      : `Шаг ${currentStep.techniqueNumber || currentIdx} из ${techniqueCount}`)}
               </span>
               {isCurrentKiai && hasStarted && (
                 <span
@@ -516,8 +547,10 @@ export default function KataSequencer({
               )}
             </div>
             <div style={{ fontSize: '0.82rem', color: 'var(--color-gold, #c5a059)', marginTop: 2, fontWeight: 600 }}>
-              {!hasStarted
-                ? 'Стойка Йой (Сидзэнтай) — готовность к началу'
+              {currentStep.isYoiEnd
+                ? 'Завершение формы — стойка Сидзэнтай'
+                : (!hasStarted || currentStep.isYoiStart)
+                ? 'Начало формы — стойка Сидзэнтай'
                 : `${currentStep.technique || currentStep.title || 'Каноническая техника'} • Стойка: ${currentStep.stance || 'zenkutsu'} • ${currentStep.facingDeg}°`}
             </div>
           </div>
@@ -620,9 +653,7 @@ export default function KataSequencer({
                 setPlaybackMode('full');
                 setHasStarted(true);
                 setIsPlaying(true);
-                if (executionMethod === 'composed') {
-                  setCurrentIdx(0);
-                }
+                setCurrentIdx(0);
                 setCurrentTime(0);
                 setScrubProgress(0);
                 setReplayTrigger((prev) => prev + 1);
@@ -640,42 +671,6 @@ export default function KataSequencer({
             </button>
           </div>
 
-          {/* Метод воспроизведения: Клипы v4 (Композиция) vs MoCap мастер */}
-          <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
-            <button
-              className="btn"
-              onClick={() => setExecutionMethod('composed')}
-              style={{
-                padding: '5px 10px',
-                fontSize: '0.78rem',
-                border: executionMethod === 'composed' ? '1px solid var(--color-gold, #c5a059)' : 'none',
-                background: executionMethod === 'composed' ? 'rgba(197, 160, 89, 0.2)' : 'transparent',
-                color: executionMethod === 'composed' ? 'var(--color-gold, #c5a059)' : 'var(--color-text-muted, #a0a0a0)',
-                fontWeight: executionMethod === 'composed' ? 700 : 500,
-              }}
-              title="Собрать ката из библиотеки 213 переиспользуемых клипов техник и стоек Шотокан"
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Layers size={13} /> Клипы v4</span>
-            </button>
-            {kataSlug === 'heian_shodan' && (
-              <button
-                className="btn"
-                onClick={() => setExecutionMethod('mocap')}
-                style={{
-                  padding: '5px 10px',
-                  fontSize: '0.78rem',
-                  border: executionMethod === 'mocap' ? '1px solid #68d391' : 'none',
-                  background: executionMethod === 'mocap' ? 'rgba(104, 211, 145, 0.2)' : 'transparent',
-                  color: executionMethod === 'mocap' ? '#68d391' : 'var(--color-text-muted, #a0a0a0)',
-                  fontWeight: executionMethod === 'mocap' ? 700 : 500,
-                }}
-                title="Монолитная MoCap запись ката"
-              >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Activity size={13} /> MoCap</span>
-              </button>
-            )}
-          </div>
-
           {/* Кнопки воспроизведения, паузы и повтора */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <button
@@ -684,9 +679,21 @@ export default function KataSequencer({
               onClick={() => {
                 if (!hasStarted) {
                   setHasStarted(true);
-                  setIsPlaying(true);
+                  if (currentIdx === 0 && composedSteps.length > 1) {
+                    selectStep(1);
+                  } else {
+                    setIsPlaying(true);
+                  }
                 } else {
-                  setIsPlaying(!isPlaying);
+                  if (playbackMode === 'full' && currentTime >= totalDuration - 0.1) {
+                    setCurrentIdx(0);
+                    setCurrentTime(0);
+                    setScrubProgress(0);
+                    setReplayTrigger((prev) => prev + 1);
+                    setIsPlaying(true);
+                  } else {
+                    setIsPlaying(!isPlaying);
+                  }
                 }
               }}
             >
@@ -698,6 +705,11 @@ export default function KataSequencer({
               onClick={() => {
                 setHasStarted(true);
                 setIsPlaying(true);
+                if (playbackMode === 'full') {
+                  setCurrentIdx(0);
+                  setCurrentTime(0);
+                  setScrubProgress(0);
+                }
                 setReplayTrigger((prev) => prev + 1);
               }}
               title="Повторить текущее движение с начала"
@@ -728,9 +740,9 @@ export default function KataSequencer({
                   controlsRef.current.update();
                 }
               }}
-              title="Вернуться в исходную стойку Йой"
+              title="Вернуться к началу формы"
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Compass size={13} /> В стойку Йой</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Compass size={13} /> К началу формы</span>
             </button>
             {playbackMode === 'steps' && (
               <button

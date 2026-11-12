@@ -15,7 +15,8 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "check:ports": "node scripts/check_port_conflicts.js",
-    "audit:performance": "node scripts/verify_page_optimization_and_nginx.js"
+    "audit:performance": "node scripts/verify_page_optimization_and_nginx.js",
+    "test:functional": "node scripts/functional_role_tests.js"
   },
   "author": "mrkark",
   "license": "ISC"

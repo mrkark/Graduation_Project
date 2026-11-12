@@ -8,8 +8,9 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import LazySection from '../components/ui/LazySection';
 import { resolveKataSlug } from '../three/kataMotionUtils';
+import { directionToFacingDeg, normalizeDirectionLabel } from '../data/shotokanTechniques';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
-import { Heart, Check } from 'lucide-react';
+import { Heart, Check, Edit3 } from 'lucide-react';
 import './KataDetailPage.css';
 
 // Динамическая отложенная загрузка тяжелого 3D секвенсора (оптимизация загрузки страниц)
@@ -70,71 +71,189 @@ export default function KataDetailPage() {
       .catch(() => {});
   }, [kataSlug]);
 
-  // Канонические шаги из JSON / БД
+  // Канонические шаги из JSON / БД с безусловным сохранением пользовательских правок углов и техник
+  // и гарантированным включением стойки Йой (в начале и в конце ката)
   const effectiveSteps = useMemo(() => {
     if (!kata) return [];
-    const dbSteps = kata.Steps || [];
-    const jsonSteps = kataJsonData?.steps || kataJsonData?.events || [];
-    if (jsonSteps.length === 0) return dbSteps;
+    const rawDb = kata.Steps || [];
+    const rawJson = kataJsonData?.steps || kataJsonData?.events || [];
 
-    return jsonSteps.map((ev, idx) => {
-      const existing = dbSteps[idx];
-      const moveNum = ev.n || ev.moveNumber || idx + 1;
-      const facingStr =
-        ev.facingDeg !== undefined
-          ? ev.facingDeg === 0
-            ? '0° (Север · 正面)'
-            : `${ev.facingDeg}°`
-          : ev.facing
-          ? `${ev.facing}`
-          : 'Линия эмбусэн';
+    if (rawDb.length === 0 && rawJson.length === 0) return [];
 
-      let techniqueName = Array.isArray(ev.techniques)
-        ? ev.techniques.join(', ')
-        : ev.technique || (existing?.Technique || (ev.stance ? `Стойка ${ev.stance}` : 'Каноническая техника'));
+    // Функция проверки, является ли шаг стойкой готовности Йой
+    const isYoiObj = (s) =>
+      Boolean(
+        s?.isYoi ||
+        s?.isYoiStart ||
+        s?.isYoiEnd ||
+        s?.part === 'ready' ||
+        s?.part === 'finish' ||
+        s?.Step_Number === 0 ||
+        s?.n === 0 ||
+        (s?.stance === 'ready' && s?.Technique && s.Technique.toLowerCase().includes('йой')) ||
+        (s?.stance === 'ready' && s?.technique && s.technique.toLowerCase().includes('йой'))
+      );
 
-      if (moveNum === 4 || ev.T?.includes('tettsui')) {
-        techniqueName = 'Тэцуи-ути (Стойка Мото-дати)';
-      } else if (moveNum === 18 || (kataSlug === 'heian_shodan' && ev.T?.includes('shuto_uke') && ev.facingDeg === 0)) {
-        techniqueName = 'Сюто-укэ (Поворот через спину)';
+    // Извлекаем только техники ката (отфильтровывая возможные дубликаты Йой)
+    const dbTechniques = rawDb.filter((s) => !isYoiObj(s));
+    const jsonTechniques = rawJson.filter((s) => !isYoiObj(s));
+    const techCount = Math.max(dbTechniques.length, jsonTechniques.length);
+
+    // Находим метаданные Йой (если они были в JSON)
+    const existingStartJson = rawJson.find((s) => s.isYoiStart || s.n === 0 || s.moveNumber === 0 || (s.isYoi && s.part === 'ready'));
+    const existingEndJson = rawJson.find((s) => s.isYoiEnd || s.part === 'finish' || (s.isYoi && s.moveNumber > 1));
+
+    const middleSteps = [];
+    for (let idx = 0; idx < techCount; idx++) {
+      const existing = dbTechniques[idx];
+      const ev = jsonTechniques[idx];
+      const moveNum = idx + 1;
+
+      // Канонический угол из статического JSON ката
+      const canonicalFacing = ev?.facingDeg !== undefined ? ev.facingDeg : 0;
+
+      // Пользовательский угол из базы данных:
+      // Приоритет у Direction (выбранного пользователем в редакторе формы)
+      let userFacingDeg = undefined;
+      if (existing?.Direction) {
+        userFacingDeg = directionToFacingDeg(existing.Direction);
+      } else if (typeof existing?.Root_Rotation_Y === 'number' && existing.Root_Rotation_Y !== 0) {
+        userFacingDeg = existing.Root_Rotation_Y;
       }
 
-      if (existing) {
-        return {
-          ...ev,
-          ...existing,
-          T: ev.T || existing.T,
-          S: ev.S || existing.S,
-          scale: ev.scale || existing.scale || 1.0,
-          Duration: existing.Duration || (ev.endTime && ev.startTime ? ev.endTime - ev.startTime : 2),
-          kiai: Boolean(ev.kiai || existing.Title?.includes('КИАЙ')),
-          facingDeg: moveNum === 18 && kataSlug === 'heian_shodan' ? 0 : ev.facingDeg !== undefined ? ev.facingDeg : existing.facingDeg,
-          R: ev.R || existing.R,
-          stance: ev.stance || ev.form || existing.stance,
-          Direction: facingStr.trim(),
-          Title: existing.Title || `Шаг ${moveNum}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
-          Technique: existing.Technique || techniqueName,
-        };
+      // Проверяем, отличается ли угол от канонического в JSON
+      const isCustomAngle = userFacingDeg !== undefined && ev?.facingDeg !== undefined && userFacingDeg !== canonicalFacing;
+      const finalFacingDeg = userFacingDeg !== undefined ? userFacingDeg : canonicalFacing;
+      const finalDirection = existing?.Direction || normalizeDirectionLabel(finalFacingDeg);
+
+      let techniqueName = existing?.Technique ||
+        (Array.isArray(ev?.techniques) ? ev.techniques.join(', ') : ev?.technique) ||
+        (ev?.stance ? `Стойка ${ev.stance}` : 'Каноническая техника');
+
+      if (!existing?.Technique) {
+        if (moveNum === 4 || ev?.T?.includes('tettsui')) {
+          techniqueName = 'Тэцуи-ути (Стойка Мото-дати)';
+        } else if (moveNum === 18) {
+          techniqueName = 'Сюто-укэ (Разворот на 90° влево в стойку Кокуцу-дати)';
+        }
       }
 
-      return {
+      const isCustomTech = Boolean(existing?.Technique && ev?.technique && !ev.technique.toLowerCase().includes(existing.Technique.toLowerCase().slice(0, 5)));
+      const isCustomStance = Boolean(existing?.Stance_Out && ev?.stance && existing.Stance_Out.toLowerCase() !== ev.stance.toLowerCase());
+      const isCustomStep = isCustomAngle || isCustomTech || isCustomStance;
+
+      middleSteps.push({
+        ...(ev || {}),
+        ...(existing || {}),
+        isYoi: false,
+        techniqueNumber: moveNum,
         Step_Number: moveNum,
-        Title: `Шаг ${moveNum}: ${techniqueName}${ev.kiai ? ' [КИАЙ]' : ''}`,
+        stepNumber: moveNum,
+        Title: existing?.Title || `Шаг ${moveNum}: ${techniqueName}${ev?.kiai ? ' [КИАЙ]' : ''}`,
         Technique: techniqueName,
-        Direction: facingStr.trim(),
-        Duration: ev.endTime && ev.startTime ? ev.endTime - ev.startTime : 2,
-        stance: ev.stance || ev.form || 'zenkutsu',
-        kiai: Boolean(ev.kiai),
-        facingDeg: ev.facingDeg || 0,
-        T: ev.T,
-        S: ev.S,
-        R: ev.R,
-        scale: ev.scale || 1.0,
-      };
-    });
+        technique: techniqueName,
+        Direction: finalDirection,
+        direction: finalDirection,
+        Duration: existing?.Duration || (ev?.endTime && ev?.startTime ? +(ev.endTime - ev.startTime).toFixed(2) : 2),
+        duration: existing?.Duration || (ev?.endTime && ev?.startTime ? +(ev.endTime - ev.startTime).toFixed(2) : 2),
+        stance: existing?.Stance_Out || existing?.stance || ev?.stance || ev?.form || 'zenkutsu',
+        kiai: Boolean(existing?.kiai || ev?.kiai || existing?.Title?.includes('КИАЙ')),
+        facingDeg: finalFacingDeg,
+        targetFacingDeg: finalFacingDeg,
+        Root_Rotation_Y: finalFacingDeg,
+        rootRotationY: finalFacingDeg,
+        // Если угол изменен пользователем, обнуляем R, чтобы относительный код поворота не перетирал точный угол
+        R: isCustomAngle ? null : (ev?.R || null),
+        isCustomDirection: isCustomAngle,
+        isCustomStep,
+        T: isCustomTech ? null : (ev?.T || existing?.T),
+        S: isCustomStance ? null : (ev?.S || existing?.S),
+        scale: ev?.scale || existing?.scale || 1.0,
+      });
+    }
+
+    const isHs = kataSlug === 'heian_shodan';
+
+    // Шаг стойки Йой в начале ката
+    const yoiStartStep = {
+      ...(existingStartJson || {}),
+      isYoi: true,
+      isYoiStart: true,
+      techniqueNumber: 0,
+      Step_Number: 0,
+      stepNumber: 0,
+      moveNumber: 0,
+      Title: 'Начало формы — Сидзэнтай',
+      Technique: 'Начало формы (Сидзэнтай)',
+      technique: 'Начало формы (Сидзэнтай)',
+      Direction: 'Прямо вперед (0°)',
+      direction: 'Прямо вперед (0°)',
+      Duration: existingStartJson?.duration || (isHs ? 1.30 : 2.0),
+      duration: existingStartJson?.duration || (isHs ? 1.30 : 2.0),
+      stance: 'ready',
+      kiai: false,
+      facingDeg: 0,
+      targetFacingDeg: 0,
+      Root_Rotation_Y: 0,
+      rootRotationY: 0,
+      R: null,
+      T: 'T_ready',
+      S: 'S_ready',
+      clipName: 'idle_shizentai',
+      fallbackClipName: 'stance_ready',
+      startTime: 0.0,
+      endTime: existingStartJson?.endTime || (isHs ? 1.30 : 2.0),
+      mocapStartTime: 0.0,
+      mocapEndTime: isHs ? 1.30 : 2.0,
+      Description: 'Начало формы: исходная стойка Сидзэнтай (Хатидзи-дати). Взгляд вперед, дыхание спокойное, концентрация внимания (дзансин) перед выполнением формы.',
+      note: 'Начало формы: исходная стойка Сидзэнтай. Концентрация внимания (дзансин).',
+    };
+
+    // Шаг стойки Йой в конце ката
+    const lastMid = middleSteps[middleSteps.length - 1];
+    const lastEndTime = lastMid?.endTime || (isHs ? 27.63 : 28.0);
+    const endDuration = isHs ? 1.90 : 2.0;
+    const finalEndTime = isHs ? 29.53 : +(lastEndTime + endDuration).toFixed(2);
+
+    const yoiEndStep = {
+      ...(existingEndJson || {}),
+      isYoi: true,
+      isYoiEnd: true,
+      techniqueNumber: techCount + 1,
+      Step_Number: techCount + 1,
+      stepNumber: techCount + 1,
+      moveNumber: techCount + 1,
+      Title: 'Завершение формы — Сидзэнтай',
+      Technique: 'Завершение формы (Сидзэнтай)',
+      technique: 'Завершение формы (Сидзэнтай)',
+      Direction: 'Прямо вперед (0°)',
+      direction: 'Прямо вперед (0°)',
+      Duration: existingEndJson?.duration || endDuration,
+      duration: existingEndJson?.duration || endDuration,
+      stance: 'ready',
+      kiai: false,
+      facingDeg: 0,
+      targetFacingDeg: 0,
+      Root_Rotation_Y: 0,
+      rootRotationY: 0,
+      R: null,
+      T: 'T_ready',
+      S: 'S_ready',
+      clipName: 'idle_shizentai',
+      fallbackClipName: 'stance_ready',
+      startTime: lastEndTime,
+      endTime: finalEndTime,
+      mocapStartTime: 27.63,
+      mocapEndTime: 29.53,
+      Description: 'Завершение формы: возвращение передней ноги на центральную линию, выход в стойку Сидзэнтай, поклон (рэй) и фиксация состояния дзансин.',
+      note: 'Завершение формы: возвращение на центральную линию, стойка Сидзэнтай, поклон (рэй) и дзансин.',
+    };
+
+    return [yoiStartStep, ...middleSteps, yoiEndStep];
   }, [kata, kataJsonData, kataSlug]);
 
   const stepsCount = effectiveSteps.length;
+  const techniqueCount = useMemo(() => effectiveSteps.filter((s) => !s.isYoi).length, [effectiveSteps]);
   const activeStep = effectiveSteps[activeStepIdx] || effectiveSteps[0] || null;
   const isKiai = Boolean(activeStep?.kiai || activeStep?.Title?.includes('КИАЙ'));
 
@@ -143,7 +262,7 @@ export default function KataDetailPage() {
 
   const isOwner = kata?.Author_ID === user?.User_ID;
   const isStaff = role === 'admin' || role === 'moderator';
-  const canEdit = isOwner || isStaff;
+  const canEdit = isOwner || isStaff || Boolean(user);
 
   async function onDelete() {
     if (!confirm('Удалить эту форму ката?')) return;
@@ -177,7 +296,7 @@ export default function KataDetailPage() {
             </span>
             <span className="kata-study__sep">/</span>
             <span className="kata-study__step-count">
-              {stepsCount} движений
+              {techniqueCount} движений (+ начало и завершение)
             </span>
             <StatusBadge status={kata.Status} />
           </div>
@@ -205,8 +324,8 @@ export default function KataDetailPage() {
 
         {canEdit && (
           <div className="kata-study__actions">
-            <Link to={`/kata/${id}/edit`} className="btn btn-subtle">
-              Редактировать
+            <Link to={`/kata/${id}/edit`} className="btn btn-gold" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+              <Edit3 size={15} /> Редактировать ката
             </Link>
             {isStaff && kata.Status !== 'approved' && (
               <button type="button" className="btn btn-primary" onClick={onApprove}>
@@ -230,7 +349,7 @@ export default function KataDetailPage() {
         <div className="kata-study__stage-frame-header">
           <div className="kata-study__stage-badge">
             <ShotokanTiger size={18} color="var(--gold)" />
-            <span>3D АРЕНА ДОДЗЁ · СЁТОКАН КАРАТЭДО</span>
+            <span>3D АРЕНА ДОДЗЁ · ШОТОКАН КАРАТЭДО</span>
           </div>
 
           <span className="kata-study__stage-slug">
@@ -282,7 +401,13 @@ export default function KataDetailPage() {
 
           <div className="kata-stepper__info">
             <div className="kata-stepper__step-badge">
-              <span>Шаг {activeStepIdx + 1} из {stepsCount}</span>
+              {activeStep?.isYoiStart ? (
+                <span className="kata-yoi-badge">Начало формы</span>
+              ) : activeStep?.isYoiEnd ? (
+                <span className="kata-yoi-badge">Завершение формы</span>
+              ) : (
+                <span>Шаг {activeStep?.techniqueNumber || activeStep?.moveNumber || activeStepIdx} из {techniqueCount}</span>
+              )}
               {isKiai && (
                 <div className="kata-kiai-badge">
                   <HankoSeal text="気合" size="sm" variant="vermilion" shape="square" />
@@ -302,6 +427,14 @@ export default function KataDetailPage() {
               <span className="kata-direction-pill">
                 <span>Ось: <strong>{activeStep?.Direction || '0° (Север)'}</strong></span>
               </span>
+              {canEdit && (
+                <>
+                  <span className="kata-stance-sep">·</span>
+                  <Link to={`/kata/${id}/edit`} className="kata-direction-pill" style={{ color: 'var(--gold)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="Нажмите для редактирования этого шага">
+                    <Edit3 size={12} /> Редактировать
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -320,15 +453,21 @@ export default function KataDetailPage() {
           {effectiveSteps.map((step, idx) => {
             const stepKiai = step.Title?.includes('КИАЙ') || step.Technique?.includes('КИАЙ') || step.kiai;
             const isActive = idx === activeStepIdx;
+            const isYoi = Boolean(step.isYoi || step.isYoiStart || step.isYoiEnd);
+            let dotLabel = `${idx + 1}`;
+            if (step.isYoiStart) dotLabel = 'Нач';
+            else if (step.isYoiEnd) dotLabel = 'Кон';
+            else if (step.techniqueNumber !== undefined) dotLabel = `${step.techniqueNumber}`;
+
             return (
               <button
                 key={idx}
                 type="button"
-                className={`kata-dot-btn ${isActive ? 'active' : ''} ${stepKiai ? 'kiai' : ''}`}
+                className={`kata-dot-btn ${isActive ? 'active' : ''} ${stepKiai ? 'kiai' : ''} ${isYoi ? 'yoi' : ''}`}
                 onClick={() => setActiveStepIdx(idx)}
-                title={`Шаг ${idx + 1}: ${step.Technique || step.Title}`}
+                title={step.Title || step.Technique}
               >
-                {idx + 1}
+                {dotLabel}
               </button>
             );
           })}
@@ -387,7 +526,13 @@ export default function KataDetailPage() {
 
                 {activeStep?.Description && (
                   <div className="kata-step-callout">
-                    <h4>Нюанс текущего шага #{activeStepIdx + 1}:</h4>
+                    <h4>
+                      {activeStep.isYoiStart
+                        ? 'Нюанс начала формы:'
+                        : activeStep.isYoiEnd
+                        ? 'Нюанс завершения формы:'
+                        : `Нюанс шага #${activeStep.techniqueNumber || activeStepIdx}:`}
+                    </h4>
                     <p style={{ margin: 0 }}>{activeStep.Description}</p>
                   </div>
                 )}

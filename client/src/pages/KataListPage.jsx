@@ -857,6 +857,23 @@ export default function KataListPage() {
                             <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
                             {isHero && <span className="atlas-card__hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Star size={11} fill='currentColor' /> Ключевая форма</span>}
                           </div>
+                          {item.Video_URL && (
+                            <button
+                              type="button"
+                              className="atlas-card__video-badge-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveVideo({
+                                  url: item.Video_URL,
+                                  title: item.Title,
+                                  subtitle: `${kanji} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
+                                });
+                              }}
+                              title="Смотреть эталонное видео мастеров JKS"
+                            >
+                              <Video size={13} style={{ flexShrink: 0 }} /> Видео JKS
+                            </button>
+                          )}
                         </div>
 
                         <div className="atlas-card__body">
@@ -879,23 +896,6 @@ export default function KataListPage() {
                               <BeltBadge belt={belt} size="sm" showKanji={false} />
                               <span className="atlas-card__steps-pill">{formatSteps(stepsCount)}</span>
                             </div>
-                            {item.Video_URL && (
-                              <button
-                                type="button"
-                                className="atlas-card__video-badge-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveVideo({
-                                    url: item.Video_URL,
-                                    title: item.Title,
-                                    subtitle: `${kanji} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
-                                  });
-                                }}
-                                title="Смотреть эталонное видео мастеров JKS"
-                              >
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} style={{ flexShrink: 0 }} /> Видео JKS</span>
-                              </button>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -990,6 +990,23 @@ export default function KataListPage() {
                               <span className="atlas-card__idx-pill">#{String(idx + 1).padStart(2, '0')}</span>
                               {isHero && <span className="atlas-card__hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Star size={11} fill='currentColor' /> Ключевая форма</span>}
                             </div>
+                            {item.Video_URL && (
+                              <button
+                                type="button"
+                                className="atlas-card__video-badge-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveVideo({
+                                    url: item.Video_URL,
+                                    title: item.Title,
+                                    subtitle: `${kanji} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
+                                  });
+                                }}
+                                title="Смотреть эталонное видео мастеров JKS"
+                              >
+                                <Video size={13} style={{ flexShrink: 0 }} /> Видео JKS
+                              </button>
+                            )}
                           </div>
 
                           {/* Тело карточки */}
@@ -1014,23 +1031,6 @@ export default function KataListPage() {
                                 <BeltBadge belt={belt} size="sm" showKanji={false} />
                                 <span className="atlas-card__steps-pill">{formatSteps(stepsCount)}</span>
                               </div>
-                              {item.Video_URL && (
-                                <button
-                                  type="button"
-                                  className="atlas-card__video-badge-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveVideo({
-                                      url: item.Video_URL,
-                                      title: item.Title,
-                                      subtitle: `${kanji} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
-                                    });
-                                  }}
-                                  title="Смотреть эталонное видео мастеров JKS"
-                                >
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Video size={13} style={{ flexShrink: 0 }} /> Видео JKS</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                         </div>

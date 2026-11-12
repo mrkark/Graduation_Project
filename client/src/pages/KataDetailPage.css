@@ -252,6 +252,21 @@
   animation: pulse-kiai 2s infinite ease-in-out;
 }
 
+.kata-yoi-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(197, 160, 89, 0.15);
+  border: 1px solid var(--gold, #c5a059);
+  color: var(--gold, #c5a059);
+  padding: 1px 8px;
+  border-radius: 2px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 @keyframes pulse-kiai {
   0%, 100% { box-shadow: 0 0 0 0 rgba(184, 41, 41, 0.4); }
   50% { box-shadow: 0 0 8px 1px rgba(184, 41, 41, 0.6); }
@@ -377,6 +392,24 @@
   border-color: var(--accent-red);
   color: #ffffff;
   box-shadow: 0 0 12px rgba(184, 41, 41, 0.6);
+}
+
+.kata-dot-btn.yoi {
+  border-color: rgba(197, 160, 89, 0.45);
+  color: var(--gold, #c5a059);
+  font-weight: 800;
+  background: rgba(197, 160, 89, 0.08);
+  min-width: 42px;
+  padding: 0 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.kata-dot-btn.yoi.active {
+  background: var(--gold, #c5a059);
+  border-color: var(--gold, #c5a059);
+  color: #111;
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.6);
 }
 
 /* 4. ПРОГРЕССИВНОЕ РАСКРЫТИЕ (ТАБЫ & ДЭНСЁ СВИТОК) */
