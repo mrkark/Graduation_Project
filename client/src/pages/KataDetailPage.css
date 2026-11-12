@@ -399,10 +399,13 @@
   color: var(--gold, #c5a059);
   font-weight: 800;
   background: rgba(197, 160, 89, 0.08);
-  min-width: 42px;
-  padding: 0 6px;
-  font-size: 0.68rem;
-  letter-spacing: 0.02em;
+  min-width: 4.25rem;
+  height: 32px;
+  padding: 0 0.55rem;
+  font-size: 0.74rem;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .kata-dot-btn.yoi.active {

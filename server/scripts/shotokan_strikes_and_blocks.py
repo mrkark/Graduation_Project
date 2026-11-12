@@ -104,9 +104,9 @@ def register_strikes_and_blocks(gen_clip, poses):
         {'t': 0.0, 'pose': lambda: p_ready(0.0)},
         # Замах открытыми ладонями
         {'t': 0.28, 'pose': lambda: (p_kokutsu('left', 0.0), p_set_bone('UpperArm.L', x_deg=45, y_deg=20, z_deg=30), p_set_bone('LowerArm.L', x_deg=110, y_deg=0, z_deg=0), p_set_bone('UpperArm.R', x_deg=-45, y_deg=0, z_deg=-20), p_shuto('both'))},
-        # Фиксация блока: передняя ладонь защищает корпус, задняя у солнечного сплетения
-        {'t': 0.62, 'pose': lambda: (p_kokutsu('left', 0.0), p_set_bone('UpperArm.L', x_deg=-15, y_deg=25, z_deg=-60), p_set_bone('LowerArm.L', x_deg=75, y_deg=45, z_deg=0), p_set_bone('UpperArm.R', x_deg=-25, y_deg=-30, z_deg=30), p_set_bone('LowerArm.R', x_deg=100, y_deg=-45, z_deg=0), p_shuto('both'))},
-        {'t': 0.95, 'pose': lambda: (p_kokutsu('left', 0.0), p_set_bone('UpperArm.L', x_deg=-15, y_deg=25, z_deg=-60), p_set_bone('LowerArm.L', x_deg=75, y_deg=45, z_deg=0), p_set_bone('UpperArm.R', x_deg=-25, y_deg=-30, z_deg=30), p_set_bone('LowerArm.R', x_deg=100, y_deg=-45, z_deg=0), p_shuto('both'))},
+        # Фиксация блока: передняя рука впереди и в стороне от корпуса, задняя у солнечного сплетения
+        {'t': 0.62, 'pose': lambda: (p_kokutsu('left', 0.0), p_set_bone('UpperArm.L', x_deg=-28, y_deg=12, z_deg=-34), p_set_bone('LowerArm.L', x_deg=88, y_deg=12, z_deg=0), p_set_bone('UpperArm.R', x_deg=-25, y_deg=-30, z_deg=30), p_set_bone('LowerArm.R', x_deg=100, y_deg=-45, z_deg=0), p_shuto('both'))},
+        {'t': 0.95, 'pose': lambda: (p_kokutsu('left', 0.0), p_set_bone('UpperArm.L', x_deg=-28, y_deg=12, z_deg=-34), p_set_bone('LowerArm.L', x_deg=88, y_deg=12, z_deg=0), p_set_bone('UpperArm.R', x_deg=-25, y_deg=-30, z_deg=30), p_set_bone('LowerArm.R', x_deg=100, y_deg=-45, z_deg=0), p_shuto('both'))},
         {'t': 1.40, 'pose': lambda: p_ready(0.0)},
     ])
 
