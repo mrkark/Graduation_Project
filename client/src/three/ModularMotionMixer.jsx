@@ -70,7 +70,7 @@ export const MODULAR_TECHNIQUE_PRESETS = [
   { id: 'tech_age_uke_left', name: 'Агэ-укэ (Верхний блок)', type: 'block', desc: 'Защита головы и шеи предплечьем снизу вверх' },
   { id: 'tech_soto_uke_left', name: 'Сото-укэ (Блок снаружи-внутрь)', type: 'block', desc: 'Отбивающий блок круговым движением снаружи' },
   { id: 'tech_uchi_uke_left', name: 'Ути-укэ (Блок изнутри-наружу)', type: 'block', desc: 'Выбивание атакующей руки наружу от бедра' },
-  { id: 'tech_shuto_uke_left', name: 'Сюто-укэ (Блок ребром ладони)', type: 'block', desc: 'Классическая защита ребром ладони в Кокуцу-дати' },
+  { id: 'shuto_uke', name: 'Сюто-укэ (Блок ребром ладони)', type: 'block', desc: 'Классическая защита ребром ладони в Кокуцу-дати' },
   { id: 'tech_uraken_right', name: 'Уракэн-ути (Хлесткий тыльный удар)', type: 'strike', desc: 'Хлесткий щелчок тыльной стороной кулака' },
   { id: 'tech_mae_empi_right', name: 'Маэ-эмпи (Удар локтем вперед)', type: 'strike', desc: 'Сокрушающий таранный удар локтем' },
   { id: 'tech_morote_zuki_right', name: 'Моротэ-цуки (Двойной удар)', type: 'punch', desc: 'Синхронный удар обоими кулаками' },

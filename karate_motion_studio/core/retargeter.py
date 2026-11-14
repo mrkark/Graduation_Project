@@ -72,6 +72,16 @@ DEFAULT_BONE_JOINT_MAP: Dict[str, Tuple[str, str]] = {
 }
 
 
+def quat_from_axis_angle(axis: np.ndarray, angle_rad: float) -> np.ndarray:
+    norm_ax = float(np.linalg.norm(axis))
+    if norm_ax < 1e-6:
+        return np.array([0.0, 0.0, 0.0, 1.0])
+    ax = axis / norm_ax
+    s = math.sin(angle_rad * 0.5)
+    c = math.cos(angle_rad * 0.5)
+    return np.array([ax[0] * s, ax[1] * s, ax[2] * s, c], dtype=float)
+
+
 def quat_from_unit_vectors(v_from: np.ndarray, v_to: np.ndarray) -> np.ndarray:
     """Quaternion rotating unit vector v_from to unit vector v_to: [x, y, z, w]."""
     v1 = v_from / np.linalg.norm(v_from)
@@ -213,6 +223,14 @@ def solve_two_bone_ik(
         flexion_angle = max_flex_rad
         beta = math.pi - flexion_angle
 
+    # Progressive Extension Assist for kicks and straight stances:
+    # Counteracts monocular depth foreshortening that artificially bends limbs
+    if flexion_angle < math.radians(45.0):
+        t_ext = max(0.0, min(1.0, (math.radians(45.0) - flexion_angle) / math.radians(45.0)))
+        ease_ext = t_ext * t_ext * (3.0 - 2.0 * t_ext)
+        flexion_angle *= (1.0 - ease_ext * 0.90)
+        beta = math.pi - flexion_angle
+
     # Form bend plane normal from target direction and pole vector
     n_pole = np.cross(u_target, v_pole)
     norm_pole = float(np.linalg.norm(n_pole))
@@ -291,12 +309,17 @@ class Retargeter:
         if has_hips:
             l_hp = np.array(pts["left_hip"])
             r_hp = np.array(pts["right_hip"])
-            v_hips = l_hp - r_hp
-            len_hips = float(np.linalg.norm(v_hips))
+            v_hips_lat = l_hp - r_hp
+            len_hips = float(np.linalg.norm(v_hips_lat))
 
             if len_hips > 1e-4:
-                # Raw Pelvis Yaw around Y
-                raw_yaw = float(math.atan2(v_hips[2], abs(v_hips[0])))
+                # True 360-deg Pelvis Yaw around Y from forward normal
+                n_fwd = np.array([-v_hips_lat[2], 0.0, v_hips_lat[0]], dtype=float)
+                norm_fwd = float(np.linalg.norm(n_fwd))
+                if norm_fwd > 1e-4:
+                    raw_yaw = float(math.atan2(n_fwd[0], n_fwd[2]))
+                else:
+                    raw_yaw = 0.0
                 continuous_yaw = self.azimuth_unwrapper.unwrap(raw_yaw)
 
                 # Pelvic pitch & roll
@@ -307,7 +330,7 @@ class Retargeter:
                         trunk_pitch = float(math.atan2(v_torso[2], max(0.08, v_torso[1])))
                         pelvic_pitch = float(np.clip(trunk_pitch * 0.35, -0.45, 0.45))
 
-                pelvic_roll = float(math.atan2(v_hips[1], max(0.05, math.hypot(v_hips[0], v_hips[2]))))
+                pelvic_roll = float(math.atan2(v_hips_lat[1], max(0.05, math.hypot(v_hips_lat[0], v_hips_lat[2]))))
                 pelvic_roll = float(np.clip(pelvic_roll, -0.35, 0.35))
 
                 q_hips_world = quat_from_euler_yxz(continuous_yaw, -pelvic_pitch, pelvic_roll)
@@ -425,8 +448,10 @@ class Retargeter:
                 world_quats[up_name] = q_up_world
                 world_quats[low_name] = q_low_world
 
-                # Local relative rotations
-                q_up_local = quat_multiply(quat_inverse(world_quats["Hips"]), q_up_world)
+                # Local relative rotations (incorporates GLB UpperLeg rest rotation [1, 0, 0, 0])
+                q_up_rel = quat_multiply(quat_inverse(world_quats["Hips"]), q_up_world)
+                q_up_rel /= np.linalg.norm(q_up_rel)
+                q_up_local = quat_multiply(np.array([1.0, 0.0, 0.0, 0.0]), q_up_rel)
                 q_up_local /= np.linalg.norm(q_up_local)
                 local_quats[up_name] = [round(float(v), 4) for v in q_up_local]
 
@@ -483,14 +508,15 @@ class Retargeter:
                     q_arm_local /= np.linalg.norm(q_arm_local)
                     local_quats[up_name] = [round(float(v), 4) for v in q_arm_local]
 
-                    # Forearm world quaternion
-                    v_rest_fore = np.array(self.rest_world_dirs[low_name])
-                    q_fore_world = quat_from_unit_vectors(v_rest_fore, v_forearm)
-                    world_quats[low_name] = q_fore_world
-
-                    q_fore_local = quat_multiply(quat_inverse(q_arm_world), q_fore_world)
-                    q_fore_local /= np.linalg.norm(q_fore_local)
+                    # Forearm: pure 1-DOF elbow flexion around local Z axis
+                    # Right arm: flexes forward around +Z
+                    # Left arm: flexes forward around -Z
+                    bend_axis = np.array([0.0, 0.0, -1.0 if is_left else 1.0])
+                    flex_angle = float(math.acos(float(np.clip(dot_collinear, -1.0, 1.0))))
+                    flex_angle = float(np.clip(flex_angle, 0.0, math.radians(155.0)))
+                    q_fore_local = quat_from_axis_angle(bend_axis, flex_angle)
                     local_quats[low_name] = [round(float(v), 4) for v in q_fore_local]
+                    world_quats[low_name] = quat_multiply(q_arm_world, q_fore_local)
 
         # 6. Finger Curls (Thumb, Index, Middle, Ring, Pinky 1..3)
         if hasattr(frame_data, "fingers") and frame_data.fingers:

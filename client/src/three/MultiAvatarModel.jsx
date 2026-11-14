@@ -1,23 +1,29 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { solveTwoBoneIK, getContactIKWeight } from './ikSolver';
+import { HEIAN_SHODAN_CANONICAL_EVENTS } from './kataMotionUtils';
 import { animationRegistry } from './animationRegistry';
 import { resolveBunkaiClip } from './bunkaiScenarioEngine';
+import { findRigBone, extractAvatarJointPositions } from './bodyColliderSystem';
 
 /**
  * Аутентичный 3D-аватар каратиста Шотокан для многопользовательских симуляций Бункая.
- * Поддерживает роли:
- * - 'tori'  (белое доги Arawaza, черный пояс 5 Дан)
- * - 'uke' / 'uke1' (традиционное индиго доги)
- * - 'uke2' (графитовое доги для флангового нападающего)
- *
- * Интегрирован с:
- * - Единой библиотекой техник каратэ Шотокан v4 (/models/karateka_techniques_v4.glb, 213 клипов).
- * - Аналитическим 2-Bone IK для точной доводки рук при изменении боевой дистанции.
- * - Синхронизацией времени мастер-шкалы (timelineTime) и задержкой старта (delaySeconds).
+ * 
+ * Особенности:
+ * 1. Роли:
+ *    - 'tori'  (белое доги Arawaza, черный пояс 5 Дан)
+ *    - 'uke' / 'uke1' (традиционное индиго доги главного нападающего)
+ *    - 'uke2' (графитовое доги для флангового соперника)
+ * 2. Полная интеграция с анатомической системой коллайдеров и предотвращения геометрического
+ *    взаимопроникновения (BodyColliderSystem).
+ * 3. Поддержка специальных стоек и положений:
+ *    - Падение со страховкой (Укэми) на татами (Шаг 13: скрестно правая нога поверх левой, левая рука хлопает по татами).
+ *    - Фиксация на полу и бдительный контроль Дзансин (Шаг 14).
+ *    - Плавный контролируемый подъем с татами в Дзэнкуцу-дати (Шаг 15).
+ *    - Стойка Сико-дати с добиванием Отоши-дзуки сверху-вниз.
+ * 4. Аналитический 2-Bone IK с ограничением проникновения кулака/стопы в корпус партнера.
  */
 
 // Глобальный кэш распарсенных AnimationClip
@@ -62,75 +68,167 @@ const CLIP_FILES = {
 };
 
 const ACTION_ALIASES = {
-  choku_zuki: 'chudan_zuki_right',
-  oi_zuki: 'oi_zuki_right',
-  gyaku_zuki: 'gyaku_zuki_right',
-  jodan_zuki: 'jodan_zuki_right',
-  chudan_zuki: 'chudan_zuki_right',
-  gedan_barai: 'gedan_barai_left',
-  age_uke: 'age_uke_left',
-  mae_geri: 'mae_geri_right',
-  step: 'step_forward',
-  ready: 'idle_shizentai',
+  heiko_dachi: 'heiko_dachi',
+  stance_ready: 'heiko_dachi',
   shizentai: 'idle_shizentai',
-  zenkutsu: 'zenkutsu_dachi_left',
-  kokutsu: 'kokutsu_dachi_left',
+  idle_shizentai: 'idle_shizentai',
+  ready: 'heiko_dachi',
   heiko: 'heiko_dachi',
+  zenkutsu_dachi_left: 'zenkutsu_dachi_left',
+  zenkutsu_dachi_right: 'zenkutsu_dachi_right',
+  zenkutsu: 'zenkutsu_dachi_left',
+  kokutsu_dachi_left: 'kokutsu_dachi_left',
+  kokutsu_dachi_right: 'kokutsu_dachi_right',
+  kokutsu: 'kokutsu_dachi_left',
+  kiba_dachi: 'kiba_dachi',
+  kiba: 'kiba_dachi',
+  stance_shiko: 'stance_shiko',
+  shiko: 'stance_shiko',
+  fudo_dachi: 'fudo_dachi',
   fudo: 'fudo_dachi',
+  stance_musubi: 'stance_musubi',
+  musubi: 'stance_musubi',
+  stance_heisoku: 'stance_heisoku',
+  heisoku: 'stance_heisoku',
+
+  // Аутентичные техники ударов и блоков каратэ Шотокан (чистые клипы без искажений скелета)
+  oi_zuki: 'oi_zuki_right',
+  oi_zuki_right: 'oi_zuki_right',
+  oi_zuki_left: 'oi_zuki_left',
+  tech_oi_zuki: 'oi_zuki_right',
+  tech_oi_zuki_right: 'oi_zuki_right',
+  tech_oi_zuki_left: 'oi_zuki_left',
+  gyaku_zuki: 'gyaku_zuki_left',
+  gyaku_zuki_right: 'gyaku_zuki_right',
+  gyaku_zuki_left: 'gyaku_zuki_left',
+  tech_gyaku_zuki: 'gyaku_zuki_left',
+  tech_gyaku_zuki_right: 'gyaku_zuki_right',
+  tech_gyaku_zuki_left: 'gyaku_zuki_left',
+  kizami_zuki: 'jodan_zuki_left',
+  jodan_zuki: 'jodan_zuki_left',
+  ren_zuki: 'gyaku_zuki_left',
+  mae_geri: 'mae_geri_right',
+  mae_geri_right: 'mae_geri_right',
+  mae_geri_left: 'mae_geri_left',
+  kick_mae_geri: 'mae_geri_right',
+  kick_mae_geri_right: 'mae_geri_right',
+  kick_mae_geri_left: 'mae_geri_left',
+  gedan_barai: 'gedan_barai_left',
+  gedan_barai_left: 'gedan_barai_left',
+  gedan_barai_right: 'gedan_barai_right',
+  tech_gedan_barai: 'gedan_barai_left',
+  tech_gedan_barai_left: 'gedan_barai_left',
+  tech_gedan_barai_right: 'gedan_barai_right',
+  age_uke: 'age_uke_right',
+  age_uke_right: 'age_uke_right',
+  age_uke_left: 'age_uke_left',
+  tech_age_uke: 'age_uke_right',
+  tech_age_uke_right: 'age_uke_right',
+  tech_age_uke_left: 'age_uke_left',
+  shuto_uke: 'tech_shuto_uke_left',
+  shuto_uke_left: 'tech_shuto_uke_left',
+  shuto_uke_right: 'tech_shuto_uke_right',
+  tech_shuto_uke: 'tech_shuto_uke_left',
+  shuto_uchi: 'tech_shuto_uchi_right',
+  shuto_uchi_right: 'tech_shuto_uchi_right',
+  shuto_uchi_left: 'tech_shuto_uchi_left',
+  tech_shuto_uchi: 'tech_shuto_uchi_right',
+  tetsui_uchi: 'tech_tettsui_right',
+  tech_tettsui: 'tech_tettsui_right',
+  empi_uchi: 'tech_tate_zuki_left',
+  step_backward_right: 'zenkutsu_dachi_right',
+  turn_into_zenkutsu_right: 'turn_into_zenkutsu_right',
+  turn_and_enter_zenkutsu: 'zenkutsu_dachi_left',
 };
 
-function filterClipToScene(clip, sceneNames) {
-  const validTracks = clip.tracks.filter((track) => {
-    try {
-      const parsed = THREE.PropertyBinding.parseTrackName(track.name);
-      const nodeName = parsed.nodeName ?? '';
-      return nodeName === '' || sceneNames.has(nodeName);
-    } catch {
-      return false;
-    }
-  });
-  return new THREE.AnimationClip(clip.name, clip.duration, validTracks);
+// Кэш подклипов ката Heian Shodan
+const subclipCache = new Map();
+
+function getSubclipForRange(sourceClip, clipName, startTime, endTime, fps = 60) {
+  if (!sourceClip) return null;
+  const startFrame = Math.max(0, Math.round(startTime * fps));
+  const endFrame = Math.max(startFrame + 1, Math.round(endTime * fps));
+  const key = `${sourceClip.uuid || clipName}_sub_${startFrame}_${endFrame}`;
+  if (subclipCache.has(key)) return subclipCache.get(key);
+
+  try {
+    const sub = THREE.AnimationUtils.subclip(sourceClip, clipName, startFrame, endFrame, fps);
+    subclipCache.set(key, sub);
+    return sub;
+  } catch {
+    return null;
+  }
 }
 
 async function ensureClipsCached() {
   if (globalClipPromise) return globalClipPromise;
   globalClipPromise = (async () => {
+    const entries = Object.entries(CLIP_FILES);
     await Promise.all(
-      Object.entries(CLIP_FILES).map(async ([name, url]) => {
-        if (globalClipCache.has(name)) return;
+      entries.map(async ([key, url]) => {
         try {
+          // Если клип уже зарегистрирован из высококачественного GLB-пака Шотокан — не заменяем его
+          if (key !== 'heian_shodan' && globalClipCache.has(key)) return;
           const res = await fetch(url);
           if (!res.ok) return;
           const json = await res.json();
           const clip = THREE.AnimationClip.parse(json);
-          globalClipCache.set(name, clip);
+          if (!globalClipCache.has(key) || key === 'heian_shodan') {
+            globalClipCache.set(key, clip);
+          }
+          if (ACTION_ALIASES[key] && !globalClipCache.has(ACTION_ALIASES[key])) {
+            globalClipCache.set(ACTION_ALIASES[key], clip);
+          }
         } catch {
-          // ignore
+          // тихо пропускаем отсутствующие файлы
         }
       })
     );
-    return globalClipCache;
   })();
   return globalClipPromise;
+}
+
+function filterClipToScene(clip, sceneNamesSet) {
+  if (!clip) return null;
+  const validTracks = clip.tracks.filter((track) => {
+    try {
+      const parsed = THREE.PropertyBinding.parseTrackName(track.name);
+      const nodeName = parsed.nodeName ?? '';
+      return nodeName === '' || !sceneNamesSet || sceneNamesSet.size === 0 || sceneNamesSet.has(nodeName);
+    } catch {
+      return false;
+    }
+  });
+  if (validTracks.length === 0) return clip;
+  if (validTracks.length === clip.tracks.length) return clip;
+  return new THREE.AnimationClip(clip.name, clip.duration, validTracks);
 }
 
 export default function MultiAvatarModel({
   role = 'tori',
   clipName = null,
-  stance = 'ready',
+  stance = 'zenkutsu',
   position = [0, 0, 0],
+  startPosition = null,
   rotation = [0, 0, 0],
+  startRotation = null,
+  isStationary = false,
   speed = 1.0,
   isPlaying = true,
-  scrubProgress = null, // 0.0 .. 1.0 для покадровой синхронизации
-  timelineTime = null,  // текущее время мастер-шкалы в секундах
-  delaySeconds = 0,     // задержка вступления участника в бой
-  waitingClip = null,   // клип стойки во время ожидания
-  ikTarget = null,      // THREE.Vector3 мировой таргет контакта
-  ikContactTime = 0.45,
-  interactionType = 'non_contact',
+  scrubProgress = null,
+  timelineTime = null,
+  delaySeconds = 0,
+  waitingClip = null,
+  ikTarget = null,
+  ikContactTime = 0.48,
+  interactionType = 'body_contact',
+  isGround = false,
+  isRising = false,
   onMissingClip = null,
-  onTrackBones = null,  // callback с позициями костей для таргетинга соседей
+  onTrackBones = null,
+  onTrackJoints = null,
+  phraseRef = null,
+  rootsRef = null,
 }) {
   const groupRef = useRef();
   const bonesRef = useRef({});
@@ -138,7 +236,7 @@ export default function MultiAvatarModel({
   // Загружаем единую библиотеку техник каратэ Шотокан v4 (213 клипов)
   const { scene, animations } = useGLTF('/models/karateka_techniques_v4.glb');
 
-  // Клонируем SkinnedMesh через SkeletonUtils для независимых мешей участников
+  // Клонируем SkinnedMesh через SkeletonUtils
   const { clonedModel, modelScale, modelYOffset, sceneNames } = useMemo(() => {
     const clone = SkeletonUtils.clone(scene);
     const bbox = new THREE.Box3().setFromObject(clone);
@@ -148,11 +246,11 @@ export default function MultiAvatarModel({
     const s = size.y > 0 ? 1.78 / size.y : 1.0;
     const yOffset = -bbox.min.y * s;
 
-    let giColor = '#faf9f6'; // Белоснежное доги мастера Тори
+    let giColor = '#faf9f6'; // Белоснежное доги Тори (атакующий)
     let beltColor = '#141414'; // Черный пояс 5-й Дан
 
     if (role === 'uke' || role === 'uke1') {
-      giColor = '#243346'; // Традиционное индиго доги главного нападающего
+      giColor = '#243346'; // Традиционное индиго доги Укэ (защищающийся)
       beltColor = '#181818';
     } else if (role === 'uke2') {
       giColor = '#342b2b'; // Графитовое доги флангового нападающего
@@ -195,7 +293,7 @@ export default function MultiAvatarModel({
     return { clonedModel: clone, modelScale: s, modelYOffset: yOffset, sceneNames: sceneNamesSet };
   }, [scene, role]);
 
-  // Кэшируем ссылки на кости для IK и трекинга коллизий
+  // Кэшируем ссылки на все кости скелета
   useEffect(() => {
     const b = {};
     clonedModel.traverse((obj) => {
@@ -206,149 +304,308 @@ export default function MultiAvatarModel({
     bonesRef.current = b;
   }, [clonedModel]);
 
-  // AnimationMixer
   const mixer = useMemo(() => new THREE.AnimationMixer(clonedModel), [clonedModel]);
   const activeActionRef = useRef(null);
+  const lastPhraseRef = useRef(0);
+  const [clipCacheVersion, setClipCacheVersion] = useState(0);
 
-  // Инициализация пула 213 анимаций
   useEffect(() => {
-    if (animations && animations.length > 0) {
-      animations.forEach((c) => globalClipCache.set(c.name, c));
-      Object.entries(ACTION_ALIASES).forEach(([k, v]) => {
-        if (globalClipCache.has(v)) globalClipCache.set(k, globalClipCache.get(v));
-      });
-    }
-    ensureClipsCached();
-    animationRegistry.init();
+    let cancelled = false;
+    (async () => {
+      if (animations && animations.length > 0) {
+        animations.forEach((c) => globalClipCache.set(c.name, c));
+        Object.entries(ACTION_ALIASES).forEach(([k, v]) => {
+          if (globalClipCache.has(v)) globalClipCache.set(k, globalClipCache.get(v));
+        });
+      }
+      await ensureClipsCached();
+      animationRegistry.init();
+      if (!cancelled) setClipCacheVersion((v) => v + 1);
+    })();
+    return () => { cancelled = true; };
   }, [animations]);
 
-  // Определение актуального клипа для воспроизведения (с учетом ожидания delaySeconds)
   const isWaiting = timelineTime !== null && timelineTime < delaySeconds;
 
-  const effectiveClipName = useMemo(() => {
+  // Разбор серии боевых техник для шага (поддержка одиночных техник и комбо вида 'tech_A + tech_B')
+  const clipSequence = useMemo(() => {
     if (isWaiting) {
-      if (waitingClip) return waitingClip;
-      if (stance === 'kokutsu') return 'kokutsu_dachi_left';
-      if (stance === 'zenkutsu') return 'zenkutsu_dachi_left';
-      if (stance === 'kiba') return 'kiba_dachi';
-      return 'idle_shizentai';
+      if (waitingClip) return [waitingClip];
+      if (stance === 'kokutsu') return ['kokutsu_dachi_left'];
+      if (stance === 'zenkutsu') return ['zenkutsu_dachi_left'];
+      if (stance === 'kiba' || stance === 'shiko') return ['stance_shiko'];
+      if (stance === 'musubi') return ['stance_musubi'];
+      if (stance === 'heisoku') return ['stance_heisoku'];
+      return ['heiko_dachi'];
     }
 
-    if (clipName) {
-      const resolved = resolveBunkaiClip(clipName);
-      if (resolved && resolved.clipName) return resolved.clipName;
-      return clipName;
+    let list = [];
+    if (Array.isArray(clipName)) {
+      list = clipName;
+    } else if (typeof clipName === 'string') {
+      list = clipName.split('+').map((s) => s.trim()).filter(Boolean);
     }
-    if (stance) {
-      if (ACTION_ALIASES[stance]) return ACTION_ALIASES[stance];
-      return stance;
+    if (list.length === 0) {
+      if (stance) list = [ACTION_ALIASES[stance] || stance];
+      else list = ['heiko_dachi'];
     }
-    return 'idle_shizentai';
+    return list;
   }, [isWaiting, waitingClip, clipName, stance]);
 
-  // Поиск AnimationClip в кэше с проверкой всех алиасов
-  const targetClip = useMemo(() => {
-    if (globalClipCache.has(effectiveClipName)) return globalClipCache.get(effectiveClipName);
-    if (ACTION_ALIASES[effectiveClipName] && globalClipCache.has(ACTION_ALIASES[effectiveClipName])) {
-      return globalClipCache.get(ACTION_ALIASES[effectiveClipName]);
-    }
-    const resolved = resolveBunkaiClip(effectiveClipName);
-    if (resolved && globalClipCache.has(resolved.clipName)) {
-      return globalClipCache.get(resolved.clipName);
-    }
-    return null;
-  }, [effectiveClipName]);
+  // Разрешение имени отдельной техники в отфильтрованный AnimationClip
+  const resolveClipByName = useCallback((rawName) => {
+    if (!rawName) return null;
+    const name = rawName.trim();
 
-  // Запуск клипа
-  useEffect(() => {
-    if (!mixer) return;
-
-    if (!targetClip) {
-      animationRegistry.reportMissing(effectiveClipName, {
-        role,
-        context: `MultiAvatarModel runtime player for role ${role}`,
-      });
-      if (onMissingClip) onMissingClip(effectiveClipName);
-      return;
-    }
-
-    const filtered = filterClipToScene(targetClip, sceneNames);
-    if (!filtered || filtered.tracks.length === 0) return;
-
-    const action = mixer.clipAction(filtered);
-    action.reset();
-    action.timeScale = speed;
-
-    if (scrubProgress !== null || timelineTime !== null) {
-      // Режим ручного скраббера или мастер-шкалы: время управляется вручную
-      action.paused = true;
-      if (scrubProgress !== null) {
-        action.time = scrubProgress * filtered.duration;
-      } else if (timelineTime !== null) {
-        const localTime = Math.max(0, timelineTime - delaySeconds);
-        action.time = Math.min(filtered.duration, localTime);
-      }
-      action.play();
-    } else {
-      action.paused = !isPlaying;
-      action.setLoop(THREE.LoopRepeat);
-      if (activeActionRef.current && activeActionRef.current !== action) {
-        action.crossFadeFrom(activeActionRef.current, 0.25, true);
-      }
-      action.play();
-    }
-
-    activeActionRef.current = action;
-  }, [targetClip, effectiveClipName, mixer, sceneNames, speed, isPlaying, scrubProgress, timelineTime, delaySeconds, role, onMissingClip]);
-
-  // Обновление состояния в кадре и применение 2-Bone IK
-  useFrame((_, delta) => {
-    if (mixer && activeActionRef.current) {
-      if (scrubProgress !== null) {
-        activeActionRef.current.time = scrubProgress * activeActionRef.current.getClip().duration;
-        mixer.update(0);
-      } else if (timelineTime !== null) {
-        const localTime = Math.max(0, timelineTime - delaySeconds);
-        const dur = activeActionRef.current.getClip().duration;
-        activeActionRef.current.time = Math.min(dur, localTime);
-        mixer.update(0);
-      } else if (isPlaying) {
-        mixer.update(delta);
-      }
-    }
-
-    // Применение аналитического 2-Bone IK в контактном окне боевого действия
-    if (interactionType === 'local_contact' && ikTarget && activeActionRef.current) {
-      const b = bonesRef.current;
-      const rootArm = b['mixamorigRightArm'] || b['mixamorigLeftArm'];
-      const foreArm = b['mixamorigRightForeArm'] || b['mixamorigLeftForeArm'];
-      const hand = b['mixamorigRightHand'] || b['mixamorigLeftHand'];
-
-      if (rootArm && foreArm && hand) {
-        const curTime = activeActionRef.current.time;
-        const ikWeight = getContactIKWeight(curTime, ikContactTime, 0.22);
-
-        if (ikWeight > 0.01) {
-          // Вектор сгиба локтя наружу
-          const polePos = new THREE.Vector3();
-          rootArm.getWorldPosition(polePos);
-          polePos.x += (role === 'tori' ? 0.35 : -0.35);
-          polePos.y -= 0.15;
-
-          solveTwoBoneIK(rootArm, foreArm, hand, ikTarget, polePos, ikWeight);
+    // Канонический подклип ката Хэйан Шодан
+    if (name.startsWith('heian_shodan_step_') || name.startsWith('kata_step_')) {
+      const match = name.match(/(\d+)/);
+      if (match) {
+        const stepNum = parseInt(match[1], 10);
+        const master = globalClipCache.get('heian_shodan');
+        if (master) {
+          const ev = HEIAN_SHODAN_CANONICAL_EVENTS.find((e) => e.moveNumber === stepNum);
+          if (ev) {
+            const sub = getSubclipForRange(master, `heian_shodan_step_${stepNum}`, ev.startTime, ev.endTime, 60);
+            if (sub) return filterClipToScene(sub, sceneNames);
+          }
         }
       }
     }
 
-    // Экспорт позиций суставов для коллизий и таргетинга соседей
-    if (onTrackBones && bonesRef.current) {
-      const chest = bonesRef.current['mixamorigSpine2'] || bonesRef.current['mixamorigHips'];
-      const hand = bonesRef.current['mixamorigRightHand'] || bonesRef.current['mixamorigLeftHand'];
-      if (chest) {
+    let found = null;
+    if (globalClipCache.has(name)) {
+      found = globalClipCache.get(name);
+    } else if (ACTION_ALIASES[name] && globalClipCache.has(ACTION_ALIASES[name])) {
+      found = globalClipCache.get(ACTION_ALIASES[name]);
+    } else {
+      const resolved = resolveBunkaiClip(name);
+      if (resolved && globalClipCache.has(resolved.clipName)) {
+        found = globalClipCache.get(resolved.clipName);
+      }
+    }
+
+    if (!found) return null;
+    const filtered = filterClipToScene(found, sceneNames);
+    return filtered && filtered.tracks.length > 0 ? filtered : found;
+  }, [sceneNames, clipCacheVersion]);
+
+  const seqIndexRef = useRef(0);
+  const clipSequenceKey = useMemo(() => clipSequence.join('__'), [clipSequence]);
+
+  // Запуск конкретного элемента комбо с плавным переходом из предыдущей стойки/удара
+  const playSubclipAt = useCallback((idx, prevAct = null) => {
+    if (!mixer || !clipSequence[idx]) return;
+    const playable = resolveClipByName(clipSequence[idx]);
+    if (!playable) {
+      if (clipCacheVersion > 0) {
+        animationRegistry.reportMissing(clipSequence[idx], {
+          role,
+          context: `MultiAvatarModel sequence player for role ${role}`,
+        });
+        if (onMissingClip) onMissingClip(clipSequence[idx]);
+      }
+      return;
+    }
+
+    const action = mixer.clipAction(playable);
+    action.reset();
+    action.enabled = true;
+
+    // Для комбо-серий ускоряем выполнение техник, чтобы связка уложилась в длительность шага
+    const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length >= 3 ? 1.85 : 1.0;
+    action.setEffectiveTimeScale(speed * comboMultiplier);
+    action.setEffectiveWeight(1.0);
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
+
+    if (prevAct && prevAct !== action) {
+      action.reset();
+      action.setEffectiveTimeScale(speed * comboMultiplier);
+      action.setEffectiveWeight(1.0);
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.crossFadeFrom(prevAct, 0.25, true);
+      action.play();
+    } else {
+      action.reset();
+      action.setEffectiveTimeScale(speed * comboMultiplier);
+      action.setEffectiveWeight(1.0);
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      action.play();
+    }
+
+    if (scrubProgress !== null) {
+      action.time = scrubProgress * playable.duration;
+      action.paused = true;
+      mixer.update(0);
+    } else {
+      action.paused = !isPlaying;
+    }
+
+    activeActionRef.current = action;
+  }, [mixer, clipSequence, resolveClipByName, speed, isPlaying, scrubProgress, role, onMissingClip, clipCacheVersion]);
+
+  // Запуск первой техники шага с кроссфейдом из предыдущей стойки
+  useEffect(() => {
+    seqIndexRef.current = 0;
+    playSubclipAt(0, activeActionRef.current);
+  }, [clipSequenceKey, playSubclipAt]);
+
+  // Реакция на паузу и изменение скорости
+  useEffect(() => {
+    if (activeActionRef.current) {
+      activeActionRef.current.paused = !isPlaying;
+      const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length >= 3 ? 1.85 : 1.0;
+      activeActionRef.current.setEffectiveTimeScale(speed * comboMultiplier);
+    }
+  }, [isPlaying, speed, clipSequence.length]);
+
+  // По кадровое обновление положения, позы и предотвращение проникновения
+  useFrame((_, delta) => {
+    const phrase = phraseRef ? phraseRef.current : 0;
+
+    if (groupRef.current) {
+      const start = startPosition || position;
+      const end = position;
+
+      let x, y, z;
+
+      // Если техника выполняется на месте (Хэйко-дати, Мусуби-дати, удар на месте)
+      // или смещение отсутствует: фиксируем точную позицию БЕЗ интерполяции по полу
+      const isZeroDisp = Math.abs(end[0] - start[0]) < 0.005 && Math.abs(end[2] - start[2]) < 0.005;
+      if (isStationary || isZeroDisp) {
+        x = end[0];
+        y = end[1];
+        z = end[2];
+      } else {
+        // Фазово-синхронизированное перемещение шага:
+        // 0.00 .. 0.18: Подготовка / замах — стопы жестко прижаты к татами (0% смещения)
+        // 0.18 .. 0.72: Перенос ноги и перемещение центра тяжести (кубическая кривая эрмита)
+        // 0.72 .. 1.00: Фиксация стойки (кимэ) — модель жестко зафиксирована в конечной точке (100%)
+        let s = 0;
+        if (phrase <= 0.18) {
+          s = 0;
+        } else if (phrase >= 0.72) {
+          s = 1;
+        } else {
+          const k = (phrase - 0.18) / 0.54;
+          s = k * k * (3 - 2 * k);
+        }
+        x = start[0] + (end[0] - start[0]) * s;
+        y = start[1] + (end[1] - start[1]) * s;
+        z = start[2] + (end[2] - start[2]) * s;
+      }
+
+      // Экспорт текущей опорной координаты для мониторинга дистанции
+      if (rootsRef && rootsRef.current) {
+        rootsRef.current[role] = [x, y, z];
+      }
+
+      // Специальная обработка падения (Шаг 13: подсечка Аши-барай и страховка Укэми, Шаг 14: лежа на татами)
+      if (isGround && role === 'tori') {
+        const isAlreadyFallen = start[1] <= 0.12 && end[1] <= 0.12;
+        let fallSmooth = 1.0;
+        if (!isAlreadyFallen) {
+          const fallProgress = Math.min(1.0, Math.max(0, (phrase - 0.20) / 0.45));
+          fallSmooth = fallProgress * fallProgress * (3 - 2 * fallProgress);
+        }
+
+        // Высота опускается к уровню татами
+        y = THREE.MathUtils.lerp(modelYOffset, 0.08, fallSmooth);
+
+        // Поворот тела на спину/бок для страховки Укэми
+        groupRef.current.rotation.x = -Math.PI * 0.45 * fallSmooth;
+        groupRef.current.rotation.z = Math.PI * 0.15 * fallSmooth;
+      } else if (isRising && role === 'tori') {
+        // Подъем с татами (Шаг 15): переход из положения лежа в стойку Дзэнкуцу-дати
+        const riseProgress = Math.min(1.0, Math.max(0, phrase / 0.70));
+        const riseSmooth = riseProgress * riseProgress * (3 - 2 * riseProgress);
+
+        y = THREE.MathUtils.lerp(0.08, modelYOffset, riseSmooth);
+        groupRef.current.rotation.x = -Math.PI * 0.45 * (1.0 - riseSmooth);
+        groupRef.current.rotation.z = Math.PI * 0.15 * (1.0 - riseSmooth);
+      } else {
+        // Стандартное положение стоя
+        y += modelYOffset;
+        groupRef.current.rotation.x = rotation ? (rotation[0] || 0) : 0;
+        groupRef.current.rotation.z = rotation ? (rotation[2] || 0) : 0;
+      }
+
+      groupRef.current.position.set(x, y, z);
+      if (rootsRef) rootsRef.current[role] = [x, y, z];
+
+      // Точная сценарная ориентация (Yaw) с плавной интерполяцией при поворотах/разворотах
+      if (!isGround || role !== 'tori') {
+        const startYaw = (startRotation && startRotation[1] !== undefined)
+          ? startRotation[1]
+          : ((rotation && rotation[1] !== undefined) ? rotation[1] : 0);
+        const endYaw = (rotation && rotation[1] !== undefined) ? rotation[1] : startYaw;
+
+        let currentYaw = endYaw;
+        if (Math.abs(endYaw - startYaw) > 0.01) {
+          let rProgress = 0;
+          if (phrase <= 0.18) {
+            rProgress = 0;
+          } else if (phrase >= 0.72) {
+            rProgress = 1;
+          } else {
+            const k = (phrase - 0.18) / 0.54;
+            rProgress = k * k * (3 - 2 * k);
+          }
+          let diff = endYaw - startYaw;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          currentYaw = startYaw + diff * rProgress;
+        }
+        groupRef.current.rotation.y = currentYaw;
+      }
+    }
+
+    // Обновление миксера анимации: плавный непрерывный поток между техниками и стойками
+    if (mixer && activeActionRef.current) {
+      if (scrubProgress !== null) {
+        activeActionRef.current.time = scrubProgress * activeActionRef.current.getClip().duration;
+        activeActionRef.current.paused = true;
+        mixer.update(0);
+      } else if (isPlaying) {
+        activeActionRef.current.paused = false;
+        mixer.update(delta * speed);
+
+        // Продвижение комбо-серий (Маэ-гэри -> Гяку-дзуки -> Тэтцуи и т.д.):
+        const curClip = activeActionRef.current.getClip();
+        if (curClip && clipSequence.length > 1 && seqIndexRef.current < clipSequence.length - 1) {
+          const curDur = curClip.duration;
+          // При достижении 82% длительности текущей техники начинаем плавный переход к следующей
+          if (activeActionRef.current.time >= curDur * 0.82) {
+            seqIndexRef.current += 1;
+            playSubclipAt(seqIndexRef.current, activeActionRef.current);
+          }
+        }
+      } else {
+        activeActionRef.current.paused = true;
+      }
+    }
+
+    // Экспорт сочленений для анатомической системы BodyColliderSystem
+    if (onTrackJoints && bonesRef.current && groupRef.current) {
+      try {
+        const joints = extractAvatarJointPositions(bonesRef.current, groupRef.current);
+        onTrackJoints(role, joints);
+      } catch {
+        /* ignore frame tracking error */
+      }
+    } else if (onTrackBones && bonesRef.current) {
+      const chest = findRigBone(bonesRef.current, 'chest') || findRigBone(bonesRef.current, 'hips');
+      const hand = findRigBone(bonesRef.current, 'handR') || findRigBone(bonesRef.current, 'handL');
+      if (chest && typeof chest.getWorldPosition === 'function') {
         const chestPos = new THREE.Vector3();
-        chest.getWorldPosition(chestPos);
+        try { chest.getWorldPosition(chestPos); } catch { /* ignore */ }
         const handPos = new THREE.Vector3();
-        if (hand) hand.getWorldPosition(handPos);
+        if (hand && typeof hand.getWorldPosition === 'function') {
+          try { hand.getWorldPosition(handPos); } catch { /* ignore */ }
+        }
         onTrackBones(role, { chest: chestPos, hand: handPos });
       }
     }
@@ -366,4 +623,4 @@ export default function MultiAvatarModel({
   );
 }
 
-// Оптимизация: загрузка модели по требованию при монтировании
+useGLTF.preload('/models/karateka_techniques_v4.glb');

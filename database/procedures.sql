@@ -350,7 +350,7 @@ BEGIN
         Description NVARCHAR(MAX) '$.description',
         Technique NVARCHAR(200) '$.technique',
         Direction NVARCHAR(50) '$.direction',
-        Duration INT '$.duration',
+        Duration FLOAT '$.duration',
         ImageUrl NVARCHAR(500) '$.imageUrl',
         VideoUrl NVARCHAR(500) '$.videoUrl',
         ClipId INT '$.clipId',
@@ -391,7 +391,7 @@ BEGIN
         THROW 50000, N'ERR|404|KATA_NOT_FOUND|Ката не найдено', 1;
 
     DECLARE @isOwner BIT = CASE WHEN @authorId = @UserId THEN 1 ELSE 0 END;
-    IF @isOwner = 0 AND @UserRole <> N'admin'
+    IF @isOwner = 0 AND @UserRole NOT IN (N'admin', N'moderator')
         THROW 50000, N'ERR|403|FORBIDDEN|Недостаточно прав', 1;
 
     BEGIN TRANSACTION;
@@ -428,7 +428,7 @@ BEGIN
             Description NVARCHAR(MAX) '$.description',
             Technique NVARCHAR(200) '$.technique',
             Direction NVARCHAR(50) '$.direction',
-            Duration INT '$.duration',
+            Duration FLOAT '$.duration',
             ImageUrl NVARCHAR(500) '$.imageUrl',
             VideoUrl NVARCHAR(500) '$.videoUrl',
             ClipId INT '$.clipId',
@@ -615,7 +615,7 @@ BEGIN
         THROW 50000, N'ERR|404|BUNKAI_NOT_FOUND|Бункай не найден', 1;
 
     DECLARE @isOwner BIT = CASE WHEN @authorId = @UserId THEN 1 ELSE 0 END;
-    IF @isOwner = 0 AND @UserRole <> N'admin'
+    IF @isOwner = 0 AND @UserRole NOT IN (N'admin', N'moderator')
         THROW 50000, N'ERR|403|FORBIDDEN|Недостаточно прав', 1;
 
     UPDATE dbo.Bunkai

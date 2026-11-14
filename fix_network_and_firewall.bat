@@ -15,9 +15,9 @@ echo =========================================================================
 echo  🥋 Karate Bunkai Explorer — Открытие портов для телефона и MoCap
 echo =========================================================================
 echo.
-echo [1/2] Открытие входящих портов (8000, 8088, 8443, 5173, 5000)...
+echo [1/2] Открытие входящих портов (80, 8080, 5000, 5173, 8000, 8088, 8443)...
 netsh advfirewall firewall delete rule name="Karate Bunkai Explorer Ports" >nul 2>&1
-netsh advfirewall firewall add rule name="Karate Bunkai Explorer Ports" dir=in action=allow protocol=TCP localport=8000,8088,8443,5000,5173 profile=any >nul
+netsh advfirewall firewall add rule name="Karate Bunkai Explorer Ports" dir=in action=allow protocol=TCP localport=80,8080,5000,5173,8000,8088,8443 profile=any >nul
 if %errorlevel% equ 0 (
     echo   [✔] Правило брандмауэра успешно добавлено!
 ) else (

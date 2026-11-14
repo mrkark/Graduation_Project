@@ -464,19 +464,54 @@ def fuse_multicam_landmarks(
                     if fused_conf.get(j, 0.0) < 0.50:
                         fused_joints[j][1] = round(0.4 * fused_joints[j][1] + 0.6 * r_joints[j][1], 4)
 
-    # 3. Single-Camera (Cam 1 Front) Behind-Head Protection:
+    # 3. Single-Camera (Cam 1 Front) Comprehensive Biomechanical Protection:
+    # When streaming from only 1 camera, monocular depth ambiguity is eliminated by anatomical priors:
     if not c2_ok and not c3_ok:
+        # A. Protect Arms from bending backwards into torso
         for arm_prefix in ["left", "right"]:
             wr_name = f"{arm_prefix}_wrist"
             el_name = f"{arm_prefix}_elbow"
             ear_name = f"{arm_prefix}_ear"
-            if wr_name in fused_joints and el_name in fused_joints and ear_name in fused_joints:
+            sh_name = f"{arm_prefix}_shoulder"
+            if wr_name in fused_joints and el_name in fused_joints and sh_name in fused_joints:
                 wr = fused_joints[wr_name]
                 el = fused_joints[el_name]
-                ear = fused_joints[ear_name]
-                is_arm_up = el[1] > (sh_mid_y - 0.15) or wr[1] > (sh_mid_y - 0.10)
-                if is_arm_up and wr[2] < ear[2] - 0.01:
-                    fused_joints[wr_name][2] = min(spine_mid_z - 0.04, wr[2])
+                sh = fused_joints[sh_name]
+                ear = fused_joints.get(ear_name)
+
+                # Check if arm is deliberately raised behind head/neck
+                is_behind_head = False
+                if ear is not None and (el[1] > (sh_mid_y - 0.15) or wr[1] > (sh_mid_y - 0.10)):
+                    if wr[2] < ear[2] - 0.01:
+                        is_behind_head = True
+                        fused_joints[wr_name][2] = min(spine_mid_z - 0.04, wr[2])
+
+                # When arm is in front of the body (stances, strikes, blocks, chambers):
+                if not is_behind_head:
+                    # Elbow must never pierce backwards through the spine coronal plane
+                    min_el_z = spine_mid_z - 0.03
+                    if fused_joints[el_name][2] < min_el_z:
+                        fused_joints[el_name][2] = min_el_z
+
+                    # Wrist must maintain clear anatomical distance in front of chest
+                    min_wr_z = spine_mid_z + 0.12
+                    if fused_joints[wr_name][2] < min_wr_z:
+                        fused_joints[wr_name][2] = round(max(min_wr_z, fused_joints[el_name][2] + 0.05), 4)
+
+        # B. Protect Legs from impossible backward bending in single-camera view
+        for leg_prefix in ["left", "right"]:
+            kn_name = f"{leg_prefix}_knee"
+            hp_name = f"{leg_prefix}_hip"
+            if kn_name in fused_joints and hp_name in fused_joints:
+                kn = fused_joints[kn_name]
+                hp = fused_joints[hp_name]
+                # Thigh cannot extend backward more than 15 deg (-0.08m)
+                if kn[2] < hp[2] - 0.08:
+                    fused_joints[kn_name][2] = round(hp[2] - 0.08, 4)
+
+                # When knee is bent (e.g. stance flexion), knee must be in front of hip
+                if kn[1] > hp[1] - 0.38 and kn[2] < hp[2]:
+                    fused_joints[kn_name][2] = round(hp[2] + max(0.04, hp[2] - kn[2]), 4)
 
     # 4. Multi-Camera Hands & Fingers Fusion:
     # Frontal Cam 1 takes top priority. Side cameras Cam 2 and Cam 3 fill in when
@@ -636,7 +671,15 @@ def process_multicam_worker(
         except Exception:
             pass
 
-    return fused_fdata, composite_frame, biomechanics
+    jpeg_bytes = None
+    if composite_frame is not None:
+        try:
+            _, buf = cv2.imencode(".jpg", composite_frame, [cv2.IMWRITE_JPEG_QUALITY, 45])
+            jpeg_bytes = buf.tobytes()
+        except Exception:
+            pass
+
+    return fused_fdata, jpeg_bytes, biomechanics
 
 
 # Helper to broadcast recording and layer status
@@ -710,11 +753,11 @@ async def background_tracking_loop():
             ]
             if len(active_expected) > 1:
                 t_coalesce = time.time()
-                while time.time() - t_coalesce < 0.012:
+                while time.time() - t_coalesce < 0.005:
                     async with frame_buffer_lock:
                         if all(cid in incoming_frame_buffers for cid in active_expected):
                             break
-                    await asyncio.sleep(0.002)
+                    await asyncio.sleep(0.001)
 
             async with frame_buffer_lock:
                 if not incoming_frame_buffers:
@@ -726,7 +769,7 @@ async def background_tracking_loop():
             frame_idx += 1
 
             loop = asyncio.get_running_loop()
-            fused_fdata, composite_frame, biomech = await loop.run_in_executor(
+            fused_fdata, jpeg_bytes, biomech = await loop.run_in_executor(
                 thread_pool,
                 process_multicam_worker,
                 frames_to_process,
@@ -745,6 +788,7 @@ async def background_tracking_loop():
                     "fingers": fused_fdata.fingers,
                     "rootPosition": fused_fdata.rootPosition,
                     "bones": bones,
+                    "biomechanics": biomech,
                 }
                 latest_fused_pose = pose_dict
 
@@ -801,9 +845,8 @@ async def background_tracking_loop():
                         for d in dead:
                             connected_viewers.discard(d)
 
-            if composite_frame is not None:
-                _, buf = cv2.imencode(".jpg", composite_frame, [cv2.IMWRITE_JPEG_QUALITY, 65])
-                latest_jpeg_bytes = buf.tobytes()
+            if jpeg_bytes is not None:
+                latest_jpeg_bytes = jpeg_bytes
 
         except Exception as e:
             print(f"[!] Error in background_tracking_loop: {e}")
@@ -1802,6 +1845,7 @@ async def get_studio(request: Request):
 
 
 @app.get("/viewer", response_class=HTMLResponse)
+@app.get("/viewer.html", response_class=HTMLResponse)
 async def get_viewer():
     template_path = ASSETS_DIR / "viewer_template.html"
     if template_path.exists():
@@ -2408,7 +2452,7 @@ async def video_feed():
         global latest_jpeg_bytes
         last_sent = None
         while True:
-            await asyncio.sleep(0.033)
+            await asyncio.sleep(0.030)
             frame = latest_jpeg_bytes if latest_jpeg_bytes is not None else get_waiting_splash_jpeg()
             if frame is not last_sent:
                 last_sent = frame

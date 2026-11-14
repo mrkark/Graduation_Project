@@ -2,13 +2,38 @@ const { body, param, query } = require('express-validator');
 
 const DIFFICULTIES = ['beginner', 'intermediate', 'advanced', 'master'];
 
+function isValidUrlOrPath(val) {
+  if (!val) return true;
+  const s = String(val).trim();
+  if (!s) return true;
+  if (s.startsWith('/') || s.startsWith('./') || s.startsWith('data:')) return true;
+  try {
+    const u = new URL(s);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 const createKataValidator = [
   body('title').trim().isLength({ min: 2, max: 200 }).withMessage('Название: от 2 до 200 символов'),
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
   body('difficulty').optional({ checkFalsy: true }).isIn(DIFFICULTIES).withMessage('Некорректная сложность'),
   body('style').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
-  body('videoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на видео'),
-  body('thumbnailUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на изображение'),
+  body('videoUrl')
+    .optional({ checkFalsy: true })
+    .trim()
+    .custom((val) => {
+      if (isValidUrlOrPath(val)) return true;
+      throw new Error('Некорректная ссылка на видео');
+    }),
+  body('thumbnailUrl')
+    .optional({ checkFalsy: true })
+    .trim()
+    .custom((val) => {
+      if (isValidUrlOrPath(val)) return true;
+      throw new Error('Некорректная ссылка на изображение');
+    }),
   body('steps').optional().isArray().withMessage('Шаги должны быть массивом'),
   body('steps.*.stepNumber').optional().isInt({ min: 1 }),
   body('steps.*.title').optional().trim().isLength({ min: 1, max: 200 }),
@@ -20,8 +45,20 @@ const updateKataValidator = [
   body('description').optional({ checkFalsy: true }).trim().isLength({ max: 8000 }),
   body('difficulty').optional({ checkFalsy: true }).isIn(DIFFICULTIES).withMessage('Некорректная сложность'),
   body('style').optional({ checkFalsy: true }).trim().isLength({ max: 100 }),
-  body('videoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на видео'),
-  body('thumbnailUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Некорректная ссылка на изображение'),
+  body('videoUrl')
+    .optional({ checkFalsy: true })
+    .trim()
+    .custom((val) => {
+      if (isValidUrlOrPath(val)) return true;
+      throw new Error('Некорректная ссылка на видео');
+    }),
+  body('thumbnailUrl')
+    .optional({ checkFalsy: true })
+    .trim()
+    .custom((val) => {
+      if (isValidUrlOrPath(val)) return true;
+      throw new Error('Некорректная ссылка на изображение');
+    }),
   body('steps').optional().isArray().withMessage('Шаги должны быть массивом'),
   body('steps.*.stepNumber').optional().isInt({ min: 1 }),
   body('steps.*.title').optional().trim().isLength({ min: 1, max: 200 }),
@@ -39,4 +76,4 @@ const listQueryValidator = [
 
 const idParamValidator = [param('id').isInt().withMessage('Некорректный идентификатор')];
 
-module.exports = { createKataValidator, updateKataValidator, listQueryValidator, idParamValidator, DIFFICULTIES };
+module.exports = { createKataValidator, updateKataValidator, listQueryValidator, idParamValidator, DIFFICULTIES, isValidUrlOrPath };

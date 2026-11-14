@@ -1,322 +1,663 @@
 {
- "kata": "heian_shodan",
- "confidence": "high",
- "start": "heisoku",
- "steps": [
-  {
-   "n": 1,
-   "S": "S_step_heisokuL_zenkutsuL_R",
-   "T": "T_L-gedan_barai",
-   "R": "R_p90",
-   "scale": 1.175,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": 90,
-   "note": ""
-  },
-  {
-   "n": 2,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": 90,
-   "note": ""
-  },
-  {
-   "n": 3,
-   "S": "S_step_zenkutsuR_zenkutsuR_L",
-   "T": "T_R-gedan_barai",
-   "R": "R_m180",
-   "scale": 1.35,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": -90,
-   "note": ""
-  },
-  {
-   "n": 4,
-   "S": "S_step_zenkutsuR_motoR_L",
-   "T": "T_R-tettsui",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "moto",
-   "techniques": [
-    "R:tettsui"
-   ],
-   "part": "move",
-   "facingDeg": -90,
-   "note": "Стойка Мото-дати: длина стойки ровно половина длины дзэнкуцу-дати (шаг 0.45 м вместо 0.90 м)"
-  },
-  {
-   "n": 5,
-   "S": "S_step_motoR_zenkutsuL_R",
-   "T": "T_L-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": -90,
-   "note": ""
-  },
-  {
-   "n": 6,
-   "S": "S_step_zenkutsuL_zenkutsuL_R",
-   "T": "T_L-gedan_barai",
-   "R": "R_p90",
-   "scale": 1.175,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": 0,
-   "note": ""
-  },
-  {
-   "n": 7,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-age_uke",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:age_uke"
-   ],
-   "part": "move",
-   "facingDeg": 0,
-   "note": ""
-  },
-  {
-   "n": 8,
-   "S": "S_step_zenkutsuR_zenkutsuL_R",
-   "T": "T_L-age_uke",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:age_uke"
-   ],
-   "part": "move",
-   "facingDeg": 0,
-   "note": ""
-  },
-  {
-   "n": 9,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-age_uke",
-   "R": null,
-   "scale": 1,
-   "kiai": true,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:age_uke"
-   ],
-   "part": "move",
-   "facingDeg": 0,
-   "note": ""
-  },
-  {
-   "n": 10,
-   "S": "S_step_zenkutsuR_zenkutsuL_R",
-   "T": "T_L-gedan_barai",
-   "R": "R_p270",
-   "scale": 1.35,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": -90,
-   "note": ""
-  },
-  {
-   "n": 11,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": -90,
-   "note": ""
-  },
-  {
-   "n": 12,
-   "S": "S_step_zenkutsuR_zenkutsuR_L",
-   "T": "T_R-gedan_barai",
-   "R": "R_m180",
-   "scale": 1.35,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": 90,
-   "note": ""
-  },
-  {
-   "n": 13,
-   "S": "S_step_zenkutsuR_zenkutsuL_R",
-   "T": "T_L-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": 90,
-   "note": ""
-  },
-  {
-   "n": 14,
-   "S": "S_step_zenkutsuL_zenkutsuL_R",
-   "T": "T_L-gedan_barai",
-   "R": "R_p90",
-   "scale": 1.175,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:gedan_barai"
-   ],
-   "part": "move",
-   "facingDeg": -180,
-   "note": ""
-  },
-  {
-   "n": 15,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": -180,
-   "note": ""
-  },
-  {
-   "n": 16,
-   "S": "S_step_zenkutsuR_zenkutsuL_R",
-   "T": "T_L-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": false,
-   "stance": "zenkutsu",
-   "techniques": [
-    "L:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": -180,
-   "note": ""
-  },
-  {
-   "n": 17,
-   "S": "S_step_zenkutsuL_zenkutsuR_L",
-   "T": "T_R-oi_zuki",
-   "R": null,
-   "scale": 1,
-   "kiai": true,
-   "stance": "zenkutsu",
-   "techniques": [
-    "R:oi_zuki"
-   ],
-   "part": "move",
-   "facingDeg": -180,
-   "note": ""
-  },
-  {
-   "n": 18,
-   "S": "S_turn_zenkutsuR_kokutsuL_R",
-   "T": "T_L-shuto_uke",
-   "R": "R_p180",
-   "scale": 1.175,
-   "kiai": false,
-   "stance": "kokutsu",
-   "techniques": [
-    "L:shuto_uke"
-   ],
-   "part": "move",
-   "facingDeg": 0,
-   "note": "Поворот через спину лицом к камере (Север 0°) в стойку Кокуцу-дати (Сюто-укэ)"
-  },
-  {
-   "n": 19,
-   "S": "S_step_kokutsuL_kokutsuR_L",
-   "T": "T_R-shuto_uke",
-   "R": "R_m45",
-   "scale": 1.087,
-   "kiai": false,
-   "stance": "kokutsu",
-   "techniques": [
-    "R:shuto_uke"
-   ],
-   "part": "move",
-   "facingDeg": -45,
-   "note": "Шаг под 45° в стойку Кокуцу-дати (Сюто-укэ)"
-  },
-  {
-   "n": 20,
-   "S": "S_step_kokutsuR_kokutsuR_L",
-   "T": "T_R-shuto_uke",
-   "R": "R_p135",
-   "scale": 1.087,
-   "kiai": false,
-   "stance": "kokutsu",
-   "techniques": [
-    "R:shuto_uke"
-   ],
-   "part": "move",
-   "facingDeg": 90,
-   "note": "Разворот через спину в стойку Кокуцу-дати (Сюто-укэ)"
-  },
-  {
-   "n": 21,
-   "S": "S_step_kokutsuR_kokutsuL_R",
-   "T": "T_L-shuto_uke",
-   "R": "R_m45",
-   "scale": 1.087,
-   "kiai": false,
-   "stance": "kokutsu",
-   "techniques": [
-    "L:shuto_uke"
-   ],
-   "part": "move",
-   "facingDeg": 45,
-   "note": "Шаг под 45° в стойку Кокуцу-дати (Сюто-укэ)"
-  }
- ]
+  "kata": "heian_shodan",
+  "title": "Хэйан Шодан (和平初段)",
+  "confidence": "high",
+  "start": "heisoku",
+  "totalSteps": 23,
+  "totalDuration": 29.53,
+  "steps": [
+    {
+      "n": 0,
+      "isYoi": true,
+      "isYoiStart": true,
+      "S": "S_ready",
+      "T": "T_ready",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "ready",
+      "technique": "Стойка готовности Йой (Сидзэнтай)",
+      "techniques": [
+        "ready:shizentai"
+      ],
+      "part": "ready",
+      "facingDeg": 0,
+      "startTime": 0.0,
+      "endTime": 1.3,
+      "note": "Каноническая исходная стойка готовности Сидзэнтай (Хатидзи-дати / Йой). Взгляд направлен вперед, стопы на ширине плеч, концентрация внимания (дзансин) перед выполнением ката."
+    },
+    {
+      "n": 1,
+      "S": "S_step_heisokuL_zenkutsuL_R",
+      "T": "T_L-gedan_barai",
+      "R": "R_p90",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Нижний блок левой рукой)",
+      "techniques": [
+        "L:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": 90,
+      "startTime": 1.3,
+      "endTime": 2.48,
+      "note": "Поворот головы и корпуса влево на 90°. Выпад левой ногой в Дзэнкуцу-дати с нижним блоком Гэдан-барай."
+    },
+    {
+      "n": 2,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (Прямой выпад кулаком правой рукой)",
+      "techniques": [
+        "R:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": 90,
+      "startTime": 2.46,
+      "endTime": 3.56,
+      "note": "Продвижение вперед правой ногой в Дзэнкуцу-дати с мощным прямым ударом Ой-цуки тюдан (уровень солнечного сплетения)."
+    },
+    {
+      "n": 3,
+      "S": "S_step_zenkutsuR_zenkutsuR_L",
+      "T": "T_R-gedan_barai",
+      "R": "R_m180",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Разворот вправо на 180° с нижним блоком)",
+      "techniques": [
+        "R:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 3.56,
+      "endTime": 4.97,
+      "note": "Отведение правой стопы по дуге за спину, разворот на 180° вправо в правую Дзэнкуцу-дати с блоком Гэдан-барай правой рукой."
+    },
+    {
+      "n": 4,
+      "S": "S_step_zenkutsuR_motoR_L",
+      "T": "T_R-tettsui",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "moto",
+      "technique": "Тэтцуи-ути (Удар молотом кулака в стойке Мото-дати)",
+      "techniques": [
+        "R:tettsui"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 4.97,
+      "endTime": 6.21,
+      "note": "Подтягивание передней правой стопы на половину длины стойки в Мото-дати. Замах правой рукой через левое ухо и хлёсткий удар Тэтцуи-ути сверху вниз."
+    },
+    {
+      "n": 5,
+      "S": "S_step_motoR_zenkutsuL_R",
+      "T": "T_L-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (Прямой выпад кулаком левой рукой)",
+      "techniques": [
+        "L:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 6.21,
+      "endTime": 7.31,
+      "note": "Шаг вперед левой ногой в стойку Дзэнкуцу-дати с прямым выпадом кулаком Ой-цуки тюдан."
+    },
+    {
+      "n": 6,
+      "S": "S_step_zenkutsuL_zenkutsuL_R",
+      "T": "T_L-gedan_barai",
+      "R": "R_p90",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Поворот влево на 90° на центральную ось)",
+      "techniques": [
+        "L:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": 0,
+      "startTime": 7.31,
+      "endTime": 8.62,
+      "note": "Поворот влево на 90° на центральную линию эмбусэна (направление Север/正面). Блок Гэдан-барай левой рукой в левой Дзэнкуцу-дати."
+    },
+    {
+      "n": 7,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-age_uke",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Агэ-укэ (Верхний восходящий блок правой рукой)",
+      "techniques": [
+        "R:age_uke"
+      ],
+      "part": "move",
+      "facingDeg": 0,
+      "startTime": 8.62,
+      "endTime": 9.8,
+      "note": "Шаг вперед правой ногой по центральной оси в правую Дзэнкуцу-дати. Верхний восходящий блок Агэ-укэ дзёдан правой рукой."
+    },
+    {
+      "n": 8,
+      "S": "S_step_zenkutsuR_zenkutsuL_R",
+      "T": "T_L-age_uke",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Агэ-укэ (Верхний восходящий блок левой рукой)",
+      "techniques": [
+        "L:age_uke"
+      ],
+      "part": "move",
+      "facingDeg": 0,
+      "startTime": 9.8,
+      "endTime": 10.98,
+      "note": "Шаг вперед левой ногой в левую Дзэнкуцу-дати. Верхний восходящий блок Агэ-укэ дзёдан левой рукой."
+    },
+    {
+      "n": 9,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-age_uke",
+      "R": null,
+      "scale": 1,
+      "kiai": true,
+      "stance": "zenkutsu",
+      "technique": "Агэ-укэ с КИАЙ! (Третий верхний блок)",
+      "techniques": [
+        "R:age_uke"
+      ],
+      "part": "move",
+      "facingDeg": 0,
+      "startTime": 10.98,
+      "endTime": 12.16,
+      "note": "Третий шаг вперед правой ногой в правую Дзэнкуцу-дати с мощнейшим верхним блоком Агэ-укэ и боевым выкриком КИАЙ!"
+    },
+    {
+      "n": 10,
+      "S": "S_step_zenkutsuR_zenkutsuL_R",
+      "T": "T_L-gedan_barai",
+      "R": "R_p270",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Разворот через спину влево на 270°)",
+      "techniques": [
+        "L:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 12.16,
+      "endTime": 13.72,
+      "note": "Вращение через спину влево на 270° (перенос левой ноги по дуге). Левая Дзэнкуцу-дати с нижним блоком Гэдан-барай."
+    },
+    {
+      "n": 11,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (Прямой выпад кулаком правой рукой)",
+      "techniques": [
+        "R:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 13.72,
+      "endTime": 14.82,
+      "note": "Шаг вперед правой ногой в Дзэнкуцу-дати с прямым ударом Ой-цуки тюдан."
+    },
+    {
+      "n": 12,
+      "S": "S_step_zenkutsuR_zenkutsuR_L",
+      "T": "T_R-gedan_barai",
+      "R": "R_m180",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Разворот вправо на 180° с нижним блоком)",
+      "techniques": [
+        "R:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": 90,
+      "startTime": 14.82,
+      "endTime": 16.23,
+      "note": "Перенос правой ноги за спину, разворот на 180° вправо в правую Дзэнкуцу-дати с нижним блоком Гэдан-барай правой рукой."
+    },
+    {
+      "n": 13,
+      "S": "S_step_zenkutsuR_zenkutsuL_R",
+      "T": "T_L-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (Прямой выпад кулаком левой рукой)",
+      "techniques": [
+        "L:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": 90,
+      "startTime": 16.23,
+      "endTime": 17.33,
+      "note": "Шаг вперед левой ногой в левую Дзэнкуцу-дати с прямым ударом Ой-цуки тюдан."
+    },
+    {
+      "n": 14,
+      "S": "S_step_zenkutsuL_zenkutsuL_R",
+      "T": "T_L-gedan_barai",
+      "R": "R_p90",
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Гэдан-барай (Поворот влево на 90° по центральной оси назад)",
+      "techniques": [
+        "L:gedan_barai"
+      ],
+      "part": "move",
+      "facingDeg": 180,
+      "startTime": 17.33,
+      "endTime": 18.64,
+      "note": "Поворот влево на 90° на центральную линию эмбусэна назад (направление Юг/180°). Левая Дзэнкуцу-дати с блоком Гэдан-барай."
+    },
+    {
+      "n": 15,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (1-й выпад вперед кулаком правой рукой)",
+      "techniques": [
+        "R:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": 180,
+      "startTime": 18.64,
+      "endTime": 19.74,
+      "note": "Шаг вперед правой ногой по центральной оси в правую Дзэнкуцу-дати с ударом Ой-цуки тюдан."
+    },
+    {
+      "n": 16,
+      "S": "S_step_zenkutsuR_zenkutsuL_R",
+      "T": "T_L-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки (2-й выпад вперед кулаком левой рукой)",
+      "techniques": [
+        "L:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": 180,
+      "startTime": 19.74,
+      "endTime": 20.84,
+      "note": "Второй шаг вперед левой ногой в левую Дзэнкуцу-дати с ударом Ой-цуки тюдан."
+    },
+    {
+      "n": 17,
+      "S": "S_step_zenkutsuL_zenkutsuR_L",
+      "T": "T_R-oi_zuki",
+      "R": null,
+      "scale": 1,
+      "kiai": true,
+      "stance": "zenkutsu",
+      "technique": "Ой-цуки с КИАЙ! (3-й решающий выпад вперед)",
+      "techniques": [
+        "R:oi_zuki"
+      ],
+      "part": "move",
+      "facingDeg": 180,
+      "startTime": 20.84,
+      "endTime": 21.94,
+      "note": "Третий шаг вперед правой ногой в правую Дзэнкуцу-дати с максимальным фокусом Кимэ, ударом Ой-цуки и боевым выкриком КИАЙ!"
+    },
+    {
+      "n": 18,
+      "S": "S_turn_zenkutsuR_kokutsuL_R",
+      "T": "T_L-shuto_uke",
+      "R": "R_p270",
+      "scale": 1,
+      "kiai": false,
+      "stance": "kokutsu",
+      "technique": "Сюто-укэ (Разворот на 270° через спину влево в стойку Кокуцу-дати)",
+      "techniques": [
+        "L:shuto_uke"
+      ],
+      "part": "move",
+      "facingDeg": 90,
+      "startTime": 21.94,
+      "endTime": 23.5,
+      "note": "Взгляд через левое плечо. Опора на переднюю правую ногу, разворот корпуса на 270° через спину влево (Фланг влево / 90°, в ту же сторону, что и шаг 1) в левую стойку Кокуцу-дати с блоком ребром ладони Сюто-укэ левой рукой."
+    },
+    {
+      "n": 19,
+      "S": "S_step_kokutsuL_kokutsuR_L",
+      "T": "T_R-shuto_uke",
+      "R": "R_m45",
+      "scale": 1,
+      "kiai": false,
+      "stance": "kokutsu",
+      "technique": "Сюто-укэ (Шаг под 45° в стойку Кокуцу-дати)",
+      "techniques": [
+        "R:shuto_uke"
+      ],
+      "part": "move",
+      "facingDeg": 45,
+      "startTime": 23.5,
+      "endTime": 24.81,
+      "note": "Шаг правой ногой вперед под углом 45° вправо (Диагональ влево / Северо-Запад / +45°) в правую Кокуцу-дати с блоком Сюто-укэ правой рукой."
+    },
+    {
+      "n": 20,
+      "S": "S_turn_kokutsuR_kokutsuR_L",
+      "T": "T_R-shuto_uke",
+      "R": "R_m135",
+      "scale": 1,
+      "kiai": false,
+      "stance": "kokutsu",
+      "technique": "Сюто-укэ (Разворот через спину на 135° в Кокуцу-дати)",
+      "techniques": [
+        "R:shuto_uke"
+      ],
+      "part": "move",
+      "facingDeg": -90,
+      "startTime": 24.81,
+      "endTime": 26.32,
+      "note": "Перенос правой ноги по дуге через спину, разворот на 135° по часовой стрелке на противоположный фланг (Фланг вправо / Восток / -90°) в правую Кокуцу-дати с блоком Сюто-укэ правой рукой."
+    },
+    {
+      "n": 21,
+      "S": "S_step_kokutsuR_kokutsuL_R",
+      "T": "T_L-shuto_uke",
+      "R": "R_p45",
+      "scale": 1,
+      "kiai": false,
+      "stance": "kokutsu",
+      "technique": "Сюто-укэ (Шаг под 45° в стойку Кокуцу-дати)",
+      "techniques": [
+        "L:shuto_uke"
+      ],
+      "part": "move",
+      "facingDeg": -45,
+      "startTime": 26.32,
+      "endTime": 27.63,
+      "note": "Шаг вперед левой ногой под углом 45° влево (Диагональ вправо / Северо-Восток / -45°) в левую стойку Кокуцу-дати с блоком Сюто-укэ левой рукой. Завершение формы и переход в Ямэ."
+    },
+    {
+      "n": 22,
+      "isYoi": true,
+      "isYoiEnd": true,
+      "S": "S_ready",
+      "T": "T_ready",
+      "R": null,
+      "scale": 1,
+      "kiai": false,
+      "stance": "ready",
+      "technique": "Возвращение в стойку Йой (Сидзэнтай)",
+      "techniques": [
+        "ready:shizentai"
+      ],
+      "part": "finish",
+      "facingDeg": 0,
+      "startTime": 27.63,
+      "endTime": 29.53,
+      "note": "Возвращение передней ноги в исходную позицию на центральную линию, выход в стойку готовности Сидзэнтай (Йой), поклон (рэй) и фиксация состояния дзансин."
+    }
+  ],
+  "duration": 29.53,
+  "events": [
+    {
+      "moveNumber": 0,
+      "isYoi": true,
+      "technique": [
+        "ready:shizentai"
+      ],
+      "form": "ready",
+      "startTime": 0.0,
+      "endTime": 1.3,
+      "kiai": false
+    },
+    {
+      "moveNumber": 1,
+      "technique": [
+        "L:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 1.2,
+      "endTime": 2.46,
+      "kiai": false
+    },
+    {
+      "moveNumber": 2,
+      "technique": [
+        "R:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 2.46,
+      "endTime": 3.56,
+      "kiai": false
+    },
+    {
+      "moveNumber": 3,
+      "technique": [
+        "R:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 3.56,
+      "endTime": 4.97,
+      "kiai": false
+    },
+    {
+      "moveNumber": 4,
+      "technique": [
+        "R:tettsui"
+      ],
+      "form": "moto",
+      "startTime": 4.97,
+      "endTime": 6.21,
+      "kiai": false
+    },
+    {
+      "moveNumber": 5,
+      "technique": [
+        "L:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 6.21,
+      "endTime": 7.31,
+      "kiai": false
+    },
+    {
+      "moveNumber": 6,
+      "technique": [
+        "L:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 7.31,
+      "endTime": 8.62,
+      "kiai": false
+    },
+    {
+      "moveNumber": 7,
+      "technique": [
+        "R:age_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 8.62,
+      "endTime": 9.8,
+      "kiai": false
+    },
+    {
+      "moveNumber": 8,
+      "technique": [
+        "L:age_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 9.8,
+      "endTime": 10.98,
+      "kiai": false
+    },
+    {
+      "moveNumber": 9,
+      "technique": [
+        "R:age_uke"
+      ],
+      "form": "zenkutsu",
+      "startTime": 10.98,
+      "endTime": 12.16,
+      "kiai": true
+    },
+    {
+      "moveNumber": 10,
+      "technique": [
+        "L:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 12.16,
+      "endTime": 13.72,
+      "kiai": false
+    },
+    {
+      "moveNumber": 11,
+      "technique": [
+        "R:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 13.72,
+      "endTime": 14.82,
+      "kiai": false
+    },
+    {
+      "moveNumber": 12,
+      "technique": [
+        "R:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 14.82,
+      "endTime": 16.23,
+      "kiai": false
+    },
+    {
+      "moveNumber": 13,
+      "technique": [
+        "L:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 16.23,
+      "endTime": 17.33,
+      "kiai": false
+    },
+    {
+      "moveNumber": 14,
+      "technique": [
+        "L:gedan_barai"
+      ],
+      "form": "zenkutsu",
+      "startTime": 17.33,
+      "endTime": 18.64,
+      "kiai": false
+    },
+    {
+      "moveNumber": 15,
+      "technique": [
+        "R:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 18.64,
+      "endTime": 19.74,
+      "kiai": false
+    },
+    {
+      "moveNumber": 16,
+      "technique": [
+        "L:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 19.74,
+      "endTime": 20.84,
+      "kiai": false
+    },
+    {
+      "moveNumber": 17,
+      "technique": [
+        "R:oi_zuki"
+      ],
+      "form": "zenkutsu",
+      "startTime": 20.84,
+      "endTime": 21.94,
+      "kiai": true
+    },
+    {
+      "moveNumber": 18,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 21.94,
+      "endTime": 23.5,
+      "kiai": false
+    },
+    {
+      "moveNumber": 19,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 23.5,
+      "endTime": 24.81,
+      "kiai": false
+    },
+    {
+      "moveNumber": 20,
+      "technique": [
+        "R:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 24.81,
+      "endTime": 26.32,
+      "kiai": false
+    },
+    {
+      "moveNumber": 21,
+      "technique": [
+        "L:shuto_uke"
+      ],
+      "form": "kokutsu",
+      "startTime": 26.32,
+      "endTime": 27.63,
+      "kiai": false
+    },
+    {
+      "moveNumber": 22,
+      "isYoi": true,
+      "technique": [
+        "ready:shizentai"
+      ],
+      "form": "ready",
+      "startTime": 27.63,
+      "endTime": 29.53,
+      "kiai": false
+    }
+  ]
 }

@@ -221,14 +221,19 @@ input.atlas-search-input {
 }
 
 .quick-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  padding: 3px 9px;
+  padding: 4px 10px;
+  line-height: 1.25;
   border-radius: 12px;
   font-size: 0.76rem;
   cursor: pointer;
   transition: all 0.18s ease;
+  vertical-align: middle;
 }
 
 .quick-tag-chip:hover {

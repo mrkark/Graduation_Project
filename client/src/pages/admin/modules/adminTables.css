@@ -7,7 +7,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Устранение горизонтального скролла в разделе пользователей и отступ кнопок */
+/* Устранение горизонтального скролла в разделе пользователей и адаптивное размещение кнопок */
 .admin-users-page .admin-table-wrap {
   overflow-x: hidden;
   width: 100%;
@@ -15,12 +15,13 @@
 
 .admin-users-table {
   width: 100%;
+  min-width: unset;
   table-layout: fixed;
 }
 
 .admin-users-table th,
 .admin-users-table td {
-  padding: 0.85rem 0.85rem;
+  padding: 0.85rem 0.65rem;
   vertical-align: middle;
 }
 
@@ -34,7 +35,7 @@
 .admin-users-table th:last-child,
 .admin-users-table td:last-child,
 .admin-users-table .admin-actions-cell {
-  padding-right: 2rem !important; /* Отодвигаем кнопки назначения ролей от правого края */
+  padding-right: 0.85rem !important;
   text-align: right;
   overflow: visible;
 }
@@ -45,6 +46,213 @@
   justify-content: flex-end;
   gap: 0.35rem;
   flex-wrap: nowrap;
+}
+
+/* Фиксированная сетка кнопок управления пользователями: строгая вертикальная колоночная верстка (устраняет смещение "съезд" кнопок) */
+.admin-users-actions-grid {
+  display: inline-grid !important;
+  grid-template-columns: 82px 108px 82px 34px !important;
+  gap: 0.35rem !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+}
+
+.admin-users-actions-grid .admin-action-slot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.admin-users-actions-grid .btn,
+.admin-users-actions-grid .btn-sm,
+.admin-users-actions-grid .admin-action-placeholder {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 0.35rem !important;
+  font-size: 0.75rem !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.25rem !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  border-radius: 4px !important;
+  margin: 0 !important;
+}
+
+.admin-users-actions-grid .admin-action-placeholder {
+  visibility: hidden !important;
+}
+
+/* Раздел каталога Бункай: строгий единый прямоугольник 2x2 без выступов и смещений */
+.admin-bunkai-actions-grid {
+  display: inline-grid !important;
+  grid-template-columns: 124px 124px !important;
+  grid-template-rows: 28px 28px !important;
+  gap: 0.35rem !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+}
+
+.admin-bunkai-actions-grid .admin-action-slot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+}
+
+.admin-bunkai-actions-grid .btn,
+.admin-bunkai-actions-grid a.btn,
+.admin-bunkai-actions-grid .btn-sm,
+.admin-bunkai-actions-grid .admin-action-placeholder {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 0.4rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  border-radius: 4px !important;
+  margin: 0 !important;
+  text-decoration: none !important;
+}
+
+.admin-bunkai-actions-grid .admin-action-placeholder {
+  visibility: hidden !important;
+}
+
+/* Раздел каталога ката: двухуровневые кнопки с кнопкой Редактировать внизу */
+.admin-kata-page .admin-table-wrap {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+.admin-kata-table {
+  width: 100%;
+  min-width: unset;
+  table-layout: fixed;
+}
+
+.admin-kata-table th,
+.admin-kata-table td {
+  padding: 0.85rem 0.75rem;
+  vertical-align: middle;
+}
+
+.admin-kata-table th:last-child,
+.admin-kata-table td:last-child,
+.admin-kata-table .admin-actions-cell {
+  padding-right: 0.85rem !important;
+  text-align: right;
+  overflow: visible;
+}
+
+.admin-kata-actions-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.32rem;
+}
+
+.admin-kata-actions-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.32rem;
+  white-space: nowrap;
+}
+
+.admin-kata-actions-row--bottom {
+  width: 100%;
+}
+
+.admin-kata-actions-row .btn-edit-kata {
+  width: 100%;
+  justify-content: center;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 162, 76, 0.38);
+  color: #f3f4f6;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+.admin-kata-actions-row .btn-edit-kata:hover {
+  background: rgba(212, 162, 76, 0.2);
+  border-color: var(--gold, #d4a24c);
+  color: #fff;
+}
+
+.admin-kata-table th,
+.admin-kata-table td {
+  padding: 0.85rem 0.85rem;
+  vertical-align: middle;
+}
+
+.admin-kata-table th:last-child,
+.admin-kata-table td:last-child,
+.admin-kata-table .admin-actions-cell {
+  padding-right: 0.9rem !important;
+  padding-left: 0.4rem !important;
+  text-align: right;
+  overflow: visible;
+}
+
+/* Компактный блок кнопок действий в каталоге ката: не вылезает за пределы панели */
+.admin-kata-actions-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.admin-kata-actions-wrap .btn-sm {
+  height: 28px;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  white-space: nowrap;
+  box-sizing: border-box;
+  text-decoration: none;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.admin-kata-actions-wrap .btn-sm span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transform: translateY(1px);
 }
 
 .admin-users-table .btn-sm {

@@ -137,9 +137,14 @@ def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any
 
     # Pelvis orientation (Yaw)
     if l_hip is not None and r_hip is not None:
-        v_hips = l_hip - r_hip
-        yaw_rad = math.atan2(v_hips[2], max(1e-4, abs(v_hips[0])))
-        res["pelvis_yaw"] = round(float(math.degrees(yaw_rad)), 1)
+        v_hips_lat = l_hip - r_hip
+        n_fwd = np.array([-v_hips_lat[2], 0.0, v_hips_lat[0]], dtype=float)
+        norm_fwd = float(np.linalg.norm(n_fwd))
+        if norm_fwd > 1e-4:
+            yaw_rad = math.atan2(n_fwd[0], n_fwd[2])
+            res["pelvis_yaw"] = round(float(math.degrees(yaw_rad)), 1)
+        else:
+            res["pelvis_yaw"] = 0.0
 
     # 1. Kicking Check (Mae-Geri)
     is_left_kick = (l_knee is not None and l_hip is not None and l_knee[1] > l_hip[1] - 0.22 and kl > 120 and (l_ankle is not None and l_ankle[1] > floor_est + 0.35))
@@ -162,61 +167,60 @@ def analyze_karate_biomechanics(joints: Dict[str, List[float]]) -> Dict[str, Any
 
     # A) Kiba-dachi (Horse Riding Stance / Всадник):
     # Wide lateral stance (> 1.25x shoulder width), knees bent outwards (~105°-138°), feet parallel
-    if (100 <= kl <= 138 and 100 <= kr <= 138) and dx_feet > max(0.48, sh_width * 1.25) and dz_feet < 0.32:
+    if (95 <= kl <= 145 and 95 <= kr <= 145) and dx_feet > max(0.48, sh_width * 1.20) and dz_feet < 0.35:
         res["stance"] = "Киба-дати (Всадник)"
         avg_knee = (kl + kr) / 2
-        # Ideal knee flexion in competition Kiba-dachi is ~115°
         res["score"] = max(65, min(99, int(100 - abs(avg_knee - 115) * 1.5)))
         res["lead_leg"] = "Обе ноги"
 
-    # B) Zenkutsu-dachi (Front Forward Stance):
-    # One leg deeply bent (90°-128°), rear leg extended (150°-180°), long longitudinal base
-    elif (kl < 130 and kr > 148) or (kr < 130 and kl > 148):
-        lead_left = (kl < kr)
-        lead_leg = "Левая" if lead_left else "Правая"
-        lead_knee = kl if lead_left else kr
-        rear_knee = kr if lead_left else kl
-        res["lead_leg"] = lead_leg
-
-        # Distinguish between Zenkutsu-dachi and Fudo-dachi (Sochin-dachi)
-        # In Fudo-dachi, both knees are bent, but front is ~115° and rear is ~135-148°
-        if rear_knee < 152 and lead_knee > 110:
-            res["stance"] = f"Фудо-дати ({lead_leg})"
-            res["score"] = 94
-        else:
-            res["stance"] = f"Дзэнкуцу-дати ({lead_leg})"
-            # Sensei scoring: front knee over ankle ~98°, rear leg locked straight ~170°
-            score_lead = 100 - abs(lead_knee - 98) * 1.3
-            score_rear = 100 - abs(rear_knee - 170) * 1.1
-            res["score"] = max(60, min(99, int(0.6 * score_lead + 0.4 * score_rear)))
-
-    # C) Kokutsu-dachi (Back Defense Stance):
-    # Rear leg carries 70% weight (knee bent ~110°-138°), front leg extended with light contact
-    elif (kl > 142 and 110 <= kr <= 140) or (kr > 142 and 110 <= kl <= 140):
-        # In Kokutsu-dachi, the rear leg is the one bent, front is extended forward
-        # Determine which foot is rear based on Z depth
-        if l_ankle is not None and r_ankle is not None:
-            if l_ankle[2] < r_ankle[2] - 0.10: # Left foot behind
-                rear_leg = "Левая"
-            elif r_ankle[2] < l_ankle[2] - 0.10: # Right foot behind
-                rear_leg = "Правая"
-            else:
-                rear_leg = "Левая" if kl < kr else "Правая"
-        else:
-            rear_leg = "Левая" if kl < kr else "Правая"
-
-        res["stance"] = f"Кокуцу-дати ({rear_leg} сзади)"
-        res["score"] = 93
-        res["lead_leg"] = "Правая" if rear_leg == "Левая" else "Левая"
-
-    # D) Shizentai / Yoi-dachi (Natural Ready Stance):
+    # B) Shizentai / Yoi-dachi (Natural Ready Stance):
     elif kl >= 155 and kr >= 155:
         res["stance"] = "Йой-дати (Готовность)"
         res["score"] = 95
         res["lead_leg"] = "Нейтральная"
+
+    # C) Asymmetric Stances (Zenkutsu-dachi, Kokutsu-dachi, Fudo-dachi):
     else:
-        res["stance"] = "Камаэ / Переходная стойка"
-        res["score"] = 90
+        front_left = True
+        if l_hip is not None and r_hip is not None and l_ankle is not None and r_ankle is not None:
+            v_lat = l_hip - r_hip
+            n_fwd = np.cross(v_lat, [0.0, 1.0, 0.0])
+            norm_fwd = float(np.linalg.norm(n_fwd))
+            if norm_fwd > 1e-4:
+                n_fwd /= norm_fwd
+                reach_l = float(np.dot(l_ankle - l_hip, n_fwd))
+                reach_r = float(np.dot(r_ankle - r_hip, n_fwd))
+                front_left = (reach_l >= reach_r)
+            else:
+                front_left = (l_ankle[2] >= r_ankle[2])
+        else:
+            front_left = (kl < kr)
+
+        front_knee = kl if front_left else kr
+        rear_knee = kr if front_left else kl
+        lead_leg = "Левая" if front_left else "Правая"
+        rear_leg = "Правая" if front_left else "Левая"
+
+        # Zenkutsu-dachi: FRONT leg is bent (90°-138°), REAR leg extended (145°-180°)
+        if front_knee < 138 and rear_knee > 145:
+            res["lead_leg"] = lead_leg
+            if rear_knee < 155 and front_knee > 112:
+                res["stance"] = f"Фудо-дати ({lead_leg})"
+                res["score"] = 94
+            else:
+                res["stance"] = f"Дзэнкуцу-дати ({lead_leg})"
+                score_lead = 100 - abs(front_knee - 98) * 1.3
+                score_rear = 100 - abs(rear_knee - 170) * 1.1
+                res["score"] = max(60, min(99, int(0.6 * score_lead + 0.4 * score_rear)))
+
+        # Kokutsu-dachi: REAR leg carries 70% weight and is bent (105°-142°), FRONT leg extended (142°-180°)
+        elif rear_knee < 142 and front_knee > 142:
+            res["lead_leg"] = lead_leg
+            res["stance"] = f"Кокуцу-дати ({rear_leg} сзади)"
+            res["score"] = 93
+        else:
+            res["stance"] = "Камаэ / Переходная стойка"
+            res["score"] = 90
 
     # 3. Shotokan Techniques & Arm Actions Detection
     # Check for Kime explosive punch
@@ -596,7 +600,7 @@ class MocapTracker:
 
         # High-Speed Optimization: Scale square frame to 480x480 for real-time inference (< 14ms)
         # MediaPipe Pose internally infers on 256x256, so 480x480 preserves full accuracy while doubling FPS!
-        target_inference_size = 480
+        target_inference_size = 384
         if dim_max > target_inference_size:
             rgb_inference = cv2.resize(rgb_square, (target_inference_size, target_inference_size), interpolation=cv2.INTER_LINEAR)
         else:
@@ -692,18 +696,19 @@ class MocapTracker:
                                 v_pt = pt - mid_hp
                                 t = float(np.dot(v_pt, v_spine) / spine_len_sq)
 
-                                # Only apply to thoracic spine / ribcage (t in [0.20, 1.08]).
-                                # Pelvis, groin, and legs (t < 0.20) are left completely free so hands can touch knees and legs.
-                                if 0.20 <= t <= 1.08:
+                                # Sternum penetration guard:
+                                # ONLY applies when arms cross directly IN FRONT of the chest sternum (t in [0.45, 1.08] and central).
+                                # Leaves the ribcage flanks, waist, and hips (HIKITE) completely free so the fist can rest naturally under the ribs!
+                                if 0.45 <= t <= 1.08:
                                     spine_center = mid_hp + t * v_spine
                                     delta = pt - spine_center
                                     dist_lateral = abs(float(np.dot(delta, ux)))
 
-                                    if dist_lateral < ribcage_half_width:
+                                    # Only central chest area (within 45% of ribcage half-width)
+                                    is_central_chest = dist_lateral < (ribcage_half_width * 0.45)
+                                    if is_central_chest:
                                         dist_along_normal = float(np.dot(delta, uz))
-                                        min_clearance = 0.16  # 16 cm clearance in front of spine to prevent arms cutting into kimono
-                                        # Arm behind head detection: when arm is elevated above shoulder line and passing behind neck/head,
-                                        # do not push forward into the face!
+                                        min_clearance = 0.12  # Clearance in front of sternum
                                         is_behind_head = (t >= 0.88 and pt[1] > (l_sh[1] + r_sh[1]) * 0.5 - 0.05 and dist_along_normal < -0.02)
                                         if not is_behind_head and dist_along_normal < min_clearance:
                                             cleared_pt = pt + (min_clearance - dist_along_normal) * uz

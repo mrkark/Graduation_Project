@@ -10,9 +10,13 @@ function getApiBaseUrl() {
     return envUrl;
   }
   if (typeof window !== 'undefined') {
-    // При работе через Nginx (порты 80, 8080) или Vite (порт 5173) используем прямой прокси /api
+    // При работе через Nginx (порты 80, 8080), шлюз (8443) или Vite (порт 5173) используем прямой прокси /api
     const p = window.location.port;
-    if (p === '80' || p === '8080' || p === '' || p === '5173') {
+    if (p === '80' || p === '8080' || p === '' || p === '5173' || p === '8443' || p === '443') {
+      return '/api';
+    }
+    // Если фронтенд открыт через HTTPS, бэкенд на порту 5000 (HTTP) нельзя дергать по https
+    if (window.location.protocol === 'https:') {
       return '/api';
     }
     if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {

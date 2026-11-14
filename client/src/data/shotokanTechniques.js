@@ -356,6 +356,129 @@ export const SHOTOKAN_DIRECTIONS = [
   { angle: 315, label: 'Диагональ влево (315°)', kanji: '左斜' },
 ];
 
+/**
+ * Нормализует любое строковое или числовое значение направления
+ * к одному из 8 канонических значений SHOTOKAN_DIRECTIONS.label
+ */
+export function normalizeDirectionLabel(val) {
+  if (val === undefined || val === null || val === '') return 'Прямо вперед (0°)';
+
+  const exact = SHOTOKAN_DIRECTIONS.find((d) => d.label === val);
+  if (exact) return exact.label;
+
+  // Если передано число (3D facingDeg в градусах [-180..180])
+  if (typeof val === 'number') {
+    // В 3D системе: +90° = поворот влево (270° на компасе/эмбусэн), -90° = поворот вправо (90° на компасе)
+    const compassAngle = ((-val % 360) + 360) % 360;
+    const rounded = (Math.round(compassAngle / 45) * 45) % 360;
+    const match = SHOTOKAN_DIRECTIONS.find((d) => d.angle === rounded);
+    return match ? match.label : 'Прямо вперед (0°)';
+  }
+
+  const s = String(val).trim();
+  const lower = s.toLowerCase();
+
+  if (lower.includes('на месте')) {
+    return 'Прямо вперед (0°)';
+  }
+
+  // Явные смысловые совпадения с направлениями (диагонали ПЕРЕД прямыми сторонами света)
+  if (lower.includes('315') || lower.includes('северо-запад') || (lower.includes('влево') && lower.includes('45'))) {
+    return 'Диагональ влево (315°)';
+  }
+  if (lower.includes('225') || lower.includes('юго-запад') || (lower.includes('влево') && (lower.includes('135') || lower.includes('спину')))) {
+    return 'За спину влево (225°)';
+  }
+  if (lower.includes('45') || lower.includes('северо-восток') || (lower.includes('вправо') && lower.includes('45'))) {
+    return 'Диагональ вправо (45°)';
+  }
+  if (lower.includes('135') || lower.includes('юго-восток') || (lower.includes('вправо') && (lower.includes('135') || lower.includes('спину')))) {
+    return 'За спину вправо (135°)';
+  }
+  if (lower.includes('270') || (lower.includes('влево') && lower.includes('90')) || lower.includes('запад')) {
+    return 'Фланг влево (270°)';
+  }
+  if ((lower.includes('вправо') && lower.includes('90')) || lower.includes('восток')) {
+    return 'Фланг вправо (90°)';
+  }
+  if (lower.includes('180') || lower.includes('назад') || lower.includes('юг')) {
+    return 'Разворот назад (180°)';
+  }
+  if (lower.includes('север') || lower.includes('вперед') || lower.includes('0°')) {
+    return 'Прямо вперед (0°)';
+  }
+
+  // Если строка вида "90°", "-90°", "45", "-135" без слов:
+  const degMatch = s.match(/(-?\d+(?:\.\d+)?)/);
+  if (degMatch) {
+    let deg = parseFloat(degMatch[1]);
+    const compassAngle = ((-deg % 360) + 360) % 360;
+    const rounded = (Math.round(compassAngle / 45) * 45) % 360;
+    const match = SHOTOKAN_DIRECTIONS.find((d) => d.angle === rounded);
+    if (match) return match.label;
+  }
+
+  return 'Прямо вперед (0°)';
+}
+
+/**
+ * Преобразует строковое обозначение направления (например, "Фланг вправо (90°)")
+ * в канонический угол ориентации в градусах (-180, 180] для 3D сцены
+ */
+export function directionToFacingDeg(label) {
+  if (label === undefined || label === null || label === '') return 0;
+  if (typeof label === 'number') {
+    let deg = label;
+    while (deg > 180) deg -= 360;
+    while (deg <= -180) deg += 360;
+    return deg;
+  }
+
+  const s = String(label).trim().toLowerCase();
+
+  // 1. Точные семантические сопоставления по направлениям (диагонали ПЕРЕД прямыми сторонами)
+  if (s.includes('северо-запад') || (s.includes('влево') && (s.includes('315') || s.includes('45')) && !s.includes('135') && !s.includes('225'))) return 45;
+  if (s.includes('северо-восток') || (s.includes('вправо') && s.includes('45') && !s.includes('135') && !s.includes('225'))) return -45;
+  if (s.includes('юго-запад') || (s.includes('влево') && (s.includes('225') || s.includes('135')))) return 135;
+  if (s.includes('юго-восток') || (s.includes('вправо') && (s.includes('135') || s.includes('225')))) return -135;
+
+  if ((s.includes('влево') && (s.includes('270') || s.includes('90') || s.includes('фланг'))) || s.includes('запад')) return 90;
+  if ((s.includes('вправо') && (s.includes('90') || s.includes('фланг'))) || s.includes('восток')) return -90;
+  if (s.includes('назад') || s.includes('180') || s.includes('юг')) return 180;
+  if (s.includes('прямо') || s.includes('север') || s.includes('на месте') || s.includes('(0°)') || /(^|[^\d])0°/.test(s)) return 0;
+
+  // 2. Числовые строки без слов: "270", "90", "-90", "180"
+  if (s === '270' || s === '270°') return 90;
+  if (s === '90' || s === '90°') return -90;
+  if (s === '-90' || s === '-90°') return -90;
+  if (s === '180' || s === '180°' || s === '-180' || s === '-180°') return 180;
+  if (s === '45' || s === '45°') return -45;
+  if (s === '-45' || s === '-45°') return -45;
+  if (s === '315' || s === '315°') return 45;
+  if (s === '135' || s === '135°') return -135;
+  if (s === '225' || s === '225°') return 135;
+
+  const numMatch = s.match(/(-?\d+(?:\.\d+)?)/);
+  if (numMatch) {
+    let deg = parseFloat(numMatch[1]);
+    while (deg > 180) deg -= 360;
+    while (deg <= -180) deg += 360;
+    return deg;
+  }
+  return 0;
+}
+
+export const SHOTOKAN_STANCES = [
+  { id: 'zenkutsu', label: 'Дзэнкуцу-дати (Передняя атакующая стойка)', kanji: '前屈' },
+  { id: 'kokutsu', label: 'Кокуцу-дати (Задняя защитная стойка)', kanji: '後屈' },
+  { id: 'kiba', label: 'Киба-дати (Стойка всадника)', kanji: '騎馬' },
+  { id: 'moto', label: 'Мото-дати (Короткая базовая стойка)', kanji: '基' },
+  { id: 'fudo', label: 'Фудо-дати / Сотин-дати (Непоколебимая стойка)', kanji: '不動' },
+  { id: 'nekoashi', label: 'Нэкоаси-дати (Стойка кошачьей лапы)', kanji: '猫足' },
+  { id: 'heiko', label: 'Хэйко-дати (Параллельная стойка)', kanji: '平行' },
+  { id: 'ready', label: 'Сидзэнтай / Хэйсоку (Стойка готовности / Йой)', kanji: '然' },
+];
+
 export const SHOTOKAN_MOVEMENT_TYPES = [
   { id: 'linear', label: 'Прямолинейный шаг (Аюми-аси)', desc: 'Обычный шаг со сменой стойки' },
   { id: 'sliding', label: 'Скользящий подшаг (Цуги-аси / Сури-аси)', desc: 'Быстрое сближение без смены стойки' },

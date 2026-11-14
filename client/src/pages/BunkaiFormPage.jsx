@@ -4,7 +4,8 @@ import { getBunkai, createBunkai, updateBunkai, getBunkaiSteps, saveBunkaiSteps 
 import { listKata } from '../api/kata';
 import { listClips } from '../api/animations';
 import TechniquePicker from '../components/TechniquePicker';
-import { X, Swords, Trophy, Layers, Plus, Trash2, Zap, BookOpen, Ruler, AlertTriangle } from 'lucide-react';
+import { X, Swords, Trophy, Layers, Plus, Trash2, Zap, BookOpen, Ruler, AlertTriangle, Sparkles } from 'lucide-react';
+import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
 const BunkaiMultiAvatarPlayer = lazy(() => import('../three/BunkaiMultiAvatarPlayer'));
 import './BunkaiEditor.css';
 
@@ -220,23 +221,79 @@ export default function BunkaiFormPage() {
     setPickerTarget(null);
   }
 
-  // Генерация шагов для 3D предпросмотра в реальном времени
+  // Генерация шагов для 3D предпросмотра в реальном времени с поддержкой анти-проникновения
   const previewSteps = useMemo(() => {
     return episodes.map((ep, idx) => ({
       stepNumber: idx + 1,
-      title: `Эпизод ${idx + 1}`,
-      description: `${ep.attackTechnique} против ${ep.toriCounter}`,
+      title: ep.attackTechnique || `Шаг ${idx + 1}`,
+      description: ep.toriCounter || ep.outcome,
+      notes: ep.outcome,
       optimalDistance: ep.combatDistance || 1.45,
       attackAngleDeg: ep.attackAngleDeg || 0,
-      interactionType: 'local_contact',
-      tContact: 0.45,
+      contactType: ep.phase === 'Залом сустава (Кансэцу)' ? 'joint_lock' : ep.phase === 'Бросок / сваливание (Нагэ)' ? 'sweep_fall' : 'body_contact',
+      interactionType: ep.phase === 'Бросок / сваливание (Нагэ)' ? 'takedown' : 'body_contact',
+      isGround: idx === 12 || idx === 13,
+      isRising: idx === 14,
+      displacementTori: [0, 0, (idx % 2 === 0 ? 0.35 : -0.2)],
+      displacementUke: [0, 0, (idx % 2 === 0 ? -0.25 : 0.35)],
+      tContact: 0.48,
       participants: [
-        { role: 'tori', clipName: ep.toriClip, stance: 'kokutsu' },
-        { role: 'uke1', clipName: ep.ukeClip, stance: 'zenkutsu' },
+        { role: 'tori', clipName: ep.toriClip, stance: idx === 12 || idx === 13 ? 'fallen_ukemi' : 'zenkutsu', isGround: idx === 12 || idx === 13, isRising: idx === 14 },
+        { role: 'uke1', clipName: ep.ukeClip, stance: idx === 12 ? 'shiko' : 'zenkutsu' },
         { role: 'uke2', clipName: ep.uke2Clip || 'idle_shizentai', stance: 'ready' },
       ],
     }));
   }, [episodes]);
+
+  function loadHeianShodanCanonicalTemplate() {
+    const heianKata = kataOptions.find((k) =>
+      (k.Title || '').toLowerCase().includes('хэйан шодан') ||
+      (k.Title || '').toLowerCase().includes('heian shodan') ||
+      (k.Title || '').toLowerCase().includes('хейан шодан') ||
+      (k.Code || '').toLowerCase().includes('heian_shodan')
+    );
+
+    setForm((f) => ({
+      ...f,
+      kataId: heianKata ? String(heianKata.Kata_ID) : f.kataId,
+      title: 'Канонический Бункай: Хэйан Шодан (18 шагов)',
+      description: 'Официальный пошаговый бункай ката Хэйан Шодан: 1 — Тори (атакующий), 2 — Укэ (защищающийся). Разбор боевого взаимодействия на реальной боевой дистанции с непрерывными переходами и контролем анти-проникновения.',
+      difficulty: 'beginner',
+    }));
+
+    setParticipantMode('2-person');
+
+    const mappedEpisodes = HEIAN_SHODAN_BUNKAI_18_STEPS.map((step) => {
+      const toriP = step.participants.find((p) => p.role === 'tori') || {};
+      const ukeP = step.participants.find((p) => p.role === 'uke' || p.role === 'uke1') || {};
+
+      let phase = 'Атака и реакция';
+      if (step.contactType === 'block_gedan' || step.contactType === 'block_haivan') phase = 'Встречный сбив (Укэ)';
+      if (step.contactType === 'joint_lock') phase = 'Залом сустава (Кансэцу)';
+      if (step.contactType === 'sweep_fall') phase = 'Бросок / сваливание (Нагэ)';
+      if (step.contactType === 'strike_chudan' || step.contactType === 'strike_throat') phase = 'Контрудар (Атэми)';
+      if (step.stepNumber >= 14) phase = 'Фиксация и контроль (Дзансин)';
+
+      return {
+        attacker: '1 (Тори — атакующий)',
+        attackAngle: `${step.attackAngleDeg}°`,
+        attackAngleDeg: step.attackAngleDeg,
+        combatDistance: step.optimalDistance,
+        toriClip: toriP.clipName || 'heiko_dachi',
+        ukeClip: ukeP.clipName || 'heiko_dachi',
+        uke2Clip: 'idle_shizentai',
+        attackTechnique: step.title,
+        toriMovement: `Смещение: [${step.displacementTori.join(', ')}]`,
+        toriCounter: step.description,
+        phase,
+        outcome: step.notes ? `[${step.notes}] ${step.description}` : step.description,
+      };
+    });
+
+    setEpisodes(mappedEpisodes);
+    setActiveEpisodeIdx(0);
+    setError(null);
+  }
 
   async function onSubmit(e) {
     if (e) e.preventDefault();
@@ -387,6 +444,17 @@ export default function BunkaiFormPage() {
         </div>
 
         <div className="bunkai-studio__header-actions">
+          {!isEdit && (
+            <button
+              type="button"
+              className="btn btn-gold"
+              onClick={loadHeianShodanCanonicalTemplate}
+              title="Загрузить официальный 18-шаговый сценарий бункая Хэйан Шодан"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Zap size={14} /> Шаблон Хэйан Шодан (18 шагов)
+            </button>
+          )}
           <button type="button" className="btn" onClick={() => navigate(-1)} disabled={saving}>
             Отмена
           </button>

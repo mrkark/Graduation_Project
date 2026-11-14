@@ -54,6 +54,68 @@
   color: var(--gold);
 }
 
+.atlas-table th:last-child,
+.atlas-table td:last-child,
+.atlas-table__actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Действия над ката в сводной таблице */
+.atlas-table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.atlas-table-actions .btn-sm {
+  height: 30px;
+  padding: 0.28rem 0.75rem;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  line-height: 1.2;
+  border-radius: 4px;
+  box-sizing: border-box;
+  text-decoration: none;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.atlas-table-actions .btn-fav {
+  width: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.atlas-table-actions .btn-video {
+  color: var(--gold);
+  border: 1px solid rgba(212, 162, 76, 0.35);
+}
+
+.atlas-table-actions .btn-video:hover {
+  background: rgba(212, 162, 76, 0.15);
+  border-color: var(--gold);
+}
+
+.atlas-table-actions .btn-view-3d {
+  background: linear-gradient(135deg, #d4a24c 0%, #b88636 100%);
+  color: #120f0d;
+  border: 1px solid var(--gold-bright);
+}
+
+.atlas-table-actions .btn-view-3d:hover {
+  background: linear-gradient(135deg, #e5b35d 0%, #c99747 100%);
+  color: #000;
+  box-shadow: 0 0 10px rgba(212, 162, 76, 0.35);
+}
+
 /* Мобильная адаптивность */
 @media (max-width: 768px) {
   .atlas-card,

@@ -77,7 +77,7 @@ export const ACTION_ALIASES = {
   chudan_zuki: 'chudan_zuki_right',
   kizami_zuki: 'jodan_zuki_right',
   ren_zuki: 'tech_gyaku_zuki_right',
-  sanbon_zuki: 'tech_oi_zuki_right',
+  sanbon_zuki: 'oi_zuki_right',
   uraken_uchi: 'tech_uraken_right',
   tetsui_uchi: 'tech_tettsui_right',
   empi_uchi: 'tech_mae_empi_right',
@@ -90,7 +90,7 @@ export const ACTION_ALIASES = {
   age_uke: 'age_uke_left',
   soto_uke: 'soto_uke_left',
   uchi_uke: 'tech_uchi_uke_left',
-  shuto_uke: 'tech_shuto_uke_left',
+  shuto_uke: 'shuto_uke',
   manji_uke: 'tech_manji_uke_left',
 
   // Удары ногами (Гэри)
@@ -150,16 +150,18 @@ function getStanceClipName(stanceName) {
     case 'fudo':
       return globalClipCache.has('fudo_dachi') ? 'fudo_dachi' : 'stance_fudo';
     case 'kiba':
-      return 'stance_kiba';
+      return globalClipCache.has('kiba_dachi') ? 'kiba_dachi' : 'stance_kiba';
+    case 'nekoashi':
+      return globalClipCache.has('stance_neko_left') ? 'stance_neko_left' : 'stance_ready';
     case 'gankaku':
     case 'tsuruashi':
-      return 'stance_gankaku';
+      return globalClipCache.has('stance_tsuru_left') ? 'stance_tsuru_left' : 'stance_gankaku';
     case 'gedan_barai':
       return globalClipCache.has('gedan_barai_left') ? 'gedan_barai_left' : 'gedan_barai';
     case 'age_uke':
       return globalClipCache.has('age_uke_left') ? 'age_uke_left' : 'age_uke';
     case 'empi_uchi':
-      return 'empi_uchi';
+      return globalClipCache.has('tech_mae_empi_right') ? 'tech_mae_empi_right' : 'empi_uchi';
     case 'gyaku_zuki':
       return globalClipCache.has('gyaku_zuki_right') ? 'gyaku_zuki_right' : 'gyaku_zuki';
     case 'oi_zuki':
@@ -240,6 +242,15 @@ export async function ensureKataClipLoaded(kataSlug) {
   return promise;
 }
 
+/**
+ * Согласовывает ориентацию Шага 18 Heian Shodan (1-й сюто-укэ в кокуцу-дати):
+ * По канону Шотокан разворот выполняется влево в сторону Запад (+90° / Фланг влево),
+ * строго в том же направлении, что и Шаг 1 (первое движение ката).
+ */
+function alignHeianShodanStep18(rawClip) {
+  return rawClip;
+}
+
 // Кэш нарезанных подклипов для пошагового выполнения ката
 const subclipCache = new Map();
 
@@ -251,7 +262,7 @@ function getSubclipForRange(sourceClip, clipName, startTime, endTime, fps = 60) 
   if (!sourceClip) return null;
   const startFrame = Math.max(0, Math.round(startTime * fps));
   const endFrame = Math.max(startFrame + 1, Math.round(endTime * fps));
-  const key = `${sourceClip.uuid || clipName}_sub_${startFrame}_${endFrame}`;
+  const key = `${sourceClip.uuid || clipName}_v4_sub_${startFrame}_${endFrame}`;
 
   if (subclipCache.has(key)) {
     return subclipCache.get(key);
@@ -310,13 +321,17 @@ async function getCachedClips() {
   globalClipPromise = (async () => {
     await Promise.all(
       Object.entries(CLIP_FILES).map(async ([name, url]) => {
-        if (globalClipCache.has(name)) return;
+        if (name !== 'shuto_uke' && globalClipCache.has(name)) return;
         try {
           const res = await fetch(url);
           if (!res.ok) return;
           const json = await res.json();
           const clip = THREE.AnimationClip.parse(json);
           globalClipCache.set(name, clip);
+          if (name === 'shuto_uke') {
+            globalClipCache.set('tech_shuto_uke_left', clip);
+            globalClipCache.set('tech_shuto_uke_right', clip);
+          }
         } catch {
           // ignore error
         }
@@ -496,11 +511,13 @@ export default function KaratekaLowpolyModel({
   useEffect(() => {
     if (animations && animations.length > 0) {
       animations.forEach((clip) => {
-        globalClipCache.set(clip.name, clip);
+        if (clip.name !== 'tech_shuto_uke_left' && clip.name !== 'tech_shuto_uke_right' && clip.name !== 'shuto_uke') {
+          globalClipCache.set(clip.name, clip);
+        }
       });
       // Привязываем канонические алиасы (например heian_shodan -> heian_shodan_preview)
       Object.entries(ACTION_ALIASES).forEach(([aliasKey, targetName]) => {
-        if (globalClipCache.has(targetName)) {
+        if (aliasKey !== 'shuto_uke' && globalClipCache.has(targetName)) {
           globalClipCache.set(aliasKey, globalClipCache.get(targetName));
         }
       });
@@ -701,15 +718,15 @@ export default function KaratekaLowpolyModel({
     if (!kataMode || !clipsLoaded || !mixer) return;
 
     let targetClip = null;
-    const isFullMode = kataExecutionMode === 'full';
+    const isMasterMocap = kataExecutionMode === 'full' || kataExecutionMode === 'mocap';
 
-    if (isFullMode) {
-      // Вариант 1: Полный мастер-клип ката (heian_shodan_preview для Heian Shodan или /models/katas/kata_${kataSlug}.glb)
+    if (isMasterMocap) {
+      // Вариант 1: Полный мастер-клип ката (heian_shodan для Heian Shodan или /models/katas/kata_${kataSlug}.glb)
       const sourceName = kataClipName || 'heian_shodan';
       const rawSource =
+        globalClipCache.get(sourceName) ||
         kataLoadedClip ||
         resolveClip(sourceName) ||
-        globalClipCache.get(sourceName) ||
         globalClipCache.get(`${sourceName}_preview`) ||
         globalClipCache.get('heian_shodan_preview') ||
         globalClipCache.get('heian_shodan');
@@ -744,8 +761,9 @@ export default function KaratekaLowpolyModel({
 
     // Защита от прерывания: если полный мастер-клип уже воспроизводится (или на паузе),
     // не сбрасываем его при смене активного шага таймлайна, если пользователь явно не нажал повтор!
+    const isFullPlay = kataExecutionMode === 'full';
     if (
-      isFullMode &&
+      isFullPlay &&
       !isReplayRequested &&
       currentActionRef.current &&
       currentActionRef.current.getClip() === clip
@@ -757,7 +775,9 @@ export default function KaratekaLowpolyModel({
 
     const action = mixer.clipAction(clip);
     action.reset();
-    action.timeScale = speed;
+    action.enabled = true;
+    action.setEffectiveTimeScale(speed);
+    action.setEffectiveWeight(1.0);
     action.setLoop(isLooping ? THREE.LoopRepeat : THREE.LoopOnce, 1);
     action.clampWhenFinished = true;
 
@@ -769,7 +789,9 @@ export default function KaratekaLowpolyModel({
       if (prevAction.time < prevAction.getClip().duration) {
         prevAction.time = prevAction.getClip().duration;
       }
-      action.crossFadeFrom(prevAction, Math.min(blendDuration || 0.14, 0.14), false);
+      // Плавный органичный переход между стойками и техниками (0.24 - 0.35с вместо моментального скачка)
+      const crossFadeSec = Math.max(0.24, Math.min(blendDuration || 0.28, 0.35));
+      action.crossFadeFrom(prevAction, crossFadeSec, false);
     }
 
     if (isPlaying) {
@@ -903,50 +925,55 @@ export default function KaratekaLowpolyModel({
           onRootMove(avatarWorldPos);
         }
 
-        // --- ПЛАВНАЯ АНИМАЦИЯ ПОВОРОТА ЧЕРЕЗ СПИНУ И СМЕНЫ НАПРАВЛЕНИЯ ЭМБУСЭН ---
+        // --- ТОЧНАЯ ФИКСАЦИЯ ПОЗИЦИИ И ПЛАВНЫЙ КАНОНИЧЕСКИЙ ПОВОРОТ КОРПУСА ---
         if (groupRef.current && kataMode) {
           const clipDuration = currentActionRef.current.getClip().duration || 1.0;
           const animTime = currentActionRef.current.time;
           const progress = Math.max(0, Math.min(1, animTime / clipDuration));
 
-          const isStep18 = currentStep?.moveNumber === 18 || (kataClipName === 'heian_shodan' && currentStep?.moveNumber === 18);
+          if (kataExecutionMode === 'composed' && currentStep) {
+            // 1. Позиция аватара строго зафиксирована в точке шага эмбусэн (исключает проскальзывание стоп по полу)
+            groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
 
-          if (isStep18) {
-            // Для Шага 18 Heian Shodan: поворот через спину лицом к камере (Север 0°):
-            // После шага 17 (3-й ой-цуки с КИАЙ) мастер стоит спиной к камере (180° / π рад).
-            // Персонаж разворачивается через спину (по дуге 180° -> 270° -> 360° / 0°),
-            // завершая блок сюто-укэ в стойке кокуцу-дати строго лицом к камере (0° / 0 рад).
-            if (kataExecutionMode === 'mocap') {
-              // В MoCap-записи мастер завершает поворот под углом 48°.
-              // Плавно компенсируем поворот группы так, чтобы аватар оказался строго лицом к камере (0°)!
-              const turnT = Math.min(1, Math.max(0, (progress - 0.15) / 0.70));
-              const ease = turnT * turnT * (3 - 2 * turnT);
-              const compYawRad = - (48 * Math.PI / 180) * ease;
-              groupRef.current.rotation.y = compYawRad;
-            } else {
-              // В режиме Клипов v4 (composed): плавно интерполируем поворот через спину от 180° (π) до 360° (2π / 0 rad)
-              const turnT = Math.min(1, Math.max(0, progress / 0.70));
-              const ease = turnT * turnT * (3 - 2 * turnT);
-              const currentAngleRad = Math.PI + Math.PI * ease;
-              groupRef.current.rotation.y = currentAngleRad;
-            }
-          } else if (kataExecutionMode === 'composed' && currentStep) {
+            // 2. Плавная каноническая угловая ориентация при развороте (Root Motion Yaw Rotation)
             const targetYaw = rotation[1];
-            const startYaw = prevStep ? prevStep.rotation[1] : (currentStep.stateIn ? (currentStep.stateIn.facingDeg * Math.PI / 180) : targetYaw);
-            let diff = targetYaw - startYaw;
-            while (diff > Math.PI) diff -= 2 * Math.PI;
-            while (diff < -Math.PI) diff += 2 * Math.PI;
+            const startYaw = prevStep
+              ? prevStep.rotation[1]
+              : (currentStep.stateIn ? (currentStep.stateIn.facingDeg * Math.PI / 180) : targetYaw);
 
-            if (Math.abs(diff) > 0.01) {
+            let diff = 0;
+            const R = currentStep.R;
+            if (R === 'R_p270') diff = (3 * Math.PI) / 2;
+            else if (R === 'R_m270') diff = (-3 * Math.PI) / 2;
+            else if (R === 'R_p180') diff = Math.PI;
+            else if (R === 'R_m180') diff = -Math.PI;
+            else if (R === 'R_p135') diff = (3 * Math.PI) / 4;
+            else if (R === 'R_m135') diff = (-3 * Math.PI) / 4;
+            else if (R === 'R_p90') diff = Math.PI / 2;
+            else if (R === 'R_m90') diff = -Math.PI / 2;
+            else if (R === 'R_p45') diff = Math.PI / 4;
+            else if (R === 'R_m45') diff = -Math.PI / 4;
+            else {
+              diff = targetYaw - startYaw;
+              while (diff > Math.PI) diff -= 2 * Math.PI;
+              while (diff < -Math.PI) diff += 2 * Math.PI;
+            }
+
+            if (Math.abs(diff) > 0.005) {
               const turnT = Math.min(1, Math.max(0, progress / 0.65));
-              const ease = turnT * turnT * (3 - 2 * turnT);
-              groupRef.current.rotation.y = startYaw + diff * ease;
+              const easeRot = turnT * turnT * (3 - 2 * turnT);
+              groupRef.current.rotation.y = startYaw + diff * easeRot;
             } else {
               groupRef.current.rotation.y = targetYaw;
             }
           } else {
-            groupRef.current.rotation.y = rotation[1];
+            // В режиме MoCap / мастер-прогона вращением тела полностью и точно управляют треки анимации (Hips.quaternion)
+            groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
+            groupRef.current.rotation.y = rotation[1] || 0;
           }
+        } else if (groupRef.current && !kataMode) {
+          groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
+          groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
         }
       }
   });
@@ -957,7 +984,6 @@ export default function KaratekaLowpolyModel({
     <group
       ref={groupRef}
       position={[position[0], position[1] + modelYOffset, position[2]]}
-      rotation={rotation}
       scale={[modelScale, modelScale, modelScale]}
     >
       <primitive object={clonedModel} />

@@ -1092,40 +1092,43 @@ export default function KataListPage() {
                   </td>
                   <td>{item.Style || 'Шотокан'}</td>
                   <td>{item.Steps?.length || (item.Difficulty === 'beginner' ? 21 : 34)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn btn-subtle"
-                      style={{ padding: '0.4rem 0.6rem', marginRight: '0.4rem' }}
-                      onClick={() => toggleFavorite('kata', item.Kata_ID)}
-                      title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'В избранное'}
-                    >
-                      {isKataFavorite(item.Kata_ID) ? <Heart size={16} fill='#ef4444' color='#ef4444' /> : <Heart size={16} color='#f3f4f6' strokeWidth={2} />}
-                    </button>
-                    {item.Video_URL && (
+                  <td className="atlas-table__actions-cell">
+                    <div className="atlas-table-actions">
                       <button
                         type="button"
-                        className="btn btn-subtle"
-                        style={{ padding: '0.4rem 0.6rem', marginRight: '0.4rem', color: 'var(--gold)' }}
-                        onClick={() =>
-                          setActiveVideo({
-                            url: item.Video_URL,
-                            title: item.Title,
-                            subtitle: `${getKataKanji(item)} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
-                          })
-                        }
-                        title="Смотреть эталонное видео мастеров JKS"
+                        className={`btn btn-subtle btn-sm btn-fav ${isKataFavorite(item.Kata_ID) ? 'active' : ''}`}
+                        onClick={() => toggleFavorite('kata', item.Kata_ID)}
+                        title={isKataFavorite(item.Kata_ID) ? 'Удалить из избранного' : 'В избранное'}
                       >
-                        ▶ Видео
+                        {isKataFavorite(item.Kata_ID) ? (
+                          <Heart size={14} fill="#ef4444" color="#ef4444" />
+                        ) : (
+                          <Heart size={14} color="#f3f4f6" strokeWidth={2} />
+                        )}
                       </button>
-                    )}
-                    <Link
-                      to={`/kata/${item.Kata_ID}`}
-                      className="btn btn-subtle"
-                      style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }}
-                    >
-                      Открыть 3D →
-                    </Link>
+                      {item.Video_URL && (
+                        <button
+                          type="button"
+                          className="btn btn-subtle btn-sm btn-video"
+                          onClick={() =>
+                            setActiveVideo({
+                              url: item.Video_URL,
+                              title: item.Title,
+                              subtitle: `${getKataKanji(item)} · Мастера JKS (Japan Karate Shoto Federation) / Масао Кагава`,
+                            })
+                          }
+                          title="Смотреть эталонное видео мастеров JKS"
+                        >
+                          <span>▶ Видео</span>
+                        </button>
+                      )}
+                      <Link
+                        to={`/kata/${item.Kata_ID}`}
+                        className="btn btn-primary btn-sm btn-view-3d"
+                      >
+                        <span>Открыть 3D →</span>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

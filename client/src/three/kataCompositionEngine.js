@@ -23,27 +23,27 @@ import {
 export const TECHNIQUE_REGISTRY = {
   // --- БЛОКИ (УКЭ) ---
   gedan_barai: {
-    clipLeft: 'tech_gedan_barai_left',
-    clipRight: 'tech_gedan_barai_right',
-    fallback: 'tech_gedan_barai_left',
+    clipLeft: 'gedan_barai_left',
+    clipRight: 'gedan_barai_right',
+    fallback: 'gedan_barai_left',
     title: 'Гэдан-барай (Нижний смет)',
     type: 'block',
     defaultDuration: 2.20,
     heightOffset: -0.15,
   },
   age_uke: {
-    clipLeft: 'tech_age_uke_left',
-    clipRight: 'tech_age_uke_right',
-    fallback: 'tech_age_uke_left',
+    clipLeft: 'age_uke_left',
+    clipRight: 'age_uke_right',
+    fallback: 'age_uke_left',
     title: 'Агэ-укэ (Верхний восходящий блок)',
     type: 'block',
     defaultDuration: 2.20,
     heightOffset: -0.15,
   },
   soto_uke: {
-    clipLeft: 'tech_soto_uke_left',
-    clipRight: 'tech_soto_uke_right',
-    fallback: 'tech_soto_uke_left',
+    clipLeft: 'soto_uke_left',
+    clipRight: 'soto_uke_right',
+    fallback: 'soto_uke_left',
     title: 'Сото-укэ (Блок снаружи-внутрь)',
     type: 'block',
     defaultDuration: 2.20,
@@ -59,12 +59,12 @@ export const TECHNIQUE_REGISTRY = {
     heightOffset: -0.15,
   },
   shuto_uke: {
-    clipLeft: 'tech_shuto_uke_left',
-    clipRight: 'tech_shuto_uke_right',
-    fallback: 'tech_shuto_uke_left',
+    clipLeft: 'shuto_uke',
+    clipRight: 'shuto_uke',
+    fallback: 'shuto_uke',
     title: 'Сюто-укэ (Блок ребром ладони в Кокуцу-дати)',
     type: 'block',
-    defaultDuration: 2.30,
+    defaultDuration: 1.40,
     heightOffset: -0.16,
   },
   morote_uke: {
@@ -160,17 +160,17 @@ export const TECHNIQUE_REGISTRY = {
 
   // --- УДАРЫ РУКАМИ (ЦУКИ И УЧИ) ---
   oi_zuki: {
-    clipLeft: 'tech_oi_zuki_left',
-    clipRight: 'tech_oi_zuki_right',
-    fallback: 'tech_oi_zuki_right',
+    clipLeft: 'oi_zuki_left',
+    clipRight: 'oi_zuki_right',
+    fallback: 'oi_zuki_right',
     title: 'Ой-цуки (Прямой выпад кулаком)',
     type: 'punch',
     defaultDuration: 2.15,
     heightOffset: -0.15,
   },
   gyaku_zuki: {
-    clipLeft: 'tech_gyaku_zuki_left',
-    clipRight: 'tech_gyaku_zuki_right',
+    clipLeft: 'gyaku_zuki_left',
+    clipRight: 'gyaku_zuki_right',
     fallback: 'gyaku_zuki_right',
     title: 'Гяку-цуки (Реверсивный удар кулаком)',
     type: 'punch',
@@ -178,8 +178,8 @@ export const TECHNIQUE_REGISTRY = {
     heightOffset: -0.15,
   },
   jodan_zuki: {
-    clipLeft: 'tech_jodan_zuki_left',
-    clipRight: 'tech_jodan_zuki_right',
+    clipLeft: 'jodan_zuki_left',
+    clipRight: 'jodan_zuki_right',
     fallback: 'jodan_zuki_right',
     title: 'Дзёдан-цуки (Удар в голову)',
     type: 'punch',
@@ -640,7 +640,34 @@ export const TECHNIQUE_REGISTRY = {
     fallback: 'stance_ready',
     title: 'Сидзэнтай Йой (Готовность)',
     type: 'stance',
-    defaultDuration: 1.0,
+    defaultDuration: 1.30,
+    heightOffset: 0,
+  },
+  yoi: {
+    clipLeft: 'idle_shizentai',
+    clipRight: 'idle_shizentai',
+    fallback: 'stance_ready',
+    title: 'Стойка готовности Йой (Сидзэнтай)',
+    type: 'stance',
+    defaultDuration: 1.30,
+    heightOffset: 0,
+  },
+  yoi_start: {
+    clipLeft: 'idle_shizentai',
+    clipRight: 'idle_shizentai',
+    fallback: 'stance_ready',
+    title: 'Стойка Йой (Начало формы)',
+    type: 'stance',
+    defaultDuration: 1.30,
+    heightOffset: 0,
+  },
+  yoi_end: {
+    clipLeft: 'idle_shizentai',
+    clipRight: 'idle_shizentai',
+    fallback: 'stance_ready',
+    title: 'Возвращение в стойку Йой (Завершение формы)',
+    type: 'stance',
+    defaultDuration: 1.90,
     heightOffset: 0,
   },
 };
@@ -658,9 +685,11 @@ export function parseTransitionCode(sCode = '') {
     return { type: 'jump', pivotFoot: 'both', stepFoot: 'both' };
   }
   // Turn transitions through the back: S_turn_...
+  // Суффикс (_R / _L) в канонической нотации движений обозначает ОПОРНУЮ (pivot) ногу:
+  // _R = опора (пивот) на правую ногу, левая описывает дугу; _L = опора на левую ногу, правая описывает дугу.
   if (sCode.startsWith('S_turn')) {
-    const stepFoot = sCode.includes('_R') ? 'right' : 'left';
-    const pivotFoot = stepFoot === 'right' ? 'left' : 'right';
+    const pivotFoot = sCode.endsWith('_R') || sCode.includes('_R') ? 'right' : 'left';
+    const stepFoot = pivotFoot === 'right' ? 'left' : 'right';
     return { type: 'turn_back', pivotFoot, stepFoot };
   }
   // Kick transitions: S_kick_<type>_<foot>_<targetStance>
@@ -673,10 +702,10 @@ export function parseTransitionCode(sCode = '') {
     const foot = sCode.endsWith('_R') ? 'right' : 'left';
     return { type: 'hold', pivotFoot: foot, stepFoot: foot };
   }
-  // Step transitions: S_step_<fromStance>_<toStance>_<steppingFoot>
+  // Step transitions: S_step_<fromStance>_<toStance>_<supportFoot>
   if (sCode.startsWith('S_step')) {
-    const stepFoot = sCode.endsWith('_R') ? 'right' : 'left';
-    const pivotFoot = stepFoot === 'right' ? 'left' : 'right';
+    const pivotFoot = sCode.endsWith('_R') ? 'right' : 'left';
+    const stepFoot = pivotFoot === 'right' ? 'left' : 'right';
     return { type: 'step', pivotFoot, stepFoot };
   }
 
@@ -692,6 +721,28 @@ export function resolveComposedClip(step, availableClips = null) {
       clipName: 'idle_shizentai',
       title: 'Сидзэнтай (Готовность)',
       duration: 1.0,
+      type: 'stance',
+      heightOffset: 0,
+    };
+  }
+
+  // Явные шаги стойки Йой (в начале и конце формы)
+  if (step.isYoiStart || (step.isYoi && (step.moveNumber === 0 || step.stepNumber === 0))) {
+    return {
+      clipName: 'idle_shizentai',
+      fallback: 'stance_ready',
+      title: 'Стойка готовности Йой (Сидзэнтай)',
+      duration: 1.30,
+      type: 'stance',
+      heightOffset: 0,
+    };
+  }
+  if (step.isYoiEnd || (step.isYoi && (step.moveNumber > 1 || step.stepNumber > 1))) {
+    return {
+      clipName: 'idle_shizentai',
+      fallback: 'stance_ready',
+      title: 'Возвращение в стойку Йой (Сидзэнтай)',
+      duration: 1.90,
       type: 'stance',
       heightOffset: 0,
     };
@@ -746,21 +797,6 @@ export function resolveComposedClip(step, availableClips = null) {
     }
     const reg = TECHNIQUE_REGISTRY.jump_forward;
     return { clipName: reg.clipRight, title: reg.title, duration: reg.defaultDuration, type: 'jump', heightOffset: 0 };
-  }
-
-  // 1b. Проверяем развороты через спину в стойку кокуцу-дати (Сюто-укэ)
-  if (
-    (sCode.startsWith('S_turn') || sCode.includes('turn') || sCode.includes('kokutsu') || step.R?.includes('180') || step.R?.includes('90') || step.n === 18 || step.moveNumber === 18) &&
-    (stance === 'kokutsu' || tCode.includes('shuto'))
-  ) {
-    const clipName = isLeft ? 'turn_into_kokutsu_left' : 'turn_into_kokutsu_right';
-    return {
-      clipName,
-      title: `Сюто-укэ с разворотом через спину в Кокуцу-дати (${isLeft ? 'левой' : 'правой'})`,
-      duration: 2.30,
-      type: 'turn',
-      heightOffset: -0.16,
-    };
   }
 
   // 2. Проверяем удары ногами
@@ -898,31 +934,31 @@ export function evaluateStepCompatibility(stepA, stepB) {
   if (stanceA === stanceB && deltaYaw === 0) {
     return {
       compatible: true,
-      blendDuration: 0.18,
+      blendDuration: 0.28,
       transitionClip: null,
       note: `Непрерывный ход в стойке ${stanceB}`,
     };
   }
 
-  // Переход в кокуцу-дати с поворотом через спину (лицом к камере на 180° или поворот на 90°)
+  // Переход в кокуцу-дати с поворотом через спину
   if (stanceB === 'kokutsu' && (deltaYaw > 130 || (deltaYaw >= 80 && deltaYaw <= 100))) {
     const transClip = stepB.stepFoot === 'right' ? 'turn_into_kokutsu_right' : 'turn_into_kokutsu_left';
     return {
       compatible: true,
-      blendDuration: 0.34,
+      blendDuration: 0.38,
       transitionClip: transClip,
       note: deltaYaw > 130
-        ? 'Поворот через спину лицом к камере в стойку Кокуцу-дати (Сюто-укэ)'
-        : 'Поворот через спину на 90° в стойку Кокуцу-дати (Сюто-укэ)',
+        ? 'Поворот через спину в стойку Кокуцу-дати (Сюто-укэ)'
+        : 'Поворот на 90° в стойку Кокуцу-дати (Сюто-укэ)',
     };
   }
 
   // Поворот на 90°
   if (deltaYaw >= 80 && deltaYaw <= 100) {
-    const transClip = deltaYaw > 0 ? 'turn_and_block' : 'turn_and_step';
+    const transClip = deltaYaw > 0 ? 'turn_into_zenkutsu_left' : 'turn_into_zenkutsu_right';
     return {
       compatible: true,
-      blendDuration: 0.28,
+      blendDuration: 0.34,
       transitionClip: transClip,
       note: `Поворот на 90° с переходом ${stanceA} -> ${stanceB}`,
     };
@@ -932,8 +968,8 @@ export function evaluateStepCompatibility(stepA, stepB) {
   if (deltaYaw > 130) {
     return {
       compatible: true,
-      blendDuration: 0.35,
-      transitionClip: 'turn_with_step_left',
+      blendDuration: 0.38,
+      transitionClip: 'turn_and_enter_zenkutsu',
       note: `Разворот на ${deltaYaw}° с переходом ${stanceA} -> ${stanceB}`,
     };
   }
@@ -973,7 +1009,19 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
   let curZ = 0;
   let cumulativeTime = 0;
 
-  const canonicalPoints = CANONICAL_EMBUSEN[kataSlug] || null;
+  let canonicalPoints = CANONICAL_EMBUSEN[kataSlug] || null;
+  if (canonicalPoints) {
+    if (stepsList.length === canonicalPoints.length) {
+      // Прямое соответствие 1-к-1 (включая шаги Йой на старте и финише)
+    } else if (stepsList.length === canonicalPoints.length - 2 && canonicalPoints.length >= 3) {
+      // Массив содержит только техники (21 шаг), отсекаем граничные точки Йой
+      canonicalPoints = canonicalPoints.slice(1, -1);
+    } else if (stepsList.length === canonicalPoints.length + 2) {
+      // Массив расширен шагами Йой, добавляем точку [0,0,0] в начало и конец
+      canonicalPoints = [[0.0, 0.02, 0.0], ...canonicalPoints, [0.0, 0.02, 0.0]];
+    }
+  }
+  const hasAnyCustomSteps = stepsList.some((s) => s.isCustomDirection || s.isCustomStep);
 
   const composedSteps = stepsList.map((raw, idx) => {
     // 1. Извлечение ориентации и углов
@@ -988,7 +1036,7 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
 
     // 3. Расчет позиции шага на татами (эмбусэн)
     let stepPos = [0, 0, 0];
-    if (canonicalPoints && canonicalPoints[idx]) {
+    if (canonicalPoints && canonicalPoints[idx] && !hasAnyCustomSteps && !raw.isCustomDirection) {
       const cp = canonicalPoints[idx];
       stepPos = [cp[0], 0, cp[2]];
       curX = cp[0];
@@ -1003,7 +1051,7 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
         if (raw.stance === 'moto' || (raw.Technique && raw.Technique.toLowerCase().includes('мото'))) {
           stride = 0.45; // Стойка мото-дати: ровно половина длины дзэнкуцу-дати
         }
-        if (trans.type === 'hold' || (raw.Direction && raw.Direction.toLowerCase().includes('на месте'))) {
+        if (trans.type === 'hold' || (raw.Direction && raw.Direction.toLowerCase().includes('на месте')) || raw.stance === 'ready') {
           stepDx = 0;
           stepDz = 0;
         } else if (trans.type === 'jump') {
@@ -1030,22 +1078,41 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
     cumulativeTime += stepDuration;
     const endTime = +cumulativeTime.toFixed(2);
 
-    const mocapEv = (kataSlug === 'heian_shodan' && HEIAN_SHODAN_CANONICAL_EVENTS[idx]) ? HEIAN_SHODAN_CANONICAL_EVENTS[idx] : null;
+    let mocapEv = null;
+    if (kataSlug === 'heian_shodan') {
+      if (stepsList.length === HEIAN_SHODAN_CANONICAL_EVENTS.length) {
+        mocapEv = HEIAN_SHODAN_CANONICAL_EVENTS[idx] || null;
+      } else if (stepsList.length === HEIAN_SHODAN_CANONICAL_EVENTS.length - 2) {
+        mocapEv = HEIAN_SHODAN_CANONICAL_EVENTS[idx + 1] || null;
+      }
+    }
     const mocapStartTime = mocapEv ? mocapEv.startTime : startTime;
     const mocapEndTime = mocapEv ? mocapEv.endTime : endTime;
 
-    // 5. Маркер КИАЙ
+    // 5. Маркер КИАЙ (только для боевых ударов формы, не для Йой)
+    const isYoi = Boolean(raw.isYoi || raw.isYoiStart || raw.isYoiEnd || (raw.stance === 'ready' && (idx === 0 || idx === stepsList.length - 1)));
     const isKiai = Boolean(
       raw.kiai ||
-      (kataSlug === 'heian_shodan' && (idx + 1 === 9 || idx + 1 === 17)) ||
+      (!isYoi && (
+        raw.techniqueNumber === 9 || raw.techniqueNumber === 17 ||
+        raw.n === 9 || raw.n === 17 ||
+        (stepsList.length === 21 && (idx + 1 === 9 || idx + 1 === 17)) ||
+        (stepsList.length === 23 && (idx === 9 || idx === 17))
+      )) ||
       (raw.Title && raw.Title.includes('КИАЙ')) ||
       (raw.Technique && raw.Technique.includes('КИАЙ'))
     );
 
     // 6. Формирование стандартизированного объекта шага
     const composed = {
+      // Исходные поля для обратной совместимости
+      ...raw,
       stepId: `step_${idx + 1}`,
-      moveNumber: raw.n || idx + 1,
+      isYoi,
+      isYoiStart: Boolean(raw.isYoiStart || (isYoi && idx === 0)),
+      isYoiEnd: Boolean(raw.isYoiEnd || (isYoi && idx === stepsList.length - 1)),
+      techniqueNumber: raw.techniqueNumber !== undefined ? raw.techniqueNumber : (isYoi ? (idx === 0 ? 0 : stepsList.length - 1) : idx),
+      moveNumber: raw.n !== undefined ? raw.n : (raw.moveNumber !== undefined ? raw.moveNumber : (isYoi && idx === 0 ? 0 : idx + 1)),
       title: raw.Technique || resolvedClip.title,
       technique: resolvedClip.title,
       techniqueCode: raw.T || 'T_technique',
@@ -1085,8 +1152,6 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
       rootMotionMode: 'composed',
       blendDuration: 0.25,
       note: raw.note || '',
-      // Обратная совместимость с прежними полями
-      ...raw,
       Technique: raw.Technique || resolvedClip.title,
     };
 

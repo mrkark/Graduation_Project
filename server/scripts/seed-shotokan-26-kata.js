@@ -913,8 +913,25 @@ async function seed() {
 
   for (const kata of SHOTOKAN_26_KATA) {
     const titleKey = kata.title.trim().toLowerCase();
-    if (existingTitles.has(titleKey)) {
-      console.log(`⏩ Пропускаем (уже есть): ${kata.title}`);
+    const existing = existingList.find((k) => k.Title.trim().toLowerCase() === titleKey);
+
+    if (existing) {
+      const existingSteps = await callProcedure('sp_KataStep_ListByKata', { KataId: existing.Kata_ID });
+      if (existingSteps.length === 0) {
+        try {
+          await callProcedure('sp_Kata_Update', {
+            KataId: existing.Kata_ID,
+            UserId: 1,
+            UserRole: 'admin',
+            StepsJson: JSON.stringify(kata.steps || []),
+          });
+          console.log(`✔ [${existing.Kata_ID}] Наполнены шаги для ${kata.title} (${kata.steps?.length || 0} шагов)`);
+        } catch (updateErr) {
+          console.error(`✘ Ошибка обновления шагов для ${kata.title}:`, updateErr.message);
+        }
+      } else {
+        console.log(`⏩ Пропускаем (уже есть ${existingSteps.length} шагов): ${kata.title}`);
+      }
       continue;
     }
 

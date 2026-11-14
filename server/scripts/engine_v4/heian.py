@@ -36,10 +36,12 @@ def build_heian(verbose=False):
     h+=90*D;step_into(seq,'zenkutsu','L',h,'R',gedan('L'),strike='L',arms_prep={'L':a_gedan_prep('L')},turn_sign=1,dur=0.85,prep_t=0.30);mark(14,'L gedan-barai turn90')
     for n,sd in ((15,'R'),(16,'L'),(17,'R')):
         step_into(seq,'zenkutsu',sd,h,OPP[sd],oi(sd),strike=sd);mark(n,sd+' oi-zuki'+(' KIAI' if n==17 else ''))
-    # 18-21 shuto-uke in kokutsu (Move 18: turn 90° through the back into East)
+    # 18-21 shuto-uke in kokutsu (Move 18: поворот после 2-го киай на 270° влево через спину вокруг передней ноги, как Move 10, в стойку Кокуцу-дати)
     shuto=lambda sd:{sd:arm_path(a_shuto_prep(sd),a_shuto_final(sd),knots=[0.5,1.0]),OPP[sd]:a_shuto_support(OPP[sd])}
-    for n,sd,dh,dur,tsign in ((18,'L',-270,1.05,-1),(19,'R',45,0.85,1),(20,'R',-135,1.05,-1),(21,'L',45,0.85,1)):
-        h+=dh*D;step_into(seq,'kokutsu',sd,h,OPP[sd],shuto(sd),strike=sd,turn_sign=tsign,dur=dur,prep_t=0.32 if abs(dh)>100 else 0.25,fist=(0,0),chest=(0,0,0));mark(n,sd+' shuto-uke kokutsu')
+    shuto_prep=lambda sd:{sd:a_shuto_prep(sd),OPP[sd]:a_shuto_support(OPP[sd])}
+    h+=270*D;step_into(seq,'kokutsu','L',h,'R',shuto('L'),strike='L',arms_prep=shuto_prep('L'),turn_sign=1,dur=1.10,prep_t=0.35,fist=(0,0),chest=(0,0,0));mark(18,'L shuto-uke kokutsu')
+    for n,sd,dh,dur,tsign in ((19,'R',-45,0.85,-1),(20,'R',-135,1.05,-1),(21,'L',45,0.85,1)):
+        h+=dh*D;step_into(seq,'kokutsu',sd,h,OPP[sd],shuto(sd),strike=sd,arms_prep=shuto_prep(sd),turn_sign=tsign,dur=dur,prep_t=0.32 if abs(dh)>100 else 0.25,fist=(0,0),chest=(0,0,0));mark(n,sd+' shuto-uke kokutsu')
     # 22 return to yoi facing front
     hf=round(h/(2*np.pi))*2*np.pi
     S=stance_state('shizentai','L',{'L':a_yoi('L'),'R':a_yoi('R')},support=('R',ball_of(seq.cur,'R')),heading=hf)

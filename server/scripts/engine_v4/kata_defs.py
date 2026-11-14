@@ -14,7 +14,7 @@ def kata(name,conf,start='heisoku'):
 @kata('heian_shodan','high')
 def _():return [Z(90,'L','L:gedan_barai'),Z(0,'R','R:oi_zuki'),Z(-180,'R','R:gedan_barai'),M(0,'moto','R',['R:tettsui'],support='L'),Z(0,'L','L:oi_zuki'),Z(90,'L','L:gedan_barai'),
  Z(0,'R','R:age_uke'),Z(0,'L','L:age_uke'),Z(0,'R','R:age_uke',kiai=True),Z(270,'L','L:gedan_barai'),Z(0,'R','R:oi_zuki'),Z(-180,'R','R:gedan_barai'),Z(0,'L','L:oi_zuki'),Z(90,'L','L:gedan_barai'),
- Z(0,'R','R:oi_zuki'),Z(0,'L','L:oi_zuki'),Z(0,'R','R:oi_zuki',kiai=True),K(-270,'L','L:shuto_uke'),K(45,'R','R:shuto_uke'),K(-135,'R','R:shuto_uke'),K(45,'L','L:shuto_uke')]
+ Z(0,'R','R:oi_zuki'),Z(0,'L','L:oi_zuki'),Z(0,'R','R:oi_zuki',kiai=True),K(270,'L','L:shuto_uke'),K(-45,'R','R:shuto_uke'),K(-135,'R','R:shuto_uke'),K(45,'L','L:shuto_uke')]
 @kata('heian_nidan','med')
 def _():return [K(90,'L','L:soto_uke'),Z(0,'R','R:gedan_zuki'),Z(0,'L','L:zuki'),K(-180,'R','R:soto_uke'),Z(0,'L','L:gedan_zuki'),Z(0,'R','R:zuki'),
  B(0,'R:uraken'),KICK('yoko_keage','R'),K(90,'L','L:shuto_uke'),K(0,'R','R:shuto_uke'),K(0,'L','L:shuto_uke'),Z(0,'R','R:nukite','L:hikite',kiai=True),K(-90,'L','L:shuto_uke'),

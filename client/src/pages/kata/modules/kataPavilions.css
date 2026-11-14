@@ -7,19 +7,21 @@
 }
 
 .pavilion-tab {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   background: #171310;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.65rem 1.15rem;
+  padding: 0.62rem 1.15rem;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
   font-size: 0.86rem;
   font-weight: 600;
+  line-height: 1.25;
+  box-sizing: border-box;
 }
 
 .pavilion-tab:hover {
@@ -39,11 +41,25 @@
   font-family: var(--font-kanji);
   font-size: 0.95rem;
   color: var(--accent-red);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tab-title {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transform: translateY(1px);
 }
 
 .tab-count {
   font-size: 0.74rem;
   color: var(--text-muted);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  transform: translateY(1px);
 }
 
 .pavilion-tab.active .tab-count {
@@ -65,12 +81,23 @@
   background: #151210;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
-  padding: 0.4rem 0.85rem;
+  padding: 0.42rem 0.85rem 0.38rem;
   font-size: 0.78rem;
+  line-height: 1.25;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.atlas-belt-kyu,
+.atlas-belt-name,
+.atlas-belt-count {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transform: translateY(1px);
 }
 
 .atlas-belt-pill:hover {

@@ -81,6 +81,24 @@ const handleProxyError = (proxy) => {
   });
 };
 
+const handleBackendProxyError = (proxy) => {
+  proxy.on('error', (err, req, res) => {
+    if (res && res.writeHead && !res.headersSent) {
+      res.writeHead(503, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: {
+            message: 'Бэкенд инициализируется или временно недоступен',
+            code: 'BACKEND_UNAVAILABLE',
+            details: err.message,
+          },
+        })
+      );
+    }
+  });
+};
+
 export default defineConfig({
   plugins: [react(), mocapAutoStartPlugin()],
   server: {
@@ -103,6 +121,7 @@ export default defineConfig({
         target: backendTarget,
         changeOrigin: true,
         secure: false,
+        configure: handleBackendProxyError,
       },
       '/socket.io': {
         target: backendTarget,

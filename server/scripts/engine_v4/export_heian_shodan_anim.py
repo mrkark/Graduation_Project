@@ -152,14 +152,31 @@ def export():
         })
         prev_t = end_t
         
-    kata_json = {
-        'kata': 'heian_shodan',
-        'confidence': 'high',
-        'duration': duration,
-        'movesCount': 21,
-        'events': events,
-        'kiaiMoves': [9, 17]
-    }
+    # Update kata_data/heian_shodan.json event timestamps, preserving rich steps if present
+    kata_json = None
+    if os.path.exists(kata_data_path):
+        try:
+            with open(kata_data_path, 'r', encoding='utf-8') as f:
+                kata_json = json.load(f)
+        except Exception:
+            kata_json = None
+
+    if kata_json and 'steps' in kata_json:
+        kata_json['duration'] = duration
+        kata_json['totalDuration'] = duration
+        for i in range(min(21, len(kata_json['steps']))):
+            kata_json['steps'][i]['startTime'] = events[i]['startTime']
+            kata_json['steps'][i]['endTime'] = events[i]['endTime']
+        kata_json['events'] = events
+    else:
+        kata_json = {
+            'kata': 'heian_shodan',
+            'confidence': 'high',
+            'duration': duration,
+            'movesCount': 21,
+            'events': events,
+            'kiaiMoves': [9, 17]
+        }
     
     with open(kata_data_path, 'w', encoding='utf-8') as f:
         json.dump(kata_json, f, ensure_ascii=False, indent=2)

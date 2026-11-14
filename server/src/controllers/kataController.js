@@ -57,7 +57,7 @@ async function getById(req, res, next) {
     const cacheKey = `id_${req.params.id}_${req.userRole}`;
     const cached = kataCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
-      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return ok(res, cached.kata);
     }
 
@@ -65,7 +65,7 @@ async function getById(req, res, next) {
     if (!kata) return fail(res, 404, 'Ката не найдено', 'KATA_NOT_FOUND');
 
     kataCache.set(cacheKey, { kata, ts: Date.now() });
-    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
     return ok(res, kata);
   } catch (err) {

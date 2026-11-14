@@ -1,4 +1,4 @@
-import { Check, RefreshCw, Eye } from 'lucide-react';
+import { Check, RefreshCw, Eye, X, Edit3, Clock } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { listKata, approveKata, rejectKata } from '../../api/kata';
@@ -96,21 +96,24 @@ export default function AdminKataPage() {
               className={`admin-status-tab ${status === 'approved' ? 'active' : ''}`}
               onClick={() => setStatus('approved')}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Одобренные</span>
+              <Check size={13} />
+              <span>Одобренные</span>
             </button>
             <button
               type="button"
               className={`admin-status-tab ${status === 'pending' ? 'active' : ''}`}
               onClick={() => setStatus('pending')}
             >
-              ⏳ На модерации
+              <Clock size={13} />
+              <span>На модерации</span>
             </button>
             <button
               type="button"
               className={`admin-status-tab ${status === 'rejected' ? 'active' : ''}`}
               onClick={() => setStatus('rejected')}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} /> Отклонённые</span>
+              <X size={13} />
+              <span>Отклонённые</span>
             </button>
           </div>
 
@@ -142,14 +145,14 @@ export default function AdminKataPage() {
         </div>
       ) : (
         <div className="admin-table-wrap">
-          <table className="admin-table">
+          <table className="admin-table admin-kata-table">
             <thead>
               <tr>
-                <th>Название ката</th>
-                <th>Сложность</th>
-                <th>Автор</th>
-                <th>Статус</th>
-                <th style={{ textAlign: 'right' }}>Действия</th>
+                <th style={{ width: '25%' }}>Название ката</th>
+                <th style={{ width: '13%' }}>Сложность</th>
+                <th style={{ width: '16%' }}>Автор</th>
+                <th style={{ width: '14%' }}>Статус</th>
+                <th style={{ width: '32%', textAlign: 'right' }}>Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -175,31 +178,52 @@ export default function AdminKataPage() {
                     <td>
                       <StatusBadge status={k.Status} />
                     </td>
-                    <td>
-                      <div className="admin-row-actions">
-                        {k.Status !== 'approved' && (
-                          <button
-                            type="button"
-                            className="btn btn-success"
-                            onClick={() => onApprove(k.Kata_ID, k.Title)}
-                            disabled={isBusy}
+                    <td className="admin-actions-cell">
+                      <div className="admin-kata-actions-stack">
+                        <div className="admin-kata-actions-row">
+                          {k.Status !== 'approved' && (
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm"
+                              onClick={() => onApprove(k.Kata_ID, k.Title)}
+                              disabled={isBusy}
+                              title="Одобрить форму ката"
+                            >
+                              <Check size={12} />
+                              <span>Одобрить</span>
+                            </button>
+                          )}
+                          {k.Status !== 'rejected' && (
+                            <button
+                              type="button"
+                              className="btn btn-warning btn-sm"
+                              onClick={() => onReject(k.Kata_ID, k.Title)}
+                              disabled={isBusy}
+                              title="Отклонить форму ката"
+                            >
+                              <X size={12} />
+                              <span>Отклонить</span>
+                            </button>
+                          )}
+                          <Link
+                            to={`/kata/${k.Kata_ID}`}
+                            className="btn btn-gold btn-sm"
+                            title="Открыть 3D-разбор формы"
                           >
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={13} /> Одобрить</span>
-                          </button>
-                        )}
-                        {k.Status !== 'rejected' && (
-                          <button
-                            type="button"
-                            className="btn btn-warning"
-                            onClick={() => onReject(k.Kata_ID, k.Title)}
-                            disabled={isBusy}
+                            <Eye size={12} />
+                            <span>3D</span>
+                          </Link>
+                        </div>
+                        <div className="admin-kata-actions-row admin-kata-actions-row--bottom">
+                          <Link
+                            to={`/kata/${k.Kata_ID}/edit`}
+                            className="btn btn-subtle btn-sm btn-edit-kata"
+                            title="Редактировать параметры ката"
                           >
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><X size={13} /> Отклонить</span>
-                          </button>
-                        )}
-                        <Link to={`/kata/${k.Kata_ID}`} className="btn btn-subtle">
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Eye size={13} /> 3D</span>
-                        </Link>
+                            <Edit3 size={12} />
+                            <span>Редактировать</span>
+                          </Link>
+                        </div>
                       </div>
                     </td>
                   </tr>

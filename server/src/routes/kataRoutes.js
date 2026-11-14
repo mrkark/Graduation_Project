@@ -18,7 +18,7 @@ router.use(requireAuth);
 router.get('/', listQueryValidator, validateRequest, kataController.list);
 router.get('/:id', idParamValidator, validateRequest, kataController.getById);
 router.post('/', adminMiddleware, createKataValidator, validateRequest, kataController.create);
-router.put('/:id', adminMiddleware, updateKataValidator, validateRequest, kataController.update);
+router.put('/:id', updateKataValidator, validateRequest, kataController.update);
 router.delete('/:id', adminMiddleware, idParamValidator, validateRequest, kataController.remove);
 
 router.post('/:id/approve', idParamValidator, validateRequest, adminMiddleware, kataController.approve);

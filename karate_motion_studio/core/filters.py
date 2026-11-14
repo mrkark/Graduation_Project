@@ -255,7 +255,7 @@ class BoneLengthStabilizer:
         Torso -> Shoulders -> Elbows -> Wrists
         Hips -> Knees -> Ankles -> Feet
         """
-        if not joints:
+        if joints is None or len(joints) == 0:
             return joints
 
         conf = confidences or {}
@@ -318,10 +318,46 @@ class BoneLengthStabilizer:
                     v_dir = v / cur_len
 
                 d_xy = math.hypot(v[0], v[1])
-                if d_xy < target_len * 0.96 and abs(v[2]) < target_len * 0.90:
-                    sign_z = 1.0 if v[2] >= -0.01 else -1.0
+                # Only apply Pythagorean depth reconstruction if limb is severely foreshortened in 2D
+                # AND 3D vector length is significantly compressed by monocular depth flattening.
+                # When d_xy is already substantial (>= 75% of target_len), preserving the true 3D unit vector
+                # ensures straight kicks and standing legs stay perfectly straight with zero fake flexion.
+                if d_xy < target_len * 0.75 and cur_len < target_len * 0.88:
+                    is_arm = ('shoulder' in p and 'elbow' in c) or ('elbow' in p and 'wrist' in c)
+                    is_thigh = ('hip' in p and 'knee' in c)
+                    is_shin = ('knee' in p and 'ankle' in c)
+
+                    if is_arm:
+                        # In frontal/single-camera karate actions (punches, blocks, kamae),
+                        # foreshortened arms in front of the body extend FORWARD (+Z) toward the camera.
+                        # Only allow negative Z if the arm is clearly elevated and reaching behind the head!
+                        is_behind_head = (p_pt[1] > 1.20 and v[1] > 0.05 and v[2] < -0.12)
+                        sign_z = -1.0 if is_behind_head else 1.0
+                    elif is_thigh:
+                        # Thigh flexes forward in kicks/stances, but can extend backward in Ushiro-geri or back balances
+                        sign_z = -1.0 if v[2] < -0.08 else 1.0
+                    elif is_shin:
+                        # Determine shin extension vs posterior flexion relative to thigh orientation:
+                        # If thigh is raised or flexed forward (kicks, chambered knee):
+                        # Foreshortened shin extends FORWARD (+Z) along the kick trajectory towards the camera!
+                        hip_key = 'left_hip' if 'left' in p else 'right_hip'
+                        v_thigh_dir = np.array(res[p]) - np.array(res[hip_key]) if hip_key in res else np.array([0.0, -1.0, 0.0])
+                        thigh_is_forward = (v_thigh_dir[2] > 0.05 or v_thigh_dir[1] > -0.32)
+
+                        if thigh_is_forward:
+                            # Forward kick, chamber, or leg extension: shin extends FORWARD (+Z) along thigh
+                            sign_z = 1.0 if (v[2] >= -0.06 or v[1] > -0.15) else -1.0
+                        else:
+                            # Standing upright: knee flexes strictly posterior (heel to glutes: -Z)
+                            sign_z = -1.0 if v[2] < 0.04 else 1.0
+                    else:
+                        sign_z = 1.0 if v[2] >= -0.01 else -1.0
+
                     rest_z = math.sqrt(max(0.0, target_len**2 - d_xy**2))
                     corrected_z = sign_z * rest_z
+                    if is_thigh and sign_z > 0:
+                        corrected_z = max(-0.08, corrected_z)
+
                     new_pt = np.array([p_pt[0] + v[0], p_pt[1] + v[1], p_pt[2] + corrected_z])
                 else:
                     new_pt = p_pt + v_dir * target_len

@@ -8,7 +8,8 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
-import { Heart, MessageSquare } from 'lucide-react';
+import { Heart, MessageSquare, Swords, Shield, Ruler, CheckCircle2 } from 'lucide-react';
+import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
 import './BunkaiDetailPage.css';
 
 // Динамическая отложенная загрузка тяжелого 3D плеера (оптимизация загрузки страниц)
@@ -60,6 +61,11 @@ export default function BunkaiDetailPage() {
   const isOwner = bunkai.Author_ID === user?.User_ID;
   const isStaff = role === 'admin' || role === 'moderator';
   const canEdit = isOwner || isStaff;
+
+  // Канонический 18-шаговый сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
+  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 18 && bunkaiSteps[0]?.toriTrajectory)
+    ? bunkaiSteps
+    : HEIAN_SHODAN_BUNKAI_18_STEPS;
 
   async function onDelete() {
     if (!confirm('Удалить этот бункай?')) return;
@@ -180,10 +186,8 @@ export default function BunkaiDetailPage() {
           }
         >
           <BunkaiMultiAvatarPlayer
-            steps={bunkaiSteps}
-            defaultParticipantMode={
-              bunkaiSteps?.some((s) => s.Participants?.some((p) => p.Role === 'uke2')) ? '3-person' : '2-person'
-            }
+            steps={effectiveSteps}
+            defaultParticipantMode="2-person"
             height={540}
           />
         </Suspense>
@@ -205,6 +209,86 @@ export default function BunkaiDetailPage() {
               <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.75 }}>{bunkai.Application}</p>
             </div>
           )}
+
+          {/* ПОШАГОВОЕ ОПИСАНИЕ БУНКАЙ (18 ШАГОВ) */}
+          <div className="bunkai-notes__block" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
+              <Swords size={20} color="var(--gold)" />
+              <h3 style={{ margin: 0 }}>Каноническое пошаговое описание Бункай Хэйан Шодан (18 шагов)</h3>
+            </div>
+            <p style={{ color: 'var(--text-muted, #a8a29e)', fontSize: '0.88rem', marginBottom: '1rem' }}>
+              1 — Тори (атакующий); 2 — Укэ (защищающийся). Все действия синхронизированы в 3D с реальной боевой дистанцией, предотвращением геометрического проникновения и непрерывными переходами стоек.
+            </p>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid rgba(197, 155, 39, 0.4)', color: 'var(--gold)' }}>
+                    <th style={{ padding: '8px 10px', width: '60px' }}>Шаг</th>
+                    <th style={{ padding: '8px 10px', width: '32%' }}>1 (Тори — атакующий)</th>
+                    <th style={{ padding: '8px 10px', width: '38%' }}>2 (Укэ — защищающийся)</th>
+                    <th style={{ padding: '8px 10px' }}>Примечания и боевой контакт</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {HEIAN_SHODAN_BUNKAI_18_STEPS.map((step) => (
+                    <tr
+                      key={step.stepNumber}
+                      style={{
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                        background: step.stepNumber % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
+                      }}
+                    >
+                      <td style={{ padding: '10px 10px', fontWeight: 700, color: 'var(--gold)' }}>
+                        {step.stepNumber}
+                      </td>
+                      <td style={{ padding: '10px 10px', color: '#f8fafc' }}>
+                        <div>{step.participants[0]?.clipName ? `${step.description.split('.')[0]}` : step.title}</div>
+                      </td>
+                      <td style={{ padding: '10px 10px', color: '#93c5fd' }}>
+                        <div>{step.description.split('.')[1] || step.description}</div>
+                      </td>
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
+                            Дистанция: <strong style={{ color: '#fff' }}>{step.optimalDistance.toFixed(2)}м</strong>
+                          </span>
+                          {step.notes && (
+                            <span
+                              style={{
+                                fontSize: '0.76rem',
+                                color: '#fbbf24',
+                                background: 'rgba(245, 158, 11, 0.15)',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                              }}
+                            >
+                              🥋 {step.notes}
+                            </span>
+                          )}
+                          {step.scenarioAngles && (
+                            <span
+                              style={{
+                                fontSize: '0.74rem',
+                                color: '#90cdf4',
+                                background: 'rgba(99, 179, 237, 0.15)',
+                                padding: '2px 6px',
+                                borderRadius: 4,
+                                border: '1px solid rgba(99, 179, 237, 0.3)',
+                              }}
+                            >
+                              📐 {step.scenarioAngles.label}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -51,84 +51,97 @@ export function resolveKataSlug(title = '') {
 }
 
 // Канонические координаты эмбусэна 5 Ката Хэйан (извлеченные из Root Motion анимаций)
+// Каждое ката начинается и заканчивается в исходной стойке готовности Йой на позиции [0, 0, 0]
 export const CANONICAL_EMBUSEN = {
   heian_shodan: [
+    [0.0, 0.02, 0.0],    // Шаг 0: стойка готовности Йой (Сидзэнтай)
     [0.23, 0.02, -0.06], // Шаг 1: поворот влево 90°, гэдан-барай
     [1.13, 0.02, -0.06], // Шаг 2: ой-цуки
     [0.33, 0.02, -0.34], // Шаг 3: разворот вправо 180°, гэдан-барай
     [-0.12, 0.02, -0.34], // Шаг 4: тэтцуи-учи в Мото-дати (ровно половина длины дзэнкуцу-дати, 0.45м)
     [-1.02, 0.02, -0.34], // Шаг 5: ой-цуки в Дзэнкуцу-дати (полный шаг вперед 0.90м)
-    [-0.12, 0.02, -0.08], // Шаг 6: поворот влево 90° на центральную ось, гэдан-барай
+    [0.42, 0.02, -0.08], // Шаг 6: поворот влево 90° на центральную ось, гэдан-барай
     [0.42, 0.02, 0.82],  // Шаг 7: агэ-укэ (1-й)
     [0.42, 0.02, 1.72],  // Шаг 8: агэ-укэ (2-й)
-    [0.42, 0.02, 2.62],  // Шаг 9: агэ-укэ (3-й, КИАЙ)
+    [0.40, 0.02, 2.64],  // Шаг 9: агэ-укэ (3-й, КИАЙ)
     [-0.12, 0.02, 3.26], // Шаг 10: разворот через спину влево 270°, гэдан-барай
-    [-1.02, 0.02, 3.26], // Шаг 11: ой-цуки
+    [-1.01, 0.02, 3.26], // Шаг 11: ой-цуки
     [-0.22, 0.02, 3.54], // Шаг 12: разворот вправо 180°, гэдан-барай
     [0.68, 0.02, 3.54],  // Шаг 13: ой-цуки
     [0.14, 0.02, 3.28],  // Шаг 14: поворот влево 90° по центральной оси назад
     [0.14, 0.02, 2.38],  // Шаг 15: ой-цуки
     [0.14, 0.02, 1.48],  // Шаг 16: ой-цуки
     [0.14, 0.02, 0.58],  // Шаг 17: ой-цуки (КИАЙ)
-    [0.14, 0.02, 0.25],  // Шаг 18: разворот через спину лицом к камере (0°), сюто-укэ
-    [0.55, 0.02, 0.65],  // Шаг 19: шаг под 45°, сюто-укэ
-    [-0.25, 0.02, 0.65], // Шаг 20: разворот через спину на сюто-укэ
-    [0.14, 0.02, 0.25],  // Шаг 21: шаг под 45°, сюто-укэ
+    [0.54, 0.02, 0.16],  // Шаг 18: разворот на 90° влево в стойку Кокуцу-дати (сюто-укэ, фланг влево Запад)
+    [0.98, 0.02, 0.60],  // Шаг 19: шаг под 45° в Кокуцу-дати (сюто-укэ, диагональ влево Северо-Запад)
+    [-0.54, 0.02, 0.16], // Шаг 20: разворот через спину на 135° (сюто-укэ, фланг вправо Восток)
+    [-0.98, 0.02, 0.60], // Шаг 21: шаг под 45° в Кокуцу-дати (сюто-укэ, диагональ вправо Северо-Восток)
+    [0.0, 0.02, 0.0],    // Шаг 22: возвращение в стойку Йой (Сидзэнтай)
   ],
   heian_nidan: [
+    [0.0, 0.02, 0.0],
     [0.11, 0.02, -0.03], [0.14, 0.02, -0.04], [0.14, 0.02, -0.04], [0.41, 0.02, -0.2], [0.5, 0.02, -0.25],
     [0.5, 0.02, -0.25], [0.61, 0.02, -0.11], [0.6, 0.02, -0.56], [0.57, 0.02, -0.11], [0.59, 0.02, 0.64],
     [0.55, 0.02, 1.63], [0.29, 0.02, 2.23], [-0.26, 0.02, 2.27], [-0.25, 0.02, 2.27], [-0.32, 0.02, 1.81],
     [-0.27, 0.02, 1.37], [-0.3, 0.02, 0.85], [-0.27, 0.02, 0.49], [-0.26, 0.02, 0.43], [-0.23, 0.02, -0.05],
     [-0.26, 0.02, -0.42], [-0.26, 0.02, -1.24], [-0.49, 0.02, -1.69], [-1.1, 0.02, -1.94], [-1.17, 0.02, -1.36],
     [-1.16, 0.02, -0.41],
+    [0.0, 0.02, 0.0],
   ],
   heian_sandan: [
+    [0.0, 0.02, 0.0],
     [0.11, 0.02, -0.03], [0.53, 0.02, -0.07], [0.61, 0.02, -0.08], [0.52, 0.02, -0.21], [0.09, 0.02, -0.28],
     [0.03, 0.02, -0.29], [0.06, 0.02, -0.18], [0.02, 0.02, 0.67], [-0.36, 0.02, 1.26], [-0.64, 0.02, 0.97],
     [-0.51, 0.02, 0.44], [-0.59, 0.02, 0.09], [-0.61, 0.02, 0.06], [-0.47, 0.02, 0.6], [-0.44, 0.02, 0.74],
     [-0.57, 0.02, 0.2], [-0.61, 0.02, 0.06], [-0.61, 0.02, 0.06], [-0.2, 0.02, 0.23], [-0.38, 0.02, 0.64],
     [-0.44, 0.02, 0.74],
+    [0.0, 0.02, 0.0],
   ],
   heian_yondan: [
+    [0.0, 0.02, 0.0],
     [0.11, 0.02, -0.03], [0.41, 0.02, -0.2], [0.14, 0.02, 0.01], [0.1, 0.02, 0.61], [-0.01, 0.02, 1.37],
     [0.35, 0.02, 1.19], [0.93, 0.02, 1.09], [0.57, 0.02, 0.91], [0.2, 0.02, 1.1], [0.19, 0.02, 1.61],
     [0.16, 0.02, 1.99], [0.19, 0.02, 2.34], [0.73, 0.02, 2.43], [1.09, 0.02, 2.46], [1.15, 0.02, 2.47],
     [1.45, 0.02, 2.43], [1.55, 0.02, 2.64], [1.52, 0.02, 2.27], [1.51, 0.02, 2.21], [1.37, 0.02, 1.64],
     [0.91, 0.02, 1.1], [0.39, 0.02, 0.56], [-0.1, 0.02, 0.08], [-0.3, 0.02, -0.33], [-0.38, 0.02, -0.47],
+    [0.0, 0.02, 0.0],
   ],
   heian_godan: [
+    [0.0, 0.02, 0.0],
     [0.11, 0.02, -0.03], [0.14, 0.02, -0.04], [-0.1, 0.02, 0.02], [-0.22, 0.02, -0.11], [-0.25, 0.02, -0.15],
     [-0.01, 0.02, -0.09], [-0.14, 0.02, 0.11], [-0.13, 0.02, 0.99], [-0.13, 0.02, 1.11], [-0.13, 0.02, 1.9],
     [-0.13, 0.02, 2.78], [-0.51, 0.02, 2.66], [-0.84, 0.02, 2.53], [-0.63, 0.02, 2.59], [-0.28, 0.02, 2.7],
     [-0.01, 0.02, 2.86], [-0.05, 0.02, 3.45], [0.17, 0.02, 4.02], [0.31, 0.02, 4.24], [0.5, 0.02, 4.28],
     [0.41, 0.02, 4.46], [0.21, 0.02, 4.49],
+    [0.0, 0.02, 0.0],
   ],
 };
 
-// Канонические метаданные всех 21 шагов Heian Shodan (время 60 FPS, ориентация, форма)
+// Канонические метаданные всех шагов Heian Shodan (включая стойку Йой на старте и финише формы)
 export const HEIAN_SHODAN_CANONICAL_EVENTS = [
-  { moveNumber: 1, startTime: 1.20, endTime: 2.46, form: 'zenkutsu', facingDeg: 90.0, R: 'R_p90' },
-  { moveNumber: 2, startTime: 2.46, endTime: 3.56, form: 'zenkutsu', facingDeg: 90.0, R: null },
-  { moveNumber: 3, startTime: 3.56, endTime: 4.97, form: 'zenkutsu', facingDeg: -90.0, R: 'R_m180' },
-  { moveNumber: 4, startTime: 4.97, endTime: 6.21, form: 'moto', stance: 'moto', facingDeg: -90.0, R: null, note: 'Тэтцуи-учи в Мото-дати (половина длины дзэнкуцу-дати)' },
-  { moveNumber: 5, startTime: 6.21, endTime: 7.31, form: 'zenkutsu', facingDeg: -90.0, R: null },
-  { moveNumber: 6, startTime: 7.31, endTime: 8.62, form: 'zenkutsu', facingDeg: 0.0, R: 'R_p90' },
-  { moveNumber: 7, startTime: 8.62, endTime: 9.80, form: 'zenkutsu', facingDeg: 0.0, R: null },
-  { moveNumber: 8, startTime: 9.80, endTime: 10.98, form: 'zenkutsu', facingDeg: 0.0, R: null },
-  { moveNumber: 9, startTime: 10.98, endTime: 12.16, form: 'zenkutsu', facingDeg: 0.0, R: null, kiai: true },
-  { moveNumber: 10, startTime: 12.16, endTime: 13.72, form: 'zenkutsu', facingDeg: -90.0, R: 'R_p270' },
-  { moveNumber: 11, startTime: 13.72, endTime: 14.82, form: 'zenkutsu', facingDeg: -90.0, R: null },
-  { moveNumber: 12, startTime: 14.82, endTime: 16.23, form: 'zenkutsu', facingDeg: 90.0, R: 'R_m180' },
-  { moveNumber: 13, startTime: 16.23, endTime: 17.33, form: 'zenkutsu', facingDeg: 90.0, R: null },
-  { moveNumber: 14, startTime: 17.33, endTime: 18.64, form: 'zenkutsu', facingDeg: 180.0, R: 'R_p90' },
-  { moveNumber: 15, startTime: 18.64, endTime: 19.74, form: 'zenkutsu', facingDeg: 180.0, R: null },
-  { moveNumber: 16, startTime: 19.74, endTime: 20.84, form: 'zenkutsu', facingDeg: 180.0, R: null },
-  { moveNumber: 17, startTime: 20.84, endTime: 21.94, form: 'zenkutsu', facingDeg: 180.0, R: null, kiai: true },
-  { moveNumber: 18, startTime: 21.94, endTime: 23.55, form: 'kokutsu', facingDeg: 0.0, R: 'R_p180', note: 'Поворот через спину лицом к камере (Север 0°) в стойку Кокуцу-дати (Сюто-укэ)' },
-  { moveNumber: 19, startTime: 23.55, endTime: 24.86, form: 'kokutsu', facingDeg: -45.0, R: 'R_m45' },
-  { moveNumber: 20, startTime: 24.86, endTime: 26.42, form: 'kokutsu', facingDeg: 90.0, R: 'R_p135' },
-  { moveNumber: 21, startTime: 26.42, endTime: 27.73, form: 'kokutsu', facingDeg: 45.0, R: 'R_m45' },
+  { moveNumber: 0, isYoi: true, startTime: 0.00, endTime: 1.30, form: 'ready', facingDeg: 0.0, R: null, note: 'Стойка готовности Йой (Сидзэнтай) — начало формы' },
+  { moveNumber: 1, startTime: 1.30, endTime: 2.48, form: 'zenkutsu', facingDeg: 90.0, R: 'R_p90' },
+  { moveNumber: 2, startTime: 2.48, endTime: 3.65, form: 'zenkutsu', facingDeg: 90.0, R: null },
+  { moveNumber: 3, startTime: 3.65, endTime: 5.28, form: 'zenkutsu', facingDeg: -90.0, R: 'R_m180' },
+  { moveNumber: 4, startTime: 5.28, endTime: 6.23, form: 'moto', stance: 'moto', facingDeg: -90.0, R: null, note: 'Тэтцуи-учи в Мото-дати (подтягивание передней стопы)' },
+  { moveNumber: 5, startTime: 6.23, endTime: 7.40, form: 'zenkutsu', facingDeg: -90.0, R: null },
+  { moveNumber: 6, startTime: 7.40, endTime: 8.65, form: 'zenkutsu', facingDeg: 0.0, R: 'R_p90' },
+  { moveNumber: 7, startTime: 8.65, endTime: 9.83, form: 'zenkutsu', facingDeg: 0.0, R: null },
+  { moveNumber: 8, startTime: 9.83, endTime: 11.02, form: 'zenkutsu', facingDeg: 0.0, R: null },
+  { moveNumber: 9, startTime: 11.02, endTime: 12.53, form: 'zenkutsu', facingDeg: 0.0, R: null, kiai: true },
+  { moveNumber: 10, startTime: 12.53, endTime: 13.73, form: 'zenkutsu', facingDeg: -90.0, R: 'R_p270' },
+  { moveNumber: 11, startTime: 13.73, endTime: 14.92, form: 'zenkutsu', facingDeg: -90.0, R: null },
+  { moveNumber: 12, startTime: 14.92, endTime: 16.25, form: 'zenkutsu', facingDeg: 90.0, R: 'R_m180' },
+  { moveNumber: 13, startTime: 16.25, endTime: 17.42, form: 'zenkutsu', facingDeg: 90.0, R: null },
+  { moveNumber: 14, startTime: 17.42, endTime: 18.65, form: 'zenkutsu', facingDeg: 180.0, R: 'R_p90' },
+  { moveNumber: 15, startTime: 18.65, endTime: 19.75, form: 'zenkutsu', facingDeg: 180.0, R: null },
+  { moveNumber: 16, startTime: 19.75, endTime: 20.85, form: 'zenkutsu', facingDeg: 180.0, R: null },
+  { moveNumber: 17, startTime: 20.85, endTime: 21.94, form: 'zenkutsu', facingDeg: 180.0, R: null, kiai: true },
+  { moveNumber: 18, startTime: 21.94, endTime: 23.50, form: 'kokutsu', facingDeg: 90.0, R: 'R_p270', note: 'Разворот на 270° через спину влево в стойку Кокуцу-дати (Сюто-укэ, фланг влево Запад / +90°, в ту же сторону, что и шаг 1)' },
+  { moveNumber: 19, startTime: 23.50, endTime: 24.81, form: 'kokutsu', facingDeg: 45.0, R: 'R_m45', note: 'Шаг под 45° вперед-влево в Кокуцу-дати (Диагональ влево Северо-Запад / +45°)' },
+  { moveNumber: 20, startTime: 24.81, endTime: 26.32, form: 'kokutsu', facingDeg: -90.0, R: 'R_m135', note: 'Разворот через спину на 135° на противоположный фланг (Фланг вправо Восток / -90°)' },
+  { moveNumber: 21, startTime: 26.32, endTime: 27.63, form: 'kokutsu', facingDeg: -45.0, R: 'R_p45', note: 'Шаг под 45° вперед-вправо в Кокуцу-дати (Диагональ вправо Северо-Восток / -45°)' },
+  { moveNumber: 22, isYoi: true, startTime: 27.63, endTime: 29.53, form: 'ready', facingDeg: 0.0, R: null, note: 'Возвращение в стойку Йой (Сидзэнтай) — завершение формы' },
 ];
 
 /**
@@ -169,6 +182,22 @@ export function parseStepOrientation(step, prevFacingDeg = 0) {
   }
   if (typeof step.targetFacingDeg === 'number' && !isNaN(step.targetFacingDeg)) {
     const targetDeg = normalizeAngleDeg(step.targetFacingDeg);
+    return {
+      targetFacingDeg: targetDeg,
+      deltaYawDeg: normalizeAngleDeg(targetDeg - prevFacingDeg),
+      targetFacingRad: (targetDeg * Math.PI) / 180,
+    };
+  }
+  if (typeof step.Root_Rotation_Y === 'number' && !isNaN(step.Root_Rotation_Y)) {
+    const targetDeg = normalizeAngleDeg(step.Root_Rotation_Y);
+    return {
+      targetFacingDeg: targetDeg,
+      deltaYawDeg: normalizeAngleDeg(targetDeg - prevFacingDeg),
+      targetFacingRad: (targetDeg * Math.PI) / 180,
+    };
+  }
+  if (typeof step.rootRotationY === 'number' && !isNaN(step.rootRotationY)) {
+    const targetDeg = normalizeAngleDeg(step.rootRotationY);
     return {
       targetFacingDeg: targetDeg,
       deltaYawDeg: normalizeAngleDeg(targetDeg - prevFacingDeg),
@@ -305,7 +334,13 @@ export function parseStepOrientation(step, prevFacingDeg = 0) {
 export function computeTrajectory(steps = [], kataSlug = '') {
   // Если есть канонические координаты (например для Ката Хэйан)
   if (CANONICAL_EMBUSEN[kataSlug]) {
-    const pts = CANONICAL_EMBUSEN[kataSlug];
+    let pts = CANONICAL_EMBUSEN[kataSlug];
+    // Адаптация: если передан массив без шагов Йой (21 техника) при 23 канонических точках
+    if (steps.length > 0 && steps.length === pts.length - 2 && pts.length >= 3) {
+      pts = pts.slice(1, -1);
+    } else if (steps.length > 0 && steps.length === pts.length + 2) {
+      pts = [[0.0, 0.02, 0.0], ...pts, [0.0, 0.02, 0.0]];
+    }
     let prevYaw = 0;
     const positions = pts.map((p, idx) => {
       const step = steps[idx] || {};

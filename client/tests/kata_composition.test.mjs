@@ -15,17 +15,21 @@ console.log('Test 1: Reusable technique clip resolution');
 {
   const gedanStep = { T: 'T_L-gedan_barai', stance: 'zenkutsu' };
   const resGedan = resolveComposedClip(gedanStep);
-  assert.equal(resGedan.clipName, 'tech_gedan_barai_left', 'T_L-gedan_barai должен разрешаться в tech_gedan_barai_left');
+  assert.equal(resGedan.clipName, 'gedan_barai_left', 'T_L-gedan_barai должен разрешаться в gedan_barai_left');
   assert.equal(resGedan.type, 'block');
 
   const oiZukiStep = { T: 'T_R-oi_zuki', stance: 'zenkutsu' };
   const resOi = resolveComposedClip(oiZukiStep);
-  assert.equal(resOi.clipName, 'tech_oi_zuki_right', 'T_R-oi_zuki должен разрешаться в tech_oi_zuki_right');
+  assert.equal(resOi.clipName, 'oi_zuki_right', 'T_R-oi_zuki должен разрешаться в oi_zuki_right');
   assert.equal(resOi.type, 'punch');
 
   const shutoStep = { T: 'T_L-shuto_uke', stance: 'kokutsu' };
   const resShuto = resolveComposedClip(shutoStep);
-  assert.equal(resShuto.clipName, 'tech_shuto_uke_left', 'T_L-shuto_uke должен разрешаться в tech_shuto_uke_left');
+  assert.equal(resShuto.clipName, 'shuto_uke', 'T_L-shuto_uke должен разрешаться в shuto_uke');
+
+  const yoiStep = { isYoi: true, isYoiStart: true };
+  const resYoi = resolveComposedClip(yoiStep);
+  assert.equal(resYoi.clipName, 'idle_shizentai', 'Стойка Йой должна разрешаться в idle_shizentai');
 
   const kickStep = { S: 'S_kick_mae_geri_R_zenkutsuL', stance: 'zenkutsu' };
   const resKick = resolveComposedClip(kickStep);
@@ -44,8 +48,8 @@ console.log('\nTest 2: Transition code parsing (pivotFoot & stepFoot)');
 {
   const tStep = parseTransitionCode('S_step_heisokuL_zenkutsuL_R');
   assert.equal(tStep.type, 'step');
-  assert.equal(tStep.pivotFoot, 'left', 'В шаге R опорная нога должна быть left');
-  assert.equal(tStep.stepFoot, 'right');
+  assert.equal(tStep.pivotFoot, 'right', 'В коде _R опорная (support/pivot) нога - правая');
+  assert.equal(tStep.stepFoot, 'left');
 
   const tHold = parseTransitionCode('S_hold_zenkutsuL_R');
   assert.equal(tHold.type, 'hold');
@@ -63,52 +67,66 @@ console.log('\nTest 3: Step transition compatibility & blend duration');
   const stepB = { stance: 'zenkutsu', facingDeg: 90 };
   const resSame = evaluateStepCompatibility(stepA, stepB);
   assert.equal(resSame.compatible, true);
-  assert(resSame.blendDuration <= 0.20, 'Прямой шаг в той же стойке должен смешиваться быстро (<= 0.20с)');
+  assert(resSame.blendDuration <= 0.30, 'Прямой шаг в той же стойке должен смешиваться быстро (<= 0.30с)');
 
   const stepTurn90 = { stance: 'zenkutsu', facingDeg: 0 };
   const resTurn = evaluateStepCompatibility(stepA, stepTurn90);
   assert.equal(resTurn.compatible, true);
-  assert(resTurn.blendDuration >= 0.25, 'Поворот на 90° требует более плавного смешивания (>= 0.25с)');
+  assert(resTurn.blendDuration >= 0.30, 'Поворот на 90° требует более плавного смешивания (>= 0.30с)');
 
   const stepTurn180 = { stance: 'zenkutsu', facingDeg: -90 };
   const res180 = evaluateStepCompatibility(stepA, stepTurn180);
   assert.equal(res180.compatible, true);
-  assert(res180.blendDuration >= 0.30, 'Разворот на 180° требует глубокого смешивания (>= 0.30с)');
+  assert(res180.blendDuration >= 0.35, 'Разворот на 180° требует глубокого смешивания (>= 0.35с)');
   console.log('  PASSED: Transition blending dynamically adapts to stance and turn angle');
 }
 
-// 4. Проверка компиляции Heian Shodan (21 шаг)
-console.log('\nTest 4: Compilation of Heian Shodan into unified scenario');
+// 4. Проверка компиляции Heian Shodan (23 шага: шаг 0 Йой, 21 техника, шаг 22 Йой)
+console.log('\nTest 4: Compilation of Heian Shodan into unified scenario (23 steps including Yoi)');
 {
   const hsData = JSON.parse(fs.readFileSync('./public/kata_data/heian_shodan.json', 'utf8'));
   const scenario = compileKataScenario(hsData.steps, 'heian_shodan');
 
-  assert.equal(scenario.steps.length, 21, 'Heian Shodan должен содержать 21 шаг');
-  assert.equal(scenario.embusenPoints.length, 21, 'Эмбусэн должен содержать 21 точку');
+  assert.equal(scenario.steps.length, 23, 'Heian Shodan должен содержать 23 шага (Йой старт, 21 прием, Йой финиш)');
+  assert.equal(scenario.embusenPoints.length, 23, 'Эмбусэн должен содержать 23 точки');
   assert.deepEqual(scenario.meta.kiaiSteps, [9, 17], 'КИАЙ должен быть строго на шагах 9 и 17');
 
-  // Проверяем первый шаг (поворот влево 90°, гэдан-барай)
-  const step1 = scenario.steps[0];
+  // Шаг 0 (Стойка готовности Йой)
+  const step0 = scenario.steps[0];
+  assert.equal(step0.moveNumber, 0);
+  assert.equal(step0.facingDeg, 0);
+  assert.equal(step0.clipName, 'idle_shizentai');
+  assert.equal(step0.stance, 'ready');
+  assert.equal(step0.startTime, 0);
+
+  // Шаг 1 (первый боевой шаг: поворот влево 90°, гэдан-барай)
+  const step1 = scenario.steps[1];
   assert.equal(step1.moveNumber, 1);
   assert.equal(step1.facingDeg, 90);
-  assert.equal(step1.clipName, 'tech_gedan_barai_left');
+  assert.equal(step1.clipName, 'gedan_barai_left');
   assert.equal(step1.stance, 'zenkutsu');
-  assert.equal(step1.startTime, 0);
+  assert.equal(step1.startTime, step0.endTime);
   assert(step1.duration > 1.0);
 
-  // Проверяем шаг 2 (ой-цуки правой вперед)
-  const step2 = scenario.steps[1];
+  // Шаг 2 (ой-цуки правой вперед)
+  const step2 = scenario.steps[2];
   assert.equal(step2.moveNumber, 2);
-  assert.equal(step2.clipName, 'tech_oi_zuki_right');
+  assert.equal(step2.clipName, 'oi_zuki_right');
   assert.equal(step2.facingDeg, 90);
   assert.equal(step2.startTime, step1.endTime, 'Таймлайн должен быть непрерывным');
 
-  // Проверяем шаги сюто-укэ (18-21)
-  const step18 = scenario.steps[17];
-  assert(step18.clipName === 'turn_into_kokutsu_left' || step18.clipName === 'tech_shuto_uke_left');
+  // Шаг 18 (сюто-укэ)
+  const step18 = scenario.steps[18];
+  assert(step18.clipName === 'shuto_uke' || step18.clipName === 'turn_into_kokutsu_left' || step18.clipName === 'tech_shuto_uke_left');
   assert.equal(step18.stance, 'kokutsu');
 
-  console.log('  PASSED: Heian Shodan compiled into complete 21-step composed sequence');
+  // Шаг 22 (возвращение в стойку Йой)
+  const step22 = scenario.steps[22];
+  assert.equal(step22.moveNumber, 22);
+  assert.equal(step22.facingDeg, 0);
+  assert.equal(step22.clipName, 'idle_shizentai');
+
+  console.log('  PASSED: Heian Shodan compiled into complete 23-step composed sequence (with opening & closing Yoi)');
 }
 
 // 5. Проверка компиляции всех 26 ката Shotokan

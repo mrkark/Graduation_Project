@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { listUsers, blockUser, unblockUser, changeUserRole, deleteUser } from '../../api/admin';
 import { useAuthStore } from '../../store/authStore';
+import './admin.css';
 
 export default function AdminUsersPage() {
   const { role, user: currentUser } = useAuthStore();
@@ -219,11 +220,11 @@ export default function AdminUsersPage() {
           <table className="admin-table admin-users-table">
             <thead>
               <tr>
-                <th style={{ width: '24%' }}>Каратэка</th>
-                <th style={{ width: '15%' }}>Роль</th>
+                <th style={{ width: '22%' }}>Каратэка</th>
+                <th style={{ width: '13%' }}>Роль</th>
                 <th style={{ width: '13%' }}>Статус</th>
-                <th style={{ width: '13%' }}>Дата создания</th>
-                <th style={{ width: '35%', textAlign: 'right' }}>Действия управления</th>
+                <th style={{ width: '14%' }}>Дата создания</th>
+                <th style={{ width: '38%', textAlign: 'right' }}>Действия управления</th>
               </tr>
             </thead>
             <tbody>
@@ -279,79 +280,93 @@ export default function AdminUsersPage() {
                       {new Date(u.Created_At).toLocaleDateString('ru-RU')}
                     </td>
                     <td className="admin-actions-cell">
-                      <div className="admin-row-actions">
+                      <div className="admin-users-actions-grid">
                         {/* 1. Блокировка / Разблокировка учетной записи (Прецедент UML) */}
-                        <button
-                          type="button"
-                          className={`btn ${u.Is_Blocked ? 'btn-success' : 'btn-warning'} btn-sm`}
-                          onClick={() => onToggleBlock(u)}
-                          disabled={isBusy || isSelf}
-                          title={u.Is_Blocked ? 'Разблокировать доступ к аккаунту' : 'Заблокировать доступ к аккаунту'}
-                        >
-                          {u.Is_Blocked ? (
-                            <>
-                              <Unlock size={12} />
-                              <span>Разблок</span>
-                            </>
-                          ) : (
-                            <>
-                              <Lock size={12} />
-                              <span>Блок</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="admin-action-slot">
+                          <button
+                            type="button"
+                            className={`btn ${u.Is_Blocked ? 'btn-success' : 'btn-warning'} btn-sm`}
+                            onClick={() => onToggleBlock(u)}
+                            disabled={isBusy || isSelf}
+                            title={u.Is_Blocked ? 'Разблокировать доступ к аккаунту' : 'Заблокировать доступ к аккаунту'}
+                          >
+                            {u.Is_Blocked ? (
+                              <>
+                                <Unlock size={12} />
+                                <span>Разблок</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock size={12} />
+                                <span>Блок</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
 
                         {/* 2. Добавление / Удаление модератора (Прецедент UML) */}
-                        {isTargetModerator ? (
-                          <button
-                            type="button"
-                            className="btn btn-subtle btn-sm"
-                            onClick={() => onRevokeModerator(u)}
-                            disabled={isBusy}
-                            title="Снять статус модератора (перевести в обычные пользователи)"
-                          >
-                            <ShieldAlert size={12} />
-                            <span>Снять</span>
-                          </button>
-                        ) : !isTargetAdmin ? (
-                          <button
-                            type="button"
-                            className="btn btn-info btn-sm"
-                            onClick={() => onAssignModerator(u)}
-                            disabled={isBusy}
-                            title="Назначить модератором Додзё"
-                          >
-                            <ShieldCheck size={12} />
-                            <span>Модератор</span>
-                          </button>
-                        ) : null}
+                        <div className="admin-action-slot">
+                          {isTargetModerator ? (
+                            <button
+                              type="button"
+                              className="btn btn-subtle btn-sm"
+                              onClick={() => onRevokeModerator(u)}
+                              disabled={isBusy}
+                              title="Снять статус модератора (перевести в обычные пользователи)"
+                            >
+                              <ShieldAlert size={12} />
+                              <span>Снять</span>
+                            </button>
+                          ) : !isTargetAdmin ? (
+                            <button
+                              type="button"
+                              className="btn btn-info btn-sm"
+                              onClick={() => onAssignModerator(u)}
+                              disabled={isBusy}
+                              title="Назначить модератором Додзё"
+                            >
+                              <ShieldCheck size={12} />
+                              <span>Модератор</span>
+                            </button>
+                          ) : (
+                            <div className="admin-action-placeholder" />
+                          )}
+                        </div>
 
                         {/* 3. Управление ролью администратора */}
-                        {!isSelf && (
-                          <button
-                            type="button"
-                            className="btn btn-gold btn-sm"
-                            onClick={() => onToggleAdmin(u)}
-                            disabled={isBusy}
-                            title={isTargetAdmin ? 'Снять права администратора' : 'Сделать администратором системы'}
-                          >
-                            <Crown size={12} />
-                            <span>{isTargetAdmin ? 'Снять' : 'Админ'}</span>
-                          </button>
-                        )}
+                        <div className="admin-action-slot">
+                          {!isSelf ? (
+                            <button
+                              type="button"
+                              className="btn btn-gold btn-sm"
+                              onClick={() => onToggleAdmin(u)}
+                              disabled={isBusy}
+                              title={isTargetAdmin ? 'Снять права администратора' : 'Сделать администратором системы'}
+                            >
+                              <Crown size={12} />
+                              <span>{isTargetAdmin ? 'Снять' : 'Админ'}</span>
+                            </button>
+                          ) : (
+                            <div className="admin-action-placeholder" />
+                          )}
+                        </div>
 
                         {/* 4. Удаление учетной записи */}
-                        {!isSelf && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => onDelete(u)}
-                            disabled={isBusy}
-                            title="Удалить пользователя из системы"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )}
+                        <div className="admin-action-slot">
+                          {!isSelf ? (
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => onDelete(u)}
+                              disabled={isBusy}
+                              title="Удалить пользователя из системы"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          ) : (
+                            <div className="admin-action-placeholder" />
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

@@ -99,6 +99,7 @@
 
 .admin-status-tabs {
   display: inline-flex;
+  align-items: center;
   background: #0d0b09;
   border: 1px solid rgba(212, 162, 76, 0.25);
   border-radius: 6px;
@@ -107,16 +108,30 @@
 }
 
 .admin-status-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   background: transparent;
   border: none;
   color: var(--text-secondary, #a8a29e);
-  padding: 0.5rem 0.95rem;
+  padding: 0.45rem 0.95rem;
   font-size: 0.85rem;
+  line-height: 1.25;
   font-weight: 500;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.admin-status-tab span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transform: translateY(1px); /* Оптическая компенсация базовой линии шрифта: опускает текст точно по центру */
 }
 
 .admin-status-tab:hover {

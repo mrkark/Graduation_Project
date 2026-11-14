@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { solveTwoBoneIK } from './ikSolver';
 import { extractHandBiomechanics, estimateHeadOrientation } from '../utils/mocapPoseTracker';
 import { applyHandRetargetingToArmature } from '../utils/mocapHandRetargeter';
 import {
@@ -27,23 +28,144 @@ import {
  * 8. Поддержка ролей Тори (Белое ги) и Укэ (Индиго ги) для парного режима Бункай и Кумитэ.
  */
 
+function makeBasisQ(x, y, z) {
+  const m = new THREE.Matrix4().makeBasis(x, y, z);
+  return new THREE.Quaternion().setFromRotationMatrix(m);
+}
+
+function alignArm(bUpper, bLower, vArm, vForearm, torsoFwd, shoulderLateral, sideKey = 'R', alpha = 0.85) {
+  if (!bUpper || !vArm || vArm.lengthSq() < 1e-4) return;
+  const isLeft = (sideKey === 'L');
+  const uArm = vArm.clone().normalize();
+
+  let hNat = isLeft
+    ? new THREE.Vector3().crossVectors(torsoFwd, uArm)
+    : new THREE.Vector3().crossVectors(torsoFwd, uArm).negate();
+  if (hNat.lengthSq() < 1e-4) {
+    hNat.set(0, 1, 0);
+  } else {
+    hNat.normalize();
+  }
+
+  const hasForearm = (bLower && vForearm && vForearm.lengthSq() > 1e-4);
+  let zHinge = hNat.clone();
+  let flexAngle = 0.0;
+
+  if (hasForearm) {
+    const uForearm = vForearm.clone().normalize();
+    const dotCollinear = Math.max(-1.0, Math.min(1.0, uArm.dot(uForearm)));
+    flexAngle = Math.acos(dotCollinear);
+    flexAngle = Math.max(0.0, Math.min(Math.PI * 0.86, flexAngle));
+
+    if (flexAngle > 0.08) {
+      const nBend = isLeft
+        ? new THREE.Vector3().crossVectors(vForearm, vArm)
+        : new THREE.Vector3().crossVectors(vArm, vForearm);
+      if (nBend.lengthSq() > 1e-4) {
+        nBend.normalize();
+        if (nBend.dot(hNat) < 0) nBend.negate();
+        const blendW = Math.min(1.0, (flexAngle - 0.08) / 0.25);
+        zHinge.lerp(nBend, blendW).normalize();
+      }
+    }
+  }
+
+  let zUpper = zHinge.clone().sub(uArm.clone().multiplyScalar(zHinge.dot(uArm)));
+  if (zUpper.lengthSq() < 1e-4) {
+    zUpper.copy(hNat);
+  } else {
+    zUpper.normalize();
+  }
+
+  const xUpper = new THREE.Vector3().crossVectors(uArm, zUpper).normalize();
+  zUpper.crossVectors(xUpper, uArm).normalize();
+
+  const qUpperWorld = makeBasisQ(xUpper, uArm, zUpper);
+  const pQUpper = new THREE.Quaternion();
+  if (bUpper.parent) bUpper.parent.getWorldQuaternion(pQUpper);
+  const targetLocalUpper = pQUpper.clone().invert().multiply(qUpperWorld);
+  bUpper.quaternion.slerp(targetLocalUpper, alpha);
+  bUpper.updateMatrixWorld(true);
+
+  if (hasForearm && bLower) {
+    const bendAxis = isLeft ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
+    const qLowerLocal = new THREE.Quaternion().setFromAxisAngle(bendAxis, flexAngle);
+    bLower.quaternion.slerp(qLowerLocal, alpha);
+    bLower.updateMatrixWorld(true);
+  }
+}
+
+function alignLeg(bUpper, bLower, vThigh, vShin, torsoFwd, pelvisLateral, sideKey = 'R', alpha = 0.85) {
+  if (!bUpper || !vThigh || vThigh.lengthSq() < 1e-4) return;
+  const isLeft = (sideKey === 'L');
+  const uThigh = vThigh.clone().normalize();
+
+  let xLat = pelvisLateral ? pelvisLateral.clone() : new THREE.Vector3(1, 0, 0);
+  if (xLat.lengthSq() < 1e-4) xLat.set(1, 0, 0);
+  else xLat.normalize();
+
+  let xUpper = xLat.clone().sub(uThigh.clone().multiplyScalar(xLat.dot(uThigh)));
+  if (xUpper.lengthSq() < 1e-4) {
+    xUpper.copy(xLat);
+  } else {
+    xUpper.normalize();
+  }
+
+  const zUpper = new THREE.Vector3().crossVectors(xUpper, uThigh).normalize();
+  xUpper.crossVectors(uThigh, zUpper).normalize();
+
+  const qUpperWorld = makeBasisQ(xUpper, uThigh, zUpper);
+  const pQUpper = new THREE.Quaternion();
+  if (bUpper.parent) bUpper.parent.getWorldQuaternion(pQUpper);
+  const targetLocalUpper = pQUpper.clone().invert().multiply(qUpperWorld);
+  bUpper.quaternion.slerp(targetLocalUpper, alpha);
+  bUpper.updateMatrixWorld(true);
+
+  const hasShin = (bLower && vShin && vShin.lengthSq() > 1e-4);
+  if (hasShin && bLower) {
+    let uShin = vShin.clone().normalize();
+    let dotCollinear = Math.max(-1.0, Math.min(1.0, uThigh.dot(uShin)));
+
+    // 2D Projection Collinearity on the Camera Plane:
+    const lenThighXY = Math.hypot(vThigh.x, vThigh.y);
+    const lenShinXY = Math.hypot(vShin.x, vShin.y);
+    const dot2D = (lenThighXY > 1e-4 && lenShinXY > 1e-4)
+      ? (vThigh.x * vShin.x + vThigh.y * vShin.y) / (lenThighXY * lenShinXY)
+      : dotCollinear;
+
+    // KNEE EXTENSION & KICK LOCKOUT ASSIST:
+    // When a person extends their leg (clearly collinear in 3D: dotCollinear > 0.50 OR in 2D: dot2D > 0.75):
+    // Lock knee flexion directly to 0° (fully straight leg)!
+    let kneeFlex = Math.acos(Math.max(-1.0, Math.min(1.0, dotCollinear)));
+    const isExtended = (dotCollinear > 0.50 || dot2D > 0.75);
+    if (isExtended) {
+      const t3D = Math.max(0.0, Math.min(1.0, (dotCollinear - 0.50) / 0.35));
+      const t2D = Math.max(0.0, Math.min(1.0, (dot2D - 0.75) / 0.18));
+      const tExt = Math.max(t3D, t2D);
+      const easeExt = tExt * tExt * (3.0 - 2.0 * tExt);
+      kneeFlex *= (1.0 - easeExt);
+    }
+    kneeFlex = Math.max(0.0, Math.min(Math.PI * 0.86, kneeFlex));
+
+    const qLowerLocal = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), kneeFlex);
+    bLower.quaternion.slerp(qLowerLocal, alpha);
+    bLower.updateMatrixWorld(true);
+  }
+}
+
 function alignBone(bone, targetDir, alpha = 0.85) {
   if (!bone || !bone.restWorldDir || !targetDir || targetDir.lengthSq() < 1e-5) return;
   const vFrom = bone.restWorldDir;
   let vTo = targetDir.clone().normalize();
   const dot = vFrom.dot(vTo);
-
-  // Защита от сингулярности при перекрещивании конечностей
   if (dot < -0.92) {
     vTo.z = Math.max(vTo.z, 0.35);
     vTo.normalize();
   }
-
   const rotWorld = new THREE.Quaternion().setFromUnitVectors(vFrom, vTo);
   const targetWorldQ = rotWorld.clone().multiply(bone.restWorldQ);
   const parentWorldQ = new THREE.Quaternion();
   if (bone.parent) bone.parent.getWorldQuaternion(parentWorldQ);
-
   const targetLocalQ = parentWorldQ.clone().invert().multiply(targetWorldQ);
   bone.quaternion.slerp(targetLocalQ, alpha);
   bone.updateMatrixWorld(true);
@@ -53,18 +175,19 @@ function alignShoulder(bone, vArm, sideKey = 'R', alpha = 0.70) {
   if (!bone || !vArm || vArm.lengthSq() < 1e-4) return;
   const uArm = vArm.clone().normalize();
   const fwdReach = Math.max(0, uArm.z);
+  const backReach = Math.min(0, uArm.z); // Scapular Retraction for HIKITE!
   const elevate = Math.max(0, uArm.y);
   const depress = Math.min(0, uArm.y);
   let vClavicle = null;
 
   if (sideKey === 'R') {
     const crossReach = Math.max(0, uArm.x);
-    const yOffset = elevate > 0 ? elevate * 0.25 : depress * 0.35;
-    vClavicle = new THREE.Vector3(-1.0 + crossReach * 0.35, yOffset, fwdReach * 0.35 + crossReach * 0.25).normalize();
+    const yOffset = elevate > 0 ? elevate * 0.25 : depress * 0.20;
+    vClavicle = new THREE.Vector3(-1.0 + crossReach * 0.35, yOffset, fwdReach * 0.35 + backReach * 0.22).normalize();
   } else {
     const crossReach = Math.max(0, -uArm.x);
-    const yOffset = elevate > 0 ? elevate * 0.25 : depress * 0.35;
-    vClavicle = new THREE.Vector3(1.0 - crossReach * 0.35, yOffset, fwdReach * 0.35 + crossReach * 0.25).normalize();
+    const yOffset = elevate > 0 ? elevate * 0.25 : depress * 0.20;
+    vClavicle = new THREE.Vector3(1.0 - crossReach * 0.35, yOffset, fwdReach * 0.35 + backReach * 0.22).normalize();
   }
   alignBone(bone, vClavicle, alpha);
 }
@@ -74,14 +197,14 @@ const footOrientMemory = {
   L: { yaw: null, pitch: null },
 };
 
-function alignFoot(bone, vFoot, sideKey = 'R', alphaTarget = 0.75) {
-  if (!bone || !bone.restWorldQ || !vFoot || vFoot.lengthSq() < 1e-4) return;
+function alignFoot(bFoot, vFoot, bLowerLeg, pelvisLateral, sideKey = 'R', alphaTarget = 0.75) {
+  if (!bFoot || !vFoot || vFoot.lengthSq() < 1e-4) return;
   const mem = footOrientMemory[sideKey] || footOrientMemory.R;
 
   let curYaw = Math.atan2(vFoot.x, vFoot.z);
   const lenXZ = Math.hypot(vFoot.x, vFoot.z);
   let curPitch = Math.atan2(vFoot.y, Math.max(0.04, lenXZ));
-  curPitch = Math.max(-0.85, Math.min(0.40, curPitch));
+  curPitch = Math.max(-0.85, Math.min(0.25, curPitch));
 
   if (mem.yaw === null) {
     mem.yaw = curYaw;
@@ -97,17 +220,30 @@ function alignFoot(bone, vFoot, sideKey = 'R', alphaTarget = 0.75) {
     mem.pitch = mem.pitch * (1 - alpha) + curPitch * alpha;
   }
 
-  const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), mem.yaw);
-  const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -mem.pitch);
-  const qDeltaWorld = qYaw.multiply(qPitch);
-  const targetWorldQ = qDeltaWorld.multiply(bone.restWorldQ);
+  const cosP = Math.cos(mem.pitch);
+  const sinP = Math.sin(mem.pitch);
+  const sinY = Math.sin(mem.yaw);
+  const cosY = Math.cos(mem.yaw);
+
+  const yFoot = new THREE.Vector3(sinY * cosP, sinP, cosY * cosP).normalize();
+
+  let xLat = pelvisLateral ? pelvisLateral.clone() : new THREE.Vector3(1, 0, 0);
+  let xFoot = xLat.clone().sub(yFoot.clone().multiplyScalar(xLat.dot(yFoot)));
+  if (xFoot.lengthSq() < 1e-4) xFoot.set(1, 0, 0);
+  else xFoot.normalize();
+
+  const zFoot = new THREE.Vector3().crossVectors(xFoot, yFoot).normalize();
+  xFoot.crossVectors(yFoot, zFoot).normalize();
+
+  const mFoot = new THREE.Matrix4().makeBasis(xFoot, yFoot, zFoot);
+  const targetWorldQ = new THREE.Quaternion().setFromRotationMatrix(mFoot);
 
   const parentWorldQ = new THREE.Quaternion();
-  if (bone.parent) bone.parent.getWorldQuaternion(parentWorldQ);
+  if (bFoot.parent) bFoot.parent.getWorldQuaternion(parentWorldQ);
   const targetLocalQ = parentWorldQ.clone().invert().multiply(targetWorldQ);
 
-  bone.quaternion.slerp(targetLocalQ, alphaTarget);
-  bone.updateMatrixWorld(true);
+  bFoot.quaternion.slerp(targetLocalQ, alphaTarget);
+  bFoot.updateMatrixWorld(true);
 }
 
 const handOrientMemory = {
@@ -402,6 +538,9 @@ export default function MocapPuppetAvatar({
       const legL_Foot = mirrorMode ? boneMap.get('Foot.R') : boneMap.get('Foot.L');
 
       let torsoFwdZ = 0.0;
+      let torsoFwdNormal = new THREE.Vector3(0, 0, 1);
+      let pelvisLateral = new THREE.Vector3(1, 0, 0);
+      let shoulderLateral = new THREE.Vector3(1, 0, 0);
 
       // ======================================================================
       // 1. КОРНЕВАЯ ОРИЕНТАЦИЯ ТАЗА И ТОРСА (FORWARD KINEMATICS: HIPS & SPINE)
@@ -419,6 +558,7 @@ export default function MocapPuppetAvatar({
           if (mirrorMode) vHipsLat.x = -vHipsLat.x;
 
           if (vHipsLat.lengthSq() > 1e-4) {
+            pelvisLateral.copy(vHipsLat).normalize();
             const rawHipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
             masterRetargeterRef.current.azimuthTracker.updateContinuousYaw(rawHipYaw);
 
@@ -453,12 +593,14 @@ export default function MocapPuppetAvatar({
           if (mirrorMode) vLat.x = -vLat.x;
 
           if (vLat.lengthSq() > 1e-4) {
+            shoulderLateral.copy(vLat).normalize();
             vLat.normalize();
             const dotLat = vLat.dot(uy);
             const ux = vLat.clone().sub(uy.clone().multiplyScalar(dotLat)).normalize();
 
             if (ux.lengthSq() > 1e-4) {
               const uz = new THREE.Vector3().crossVectors(ux, uy).normalize();
+              torsoFwdNormal.copy(uz);
               ux.crossVectors(uy, uz).normalize();
 
               const basisMat = new THREE.Matrix4().makeBasis(ux, uy, uz);
@@ -501,86 +643,87 @@ export default function MocapPuppetAvatar({
       // 2. ВЕРХНИЕ КОНЕЧНОСТИ (ПЛЕЧИ, РУКИ, КИСТИ И 30 ФАЛАНГ ПАЛЬЦЕВ)
       // ======================================================================
       let vArmR = null;
+      let vForearmR = null;
       if (pRSh && pREl) {
         vArmR = pREl.clone().sub(pRSh);
         if (mirrorMode) vArmR.x = -vArmR.x;
         if (armR_Shoulder) alignShoulder(armR_Shoulder, vArmR, mirrorMode ? 'L' : 'R');
-        alignBone(armR_Upper, vArmR, 0.78);
+
+        if (pREl && pRWr) {
+          vForearmR = pRWr.clone().sub(pREl);
+          if (mirrorMode) vForearmR.x = -vForearmR.x;
+          const uArm = vArmR.clone().normalize();
+          const uFore = vForearmR.clone().normalize();
+          if (uArm.dot(uFore) > 0.92) {
+            vForearmR.lerp(uArm.clone().multiplyScalar(vForearmR.length()), 0.85);
+          }
+        }
+        alignArm(armR_Upper, armR_Lower, vArmR, vForearmR, torsoFwdNormal, shoulderLateral, mirrorMode ? 'L' : 'R', 0.85);
       }
 
       let vArmL = null;
+      let vForearmL = null;
       if (pLSh && pLEl) {
         vArmL = pLEl.clone().sub(pLSh);
         if (mirrorMode) vArmL.x = -vArmL.x;
         if (armL_Shoulder) alignShoulder(armL_Shoulder, vArmL, mirrorMode ? 'R' : 'L');
-        alignBone(armL_Upper, vArmL, 0.78);
+
+        if (pLEl && pLWr) {
+          vForearmL = pLWr.clone().sub(pLEl);
+          if (mirrorMode) vForearmL.x = -vForearmL.x;
+          const uArm = vArmL.clone().normalize();
+          const uFore = vForearmL.clone().normalize();
+          if (uArm.dot(uFore) > 0.92) {
+            vForearmL.lerp(uArm.clone().multiplyScalar(vForearmL.length()), 0.85);
+          }
+        }
+        alignArm(armL_Upper, armL_Lower, vArmL, vForearmL, torsoFwdNormal, shoulderLateral, mirrorMode ? 'R' : 'L', 0.85);
       }
 
       const fingersBio = activePose.fingers || extractHandBiomechanics(ptsRaw);
       const fR = fingersBio?.right;
       const fL = fingersBio?.left;
 
-      if (pREl && pRWr) {
-        let vForearm = pRWr.clone().sub(pREl);
-        if (mirrorMode) vForearm.x = -vForearm.x;
-        if (vArmR) {
-          const elbowChk = constrainElbowJoint(vArmR, vForearm, mirrorMode);
-          if (elbowChk.correctedForearm) vForearm.copy(elbowChk.correctedForearm);
-        }
-        alignBone(armR_Lower, vForearm, 0.78);
-
-        if (armR_Hand) {
-          const activeHandF = mirrorMode ? fL : fR;
-          if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
-            const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
-            const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
-            if (mirrorMode) {
-              targetFwd.x = -targetFwd.x;
-              targetNorm.x = -targetNorm.x;
-            }
-            alignHand(armR_Hand, targetFwd, targetNorm, mirrorMode ? 'L' : 'R', 0.75);
-          } else if (pRIdx || pRPinky) {
-            const pKnuckles = (pRIdx && pRPinky)
-              ? pRIdx.clone().add(pRPinky).multiplyScalar(0.5)
-              : (pRIdx || pRPinky);
-            const vHand = pKnuckles.clone().sub(pRWr);
-            if (mirrorMode) vHand.x = -vHand.x;
-            alignBone(armR_Hand, vHand, 0.75);
+      if (armR_Hand) {
+        const activeHandF = mirrorMode ? fL : fR;
+        if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
+          const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
+          const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
+          if (mirrorMode) {
+            targetFwd.x = -targetFwd.x;
+            targetNorm.x = -targetNorm.x;
           }
+          alignHand(armR_Hand, targetFwd, targetNorm, mirrorMode ? 'L' : 'R', 0.75);
+        } else if (pRIdx || pRPinky) {
+          const pKnuckles = (pRIdx && pRPinky)
+            ? pRIdx.clone().add(pRPinky).multiplyScalar(0.5)
+            : (pRIdx || pRPinky);
+          const vHand = pKnuckles.clone().sub(pRWr);
+          if (mirrorMode) vHand.x = -vHand.x;
+          alignBone(armR_Hand, vHand, 0.75);
         }
       }
 
-      if (pLEl && pLWr) {
-        let vForearm = pLWr.clone().sub(pLEl);
-        if (mirrorMode) vForearm.x = -vForearm.x;
-        if (vArmL) {
-          const elbowChk = constrainElbowJoint(vArmL, vForearm, !mirrorMode);
-          if (elbowChk.correctedForearm) vForearm.copy(elbowChk.correctedForearm);
-        }
-        alignBone(armL_Lower, vForearm, 0.78);
-
-        if (armL_Hand) {
-          const activeHandF = mirrorMode ? fR : fL;
-          if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
-            const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
-            const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
-            if (mirrorMode) {
-              targetFwd.x = -targetFwd.x;
-              targetNorm.x = -targetNorm.x;
-            }
-            alignHand(armL_Hand, targetFwd, targetNorm, mirrorMode ? 'R' : 'L', 0.75);
-          } else if (pLIdx || pLPinky) {
-            const pKnuckles = (pLIdx && pLPinky)
-              ? pLIdx.clone().add(pLPinky).multiplyScalar(0.5)
-              : (pLIdx || pLPinky);
-            const vHand = pKnuckles.clone().sub(pLWr);
-            if (mirrorMode) vHand.x = -vHand.x;
-            alignBone(armL_Hand, vHand, 0.75);
+      if (armL_Hand) {
+        const activeHandF = mirrorMode ? fR : fL;
+        if (activeHandF?.hand_direction && activeHandF?.palm_normal) {
+          const targetFwd = new THREE.Vector3(...activeHandF.hand_direction);
+          const targetNorm = new THREE.Vector3(...activeHandF.palm_normal);
+          if (mirrorMode) {
+            targetFwd.x = -targetFwd.x;
+            targetNorm.x = -targetNorm.x;
           }
+          alignHand(armL_Hand, targetFwd, targetNorm, mirrorMode ? 'R' : 'L', 0.75);
+        } else if (pLIdx || pLPinky) {
+          const pKnuckles = (pLIdx && pLPinky)
+            ? pLIdx.clone().add(pLPinky).multiplyScalar(0.5)
+            : (pLIdx || pLPinky);
+          const vHand = pKnuckles.clone().sub(pLWr);
+          if (mirrorMode) vHand.x = -vHand.x;
+          alignBone(armL_Hand, vHand, 0.75);
         }
       }
 
-      // Применение анатомических вращений фаланг (30 костей) с 1€ фильтрацией и ROM-клампингом
       if (fR) applyHandRetargetingToArmature(boneMap, fR, mirrorMode ? 'L' : 'R', 0.82);
       if (fL) applyHandRetargetingToArmature(boneMap, fL, mirrorMode ? 'R' : 'L', 0.82);
 
@@ -592,45 +735,42 @@ export default function MocapPuppetAvatar({
       if (pRHp && pRKn) {
         const vThigh = pRKn.clone().sub(pRHp);
         if (mirrorMode) vThigh.x = -vThigh.x;
-        alignBone(legR_Upper, vThigh, 0.85);
 
+        let vShin = null;
         if (pRAn) {
           const pRAnGrounded = masterRetargeterRef.current?.footContactManager.processFoot('R', pRAn, null, groundLevel) || pRAn;
-          let vShin = pRAnGrounded.clone().sub(pRKn);
+          vShin = pRAnGrounded.clone().sub(pRKn);
           if (mirrorMode) vShin.x = -vShin.x;
-          const kneeChk = constrainKneeJoint(vThigh, vShin, mirrorMode);
-          if (kneeChk.correctedShin) vShin.copy(kneeChk.correctedShin);
-          alignBone(legR_Lower, vShin, 0.85);
         }
+
+        alignLeg(legR_Upper, legR_Lower, vThigh, vShin, torsoFwdNormal, pelvisLateral, mirrorMode ? 'L' : 'R', 0.85);
 
         if (pRToe && pRHeel && legR_Foot) {
           const vFoot = pRToe.clone().sub(pRHeel);
           if (mirrorMode) vFoot.x = -vFoot.x;
-          alignFoot(legR_Foot, vFoot, mirrorMode ? 'L' : 'R', 0.75);
+          alignFoot(legR_Foot, vFoot, legR_Lower, pelvisLateral, mirrorMode ? 'L' : 'R', 0.85);
         }
       }
 
       if (pLHp && pLKn) {
         const vThigh = pLKn.clone().sub(pLHp);
         if (mirrorMode) vThigh.x = -vThigh.x;
-        alignBone(legL_Upper, vThigh, 0.85);
 
+        let vShin = null;
         if (pLAn) {
           const pLAnGrounded = masterRetargeterRef.current?.footContactManager.processFoot('L', pLAn, null, groundLevel) || pLAn;
-          let vShin = pLAnGrounded.clone().sub(pLKn);
+          vShin = pLAnGrounded.clone().sub(pLKn);
           if (mirrorMode) vShin.x = -vShin.x;
-          const kneeChk = constrainKneeJoint(vThigh, vShin, !mirrorMode);
-          if (kneeChk.correctedShin) vShin.copy(kneeChk.correctedShin);
-          alignBone(legL_Lower, vShin, 0.85);
         }
+
+        alignLeg(legL_Upper, legL_Lower, vThigh, vShin, torsoFwdNormal, pelvisLateral, mirrorMode ? 'R' : 'L', 0.85);
 
         if (pLToe && pLHeel && legL_Foot) {
           const vFoot = pLToe.clone().sub(pLHeel);
           if (mirrorMode) vFoot.x = -vFoot.x;
-          alignFoot(legL_Foot, vFoot, mirrorMode ? 'R' : 'L', 0.75);
+          alignFoot(legL_Foot, vFoot, legL_Lower, pelvisLateral, mirrorMode ? 'R' : 'L', 0.85);
         }
       }
-
       // ======================================================================
       // 4. ОРИЕНТАЦИЯ ГОЛОВЫ И ВЗГЛЯД МЭЦУКЭ
       // ======================================================================
@@ -662,14 +802,14 @@ export default function MocapPuppetAvatar({
       }
 
       // ======================================================================
-      // 5. ФИЗИЧЕСКОЕ ЗАЗЕМЛЕНИЕ ПОДОШВ НА ТАТАМИ И СМЕЩЕНИЕ КОРНЯ
+      // 5. ФИЗИЧЕСКОЕ ЗАЗЕМЛЕНИЕ ПОДОШВ НА ТАТАМИ И СМЕЩЕНИЕ КОРНЯ (2-BONE IK)
       // ======================================================================
       const hasAnkle = pLAn || pRAn;
-      if (hasAnkle) {
+      if (hasAnkle && pLHp && pRHp) {
         const hipY = (pLHp.y + pRHp.y) * 0.5;
-        let maxSupportDrop = 0.0;
-        if (pLAn) maxSupportDrop = Math.max(maxSupportDrop, hipY - pLAn.y);
-        if (pRAn) maxSupportDrop = Math.max(maxSupportDrop, hipY - pRAn.y);
+        const dropL = pLAn ? (hipY - pLAn.y) : 0.0;
+        const dropR = pRAn ? (hipY - pRAn.y) : 0.0;
+        const maxSupportDrop = Math.max(dropL, dropR);
 
         if (maxSupportDrop > 0.65 && maxSupportDrop < 1.15) {
           if (maxSupportDrop > nominalLegLenRef.current) {
@@ -677,19 +817,37 @@ export default function MocapPuppetAvatar({
           }
         }
 
+        // Поддержка стоек Zenkutsu, Kokutsu, Kiba и ударов ногами (Mae-Geri)
+        let stanceDrop = maxSupportDrop;
+        const isKick = (dropL > 0 && dropL < 0.35) || (dropR > 0 && dropR < 0.35);
+        if (dropL > 0.35 && dropR > 0.35) {
+          const minDrop = Math.min(dropL, dropR);
+          const maxDrop = Math.max(dropL, dropR);
+          if (maxDrop - minDrop > 0.10) {
+            // Асимметричная стойка (Zenkutsu-dachi / Kokutsu-dachi): таз опускается по опорной ноге
+            stanceDrop = minDrop * 0.70 + maxDrop * 0.30;
+          } else {
+            // Симметричная стойка (Kiba-dachi / Shizentai)
+            stanceDrop = (dropL + dropR) * 0.5;
+          }
+        } else if (isKick) {
+          // При ударе ногой таз удерживается на высоте опорной ноги
+          stanceDrop = dropL < 0.35 ? dropR : dropL;
+        }
+
         let targetRootY = 0.0;
-        if (maxSupportDrop > 0.25) {
-          const legCompression = maxSupportDrop - nominalLegLenRef.current;
-          if (legCompression < -0.03) {
-            targetRootY = Math.max(-0.62, legCompression + 0.03);
+        if (stanceDrop > 0.25) {
+          const legCompression = stanceDrop - nominalLegLenRef.current;
+          if (legCompression < -0.02) {
+            targetRootY = Math.max(-0.65, legCompression + 0.02);
           }
         }
 
         const fwdBendShift = Math.max(0, torsoFwdZ) * 0.22;
         const targetRootZ = targetRootY * 0.25 - fwdBendShift;
 
-        smoothRootYRef.current = smoothRootYRef.current * 0.80 + targetRootY * 0.20;
-        smoothRootZRef.current = smoothRootZRef.current * 0.80 + targetRootZ * 0.20;
+        smoothRootYRef.current = smoothRootYRef.current * 0.75 + targetRootY * 0.25;
+        smoothRootZRef.current = smoothRootZRef.current * 0.75 + targetRootZ * 0.25;
 
         if (bHips && bHips.restPosition) {
           const rootX = activePose.rootPosition ? (mirrorMode ? -activePose.rootPosition[0] : activePose.rootPosition[0]) : 0;
@@ -697,6 +855,45 @@ export default function MocapPuppetAvatar({
           bHips.position.x = bHips.restPosition.x + rootX;
           bHips.position.y = bHips.restPosition.y + smoothRootYRef.current;
           bHips.position.z = bHips.restPosition.z + rootZ + smoothRootZRef.current;
+          bHips.updateMatrixWorld(true);
+
+          // Active Tatami Floor Grounding & Stance Maintenance:
+          // Ensures the avatar actively strives to STAND on the floor at all times:
+          // supporting foot (lowest foot) is firmly pinned to the tatami (ankle at TARGET_ANKLE_Y = 0.080)
+          const TARGET_ANKLE_Y = 0.080;
+          let lowestFootY = Infinity;
+          const tmpP = new THREE.Vector3();
+          for (const fb of [legR_Foot, legL_Foot]) {
+            if (fb) {
+              fb.getWorldPosition(tmpP);
+              if (tmpP.y < lowestFootY) lowestFootY = tmpP.y;
+            }
+          }
+          if (lowestFootY < 2.0 && lowestFootY > -2.0) {
+            bHips.position.y += (TARGET_ANKLE_Y - lowestFootY);
+            bHips.updateMatrixWorld(true);
+          }
+        }
+
+        // Аналитический 2-Bone IK доводчик для заземления стоп на татами
+        if (legR_Upper && legR_Lower && legR_Foot && pRAn) {
+          const worldTargetR = new THREE.Vector3();
+          legR_Foot.getWorldPosition(worldTargetR);
+          if (dropR > 0.40) worldTargetR.y = Math.max(0.038, worldTargetR.y);
+          const hipPosR = new THREE.Vector3();
+          legR_Upper.getWorldPosition(hipPosR);
+          const polePosR = hipPosR.clone().add(new THREE.Vector3(0.15, -0.3, 0.4));
+          solveTwoBoneIK(legR_Upper, legR_Lower, legR_Foot, worldTargetR, polePosR, 0.85);
+        }
+
+        if (legL_Upper && legL_Lower && legL_Foot && pLAn) {
+          const worldTargetL = new THREE.Vector3();
+          legL_Foot.getWorldPosition(worldTargetL);
+          if (dropL > 0.40) worldTargetL.y = Math.max(0.038, worldTargetL.y);
+          const hipPosL = new THREE.Vector3();
+          legL_Upper.getWorldPosition(hipPosL);
+          const polePosL = hipPosL.clone().add(new THREE.Vector3(-0.15, -0.3, 0.4));
+          solveTwoBoneIK(legL_Upper, legL_Lower, legL_Foot, worldTargetL, polePosL, 0.85);
         }
       }
     } catch (err) {

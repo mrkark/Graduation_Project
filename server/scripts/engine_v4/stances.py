@@ -46,7 +46,7 @@ def stance(name,lead='L'):
         S=make({'L':bl(0.14,0.542,0),'R':bl(-0.14,-0.358,-22)},(0,0.04),0,'R',0.985)
         if lead=='R':S=mirror(S)
     elif name=='kokutsu':
-        S=make({'L':flat(0.06,0.36,0),'R':flat(-0.07,-0.30,-90)},(-0.03,-0.11),-42,'R',0.80)
+        S=make({'L':flat(0.06,0.36,0),'R':flat(-0.07,-0.30,-90)},(-0.03,-0.11),0,'R',0.80)
         if lead=='R':S=mirror(S)
     elif name=='kiba':
         S=make({'L':flat(0.34,0,0),'R':flat(-0.34,0,0)},(0,0),0,'L',0.72)

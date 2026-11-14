@@ -95,7 +95,7 @@ export default function KarateStudioPage() {
         return window.location.hostname;
       }
       const saved = localStorage.getItem('mocap_user_ip');
-      if (saved && saved !== '127.0.0.1' && !saved.startsWith('172.') && saved !== '192.168.100.28' && saved !== '192.168.100.6') return saved;
+      if (saved && saved !== '127.0.0.1' && !saved.startsWith('172.')) return saved;
     }
     return '';
   });
@@ -205,7 +205,7 @@ export default function KarateStudioPage() {
           if (mounted && j?.data) {
             const lIp = j.data.localIp;
             if (lIp && lIp !== '127.0.0.1' && !lIp.startsWith('172.')) {
-              setRealIp((prev) => (prev && prev !== '192.168.100.6' ? prev : lIp));
+              setRealIp(lIp);
             }
             if (Array.isArray(j.data.localIps) && j.data.localIps.length > 0) {
               setAvailableIps(j.data.localIps);
@@ -350,7 +350,7 @@ export default function KarateStudioPage() {
     ? realIp
     : (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
         ? window.location.hostname
-        : (availableIps[0]?.ip || '10.129.167.47'));
+        : (availableIps[0]?.ip || '192.168.100.6'));
 
   // Use embedded mode so iframe doesn't render duplicate headers/buttons
   const studioEmbeddedUrl = '/studio?embedded=1';

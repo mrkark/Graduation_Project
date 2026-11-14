@@ -276,13 +276,162 @@
     // Attempt default model load
     loadModel("/karateka_lowpoly.glb");
 
-    // --- KINEMATIC BONE ALIGNMENT ---
+    
+        // --- HIGH-PRECISION KINEMATICS & CONTINUOUS AZIMUTH TRACKER ---
+    let lastPelvisRawYaw = null;
+    let continuousPelvisYaw = 0.0;
+
+    function makeBasisQ(x, y, z) {
+      const m = new THREE.Matrix4().makeBasis(x, y, z);
+      return new THREE.Quaternion().setFromRotationMatrix(m);
+    }
+
+    // --- REVOLUTIONARY ANATOMICAL ARM & ELBOW HINGE SOLVER (ZERO DISLOCATION / ZERO FLIP) ---
+    // 1. UpperArm: Orthonormal basis matching GLB rest pose (Col 1 = Y along bone, Col 2 = Z hinge axis)
+    // 2. LowerArm: PURE 1-DOF Revolute Hinge (Right flexes around +Z, Left flexes around -Z)
+    // Eliminates all hemisphere flips, sideways twists, and mesh breakage!
+    function alignArm(bUpper, bLower, vArm, vForearm, torsoFwd, shoulderLateral, sideKey = 'R', alpha = 0.85) {
+      if (!bUpper || !vArm || vArm.lengthSq() < 1e-4) return;
+      const isLeft = (sideKey === 'L');
+      const uArm = vArm.clone().normalize();
+
+      // Natural anatomical hinge vector:
+      // In T-pose, elbow hinge points UP (+Y).
+      let hNat = isLeft
+        ? new THREE.Vector3().crossVectors(torsoFwd, uArm)
+        : new THREE.Vector3().crossVectors(torsoFwd, uArm).negate();
+      if (hNat.lengthSq() < 1e-4) {
+        hNat.set(0, 1, 0);
+      } else {
+        hNat.normalize();
+      }
+
+      const hasForearm = (bLower && vForearm && vForearm.lengthSq() > 1e-4);
+      let zHinge = hNat.clone();
+      let flexAngle = 0.0;
+
+      if (hasForearm) {
+        const uForearm = vForearm.clone().normalize();
+        const dotCollinear = Math.max(-1.0, Math.min(1.0, uArm.dot(uForearm)));
+        flexAngle = Math.acos(dotCollinear); // [0, PI]
+        flexAngle = Math.max(0.0, Math.min(Math.PI * 0.86, flexAngle)); // clamp to 155 deg
+
+        if (flexAngle > 0.08) {
+          // Measured bend plane normal
+          // For Right: cross(vArm, vForearm) points UP (+Y)
+          // For Left: cross(vForearm, vArm) points UP (+Y)
+          const nBend = isLeft
+            ? new THREE.Vector3().crossVectors(vForearm, vArm)
+            : new THREE.Vector3().crossVectors(vArm, vForearm);
+          if (nBend.lengthSq() > 1e-4) {
+            nBend.normalize();
+            if (nBend.dot(hNat) < 0) nBend.negate();
+            const blendW = Math.min(1.0, (flexAngle - 0.08) / 0.25);
+            zHinge.lerp(nBend, blendW).normalize();
+          }
+        }
+      }
+
+      // Gram-Schmidt orthogonalization: ensure zUpper is strictly perpendicular to uArm
+      let zUpper = zHinge.clone().sub(uArm.clone().multiplyScalar(zHinge.dot(uArm)));
+      if (zUpper.lengthSq() < 1e-4) {
+        zUpper.copy(hNat);
+      } else {
+        zUpper.normalize();
+      }
+
+      const xUpper = new THREE.Vector3().crossVectors(uArm, zUpper).normalize();
+      zUpper.crossVectors(xUpper, uArm).normalize();
+
+      const qUpperWorld = makeBasisQ(xUpper, uArm, zUpper);
+      const pQUpper = new THREE.Quaternion();
+      if (bUpper.parent) bUpper.parent.getWorldQuaternion(pQUpper);
+      const targetLocalUpper = pQUpper.clone().invert().multiply(qUpperWorld);
+      bUpper.quaternion.slerp(targetLocalUpper, alpha);
+      bUpper.updateMatrixWorld(true);
+
+      // Anatomical 1-DOF Elbow Flexion:
+      // For Right Arm: flexes forward around Local +Z
+      // For Left Arm: flexes forward around Local -Z
+      if (hasForearm && bLower) {
+        const bendAxis = isLeft ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 0, 1);
+        const qLowerLocal = new THREE.Quaternion().setFromAxisAngle(bendAxis, flexAngle);
+        bLower.quaternion.slerp(qLowerLocal, alpha);
+        bLower.updateMatrixWorld(true);
+      }
+    }
+
+    // --- REVOLUTIONARY ANATOMICAL LEG & KNEE HINGE SOLVER (ZERO FLAMINGO / ZERO BREAKAGE) ---
+    // 1. UpperLeg: Thigh vector with lateral pelvis hinge orientation
+    // 2. LowerLeg: PURE 1-DOF Revolute Hinge (strictly backward flexion around Local +X for BOTH legs)
+    function alignLeg(bUpper, bLower, vThigh, vShin, torsoFwd, pelvisLateral, sideKey = 'R', alpha = 0.85) {
+      if (!bUpper || !vThigh || vThigh.lengthSq() < 1e-4) return;
+      const isLeft = (sideKey === 'L');
+      const uThigh = vThigh.clone().normalize();
+
+      // Lateral axis of pelvis (pointing right to left in world space)
+      let xLat = pelvisLateral ? pelvisLateral.clone() : new THREE.Vector3(1, 0, 0);
+      if (xLat.lengthSq() < 1e-4) xLat.set(1, 0, 0);
+      else xLat.normalize();
+
+      // Gram-Schmidt orthogonalization: ensure knee hinge axis xUpper is perpendicular to thigh
+      let xUpper = xLat.clone().sub(uThigh.clone().multiplyScalar(xLat.dot(uThigh)));
+      if (xUpper.lengthSq() < 1e-4) {
+        xUpper.copy(xLat);
+      } else {
+        xUpper.normalize();
+      }
+
+      // Dorsal axis zUpper: cross(xUpper, uThigh) points BACKWARD [0, 0, -1] in rest pose
+      const zUpper = new THREE.Vector3().crossVectors(xUpper, uThigh).normalize();
+      xUpper.crossVectors(uThigh, zUpper).normalize();
+
+      const qUpperWorld = makeBasisQ(xUpper, uThigh, zUpper);
+      const pQUpper = new THREE.Quaternion();
+      if (bUpper.parent) bUpper.parent.getWorldQuaternion(pQUpper);
+      const targetLocalUpper = pQUpper.clone().invert().multiply(qUpperWorld);
+      bUpper.quaternion.slerp(targetLocalUpper, alpha);
+
+      // Anatomical 1-DOF Knee Flexion:
+      // In karateka_lowpoly.glb, both Left and Right legs flex strictly BACKWARD around Local +X
+      const hasShin = (bLower && vShin && vShin.lengthSq() > 1e-4);
+      if (hasShin && bLower) {
+        let uShin = vShin.clone().normalize();
+        let dotCollinear = Math.max(-1.0, Math.min(1.0, uThigh.dot(uShin)));
+
+        // 2D Projection Collinearity on the Camera Plane:
+        // MediaPipe 2D detection on camera clearly sees whether knee and ankle form a straight line
+        const lenThighXY = Math.hypot(vThigh.x, vThigh.y);
+        const lenShinXY = Math.hypot(vShin.x, vShin.y);
+        const dot2D = (lenThighXY > 1e-4 && lenShinXY > 1e-4)
+          ? (vThigh.x * vShin.x + vThigh.y * vShin.y) / (lenThighXY * lenShinXY)
+          : dotCollinear;
+
+        // KNEE EXTENSION & KICK LOCKOUT ASSIST:
+        // When a person extends their leg (clearly collinear in 3D: dotCollinear > 0.50 OR in 2D: dot2D > 0.75):
+        // Lock knee flexion directly to 0° (fully straight leg)!
+        let kneeFlex = Math.acos(Math.max(-1.0, Math.min(1.0, dotCollinear))); // [0, PI]
+        const isExtended = (dotCollinear > 0.50 || dot2D > 0.75);
+        if (isExtended) {
+          const t3D = Math.max(0.0, Math.min(1.0, (dotCollinear - 0.50) / 0.35));
+          const t2D = Math.max(0.0, Math.min(1.0, (dot2D - 0.75) / 0.18));
+          const tExt = Math.max(t3D, t2D);
+          const easeExt = tExt * tExt * (3.0 - 2.0 * tExt);
+          kneeFlex *= (1.0 - easeExt);
+        }
+        kneeFlex = Math.max(0.0, Math.min(Math.PI * 0.86, kneeFlex)); // clamp to 155 deg
+
+        const qLowerLocal = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), kneeFlex);
+        bLower.quaternion.slerp(qLowerLocal, alpha);
+      }
+    }
+
+    // --- FALLBACK KINEMATIC BONE ALIGNMENT ---
     function alignBone(bone, targetDir, alpha = 0.85) {
       if (!bone || !bone.restWorldDir || !targetDir || targetDir.lengthSq() < 1e-5) return;
       const vFrom = bone.restWorldDir;
       let vTo = targetDir.clone().normalize();
       const dot = vFrom.dot(vTo);
-      // Singularity protection: prevent antiparallel gimbal flips when limbs cross the torso
       if (dot < -0.92) {
         vTo.z = Math.max(vTo.z, 0.35);
         vTo.normalize();
@@ -296,33 +445,29 @@
       bone.updateMatrixWorld(true);
     }
 
-    // --- DYNAMIC CLAVICLE / SCAPULAR PROTRACTION & DEPRESSION ---
-    // Engages Shoulder.L and Shoulder.R to seat the humerus head naturally in the socket
-    // during forward strikes, punches, cross-torso blocks, and downward reaches toward legs.
+    // --- DYNAMIC CLAVICLE / SCAPULAR PROTRACTION & RETRACTION (HIKITE) ---
     function alignShoulder(bone, vArm, sideKey = "R") {
       if (!bone || !vArm || vArm.lengthSq() < 1e-4) return;
-      // Clavicle should remain stable and aligned with natural shoulder girdle
-      // Only gentle elevation/depression (max 10-15 deg) when arm is lifted or reaching
       const uArm = vArm.clone().normalize();
       const fwdReach = Math.max(0, uArm.z);
+      const backReach = Math.min(0, uArm.z); // Scapular Retraction when drawing fist into HIKITE!
       const elevate = Math.max(0, uArm.y);
       const depress = Math.min(0, uArm.y);
       let vClavicle = null;
 
       if (sideKey === "R") {
-        // Right clavicle naturally points along +X (towards user's right)
-        const yOffset = elevate > 0 ? elevate * 0.18 : depress * 0.20;
-        vClavicle = new THREE.Vector3(1.0, yOffset, fwdReach * 0.15).normalize();
+        const crossReach = Math.max(0, uArm.x);
+        const yOffset = elevate > 0 ? elevate * 0.18 : depress * 0.15;
+        vClavicle = new THREE.Vector3(-1.0 + crossReach * 0.25, yOffset, fwdReach * 0.25 + backReach * 0.22).normalize();
       } else {
-        // Left clavicle naturally points along -X (towards user's left)
-        const yOffset = elevate > 0 ? elevate * 0.18 : depress * 0.20;
-        vClavicle = new THREE.Vector3(-1.0, yOffset, fwdReach * 0.15).normalize();
+        const crossReach = Math.max(0, -uArm.x);
+        const yOffset = elevate > 0 ? elevate * 0.18 : depress * 0.15;
+        vClavicle = new THREE.Vector3(1.0 - crossReach * 0.25, yOffset, fwdReach * 0.25 + backReach * 0.22).normalize();
       }
       alignBone(bone, vClavicle, 0.45);
     }
 
-    // --- 3D PALM & WRIST ORIENTATION (PRONATION / SUPINATION / ROTATION) ---
-    // Smooth hand orientation memory to eliminate stationary palm jitter
+    // --- 3D PALM & WRIST ORIENTATION ---
     const handOrientMemory = {
       R: { fwd: null, norm: null },
       L: { fwd: null, norm: null }
@@ -330,9 +475,6 @@
 
     function alignHand(bone, targetFwd, targetNorm, sideKey = "R") {
       if (!bone) return;
-      // Stable anatomical hand orientation:
-      // Wrist naturally aligns along the forearm bone unless intentional wrist flexion occurs.
-      // This prevents the hand from vibrating or twisting randomly when standing still!
       if (!targetFwd || !targetNorm) {
         if (bone.restLocalQ) bone.quaternion.slerp(bone.restLocalQ, 0.12);
         return;
@@ -350,25 +492,23 @@
         const angFwd = mem.fwd.angleTo(curFwd);
         const angNorm = mem.norm.angleTo(curNorm);
         const maxAng = Math.max(angFwd, angNorm);
-        // Heavy deadband against camera noise (< 8 deg = 0.14 rad ignored completely!)
         if (maxAng < 0.14) return;
         const alpha = maxAng > 0.30 ? 0.45 : 0.20;
         mem.fwd.lerp(curFwd, alpha).normalize();
         mem.norm.lerp(curNorm, alpha).normalize();
       }
 
-      const uy = mem.fwd.clone();
+      const uy = mem.fwd.clone().normalize();
       const dorsal = mem.norm.clone().negate().normalize();
-      const dot = dorsal.dot(uy);
-      const uz = dorsal.clone().sub(uy.clone().multiplyScalar(dot)).normalize();
-      if (uz.lengthSq() < 1e-4) return;
+      let uz = dorsal.clone().sub(uy.clone().multiplyScalar(dorsal.dot(uy)));
+      if (uz.lengthSq() < 1e-4) uz.set(0, 1, 0);
+      else uz.normalize();
 
       const ux = new THREE.Vector3().crossVectors(uy, uz).normalize();
-      if (ux.lengthSq() < 1e-4) return;
+      uz.crossVectors(ux, uy).normalize();
 
       const basisMat = new THREE.Matrix4().makeBasis(ux, uy, uz);
-      const rotWorld = new THREE.Quaternion().setFromRotationMatrix(basisMat);
-      const targetWorldQ = rotWorld.clone().multiply(bone.restWorldQ || new THREE.Quaternion());
+      const targetWorldQ = new THREE.Quaternion().setFromRotationMatrix(basisMat);
 
       const parentWorldQ = new THREE.Quaternion();
       if (bone.parent) bone.parent.getWorldQuaternion(parentWorldQ);
@@ -378,51 +518,62 @@
       bone.updateMatrixWorld(true);
     }
 
-    // --- 3D FOOT ORIENTATION (YAW HEADING, HEEL ELEVATION & STANCE ROTATION) ---
-    // Accurately replicates turning feet on the tatami (Zenkutsu, Kiba, Kokutsu dachi)
-    // with smooth heading memory to eliminate micro-jitter while remaining snappy on pivots.
+    // --- 3D FOOT ORIENTATION (YAW HEADING & TATAMI GROUNDING) ---
     const footOrientMemory = {
       R: { yaw: null, pitch: null },
       L: { yaw: null, pitch: null }
     };
 
-    function alignFoot(bone, vFoot, sideKey = "R") {
-      if (!bone || !bone.restWorldQ || !vFoot || vFoot.lengthSq() < 1e-4) return;
+    function alignFoot(bFoot, vFoot, bLowerLeg, pelvisLateral, sideKey = "R", alpha = 0.85) {
+      if (!bFoot || !vFoot || vFoot.lengthSq() < 1e-4) {
+        if (bFoot && bFoot.restLocalQ) bFoot.quaternion.slerp(bFoot.restLocalQ, 0.15);
+        return;
+      }
       const mem = footOrientMemory[sideKey] || footOrientMemory.R;
 
       let curYaw = Math.atan2(vFoot.x, vFoot.z);
       const lenXZ = Math.hypot(vFoot.x, vFoot.z);
       let curPitch = Math.atan2(vFoot.y, Math.max(0.04, lenXZ));
-      // Anatomical pitch limit: don't allow foot to bend backwards through the shin
-      curPitch = Math.max(-0.85, Math.min(0.40, curPitch));
+      curPitch = Math.max(-0.85, Math.min(0.25, curPitch));
 
       if (mem.yaw === null) {
         mem.yaw = curYaw;
         mem.pitch = curPitch;
       } else {
-        // Handle angle wrap-around for yaw
         let diffYaw = curYaw - mem.yaw;
         while (diffYaw > Math.PI) diffYaw -= 2 * Math.PI;
         while (diffYaw < -Math.PI) diffYaw += 2 * Math.PI;
 
         const maxDiff = Math.max(Math.abs(diffYaw), Math.abs(curPitch - mem.pitch));
-        // Adaptive filter: smooth when holding stance, snappy when rotating foot
-        const alpha = maxDiff > 0.20 ? 0.75 : (maxDiff > 0.05 ? 0.40 : 0.20);
-        mem.yaw += diffYaw * alpha;
-        mem.pitch = mem.pitch * (1 - alpha) + curPitch * alpha;
+        const filterAlpha = maxDiff > 0.20 ? 0.75 : (maxDiff > 0.05 ? 0.40 : 0.20);
+        mem.yaw += diffYaw * filterAlpha;
+        mem.pitch = mem.pitch * (1 - filterAlpha) + curPitch * filterAlpha;
       }
 
-      const qYaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), mem.yaw);
-      const qPitch = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -mem.pitch);
-      const qDeltaWorld = qYaw.multiply(qPitch);
-      const targetWorldQ = qDeltaWorld.multiply(bone.restWorldQ);
+      const cosP = Math.cos(mem.pitch);
+      const sinP = Math.sin(mem.pitch);
+      const sinY = Math.sin(mem.yaw);
+      const cosY = Math.cos(mem.yaw);
+
+      const yFoot = new THREE.Vector3(sinY * cosP, sinP, cosY * cosP).normalize();
+
+      let xLat = pelvisLateral ? pelvisLateral.clone() : new THREE.Vector3(1, 0, 0);
+      let xFoot = xLat.clone().sub(yFoot.clone().multiplyScalar(xLat.dot(yFoot)));
+      if (xFoot.lengthSq() < 1e-4) xFoot.set(1, 0, 0);
+      else xFoot.normalize();
+
+      const zFoot = new THREE.Vector3().crossVectors(xFoot, yFoot).normalize();
+      xFoot.crossVectors(yFoot, zFoot).normalize();
+
+      const mFoot = new THREE.Matrix4().makeBasis(xFoot, yFoot, zFoot);
+      const targetWorldQ = new THREE.Quaternion().setFromRotationMatrix(mFoot);
 
       const parentWorldQ = new THREE.Quaternion();
-      if (bone.parent) bone.parent.getWorldQuaternion(parentWorldQ);
+      if (bFoot.parent) bFoot.parent.getWorldQuaternion(parentWorldQ);
       const targetLocalQ = parentWorldQ.clone().invert().multiply(targetWorldQ);
 
-      bone.quaternion.slerp(targetLocalQ, 0.75);
-      bone.updateMatrixWorld(true);
+      bFoot.quaternion.slerp(targetLocalQ, alpha);
+      bFoot.updateMatrixWorld(true);
     }
 
     // Metsuke gaze trim offset (chin slightly up in traditional Shotokan posture)
@@ -482,6 +633,20 @@
       if (!frameData) return;
 
       const pts = frameData.joints || {};
+
+      const hasLandmarks = (pts && Object.keys(pts).length >= 4);
+
+      // If precomputed retargeted local bones are provided from Retargeter AND no 3D landmarks are available, apply them as fallback
+      if (!hasLandmarks && frameData.bones && Object.keys(frameData.bones).length > 0) {
+        for (const [bName, qArr] of Object.entries(frameData.bones)) {
+          const b = getBone(bName);
+          if (b && Array.isArray(qArr) && qArr.length === 4) {
+            const tQ = new THREE.Quaternion(qArr[0], qArr[1], qArr[2], qArr[3]);
+            b.quaternion.slerp(tQ, 0.85);
+            b.updateMatrixWorld(true);
+          }
+        }
+      }
       const vis = frameData.confidence || {};
 
       // 1. Position skeleton group only when active
@@ -537,6 +702,8 @@
           // reach down, and place hands on knees/legs without distortion.
           let torsoFwdZ = 0.0;
           let torsoFwdNormal = new THREE.Vector3(0, 0, 1);
+          let pelvisLateral = new THREE.Vector3(1, 0, 0);
+          let shoulderLateral = new THREE.Vector3(1, 0, 0);
           let midHip = null;
           let midSh = null;
           let vSpine = new THREE.Vector3(0, 1, 0);
@@ -556,34 +723,44 @@
             vSpine.copy(midSh).sub(midHip);
             torsoFwdZ = vSpine.z;
 
-            // 1. Pelvis / Hips Orientation Solver
+            // 1. Pelvis / Hips Orientation Solver (Continuous 360° Azimuth)
             const bHips = getBone("Hips");
             if (bHips && bHips.restWorldQ) {
               let vHipsLat = new THREE.Vector3(...pLHp).sub(new THREE.Vector3(...pRHp));
               if (mirrorAvatar) vHipsLat.x = -vHipsLat.x;
 
               if (vHipsLat.lengthSq() > 1e-4) {
-                // Deadband against depth noise: small Z differences (< 0.035m) do not twist the pelvis
-                if (Math.abs(vHipsLat.z) < 0.035) {
-                  vHipsLat.z = 0.0;
-                } else {
-                  vHipsLat.z = Math.sign(vHipsLat.z) * (Math.abs(vHipsLat.z) - 0.035);
+                pelvisLateral.copy(vHipsLat).normalize();
+                
+                const pRHpCur = new THREE.Vector3(...pRHp);
+                const pLHpCur = new THREE.Vector3(...pLHp);
+                if (mirrorAvatar) {
+                  pRHpCur.x = -pRHpCur.x;
+                  pLHpCur.x = -pLHpCur.x;
                 }
-                // Pelvic Yaw angle around Y (clamped ~65 deg)
-                let hipYaw = Math.atan2(vHipsLat.z, vHipsLat.x);
-                hipYaw = Math.max(-1.15, Math.min(1.15, hipYaw));
+                const vHipsLatRtoL = new THREE.Vector3().subVectors(pLHpCur, pRHpCur);
+                const nPelvisFwd = new THREE.Vector3(-vHipsLatRtoL.z, 0, vHipsLatRtoL.x).normalize();
+                let rawHipYaw = Math.atan2(nPelvisFwd.x, nPelvisFwd.z);
+                if (lastPelvisRawYaw !== null) {
+                  let dYaw = rawHipYaw - lastPelvisRawYaw;
+                  while (dYaw > Math.PI) dYaw -= 2 * Math.PI;
+                  while (dYaw < -Math.PI) dYaw += 2 * Math.PI;
+                  continuousPelvisYaw += dYaw;
+                } else {
+                  continuousPelvisYaw = rawHipYaw;
+                }
+                lastPelvisRawYaw = rawHipYaw;
 
                 // Pelvic forward tilt when leaning or bending forward
                 const trunkForwardPitch = Math.atan2(vSpine.z, Math.max(0.08, vSpine.y));
-                // Pelvis absorbs ~35% of trunk forward flexion, hinging naturally at the hips (clamped ~28 deg)
                 let pelvicTilt = trunkForwardPitch * 0.35;
                 pelvicTilt = Math.max(-0.50, Math.min(0.50, pelvicTilt));
 
-                // Pelvic Roll around Z (weight shift / lateral tilt clamped ~23 deg)
+                // Pelvic Roll around Z (lateral weight shift)
                 let pelvicRoll = Math.atan2(vHipsLat.y, Math.hypot(vHipsLat.x, vHipsLat.z));
                 pelvicRoll = Math.max(-0.40, Math.min(0.40, pelvicRoll));
 
-                const eulerHips = new THREE.Euler(-pelvicTilt, hipYaw, pelvicRoll, 'YXZ');
+                const eulerHips = new THREE.Euler(-pelvicTilt, continuousPelvisYaw, pelvicRoll, 'YXZ');
                 const qPelvisDelta = new THREE.Quaternion().setFromEuler(eulerHips);
                 const targetHipsWorldQ = qPelvisDelta.clone().multiply(bHips.restWorldQ);
 
@@ -596,31 +773,15 @@
               }
             }
 
-            // Perspective slouch filter: only active when standing tall in upright posture
-            // When user deliberately bends forward (vSpine.y drops or |vSpine.z| >= 0.08), 100% flexion is preserved!
-            const isUprightStance = vSpine.y > 0.45 && Math.abs(vSpine.z) < 0.08;
-            if (isUprightStance) {
-              vSpine.z *= 0.15;
-              if (Math.abs(vSpine.z) < 0.02) vSpine.z = 0.0;
-            }
-
+            // 2. Full Torso Rotation Solver (Authentic Hanmi / Shomen / Stance Dynamics)
+            // Preserves 100% natural rotation of shoulders and ribcage without artificial deadbands!
             if (vSpine.lengthSq() > 1e-4) {
               const uy = vSpine.clone().normalize();
               let vLat = new THREE.Vector3(...pLSh).sub(new THREE.Vector3(...pRSh));
               if (mirrorAvatar) vLat.x = -vLat.x;
-              // Torso Yaw Deadband:
-              // When facing front, small depth differences (< 0.04m) between shoulders are sensor noise
-              // and must NOT induce phantom torso rotation!
-              if (Math.abs(vLat.z) < 0.04) {
-                vLat.z = 0.0;
-              } else {
-                vLat.z = Math.sign(vLat.z) * (Math.abs(vLat.z) - 0.04);
-              }
-              if (isUprightStance) {
-                vLat.z *= 0.30;
-                if (Math.abs(vLat.z) < 0.015) vLat.z = 0.0;
-              }
+
               if (vLat.lengthSq() > 1e-4) {
+                shoulderLateral.copy(vLat).normalize();
                 vLat.normalize();
                 // Gram-Schmidt orthogonalization: project lateral vector onto plane normal to spine
                 const dotLat = vLat.dot(uy);
@@ -636,11 +797,12 @@
                   const bSpine = getBone("Spine");
                   const bSpine1 = getBone("Spine1");
                   const bChest = getBone("Chest");
-                  const qIdentity = new THREE.Quaternion(0, 0, 0, 1);
+                  const hipsWorldQ = new THREE.Quaternion();
+                  if (bHips) bHips.getWorldQuaternion(hipsWorldQ);
 
-                  // 1. Lumbar Spine (Spine) takes ~45% of bend
+                  // 1. Lumbar Spine (Spine) takes ~35% of bend from hips to chest
                   if (bSpine) {
-                    const qLumbarWorld = qIdentity.clone().slerp(targetTorsoWorldQ, 0.45);
+                    const qLumbarWorld = hipsWorldQ.clone().slerp(targetTorsoWorldQ, 0.35);
                     const parentQSpine = new THREE.Quaternion();
                     if (bSpine.parent) bSpine.parent.getWorldQuaternion(parentQSpine);
                     const targetLocalSpine = parentQSpine.clone().invert().multiply(qLumbarWorld);
@@ -648,9 +810,9 @@
                     bSpine.updateMatrixWorld(true);
                   }
 
-                  // 2. Mid Thoracic Spine (Spine1) takes ~75% of bend
+                  // 2. Mid Thoracic Spine (Spine1) takes ~70% of bend from hips to chest
                   if (bSpine1) {
-                    const qMidWorld = qIdentity.clone().slerp(targetTorsoWorldQ, 0.75);
+                    const qMidWorld = hipsWorldQ.clone().slerp(targetTorsoWorldQ, 0.70);
                     const parentQSpine1 = new THREE.Quaternion();
                     if (bSpine1.parent) bSpine1.parent.getWorldQuaternion(parentQSpine1);
                     const targetLocalSpine1 = parentQSpine1.clone().invert().multiply(qMidWorld);
@@ -658,7 +820,7 @@
                     bSpine1.updateMatrixWorld(true);
                   }
 
-                  // 3. Upper Chest (Chest) carries full 100% orientation, bringing shoulders forward and down
+                  // 3. Upper Chest (Chest) carries full 100% orientation
                   if (bChest) {
                     const parentQChest = new THREE.Quaternion();
                     if (bChest.parent) bChest.parent.getWorldQuaternion(parentQChest);
@@ -699,68 +861,34 @@
             const vArm = new THREE.Vector3(...pts["right_elbow"]).sub(new THREE.Vector3(...pts["right_shoulder"]));
             if (mirrorAvatar) vArm.x = -vArm.x;
 
-            // Clavicle protraction seats shoulder joint naturally on reaches and crosses
             if (bShoulderR) {
               alignShoulder(bShoulderR, vArm, mirrorAvatar ? "L" : "R");
             }
 
+            let vForearm = null;
             if (pts["right_wrist"] && conf("right_wrist") >= minConf) {
-              const vForearm = new THREE.Vector3(...pts["right_wrist"]).sub(new THREE.Vector3(...pts["right_elbow"]));
+              vForearm = new THREE.Vector3(...pts["right_wrist"]).sub(new THREE.Vector3(...pts["right_elbow"]));
               if (mirrorAvatar) vForearm.x = -vForearm.x;
 
-              // ANATOMICAL ELBOW HINGE PROTECTION (Right Arm):
-              // Human elbow can only flex towards anterior zone when lowered.
-              // When hand is raised or reaching behind the head/neck, dorsal flexion is anatomically natural!
               if (vArm.lengthSq() > 1e-4 && vForearm.lengthSq() > 1e-4) {
                 const uArm = vArm.clone().normalize();
                 const uForearm = vForearm.clone().normalize();
                 const armCollinearDot = uArm.dot(uForearm);
-
-                // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
-                // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
                 if (armCollinearDot > 0.92) {
                   const straightAlpha = Math.max(0.0, Math.min(1.0, (armCollinearDot - 0.95) / 0.04));
                   vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
                 }
-
-                // 2. Torso Clearance & Anatomical Elbow Hinge Protection:
-                const projAlongArm = vForearm.dot(uArm);
-                const vParallel = uArm.clone().multiplyScalar(projAlongArm);
-                let vBend = vForearm.clone().sub(vParallel);
-
-                if (vBend.lengthSq() > 1e-4) {
-                  const pShR = pts["right_shoulder"];
-                  const pElR = pts["right_elbow"];
-                  const pWrR = pts["right_wrist"];
-                  const isElevatedR = (pElR && pShR && pElR[1] > pShR[1] - 0.20) || (pWrR && pShR && pWrR[1] > pShR[1] - 0.15);
-                  if (!isElevatedR) {
-                    const fwdDot = vBend.dot(torsoFwdNormal);
-                    if (fwdDot < -0.04) {
-                      vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
-                      vForearm.copy(vParallel.add(vBend));
-                    }
-                  }
-                }
-
-                // Kimono chest clearance (minChestClearance = 0.16) is safely enforced in mocap_tracker.py
-                // to avoid Three.js bone twisting.
               }
-
-              alignBone(bUpperR, vArm, 0.75);
-              alignBone(bLowerR, vForearm, 0.75);
-            } else if (bLowerR) {
-              alignBone(bUpperR, vArm, 0.75);
-              alignBone(bLowerR, vArm, 0.40);
-            } else {
-              alignBone(bUpperR, vArm, 0.75);
             }
+
+            alignArm(bUpperR, bLowerR, vArm, vForearm, torsoFwdNormal, shoulderLateral, mirrorAvatar ? "L" : "R", 0.85);
           } else {
             if (bShoulderR && bShoulderR.restLocalQ) bShoulderR.quaternion.slerp(bShoulderR.restLocalQ, 0.08);
             if (bUpperR && bUpperR.restLocalQ) bUpperR.quaternion.slerp(bUpperR.restLocalQ, 0.08);
             if (bLowerR && bLowerR.restLocalQ) bLowerR.quaternion.slerp(bLowerR.restLocalQ, 0.08);
           }
 
-          // Right Hand / Palm Orientation (Pronation, Supination, Strike angles)
+          // Right Hand / Palm Orientation
           if (bHandR) {
             if (fDataR && fDataR.palm_normal && fDataR.hand_direction) {
               const targetFwd = new THREE.Vector3(...fDataR.hand_direction);
@@ -785,66 +913,34 @@
             const vArm = new THREE.Vector3(...pts["left_elbow"]).sub(new THREE.Vector3(...pts["left_shoulder"]));
             if (mirrorAvatar) vArm.x = -vArm.x;
 
-            // Clavicle protraction seats shoulder joint naturally on reaches and crosses
             if (bShoulderL) {
               alignShoulder(bShoulderL, vArm, mirrorAvatar ? "R" : "L");
             }
 
+            let vForearm = null;
             if (pts["left_wrist"] && conf("left_wrist") >= minConf) {
-              const vForearm = new THREE.Vector3(...pts["left_wrist"]).sub(new THREE.Vector3(...pts["left_elbow"]));
+              vForearm = new THREE.Vector3(...pts["left_wrist"]).sub(new THREE.Vector3(...pts["left_elbow"]));
               if (mirrorAvatar) vForearm.x = -vForearm.x;
 
-              // ANATOMICAL ELBOW HINGE PROTECTION (Left Arm):
               if (vArm.lengthSq() > 1e-4 && vForearm.lengthSq() > 1e-4) {
                 const uArm = vArm.clone().normalize();
                 const uForearm = vForearm.clone().normalize();
                 const armCollinearDot = uArm.dot(uForearm);
-
-                // 1. STRAIGHT ARM SNAP: When human extends arm straight (collinear dot > 0.92, angle < 23 deg),
-                // snap forearm directly collinear to upper arm so model does NOT show an artificial bent elbow!
                 if (armCollinearDot > 0.92) {
                   const straightAlpha = Math.max(0.0, Math.min(1.0, (armCollinearDot - 0.95) / 0.04));
                   vForearm.lerp(uArm.clone().multiplyScalar(vForearm.length()), straightAlpha);
                 }
-
-                // 2. Torso Clearance & Anatomical Elbow Hinge Protection:
-                const projAlongArm = vForearm.dot(uArm);
-                const vParallel = uArm.clone().multiplyScalar(projAlongArm);
-                let vBend = vForearm.clone().sub(vParallel);
-
-                if (vBend.lengthSq() > 1e-4) {
-                  const pShL = pts["left_shoulder"];
-                  const pElL = pts["left_elbow"];
-                  const pWrL = pts["left_wrist"];
-                  const isElevatedL = (pElL && pShL && pElL[1] > pShL[1] - 0.20) || (pWrL && pShL && pWrL[1] > pShL[1] - 0.15);
-                  if (!isElevatedL) {
-                    const fwdDot = vBend.dot(torsoFwdNormal);
-                    if (fwdDot < -0.04) {
-                      vBend.sub(torsoFwdNormal.clone().multiplyScalar(2.0 * fwdDot));
-                      vForearm.copy(vParallel.add(vBend));
-                    }
-                  }
-                }
-
-                // Kimono chest clearance (minChestClearance = 0.16) is safely enforced in mocap_tracker.py
-                // to avoid Three.js bone twisting.
               }
-
-              alignBone(bUpperL, vArm, 0.75);
-              alignBone(bLowerL, vForearm, 0.75);
-            } else if (bLowerL) {
-              alignBone(bUpperL, vArm, 0.75);
-              alignBone(bLowerL, vArm, 0.40);
-            } else {
-              alignBone(bUpperL, vArm, 0.75);
             }
+
+            alignArm(bUpperL, bLowerL, vArm, vForearm, torsoFwdNormal, shoulderLateral, mirrorAvatar ? "R" : "L", 0.85);
           } else {
             if (bShoulderL && bShoulderL.restLocalQ) bShoulderL.quaternion.slerp(bShoulderL.restLocalQ, 0.08);
             if (bUpperL && bUpperL.restLocalQ) bUpperL.quaternion.slerp(bUpperL.restLocalQ, 0.08);
             if (bLowerL && bLowerL.restLocalQ) bLowerL.quaternion.slerp(bLowerL.restLocalQ, 0.08);
           }
 
-          // Left Hand / Palm Orientation (Pronation, Supination, Strike angles)
+          // Left Hand / Palm Orientation
           if (bHandL) {
             if (fDataL && fDataL.palm_normal && fDataL.hand_direction) {
               const targetFwd = new THREE.Vector3(...fDataL.hand_direction);
@@ -859,252 +955,175 @@
             }
           }
 
-          // Smart Supporting Foot Grounding & Squat Solver:
-          // In real life, feet remain on the floor (tatami ground).
-          // When squatting or sitting, legs compress vertically (hipY - footY shrinks).
-          // To keep feet planted without the avatar floating or legs pulling up towards hips ("прижимает ноги к себе"),
-          // the avatar's root Y descends continuously in exact sync with leg flexion.
+          // Smart Supporting Foot Grounding & Stance Root Descent
           const hasKneeR = pts["right_hip"] && pts["right_knee"] && conf("right_hip") >= minConf && conf("right_knee") >= minConf;
           const hasAnkleR = pts["right_ankle"] && conf("right_ankle") >= minConf;
           const hasKneeL = pts["left_hip"] && pts["left_knee"] && conf("left_hip") >= minConf && conf("left_knee") >= minConf;
           const hasAnkleL = pts["left_ankle"] && conf("left_ankle") >= minConf;
 
-          // 1. Calculate vertical drop from hips to lowest supporting foot
-          let maxSupportDrop = 0.0;
+          let dropL = 0.0;
+          let dropR = 0.0;
           if (pts["left_hip"] && pts["right_hip"]) {
             const hipY = (pts["left_hip"][1] + pts["right_hip"][1]) * 0.5;
             if (hasKneeL && (hasAnkleL || pts["left_heel"])) {
               const footYL = (pts["left_heel"] && conf("left_heel") >= minConf) ? pts["left_heel"][1] : pts["left_ankle"][1];
-              const dropL = hipY - footYL;
-              if (dropL > maxSupportDrop) maxSupportDrop = dropL;
+              dropL = hipY - footYL;
             }
             if (hasKneeR && (hasAnkleR || pts["right_heel"])) {
               const footYR = (pts["right_heel"] && conf("right_heel") >= minConf) ? pts["right_heel"][1] : pts["right_ankle"][1];
-              const dropR = hipY - footYR;
-              if (dropR > maxSupportDrop) maxSupportDrop = dropR;
+              dropR = hipY - footYR;
             }
           }
 
-          // Dynamically adapt nominal standing leg length when user stands tall
+          const maxSupportDrop = Math.max(dropL, dropR);
           if (maxSupportDrop > 0.65 && maxSupportDrop < 1.15) {
             if (maxSupportDrop > nominalLegLen) {
               nominalLegLen = nominalLegLen * 0.90 + maxSupportDrop * 0.10;
             }
           }
 
-          // 2. Strict Chair Sitting Check (when user sits in a chair with both legs)
-          let isSitting = false;
-          if (hasKneeL && hasKneeR) {
-            const dyL = Math.abs(pts["left_hip"][1] - pts["left_knee"][1]);
-            const dyR = Math.abs(pts["right_hip"][1] - pts["right_knee"][1]);
-            const dzL = pts["left_knee"][2] - pts["left_hip"][2];
-            const dzR = pts["right_knee"][2] - pts["right_hip"][2];
-            const kneesLevel = Math.abs(pts["left_knee"][1] - pts["right_knee"][1]);
-            if (dyL < 0.22 && dzL > 0.15 && dyR < 0.22 && dzR > 0.15 && kneesLevel < 0.12) {
-              isSitting = true;
+          const biomech = frameData.biomechanics || {};
+          const detectedStance = biomech.stance || "Shizentai";
+          const isZenkutsu = detectedStance === "Zenkutsu-dachi";
+          const isKiba = detectedStance === "Kiba-dachi";
+          const isKokutsu = detectedStance === "Kokutsu-dachi";
+          const isKick = dropL < 0.35 || dropR < 0.35 || (biomech.kick_technique && biomech.kick_technique !== "None");
+
+          let stanceDrop = maxSupportDrop;
+          if (dropL > 0.35 && dropR > 0.35) {
+            if (isZenkutsu || isKokutsu) {
+              const minDrop = Math.min(dropL, dropR);
+              stanceDrop = minDrop * 0.70 + maxSupportDrop * 0.30;
+            } else if (isKiba) {
+              stanceDrop = Math.min(dropL, dropR);
+            } else {
+              stanceDrop = (dropL + dropR) * 0.5;
             }
+          } else if (isKick) {
+            stanceDrop = dropL < 0.35 ? dropR : dropL;
           }
 
-          const targetSeated = isSitting ? 1.0 : 0.0;
-          seatedWeight = seatedWeight * 0.88 + targetSeated * 0.12;
-
-          // 3. Compute continuous root Y descent (feet stay firmly planted on the floor!)
           let targetRootY = 0.0;
-          if (maxSupportDrop > 0.25) {
-            // Smooth continuous squat tracking: descends smoothly as knees bend!
-            const legCompression = maxSupportDrop - nominalLegLen;
-            if (legCompression < -0.03) {
-              targetRootY = Math.max(-0.62, legCompression + 0.03);
+          if (stanceDrop > 0.25) {
+            const legCompression = stanceDrop - nominalLegLen;
+            if (legCompression < -0.02) {
+              targetRootY = Math.max(-0.65, legCompression + 0.02);
             }
-          } else if (isSitting) {
-            targetRootY = -0.38 * seatedWeight;
           }
 
-          // Hips push slightly backwards (-Z) during deep squat for physical balance
-          // and during forward torso bending to maintain realistic human balance over the feet
           const fwdBendShift = Math.max(0, torsoFwdZ) * 0.22;
           const targetRootZ = targetRootY * 0.25 - fwdBendShift;
 
-          // Smooth EMA filtering for root translation
           smoothRootY = smoothRootY * 0.50 + targetRootY * 0.50;
           smoothRootZ = smoothRootZ * 0.50 + targetRootZ * 0.50;
 
           if (avatarModel) {
-            avatarModel.position.y = smoothRootY;
             avatarModel.position.z = smoothRootZ;
           }
 
-          // Pure Kinematic Leg & Foot Solver: 100% faithful replication of individual limb motion
-          // Physical Right Leg & Foot
           const bUpperLegR = getBone(legNameR);
           const bLowerLegR = getBone(shinNameR);
           const bFootR = getBone(footNameR);
 
-          if (hasKneeR) {
-            const vThigh = new THREE.Vector3(...pts["right_knee"]).sub(new THREE.Vector3(...pts["right_hip"]));
-            if (mirrorAvatar) vThigh.x = -vThigh.x;
-            alignBone(bUpperLegR, vThigh, 0.85);
-
-            const anklePtR = (pts["right_ankle"] && conf("right_ankle") >= minConf) ? pts["right_ankle"] : ((pts["right_heel"] && conf("right_heel") >= minConf) ? pts["right_heel"] : null);
-            if (anklePtR) {
-              const vShin = new THREE.Vector3(...anklePtR).sub(new THREE.Vector3(...pts["right_knee"]));
-              if (mirrorAvatar) vShin.x = -vShin.x;
-
-              // PhysCap Option A: Anatomical Thigh-Relative Knee Hinge (Right Leg)
-              // Human knee flexes strictly towards the posterior surface of the femur (hamstring).
-              // By evaluating bend relative to the thigh's local anterior/posterior axis, kicks
-              // in any direction (front, side, roundhouse, back) never hyperextend or invert!
-              if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
-                const uThigh = vThigh.clone().normalize();
-                let uThighLat = new THREE.Vector3().crossVectors(torsoFwdNormal, uThigh);
-                if (uThighLat.lengthSq() < 1e-3 && vSpine) {
-                  uThighLat.crossVectors(vSpine.clone().normalize(), uThigh);
-                }
-                if (uThighLat.lengthSq() > 1e-4) {
-                  uThighLat.normalize();
-                  // Anterior (quadriceps/front of femur):
-                  const uAnterior = new THREE.Vector3().crossVectors(uThigh, uThighLat).normalize();
-                  const projAlongThigh = vShin.dot(uThigh);
-                  const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
-                  let vBend = vShin.clone().sub(vParallel);
-
-                  if (vBend.lengthSq() > 1e-4) {
-                    const anteriorDot = vBend.dot(uAnterior);
-                    // Knee cannot hyperextend anteriorly past the femur line
-                    if (anteriorDot > 0.03) {
-                      vBend.sub(uAnterior.clone().multiplyScalar(anteriorDot));
-                      vShin.copy(vParallel.add(vBend));
-                    }
-                  }
-                }
-
-                // Anatomical maximum knee flexion limit: human knee max flexion is ~155 deg (2.70 rad)
-                const kneeAngle = uThigh.angleTo(vShin.clone().normalize());
-                if (kneeAngle > 2.70) {
-                  const axis = new THREE.Vector3().crossVectors(uThigh, vShin).normalize();
-                  if (axis.lengthSq() > 1e-4) {
-                    vShin.copy(uThigh.clone().applyAxisAngle(axis, 2.70).multiplyScalar(vShin.length()));
-                  }
-                }
-              }
-
-              // Straight Kick Snap (Mae-Geri): when leg is raised and nearly straight (dot > 0.88)
-              const legDotR = uThigh.dot(vShin.clone().normalize());
-              if (legDotR > 0.88 && (vThigh.z > 0.05 || vThigh.y > -0.55)) {
-                const snapAlpha = Math.min(1.0, (legDotR - 0.88) / 0.08);
-                vShin.lerp(uThigh.clone().multiplyScalar(vShin.length()), snapAlpha);
-              }
-              alignBone(bLowerLegR, vShin, 0.85);
-            } else if (bLowerLegR) {
-              // Front kick (Mae-Geri) & elevated kicks: when ankle is collinear with camera/knee,
-              // continue shin straight forward along thigh so leg fully extends!
-              const isKickingR = vThigh.z > 0.08 || vThigh.y > -0.60;
-              const vShin = isKickingR ? vThigh.clone().normalize() : new THREE.Vector3(vThigh.x * 0.15, -0.98, -0.05);
-              alignBone(bLowerLegR, vShin, 0.85);
-            }
-
-            // Dedicated Foot Rotation Tracking (Yaw heading & pitch on the floor)
-            if (bFootR) {
-              const origR = (pts["right_heel"] && conf("right_heel") >= minConf) ? pts["right_heel"] : (pts["right_ankle"] && conf("right_ankle") >= minConf ? pts["right_ankle"] : null);
-              const hasToeR = pts["right_foot_index"] && conf("right_foot_index") >= minConf;
-              if (origR && hasToeR) {
-                const vFoot = new THREE.Vector3(...pts["right_foot_index"]).sub(new THREE.Vector3(...origR));
-                if (mirrorAvatar) vFoot.x = -vFoot.x;
-                alignFoot(bFootR, vFoot, mirrorAvatar ? "L" : "R");
-              } else if (bFootR.restLocalQ) {
-                bFootR.quaternion.slerp(bFootR.restLocalQ, 0.15);
-              }
-            }
-          } else if (bUpperLegR) {
-            // Ground avatar in a stable karate stance (Heiko-dachi) when lower body is not visible
-            const groundThighR = new THREE.Vector3(-0.06, -0.98, 0.05);
-            const groundShinR = new THREE.Vector3(-0.02, -0.98, -0.05);
-            alignBone(bUpperLegR, groundThighR, 0.20);
-            if (bLowerLegR) alignBone(bLowerLegR, groundShinR, 0.20);
-            if (bFootR && bFootR.restLocalQ) bFootR.quaternion.slerp(bFootR.restLocalQ, 0.15);
-          }
-
-          // Physical Left Leg & Foot
           const bUpperLegL = getBone(legNameL);
           const bLowerLegL = getBone(shinNameL);
           const bFootL = getBone(footNameL);
 
-          if (hasKneeL) {
-            const vThigh = new THREE.Vector3(...pts["left_knee"]).sub(new THREE.Vector3(...pts["left_hip"]));
-            if (mirrorAvatar) vThigh.x = -vThigh.x;
-            alignBone(bUpperLegL, vThigh, 0.85);
+          // 4. Stable Anatomical Leg & Knee Alignment (No gimbal twists, no joint flips)
+          if (hasKneeR && bUpperLegR) {
+            const vThighR = new THREE.Vector3(...pts["right_knee"]).sub(new THREE.Vector3(...pts["right_hip"]));
+            if (mirrorAvatar) vThighR.x = -vThighR.x;
 
-            const anklePtL = (pts["left_ankle"] && conf("left_ankle") >= minConf) ? pts["left_ankle"] : ((pts["left_heel"] && conf("left_heel") >= minConf) ? pts["left_heel"] : null);
-            if (anklePtL) {
-              const vShin = new THREE.Vector3(...anklePtL).sub(new THREE.Vector3(...pts["left_knee"]));
-              if (mirrorAvatar) vShin.x = -vShin.x;
-
-              // PhysCap Option A: Anatomical Thigh-Relative Knee Hinge (Left Leg)
-              if (vThigh.lengthSq() > 1e-4 && vShin.lengthSq() > 1e-4) {
-                const uThigh = vThigh.clone().normalize();
-                let uThighLat = new THREE.Vector3().crossVectors(torsoFwdNormal, uThigh);
-                if (uThighLat.lengthSq() < 1e-3 && vSpine) {
-                  uThighLat.crossVectors(vSpine.clone().normalize(), uThigh);
-                }
-                if (uThighLat.lengthSq() > 1e-4) {
-                  uThighLat.normalize();
-                  const uAnterior = new THREE.Vector3().crossVectors(uThigh, uThighLat).normalize();
-                  const projAlongThigh = vShin.dot(uThigh);
-                  const vParallel = uThigh.clone().multiplyScalar(projAlongThigh);
-                  let vBend = vShin.clone().sub(vParallel);
-
-                  if (vBend.lengthSq() > 1e-4) {
-                    const anteriorDot = vBend.dot(uAnterior);
-                    if (anteriorDot > 0.03) {
-                      vBend.sub(uAnterior.clone().multiplyScalar(anteriorDot));
-                      vShin.copy(vParallel.add(vBend));
-                    }
-                  }
-                }
-
-                const kneeAngle = uThigh.angleTo(vShin.clone().normalize());
-                if (kneeAngle > 2.70) {
-                  const axis = new THREE.Vector3().crossVectors(uThigh, vShin).normalize();
-                  if (axis.lengthSq() > 1e-4) {
-                    vShin.copy(uThigh.clone().applyAxisAngle(axis, 2.70).multiplyScalar(vShin.length()));
-                  }
-                }
-              }
-
-              // Straight Kick Snap (Mae-Geri): when leg is raised and nearly straight (dot > 0.88),
-              const legDotL = uThigh.dot(vShin.clone().normalize());
-              if (legDotL > 0.88 && (vThigh.z > 0.05 || vThigh.y > -0.55)) {
-                const snapAlpha = Math.min(1.0, (legDotL - 0.88) / 0.08);
-                vShin.lerp(uThigh.clone().multiplyScalar(vShin.length()), snapAlpha);
-              }
-              alignBone(bLowerLegL, vShin, 0.85);
-            } else if (bLowerLegL) {
-              // Front kick (Mae-Geri) & elevated kicks: when ankle is collinear with camera/knee,
-              // continue shin straight forward along thigh so leg fully extends!
-              const isKickingL = vThigh.z > 0.08 || vThigh.y > -0.60;
-              const vShin = isKickingL ? vThigh.clone().normalize() : new THREE.Vector3(vThigh.x * 0.15, -0.98, -0.05);
-              alignBone(bLowerLegL, vShin, 0.85);
+            const anklePtR = (pts["right_ankle"] && conf("right_ankle") >= minConf) ? pts["right_ankle"] : pts["right_heel"];
+            let vShinR = null;
+            if (anklePtR && bLowerLegR) {
+              vShinR = new THREE.Vector3(...anklePtR).sub(new THREE.Vector3(...pts["right_knee"]));
+              if (mirrorAvatar) vShinR.x = -vShinR.x;
             }
 
-            // Dedicated Foot Rotation Tracking (Yaw heading & pitch on the floor)
+            alignLeg(bUpperLegR, bLowerLegR, vThighR, vShinR, torsoFwdNormal, pelvisLateral, mirrorAvatar ? "L" : "R", 0.85);
+
+            if (bFootR) {
+              const origR = (pts["right_heel"] && conf("right_heel") >= minConf) ? pts["right_heel"] : pts["right_ankle"];
+              const hasToeR = pts["right_foot_index"] && conf("right_foot_index") >= minConf;
+              if (origR && hasToeR) {
+                const vFoot = new THREE.Vector3(...pts["right_foot_index"]).sub(new THREE.Vector3(...origR));
+                if (mirrorAvatar) vFoot.x = -vFoot.x;
+                alignFoot(bFootR, vFoot, bLowerLegR, pelvisLateral, mirrorAvatar ? "L" : "R", 0.85);
+              } else if (bFootR.restLocalQ) {
+                bFootR.quaternion.slerp(bFootR.restLocalQ, 0.15);
+              }
+            }
+          }
+
+          if (hasKneeL && bUpperLegL) {
+            const vThighL = new THREE.Vector3(...pts["left_knee"]).sub(new THREE.Vector3(...pts["left_hip"]));
+            if (mirrorAvatar) vThighL.x = -vThighL.x;
+      
+            const anklePtL = (pts["left_ankle"] && conf("left_ankle") >= minConf) ? pts["left_ankle"] : pts["left_heel"];
+            let vShinL = null;
+            if (anklePtL && bLowerLegL) {
+              vShinL = new THREE.Vector3(...anklePtL).sub(new THREE.Vector3(...pts["left_knee"]));
+              if (mirrorAvatar) vShinL.x = -vShinL.x;
+            }
+
+            alignLeg(bUpperLegL, bLowerLegL, vThighL, vShinL, torsoFwdNormal, pelvisLateral, mirrorAvatar ? "R" : "L", 0.85);
+
             if (bFootL) {
-              const origL = (pts["left_heel"] && conf("left_heel") >= minConf) ? pts["left_heel"] : (pts["left_ankle"] && conf("left_ankle") >= minConf ? pts["left_ankle"] : null);
+              const origL = (pts["left_heel"] && conf("left_heel") >= minConf) ? pts["left_heel"] : pts["left_ankle"];
               const hasToeL = pts["left_foot_index"] && conf("left_foot_index") >= minConf;
               if (origL && hasToeL) {
                 const vFoot = new THREE.Vector3(...pts["left_foot_index"]).sub(new THREE.Vector3(...origL));
                 if (mirrorAvatar) vFoot.x = -vFoot.x;
-                alignFoot(bFootL, vFoot, mirrorAvatar ? "R" : "L");
+                alignFoot(bFootL, vFoot, bLowerLegL, pelvisLateral, mirrorAvatar ? "R" : "L", 0.85);
               } else if (bFootL.restLocalQ) {
                 bFootL.quaternion.slerp(bFootL.restLocalQ, 0.15);
               }
             }
-          } else if (bUpperLegL) {
-            // Ground avatar in a stable karate stance when lower body is not visible
-            const groundThighL = new THREE.Vector3(0.06, -0.98, 0.05);
-            const groundShinL = new THREE.Vector3(0.02, -0.98, -0.05);
-            alignBone(bUpperLegL, groundThighL, 0.20);
-            if (bLowerLegL) alignBone(bLowerLegL, groundShinL, 0.20);
-            if (bFootL && bFootL.restLocalQ) bFootL.quaternion.slerp(bFootL.restLocalQ, 0.15);
+          }
+
+          // 5. Active Tatami Floor Grounding & Stance Maintenance Solver
+          // Ensures the model actively strives to STAND on the floor at all times:
+          // Whether standing on two feet or balancing on one foot with bent/tilted torso,
+          // the supporting foot (lowest foot) is firmly pinned to the tatami floor (ankle at TARGET_ANKLE_Y = 0.080).
+          if (avatarModel) {
+            avatarModel.updateMatrixWorld(true);
+            const TARGET_ANKLE_Y = 0.080;
+            const bFootL = getBone(footNameL);
+            const bFootR = getBone(footNameR);
+            let lowestAnkleY = Infinity;
+            const tmpP = new THREE.Vector3();
+
+            if (bFootL) {
+              bFootL.getWorldPosition(tmpP);
+              if (tmpP.y < lowestAnkleY) lowestAnkleY = tmpP.y;
+            }
+            if (bFootR) {
+              bFootR.getWorldPosition(tmpP);
+              if (tmpP.y < lowestAnkleY) lowestAnkleY = tmpP.y;
+            }
+
+            // Detect airborne jump: both feet clearly elevated off ground
+            let isAirborneJump = false;
+            if (pts["left_ankle"] && pts["right_ankle"]) {
+              const ankleYL = pts["left_ankle"][1];
+              const ankleYR = pts["right_ankle"][1];
+              // In mocap_tracker world coords, standing ankle is at Y ≈ -0.80.
+              // Both ankles must be above -0.40 (jump of >40cm off ground)
+              if (ankleYL > -0.40 && ankleYR > -0.40 && dropL < 0.40 && dropR < 0.40) {
+                isAirborneJump = true;
+              }
+            }
+
+            if (!isAirborneJump && lowestAnkleY < 2.5 && lowestAnkleY > -2.5) {
+              const groundingDelta = TARGET_ANKLE_Y - lowestAnkleY;
+              // Smooth, instant anchor to tatami: supporting foot stays solidly planted on the floor!
+              avatarModel.position.y += groundingDelta;
+              avatarModel.updateMatrixWorld(true);
+            } else if (isAirborneJump) {
+              avatarModel.position.y = smoothRootY;
+              avatarModel.updateMatrixWorld(true);
+            }
           }
         }
 
@@ -1118,8 +1137,6 @@
         const headBone = getBone("Head");
         if (headBone && headBone.restLocalQ) {
           const h = frameData.head || { pitch: 0, yaw: 0, roll: 0 };
-          // Negative h.pitch correctly tilts head UP when user looks up, and DOWN when user looks down in Three.js Euler space
-          // headPitchOffset maintains upright forward gaze (chin slightly elevated, Metsuke gaze)
           const pitchAngle = -(h.pitch || 0) + headPitchOffset;
           const yawAngle = (h.yaw || 0);
           const rollAngle = (h.roll || 0);
@@ -1128,70 +1145,7 @@
           headBone.quaternion.slerp(targetLocal, 0.70);
         }
 
-        // PhysCap Option A: Foot Ground-Locking, Anti-Skate & Zero Floor Penetration
-        // In real karate kata, supporting feet remain planted on the tatami ground (Y = 0.00)
-        // without sliding (anti-skate) or clipping beneath the floor (zero floor penetration).
-        if (avatarModel) {
-          avatarModel.updateMatrixWorld(true);
-          const footBoneNames = [
-            "Foot.L", "Foot.R", "ToeBase.L", "ToeBase.R",
-            "LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase"
-          ];
-          let lowestFootY = Infinity;
-          const _tmpFootPos = new THREE.Vector3();
-          for (const fbName of footBoneNames) {
-            const b = getBone(fbName);
-            if (b) {
-              b.getWorldPosition(_tmpFootPos);
-              if (_tmpFootPos.y < lowestFootY) {
-                lowestFootY = _tmpFootPos.y;
-              }
-            }
-          }
-
-          // The sole of the foot extends ~0.038m below the foot bone joint.
-          // Floor surface is at world Y = 0.00. Lowest foot joint must be >= 0.038m!
-          const MIN_GROUND_Y = 0.038;
-          if (lowestFootY < MIN_GROUND_Y && lowestFootY > -2.0) {
-            const liftAmount = MIN_GROUND_Y - lowestFootY;
-            avatarModel.position.y += liftAmount;
-            avatarModel.updateMatrixWorld(true);
-          }
-
-          // Anti-Skate: enforce grounded stability for supporting feet
-          ['L', 'R'].forEach(side => {
-            const fName = side === 'L' ? footNameL : footNameR;
-            const bFoot = getBone(fName);
-            if (bFoot) {
-              bFoot.getWorldPosition(_tmpFootPos);
-              const st = footLockState[side];
-              const isNearGround = _tmpFootPos.y <= (MIN_GROUND_Y + 0.05);
-              const deltaY = Math.abs(_tmpFootPos.y - st.prevPos.y);
-
-              if (isNearGround && deltaY < 0.02) {
-                // Foot is planted on tatami
-                if (!st.isPlanted) {
-                  st.isPlanted = true;
-                  st.plantPos.copy(_tmpFootPos);
-                } else {
-                  // Damp small lateral jitter (anti-skate filter)
-                  const driftDist = _tmpFootPos.distanceTo(st.plantPos);
-                  if (driftDist < 0.045 && driftDist > 1e-4) {
-                    // Suppress micro-jitter sliding on floor
-                    avatarModel.position.x -= (_tmpFootPos.x - st.plantPos.x) * 0.15;
-                    avatarModel.position.z -= (_tmpFootPos.z - st.plantPos.z) * 0.15;
-                  }
-                }
-              } else {
-                // Foot raised in kick, knee strike or step
-                st.isPlanted = false;
-              }
-              st.prevPos.copy(_tmpFootPos);
-            }
-          });
-        }
-
-        // Finger curls & Real-Time Telemetry
+        // Finger curls & Real-Time Telemetry// Finger curls & Real-Time Telemetry
         if (frameData.fingers) {
           const fSideR = mirrorAvatar ? "L" : "R";
           const fSideL = mirrorAvatar ? "R" : "L";
@@ -1407,8 +1361,14 @@
     });
 
     // Render loop (no deprecated SkeletonHelper.update() call)
+    let pendingPoseData = null;
+
     function animate() {
       requestAnimationFrame(animate);
+      if (pendingPoseData && window.updatePose) {
+        window.updatePose(pendingPoseData);
+        pendingPoseData = null;
+      }
       controls.update();
       renderer.render(scene, camera);
     }
@@ -1428,8 +1388,9 @@
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data && window.updatePose) {
-              window.updatePose(data);
+            if (data) {
+              // Frame coalescing: store latest pose frame for render loop
+              pendingPoseData = data;
             }
           } catch (e) {
             console.warn('[KarateViewer] Error parsing pose frame:', e);

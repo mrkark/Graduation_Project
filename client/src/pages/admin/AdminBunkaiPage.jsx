@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { listBunkai, approveBunkai, rejectBunkai, deleteBunkai } from '../../api/bunkai';
 import StatusBadge from '../../components/StatusBadge';
+import './admin.css';
 
 export default function AdminBunkaiPage() {
   const [status, setStatus] = useState('pending');
@@ -227,55 +228,69 @@ export default function AdminBunkaiPage() {
                     <td>
                       <StatusBadge status={b.Status} />
                     </td>
-                    <td>
-                      <div className="admin-row-actions">
-                        {/* Прецедент: Утверждение публикации бункай */}
-                        {b.Status !== 'approved' && (
+                    <td className="admin-actions-cell">
+                      <div className="admin-bunkai-actions-grid">
+                        {/* 1. Прецедент: Утверждение публикации бункай */}
+                        <div className="admin-action-slot">
+                          {b.Status !== 'approved' ? (
+                            <button
+                              type="button"
+                              className="btn btn-success btn-sm"
+                              onClick={() => onApprove(b.Bunkai_ID, b.Title)}
+                              disabled={isBusy}
+                              title="Утвердить публикацию боевого сценария бункай"
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>Утвердить</span>
+                            </button>
+                          ) : (
+                            <div className="admin-action-placeholder" />
+                          )}
+                        </div>
+
+                        {/* 2. Прецедент: Отклонение публикации бункай */}
+                        <div className="admin-action-slot">
+                          {b.Status !== 'rejected' ? (
+                            <button
+                              type="button"
+                              className="btn btn-warning btn-sm"
+                              onClick={() => onReject(b.Bunkai_ID, b.Title)}
+                              disabled={isBusy}
+                              title="Отклонить публикацию боевого сценария"
+                            >
+                              <XCircle size={13} />
+                              <span>Отклонить</span>
+                            </button>
+                          ) : (
+                            <div className="admin-action-placeholder" />
+                          )}
+                        </div>
+
+                        {/* 3. Переход в 3D-просмотр */}
+                        <div className="admin-action-slot">
+                          <Link
+                            to={`/bunkai/${b.Bunkai_ID}`}
+                            className="btn btn-subtle btn-sm"
+                            title="Открыть интерактивный 3D-просмотр движений"
+                          >
+                            <Eye size={13} />
+                            <span>3D-просмотр</span>
+                          </Link>
+                        </div>
+
+                        {/* 4. Удаление сценария */}
+                        <div className="admin-action-slot">
                           <button
                             type="button"
-                            className="btn btn-success btn-sm"
-                            onClick={() => onApprove(b.Bunkai_ID, b.Title)}
+                            className="btn btn-danger btn-sm"
+                            onClick={() => onDelete(b.Bunkai_ID, b.Title)}
                             disabled={isBusy}
-                            title="Утвердить публикацию боевого сценария бункай"
+                            title="Удалить сценарий из базы"
                           >
-                            <CheckCircle2 size={13} />
-                            <span>Утвердить</span>
+                            <Trash2 size={13} />
+                            <span>Удалить</span>
                           </button>
-                        )}
-
-                        {/* Прецедент: Отклонение публикации бункай */}
-                        {b.Status !== 'rejected' && (
-                          <button
-                            type="button"
-                            className="btn btn-warning btn-sm"
-                            onClick={() => onReject(b.Bunkai_ID, b.Title)}
-                            disabled={isBusy}
-                            title="Отклонить публикацию боевого сценария"
-                          >
-                            <XCircle size={13} />
-                            <span>Отклонить</span>
-                          </button>
-                        )}
-
-                        <Link
-                          to={`/bunkai/${b.Bunkai_ID}`}
-                          className="btn btn-subtle btn-sm"
-                          title="Открыть интерактивный 3D-просмотр движений"
-                        >
-                          <Eye size={13} />
-                          <span>3D-просмотр</span>
-                        </Link>
-
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => onDelete(b.Bunkai_ID, b.Title)}
-                          disabled={isBusy}
-                          title="Удалить сценарий из базы"
-                        >
-                          <Trash2 size={13} />
-                          <span>Удалить</span>
-                        </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
