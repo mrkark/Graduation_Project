@@ -135,6 +135,7 @@ export default function BunkaiMultiAvatarPlayer({
     if (activeStepIndex !== undefined && activeStepIndex !== currentStepIdx) {
       setCurrentStepIdx(activeStepIndex);
       phraseRef.current = 0;
+      setScrubProgress(null);
       setStepCompleted(false);
       zanshinTimerRef.current = 0;
       setIsPlaying(true);
@@ -147,6 +148,7 @@ export default function BunkaiMultiAvatarPlayer({
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState(1.0);
+  const [scrubProgress, setScrubProgress] = useState(null);
   const [stepCompleted, setStepCompleted] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isLoopingStep, setIsLoopingStep] = useState(false);
@@ -478,6 +480,7 @@ export default function BunkaiMultiAvatarPlayer({
   }, [currentEpisode]);
 
   function handlePrevStep() {
+    setScrubProgress(null);
     setCurrentStepIdx((prev) => {
       const next = Math.max(0, prev - 1);
       if (onStepChange) onStepChange(next);
@@ -486,6 +489,7 @@ export default function BunkaiMultiAvatarPlayer({
   }
 
   function handleNextStep() {
+    setScrubProgress(null);
     setCurrentStepIdx((prev) => {
       const next = Math.min(chainedEpisodes.length - 1, prev + 1);
       if (onStepChange) onStepChange(next);
@@ -494,6 +498,7 @@ export default function BunkaiMultiAvatarPlayer({
   }
 
   const handleReplayStep = useCallback(() => {
+    setScrubProgress(null);
     phraseRef.current = 0;
     setStepCompleted(false);
     zanshinTimerRef.current = 0;
@@ -502,6 +507,7 @@ export default function BunkaiMultiAvatarPlayer({
   }, []);
 
   const handlePlayEntireBunkai = useCallback(() => {
+    setScrubProgress(null);
     setCurrentStepIdx(0);
     if (onStepChange) onStepChange(0);
     phraseRef.current = 0;
@@ -515,6 +521,7 @@ export default function BunkaiMultiAvatarPlayer({
   }, [onStepChange]);
 
   const handleStepSelect = useCallback((idx) => {
+    setScrubProgress(null);
     setCurrentStepIdx(idx);
     if (onStepChange) onStepChange(idx);
     phraseRef.current = 0;
@@ -525,6 +532,7 @@ export default function BunkaiMultiAvatarPlayer({
   }, [onStepChange]);
 
   const handleTogglePlay = useCallback(() => {
+    setScrubProgress(null);
     if (!isPlaying && phraseRef.current >= 1.0) {
       phraseRef.current = 0;
       setStepCompleted(false);
