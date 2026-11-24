@@ -404,8 +404,8 @@ export default function BunkaiMultiAvatarPlayer({
       customUkeClip,
       toriLandingMode,
       ukeLandingMode,
-      customToriYawDeg: customToriEndYawDeg !== null ? customToriEndYawDeg : currentEpisode.toriEndAngleDeg,
-      customUkeYawDeg: customUkeEndYawDeg !== null ? customUkeEndYawDeg : currentEpisode.ukeEndAngleDeg,
+      customToriYawDeg: customToriEndYawDeg !== null ? customToriEndYawDeg : undefined,
+      customUkeYawDeg: customUkeEndYawDeg !== null ? customUkeEndYawDeg : undefined,
       orientationModeTori: orientationModeTori || (customToriEndYawDeg !== null ? 'mode1_free' : undefined),
       orientationModeUke: orientationModeUke || (customUkeEndYawDeg !== null ? 'mode1_free' : undefined),
       customToriPosX,
@@ -1582,263 +1582,6 @@ export default function BunkaiMultiAvatarPlayer({
               <span style={{ color: '#60a5fa', fontWeight: 700, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                 <Zap size={15} color="#3b82f6" /> Тори — Атакующий (Синее доги / 攻撃)
               </span>
-              {customUkeClip && (
-                <button
-                  type="button"
-                  onClick={() => setCustomUkeClip('')}
-                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.7rem', cursor: 'pointer' }}
-                >
-                  Сбросить удар
-                </button>
-              )}
-            </div>
-
-            {/* Выбор удара Укэ */}
-            <div>
-              <label style={{ fontSize: '0.75rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 3 }}>
-                Удар / Атака кулаком или ногой:
-              </label>
-              <select
-                value={customUkeClip || uke1Part.clipName || 'oi_zuki_right'}
-                onChange={(e) => {
-                  setCustomUkeClip(e.target.value);
-                  notifyParamChange('ukeClip', e.target.value);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  borderRadius: 6,
-                  background: '#1a1a24',
-                  color: '#f8fafc',
-                  border: '1px solid #475569',
-                  fontSize: '0.79rem',
-                  cursor: 'pointer',
-                }}
-              >
-                {BUNKAI_ATTACK_STRIKES.map((s) => (
-                  <option key={s.value} value={s.value}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Стойки Укэ: Начальная и Конечная */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <label style={{ fontSize: '0.73rem', color: '#cbd5e1' }}>Нач. стойка Укэ:</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = toggleStanceSide(customUkeStance, uke1Part.stance);
-                      setCustomUkeStance(next);
-                      notifyParamChange('ukeStance', next);
-                    }}
-                    title="Сменить сторону"
-                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#f8fafc', borderRadius: 3, padding: '1px 5px', fontSize: '0.68rem', cursor: 'pointer' }}
-                  >
-                    ⇄
-                  </button>
-                </div>
-                <select
-                  value={customUkeStance}
-                  onChange={(e) => {
-                    setCustomUkeStance(e.target.value);
-                    notifyParamChange('ukeStance', e.target.value);
-                  }}
-                  style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
-                >
-                  <option value="">По сценарию ({uke1Part.stance || 'zenkutsu'})</option>
-                  <optgroup label="Дзэнкуцу-дати">
-                    <option value="zenkutsu_dachi_left">Левая Дзэнкуцу (Хидари)</option>
-                    <option value="zenkutsu_dachi_right">Правая Дзэнкуцу (Миги)</option>
-                  </optgroup>
-                  <optgroup label="Кокуцу-дати">
-                    <option value="kokutsu_dachi_left">Левая Кокуцу (Хидари)</option>
-                    <option value="kokutsu_dachi_right">Правая Кокуцу (Миги)</option>
-                  </optgroup>
-                  <optgroup label="Фудо-дати">
-                    <option value="fudo_dachi">Левая Фудо (Хидари)</option>
-                    <option value="fudo_dachi_right">Правая Фудо (Миги)</option>
-                  </optgroup>
-                  <optgroup label="Симметричные">
-                    <option value="kiba_dachi">Киба-дати (Всадник)</option>
-                    <option value="stance_shiko">Сико-дати (Квадрат)</option>
-                    <option value="heiko_dachi">Хэйко-дати (Готовность)</option>
-                    <option value="stance_musubi">Мусуби-дати (Поклон)</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                  <label style={{ fontSize: '0.73rem', color: '#cbd5e1' }}>Кон. стойка Укэ:</label>
-                  {customUkeFinalStance && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomUkeFinalStance('');
-                        notifyParamChange('ukeFinalStance', '');
-                      }}
-                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.68rem', cursor: 'pointer', padding: 0 }}
-                    >
-                      Сброс
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={customUkeFinalStance}
-                  onChange={(e) => {
-                    setCustomUkeFinalStance(e.target.value);
-                    notifyParamChange('ukeFinalStance', e.target.value);
-                  }}
-                  style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
-                >
-                  <option value="">Авто (по сценарию)</option>
-                  <optgroup label="Дзэнкуцу-дати">
-                    <option value="zenkutsu_dachi_left">Левая Дзэнкуцу</option>
-                    <option value="zenkutsu_dachi_right">Правая Дзэнкуцу</option>
-                  </optgroup>
-                  <optgroup label="Кокуцу-дати">
-                    <option value="kokutsu_dachi_left">Левая Кокуцу</option>
-                    <option value="kokutsu_dachi_right">Правая Кокуцу</option>
-                  </optgroup>
-                  <optgroup label="Фудо-дати">
-                    <option value="fudo_dachi">Левая Фудо</option>
-                    <option value="fudo_dachi_right">Правая Фудо</option>
-                  </optgroup>
-                  <optgroup label="Симметричные">
-                    <option value="kiba_dachi">Киба-дати</option>
-                    <option value="stance_shiko">Сико-дати</option>
-                    <option value="heiko_dachi">Хэйко-дати</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            {/* Контекстная постановка ноги при ударе ногой Укэ */}
-            {isUkeKick && (
-              <div style={{ padding: '8px 10px', background: 'rgba(56, 189, 248, 0.08)', borderRadius: 6, border: '1px solid rgba(56, 189, 248, 0.28)' }}>
-                <div style={{ fontSize: '0.73rem', color: '#38bdf8', fontWeight: 600, marginBottom: 5 }}>
-                  Постановка ноги при ударе ногой Укэ:
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '5px 8px',
-                      borderRadius: 4,
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      background: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '#f8fafc' : '#1e293b',
-                      color: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '#0f172a' : '#f8fafc',
-                      border: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '1px solid #ffffff' : '1px solid #334155',
-                    }}
-                    onClick={() => {
-                      setUkeLandingMode('back');
-                      notifyParamChange('ukeLandingMode', 'back');
-                      const finalSt = customUkeStance || uke1Part.stance || 'zenkutsu_dachi_left';
-                      setCustomUkeFinalStance(finalSt);
-                      notifyParamChange('ukeFinalStance', finalSt);
-                    }}
-                  >
-                    🔙 Ногу назад (в исходную)
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '5px 8px',
-                      borderRadius: 4,
-                      fontSize: '0.72rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      background: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '#f8fafc' : '#1e293b',
-                      color: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '#0f172a' : '#f8fafc',
-                      border: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '1px solid #ffffff' : '1px solid #334155',
-                    }}
-                    onClick={() => {
-                      setUkeLandingMode('forward');
-                      notifyParamChange('ukeLandingMode', 'forward');
-                      const nextStance = (customUkeStance || uke1Part.stance || '').includes('left') ? 'zenkutsu_dachi_right' : 'zenkutsu_dachi_left';
-                      setCustomUkeFinalStance(nextStance);
-                      notifyParamChange('ukeFinalStance', nextStance);
-                    }}
-                  >
-                    🔜 Ногу вперед (со сменой)
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Конечный угол поворота Укэ 1 (End Yaw) */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                <label style={{ fontSize: '0.73rem', color: '#cbd5e1', fontWeight: 600 }}>Конечный угол поворота Укэ:</label>
-                <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {(customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180)) > 0
-                    ? `+${customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180)}`
-                    : (customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180))}°
-                </span>
-              </div>
-              <input
-                type="range"
-                min="-180"
-                max="180"
-                step="5"
-                value={customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180)}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setCustomUkeEndYawDeg(val);
-                  notifyParamChange('ukeEndAngleDeg', val);
-                  notifyParamChange('customUkeYawDeg', val);
-                }}
-                style={{ width: '100%', accentColor: '#cbd5e1', cursor: 'pointer' }}
-              />
-              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                {[180, 0, 90, -90, 45, -45].map((ang) => (
-                  <button
-                    key={ang}
-                    type="button"
-                    onClick={() => {
-                      setCustomUkeEndYawDeg(ang);
-                      notifyParamChange('ukeEndAngleDeg', ang);
-                      notifyParamChange('customUkeYawDeg', ang);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '2px 4px',
-                      fontSize: '0.67rem',
-                      fontWeight: 600,
-                      borderRadius: 4,
-                      background: (customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180)) === ang ? '#f8fafc' : '#1e293b',
-                      color: (customUkeEndYawDeg !== null ? customUkeEndYawDeg : (currentEpisode.ukeEndAngleDeg ?? 180)) === ang ? '#0f172a' : '#cbd5e1',
-                      border: '1px solid #334155',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {ang}°
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* КАРТОЧКА 3: ЗАЩИЩАЮЩИЙСЯ (УКЭ 1 — БЕЛОЕ ДОГИ) */}
-          <div
-            style={{
-              background: 'rgba(248, 250, 252, 0.04)',
-              padding: '12px 14px',
-              borderRadius: 8,
-              border: '1px solid rgba(248, 250, 252, 0.25)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 10,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                <Shield size={15} color="#f8fafc" /> Укэ 1 — Защищающийся (Белое доги / 防御)
-              </span>
               {customToriClip && (
                 <button
                   type="button"
@@ -1848,18 +1591,18 @@ export default function BunkaiMultiAvatarPlayer({
                   }}
                   style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.7rem', cursor: 'pointer' }}
                 >
-                  Сбросить блок
+                  Сбросить атаку
                 </button>
               )}
             </div>
 
-            {/* Выбор блока / защиты Тори */}
+            {/* Выбор удара Тори */}
             <div>
               <label style={{ fontSize: '0.75rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 3 }}>
-                Блок / Защитное действие или контрудар:
+                Удар / Атака кулаком или ногой:
               </label>
               <select
-                value={customToriClip || toriPart.clipName || 'age_uke_left'}
+                value={customToriClip || toriPart.clipName || 'oi_zuki_right'}
                 onChange={(e) => {
                   setCustomToriClip(e.target.value);
                   notifyParamChange('toriClip', e.target.value);
@@ -1875,8 +1618,8 @@ export default function BunkaiMultiAvatarPlayer({
                   cursor: 'pointer',
                 }}
               >
-                {BUNKAI_DEFENSE_BLOCKS.map((b) => (
-                  <option key={b.value} value={b.value}>{b.label}</option>
+                {BUNKAI_ATTACK_STRIKES.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
             </div>
@@ -1977,8 +1720,8 @@ export default function BunkaiMultiAvatarPlayer({
 
             {/* Контекстная постановка ноги при ударе ногой Тори */}
             {isToriKick && (
-              <div style={{ padding: '8px 10px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: 6, border: '1px solid rgba(255, 255, 255, 0.20)' }}>
-                <div style={{ fontSize: '0.73rem', color: '#f8fafc', fontWeight: 600, marginBottom: 5 }}>
+              <div style={{ padding: '8px 10px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 6, border: '1px solid rgba(59, 130, 246, 0.28)' }}>
+                <div style={{ fontSize: '0.73rem', color: '#60a5fa', fontWeight: 600, marginBottom: 5 }}>
                   Постановка ноги при ударе ногой Тори:
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -2035,9 +1778,12 @@ export default function BunkaiMultiAvatarPlayer({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                 <label style={{ fontSize: '0.73rem', color: '#cbd5e1', fontWeight: 600 }}>Конечный угол поворота Тори:</label>
                 <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {(customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0)) > 0
-                    ? `+${customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0)}`
-                    : (customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0))}°
+                  {(() => {
+                    const dispToriAngle = customToriEndYawDeg !== null
+                      ? customToriEndYawDeg
+                      : (placement.coordinates?.tori?.yawDeg ?? Math.round(((placement.angles?.toriYaw ?? placement.rotTori[1]) * 180) / Math.PI));
+                    return `${dispToriAngle > 0 ? `+${dispToriAngle}` : dispToriAngle}°`;
+                  })()}
                 </span>
               </div>
               <input
@@ -2045,40 +1791,317 @@ export default function BunkaiMultiAvatarPlayer({
                 min="-180"
                 max="180"
                 step="5"
-                value={customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0)}
+                value={customToriEndYawDeg !== null
+                  ? customToriEndYawDeg
+                  : (placement.coordinates?.tori?.yawDeg ?? Math.round(((placement.angles?.toriYaw ?? placement.rotTori[1]) * 180) / Math.PI))}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   setCustomToriEndYawDeg(val);
                   notifyParamChange('toriEndAngleDeg', val);
                   notifyParamChange('customToriYawDeg', val);
                 }}
+                style={{ width: '100%', accentColor: '#60a5fa', cursor: 'pointer' }}
+              />
+              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                {[0, 45, 90, 180, -90, -45].map((ang) => {
+                  const currentVal = customToriEndYawDeg !== null
+                    ? customToriEndYawDeg
+                    : (placement.coordinates?.tori?.yawDeg ?? Math.round(((placement.angles?.toriYaw ?? placement.rotTori[1]) * 180) / Math.PI));
+                  return (
+                    <button
+                      key={ang}
+                      type="button"
+                      onClick={() => {
+                        setCustomToriEndYawDeg(ang);
+                        notifyParamChange('toriEndAngleDeg', ang);
+                        notifyParamChange('customToriYawDeg', ang);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '2px 4px',
+                        fontSize: '0.67rem',
+                        fontWeight: 600,
+                        borderRadius: 4,
+                        background: currentVal === ang ? '#f8fafc' : '#1e293b',
+                        color: currentVal === ang ? '#0f172a' : '#cbd5e1',
+                        border: '1px solid #334155',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ang}°
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* КАРТОЧКА 3: ЗАЩИЩАЮЩИЙСЯ (УКЭ 1 — БЕЛОЕ ДОГИ) */}
+          <div
+            style={{
+              background: 'rgba(248, 250, 252, 0.04)',
+              padding: '12px 14px',
+              borderRadius: 8,
+              border: '1px solid rgba(248, 250, 252, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#f8fafc', fontWeight: 700, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                <Shield size={15} color="#f8fafc" /> Укэ 1 — Защищающийся (Белое доги / 防御)
+              </span>
+              {customUkeClip && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomUkeClip('');
+                    notifyParamChange('ukeClip', '');
+                  }}
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.7rem', cursor: 'pointer' }}
+                >
+                  Сбросить блок
+                </button>
+              )}
+            </div>
+
+            {/* Выбор блока / защиты Укэ */}
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 3 }}>
+                Блок / Защитное действие или контрудар:
+              </label>
+              <select
+                value={customUkeClip || uke1Part.clipName || 'age_uke_left'}
+                onChange={(e) => {
+                  setCustomUkeClip(e.target.value);
+                  notifyParamChange('ukeClip', e.target.value);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  background: '#1a1a24',
+                  color: '#f8fafc',
+                  border: '1px solid #475569',
+                  fontSize: '0.79rem',
+                  cursor: 'pointer',
+                }}
+              >
+                {BUNKAI_DEFENSE_BLOCKS.map((b) => (
+                  <option key={b.value} value={b.value}>{b.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Стойки Укэ: Начальная и Конечная */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                  <label style={{ fontSize: '0.73rem', color: '#cbd5e1' }}>Нач. стойка Укэ:</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = toggleStanceSide(customUkeStance, uke1Part.stance);
+                      setCustomUkeStance(next);
+                      notifyParamChange('ukeStance', next);
+                    }}
+                    title="Сменить сторону"
+                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#f8fafc', borderRadius: 3, padding: '1px 5px', fontSize: '0.68rem', cursor: 'pointer' }}
+                  >
+                    ⇄
+                  </button>
+                </div>
+                <select
+                  value={customUkeStance}
+                  onChange={(e) => {
+                    setCustomUkeStance(e.target.value);
+                    notifyParamChange('ukeStance', e.target.value);
+                  }}
+                  style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
+                >
+                  <option value="">По сценарию ({uke1Part.stance || 'zenkutsu'})</option>
+                  <optgroup label="Дзэнкуцу-дати">
+                    <option value="zenkutsu_dachi_left">Левая Дзэнкуцу (Хидари)</option>
+                    <option value="zenkutsu_dachi_right">Правая Дзэнкуцу (Миги)</option>
+                  </optgroup>
+                  <optgroup label="Кокуцу-дати">
+                    <option value="kokutsu_dachi_left">Левая Кокуцу (Хидари)</option>
+                    <option value="kokutsu_dachi_right">Правая Кокуцу (Миги)</option>
+                  </optgroup>
+                  <optgroup label="Фудо-дати">
+                    <option value="fudo_dachi">Левая Фудо (Хидари)</option>
+                    <option value="fudo_dachi_right">Правая Фудо (Миги)</option>
+                  </optgroup>
+                  <optgroup label="Симметричные">
+                    <option value="kiba_dachi">Киба-дати (Всадник)</option>
+                    <option value="stance_shiko">Сико-дати (Квадрат)</option>
+                    <option value="heiko_dachi">Хэйко-дати (Готовность)</option>
+                    <option value="stance_musubi">Мусуби-дати (Поклон)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                  <label style={{ fontSize: '0.73rem', color: '#cbd5e1' }}>Кон. стойка Укэ:</label>
+                  {customUkeFinalStance && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomUkeFinalStance('');
+                        notifyParamChange('ukeFinalStance', '');
+                      }}
+                      style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '0.68rem', cursor: 'pointer', padding: 0 }}
+                    >
+                      Сброс
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={customUkeFinalStance}
+                  onChange={(e) => {
+                    setCustomUkeFinalStance(e.target.value);
+                    notifyParamChange('ukeFinalStance', e.target.value);
+                  }}
+                  style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
+                >
+                  <option value="">Авто (по сценарию)</option>
+                  <optgroup label="Дзэнкуцу-дати">
+                    <option value="zenkutsu_dachi_left">Левая Дзэнкуцу</option>
+                    <option value="zenkutsu_dachi_right">Правая Дзэнкуцу</option>
+                  </optgroup>
+                  <optgroup label="Кокуцу-дати">
+                    <option value="kokutsu_dachi_left">Левая Кокуцу</option>
+                    <option value="kokutsu_dachi_right">Правая Кокуцу</option>
+                  </optgroup>
+                  <optgroup label="Фудо-дати">
+                    <option value="fudo_dachi">Левая Фудо</option>
+                    <option value="fudo_dachi_right">Правая Фудо</option>
+                  </optgroup>
+                  <optgroup label="Симметричные">
+                    <option value="kiba_dachi">Киба-дати</option>
+                    <option value="stance_shiko">Сико-дати</option>
+                    <option value="heiko_dachi">Хэйко-дати</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            {/* Контекстная постановка ноги при ударе ногой Укэ */}
+            {isUkeKick && (
+              <div style={{ padding: '8px 10px', background: 'rgba(255, 255, 255, 0.06)', borderRadius: 6, border: '1px solid rgba(255, 255, 255, 0.20)' }}>
+                <div style={{ fontSize: '0.73rem', color: '#f8fafc', fontWeight: 600, marginBottom: 5 }}>
+                  Постановка ноги при ударе ногой Укэ:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: 4,
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '#f8fafc' : '#1e293b',
+                      color: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '#0f172a' : '#f8fafc',
+                      border: (ukeLandingMode === 'back' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'back')) ? '1px solid #ffffff' : '1px solid #334155',
+                    }}
+                    onClick={() => {
+                      setUkeLandingMode('back');
+                      notifyParamChange('ukeLandingMode', 'back');
+                      const finalSt = customUkeStance || uke1Part.stance || 'zenkutsu_dachi_left';
+                      setCustomUkeFinalStance(finalSt);
+                      notifyParamChange('ukeFinalStance', finalSt);
+                    }}
+                  >
+                    🔙 Ногу назад (в исходную)
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: 4,
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '#f8fafc' : '#1e293b',
+                      color: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '#0f172a' : '#f8fafc',
+                      border: (ukeLandingMode === 'forward' || (ukeLandingMode === 'auto' && uke1Part.landingMode === 'forward')) ? '1px solid #ffffff' : '1px solid #334155',
+                    }}
+                    onClick={() => {
+                      setUkeLandingMode('forward');
+                      notifyParamChange('ukeLandingMode', 'forward');
+                      const nextStance = (customUkeStance || uke1Part.stance || '').includes('left') ? 'zenkutsu_dachi_right' : 'zenkutsu_dachi_left';
+                      setCustomUkeFinalStance(nextStance);
+                      notifyParamChange('ukeFinalStance', nextStance);
+                    }}
+                  >
+                    🔜 Ногу вперед (со сменой)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Конечный угол поворота Укэ 1 (End Yaw) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                <label style={{ fontSize: '0.73rem', color: '#cbd5e1', fontWeight: 600 }}>Конечный угол поворота Укэ:</label>
+                <span style={{ fontSize: '0.75rem', color: '#f8fafc', fontWeight: 700, fontFamily: 'monospace' }}>
+                  {(() => {
+                    const dispUkeAngle = customUkeEndYawDeg !== null
+                      ? customUkeEndYawDeg
+                      : (placement.coordinates?.uke1?.yawDeg ?? Math.round(((placement.angles?.uke1Yaw ?? placement.rotUke1[1]) * 180) / Math.PI));
+                    return `${dispUkeAngle > 0 ? `+${dispUkeAngle}` : dispUkeAngle}°`;
+                  })()}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="-180"
+                max="180"
+                step="5"
+                value={customUkeEndYawDeg !== null
+                  ? customUkeEndYawDeg
+                  : (placement.coordinates?.uke1?.yawDeg ?? Math.round(((placement.angles?.uke1Yaw ?? placement.rotUke1[1]) * 180) / Math.PI))}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setCustomUkeEndYawDeg(val);
+                  notifyParamChange('ukeEndAngleDeg', val);
+                  notifyParamChange('customUkeYawDeg', val);
+                }}
                 style={{ width: '100%', accentColor: '#cbd5e1', cursor: 'pointer' }}
               />
               <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-                {[0, 45, 90, 180, -90, -45].map((ang) => (
-                  <button
-                    key={ang}
-                    type="button"
-                    onClick={() => {
-                      setCustomToriEndYawDeg(ang);
-                      notifyParamChange('toriEndAngleDeg', ang);
-                      notifyParamChange('customToriYawDeg', ang);
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '2px 4px',
-                      fontSize: '0.67rem',
-                      fontWeight: 600,
-                      borderRadius: 4,
-                      background: (customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0)) === ang ? '#f8fafc' : '#1e293b',
-                      color: (customToriEndYawDeg !== null ? customToriEndYawDeg : (currentEpisode.toriEndAngleDeg ?? 0)) === ang ? '#0f172a' : '#cbd5e1',
-                      border: '1px solid #334155',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {ang}°
-                  </button>
-                ))}
+                {[180, 0, 90, -90, 45, -45].map((ang) => {
+                  const currentVal = customUkeEndYawDeg !== null
+                    ? customUkeEndYawDeg
+                    : (placement.coordinates?.uke1?.yawDeg ?? Math.round(((placement.angles?.uke1Yaw ?? placement.rotUke1[1]) * 180) / Math.PI));
+                  return (
+                    <button
+                      key={ang}
+                      type="button"
+                      onClick={() => {
+                        setCustomUkeEndYawDeg(ang);
+                        notifyParamChange('ukeEndAngleDeg', ang);
+                        notifyParamChange('customUkeYawDeg', ang);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '2px 4px',
+                        fontSize: '0.67rem',
+                        fontWeight: 600,
+                        borderRadius: 4,
+                        background: currentVal === ang ? '#f8fafc' : '#1e293b',
+                        color: currentVal === ang ? '#0f172a' : '#cbd5e1',
+                        border: '1px solid #334155',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {ang}°
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

@@ -499,6 +499,11 @@ export default function BunkaiVisualAids({
         />
       )}
 
+      {/* Линия прямого взгляда и соосности при уходе с линии атаки */}
+      {showCoordinateSystem && isEvaded && (
+        <LineOfSight3D posTori={posTori} posUke={posUke} isEvaded={isEvaded} />
+      )}
+
       {/* 1. Индикаторы направления корпуса (Torso vector) */}
       {showTorsoVector && (
         <>

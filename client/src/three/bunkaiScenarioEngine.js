@@ -578,7 +578,7 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       start: [0, 0, 1.00],
       end: [0.32, 0, 1.25],
       startYaw: Math.PI,
-      endYaw: Math.PI - 0.25,
+      endYaw: -Math.PI + 0.25,
       isStationary: false,
     },
     displacementTori: [0, 0, 0.60],
@@ -616,8 +616,8 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
     ukeTrajectory: {
       start: [0.32, 0, 1.25],
       end: [0.32, 0, 1.15],
-      startYaw: Math.PI - 0.25,
-      endYaw: Math.PI - 0.25,
+      startYaw: -Math.PI + 0.25,
+      endYaw: -Math.PI + 0.25,
       isStationary: false,
     },
     displacementTori: [0, 0, 0],
@@ -656,8 +656,8 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
     ukeTrajectory: {
       start: [0.32, 0, 1.15],
       end: [0.38, 0, 1.68],
-      startYaw: Math.PI - 0.25,
-      endYaw: Math.PI - 0.22,
+      startYaw: -Math.PI + 0.25,
+      endYaw: -Math.PI + 0.22,
       isStationary: false,
     },
     displacementTori: [0, 0, 0.55],
@@ -695,8 +695,8 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
     ukeTrajectory: {
       start: [0.38, 0, 1.68],
       end: [0.36, 0, 1.62],
-      startYaw: Math.PI - 0.22,
-      endYaw: Math.PI - 0.22,
+      startYaw: -Math.PI + 0.22,
+      endYaw: -Math.PI + 0.22,
       isStationary: false,
     },
     displacementTori: [0, 0, 0],
@@ -734,7 +734,7 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
     ukeTrajectory: {
       start: [0.36, 0, 1.62],
       end: [-0.25, 0, -0.45],
-      startYaw: Math.PI - 0.22,
+      startYaw: -Math.PI + 0.22,
       endYaw: 0.214,
       isStationary: false,
     },
@@ -1397,8 +1397,8 @@ export function normalizeBunkaiEpisode(raw, index = 0) {
   const uke1Delay = Number(uke1Part.Delay_Seconds ?? uke1Part.delaySeconds ?? canonical?.participants?.[1]?.delaySeconds ?? 0.0);
   const uke2Delay = Number(uke2Part.Delay_Seconds ?? uke2Part.delaySeconds ?? canonical?.participants?.[2]?.delaySeconds ?? 0.0);
 
-  const toriEndAngleDeg = raw.toriEndAngleDeg ?? (toriPart.rotationY !== undefined ? toriPart.rotationY : (toriPart.Rotation_Y !== undefined ? toriPart.Rotation_Y : (raw.toriTrajectory?.endYaw !== undefined ? Math.round((raw.toriTrajectory.endYaw * 180) / Math.PI) : (canonical?.toriTrajectory?.endYaw !== undefined ? Math.round((canonical.toriTrajectory.endYaw * 180) / Math.PI) : undefined))));
-  const ukeEndAngleDeg = raw.ukeEndAngleDeg ?? (uke1Part.rotationY !== undefined ? uke1Part.rotationY : (uke1Part.Rotation_Y !== undefined ? uke1Part.Rotation_Y : (raw.ukeTrajectory?.endYaw !== undefined ? Math.round((raw.ukeTrajectory.endYaw * 180) / Math.PI) : (canonical?.ukeTrajectory?.endYaw !== undefined ? Math.round((canonical.ukeTrajectory.endYaw * 180) / Math.PI) : undefined))));
+  const toriEndAngleDeg = raw.toriEndAngleDeg ?? (toriPart.rotationY !== undefined ? toriPart.rotationY : (toriPart.Rotation_Y !== undefined ? toriPart.Rotation_Y : (canonical?.scenarioAngles?.toriAngleDeg !== undefined ? canonical.scenarioAngles.toriAngleDeg : (raw.toriTrajectory?.endYaw !== undefined ? Math.round((raw.toriTrajectory.endYaw * 180) / Math.PI) : (canonical?.toriTrajectory?.endYaw !== undefined ? Math.round((canonical.toriTrajectory.endYaw * 180) / Math.PI) : undefined)))));
+  const ukeEndAngleDeg = raw.ukeEndAngleDeg ?? (uke1Part.rotationY !== undefined ? uke1Part.rotationY : (uke1Part.Rotation_Y !== undefined ? uke1Part.Rotation_Y : (canonical?.scenarioAngles?.ukeAngleDeg !== undefined ? canonical.scenarioAngles.ukeAngleDeg : (raw.ukeTrajectory?.endYaw !== undefined ? Math.round((raw.ukeTrajectory.endYaw * 180) / Math.PI) : (canonical?.ukeTrajectory?.endYaw !== undefined ? Math.round((canonical.ukeTrajectory.endYaw * 180) / Math.PI) : undefined)))));
 
   const toriEndYaw = toriEndAngleDeg !== undefined ? (Number(toriEndAngleDeg) * Math.PI) / 180 : (raw.toriEndYaw ?? canonical?.toriTrajectory?.endYaw);
   const ukeEndYaw = ukeEndAngleDeg !== undefined ? (Number(ukeEndAngleDeg) * Math.PI) / 180 : (raw.ukeEndYaw ?? canonical?.ukeTrajectory?.endYaw);
@@ -2034,20 +2034,20 @@ export function computeAvatarPlacement({
 
   // 8. ПРИНЦИП РАЗДЕЛЕНИЯ ОРИЕНТАЦИИ (КЛЮЧЕВОЕ ТРЕБОВАНИЕ):
   let endToriYaw;
-  if (customToriYawDeg !== undefined && customToriYawDeg !== null) {
+  if (orientationModeTori === 'mode1_free' && customToriYawDeg !== undefined && customToriYawDeg !== null) {
     endToriYaw = (Number(customToriYawDeg) * Math.PI) / 180;
-  } else if (orientationModeTori === 'mode1_free' && customToriYawDeg !== undefined) {
-    endToriYaw = (customToriYawDeg * Math.PI) / 180;
   } else if (orientationModeTori === 'mode3_relative_angle' && relativeAngleDegTori !== undefined) {
-    endToriYaw = attackYaw + (relativeAngleDegTori * Math.PI) / 180;
+    endToriYaw = attackYaw + (Number(relativeAngleDegTori) * Math.PI) / 180;
   } else if (orientationModeTori === 'mode4_fixed_direction' && fixedDirectionYawTori !== undefined) {
-    endToriYaw = fixedDirectionYawTori;
+    endToriYaw = Number(fixedDirectionYawTori);
   } else if (orientationModeTori === 'mode2_look_at' || Math.abs(effectiveToriEvasionDeg) > 0.001) {
     endToriYaw = Math.atan2(dx, dz);
+  } else if (customToriYawDeg !== undefined && customToriYawDeg !== null) {
+    endToriYaw = (Number(customToriYawDeg) * Math.PI) / 180;
   } else if (norm.toriEndAngleDeg !== undefined && norm.toriEndAngleDeg !== null) {
-    endToriYaw = (norm.toriEndAngleDeg * Math.PI) / 180;
+    endToriYaw = (Number(norm.toriEndAngleDeg) * Math.PI) / 180;
   } else if (episode.toriEndAngleDeg !== undefined && episode.toriEndAngleDeg !== null) {
-    endToriYaw = (episode.toriEndAngleDeg * Math.PI) / 180;
+    endToriYaw = (Number(episode.toriEndAngleDeg) * Math.PI) / 180;
   } else if (episode.toriEndYaw !== undefined) {
     endToriYaw = episode.toriEndYaw;
   } else if (norm.toriEndYaw !== undefined) {
@@ -2070,24 +2070,26 @@ export function computeAvatarPlacement({
 
   // Белый персонаж (Укэ) при уходе поворачивается ВСЕМ ТЕЛОМ лицом к Тори!
   const faceToriFromUke = Math.atan2(endTori[0] - endUke1[0], endTori[2] - endUke1[2]);
+  const isUkeEvading = Math.abs(effectiveUkeEvasionDeg) > 0.001 || isEvaded || lateralOffsetMeters >= 0.08 || Math.abs(endUke1[0] - startTori[0]) >= 0.08;
+
   let endUke1Yaw;
-  if (customUkeYawDeg !== undefined && customUkeYawDeg !== null) {
+  if (orientationModeUke === 'mode1_free' && customUkeYawDeg !== undefined && customUkeYawDeg !== null) {
     endUke1Yaw = (Number(customUkeYawDeg) * Math.PI) / 180;
-  } else if (orientationModeUke === 'mode1_free' && customUkeYawDeg !== undefined) {
-    endUke1Yaw = (customUkeYawDeg * Math.PI) / 180;
   } else if (orientationModeUke === 'mode3_relative_angle' && relativeAngleDegUke !== undefined) {
-    endUke1Yaw = faceToriFromUke + (relativeAngleDegUke * Math.PI) / 180;
+    endUke1Yaw = faceToriFromUke + (Number(relativeAngleDegUke) * Math.PI) / 180;
   } else if (orientationModeUke === 'mode4_fixed_direction' && fixedDirectionYawUke !== undefined) {
-    endUke1Yaw = fixedDirectionYawUke;
-  } else if (orientationModeUke === 'mode2_look_at' || Math.abs(effectiveUkeEvasionDeg) > 0.001 || isEvaded) {
+    endUke1Yaw = Number(fixedDirectionYawUke);
+  } else if (orientationModeUke === 'mode2_look_at' || isUkeEvading) {
     // КРИТИЧЕСКОЕ ТРЕБОВАНИЕ: При блоке с уходом в сторону (Тай-сабаки), смещении с линии атаки
     // или в режиме ориентации на противника (mode2_look_at) — Укэ автоматически разворачивается
     // ВСЕМ ТЕЛОМ прямо на атакующего Тори!
     endUke1Yaw = faceToriFromUke;
+  } else if (customUkeYawDeg !== undefined && customUkeYawDeg !== null) {
+    endUke1Yaw = (Number(customUkeYawDeg) * Math.PI) / 180;
   } else if (norm.ukeEndAngleDeg !== undefined && norm.ukeEndAngleDeg !== null) {
-    endUke1Yaw = (norm.ukeEndAngleDeg * Math.PI) / 180;
+    endUke1Yaw = (Number(norm.ukeEndAngleDeg) * Math.PI) / 180;
   } else if (episode.ukeEndAngleDeg !== undefined && episode.ukeEndAngleDeg !== null) {
-    endUke1Yaw = (episode.ukeEndAngleDeg * Math.PI) / 180;
+    endUke1Yaw = (Number(episode.ukeEndAngleDeg) * Math.PI) / 180;
   } else if (episode.ukeEndYaw !== undefined) {
     endUke1Yaw = episode.ukeEndYaw;
   } else if (norm.ukeEndYaw !== undefined) {
@@ -2098,14 +2100,15 @@ export function computeAvatarPlacement({
     endUke1Yaw = faceToriFromUke;
   }
 
+  const faceToriAtStart = Math.atan2(startTori[0] - startUke1[0], startTori[2] - startUke1[2]);
   let startUke1Yaw = episode.ukeStartYaw !== undefined
     ? episode.ukeStartYaw
-    : (episode.ukeTrajectory?.startYaw !== undefined ? episode.ukeTrajectory.startYaw : Math.atan2(startTori[0] - startUke1[0], startTori[2] - startUke1[2]));
+    : (episode.ukeTrajectory?.startYaw !== undefined ? episode.ukeTrajectory.startYaw : faceToriAtStart);
 
-  if ((customUkeYawDeg !== undefined && customUkeYawDeg !== null) || orientationModeUke === 'mode1_free' || isStationaryUke) {
-    if (isStationaryUke || orientationModeUke === 'mode1_free') {
-      startUke1Yaw = endUke1Yaw;
-    }
+  if (isStationaryUke && !isUkeEvading) {
+    startUke1Yaw = endUke1Yaw;
+  } else if (orientationModeUke === 'mode1_free' && customUkeYawDeg !== undefined && customUkeYawDeg !== null && isStationaryUke) {
+    startUke1Yaw = endUke1Yaw;
   }
 
   // 9. Расчет положения и углов стоп на татами
