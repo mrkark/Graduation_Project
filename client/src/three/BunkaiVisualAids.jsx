@@ -42,35 +42,11 @@ function LineOfSight3D({ posTori, posUke, isEvaded }) {
 
   if (!isEvaded) return null;
 
-  const mid = [
-    (posTori[0] + posUke[0]) / 2,
-    1.15,
-    (posTori[2] + posUke[2]) / 2,
-  ];
-
   return (
     <group>
       <line geometry={lineGeo}>
-        <lineBasicMaterial color="#10b981" linewidth={2} transparent opacity={0.75} />
+        <lineBasicMaterial color="#10b981" linewidth={2} transparent opacity={0.65} />
       </line>
-      <Html position={mid} center distanceFactor={8} zIndexRange={[11, 0]}>
-        <div
-          style={{
-            background: 'rgba(6, 78, 59, 0.92)',
-            color: '#6ee7b7',
-            border: '1px solid #10b981',
-            padding: '2px 8px',
-            borderRadius: 4,
-            fontSize: '10px',
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-            pointerEvents: 'none',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.6)',
-          }}
-        >
-          🎯 Развернут лицом к противнику
-        </div>
-      </Html>
     </group>
   );
 }
@@ -651,27 +627,6 @@ export default function BunkaiVisualAids({
               side={THREE.DoubleSide}
             />
           </mesh>
-          {bodyInteraction?.statusText && (
-            <Html position={[0, 0.16, 0]} center distanceFactor={7} zIndexRange={[12, 0]}>
-              <div
-                style={{
-                  background: isBlock ? 'rgba(20, 83, 45, 0.95)' : (isHit ? 'rgba(127, 29, 29, 0.95)' : 'rgba(15, 23, 42, 0.92)'),
-                  color: isBlock ? '#86efac' : (isHit ? '#fca5a5' : '#e2e8f0'),
-                  border: `1.5px solid ${isBlock ? '#22c55e' : (isHit ? '#ef4444' : '#64748b')}`,
-                  padding: '3px 9px',
-                  borderRadius: 6,
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none',
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.6)',
-                  letterSpacing: '0.02em',
-                }}
-              >
-                {isBlock ? '🛡️ ' : '💥 '}{bodyInteraction.statusText}
-              </div>
-            </Html>
-          )}
         </group>
       )}
 

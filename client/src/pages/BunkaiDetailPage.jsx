@@ -9,7 +9,7 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
-import { Heart, MessageSquare, Swords, Shield, Ruler, CheckCircle2, Compass, UserPlus, UserCheck, Clock } from 'lucide-react';
+import { Heart, MessageSquare, Swords, UserPlus, UserCheck, Clock } from 'lucide-react';
 import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
 import './BunkaiDetailPage.css';
 
@@ -31,6 +31,7 @@ export default function BunkaiDetailPage() {
   const [bunkaiSteps, setBunkaiSteps] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
 
   const [isFriend, setIsFriend] = useState(false);
   const [isFriendReqPending, setIsFriendReqPending] = useState(false);
@@ -251,7 +252,9 @@ export default function BunkaiDetailPage() {
             steps={effectiveSteps}
             defaultParticipantMode="2-person"
             height={540}
-            canEdit={isCreator}
+            activeStepIndex={activeStepIndex}
+            onStepChange={setActiveStepIndex}
+            canEdit={false}
           />
         </Suspense>
       </section>
@@ -275,119 +278,58 @@ export default function BunkaiDetailPage() {
 
           {/* ПОШАГОВОЕ ОПИСАНИЕ БУНКАЙ (18 ШАГОВ) */}
           <div className="bunkai-notes__block" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
               <Swords size={20} color="var(--gold)" />
-              <h3 style={{ margin: 0 }}>Каноническое пошаговое описание Бункай Хэйан Шодан (18 шагов)</h3>
+              <h3 style={{ margin: 0 }}>Пошаговое описание Бункай (18 шагов)</h3>
             </div>
-            <p style={{ color: 'var(--text-muted, #a8a29e)', fontSize: '0.88rem', marginBottom: '1rem' }}>
-              1 — Тори (атакующий); 2 — Укэ (защищающийся). Все действия синхронизированы в 3D с реальной боевой дистанцией, предотвращением геометрического проникновения и непрерывными переходами стоек.
+            <p style={{ color: 'var(--text-muted, #a8a29e)', fontSize: '0.86rem', marginBottom: '1rem' }}>
+              1 — Тори (атакующий); 2 — Укэ (защищающийся). Нажмите на строку шага для перехода к нему в 3D-плеере.
             </p>
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid rgba(197, 155, 39, 0.4)', color: 'var(--gold)' }}>
-                    <th style={{ padding: '8px 10px', width: '60px' }}>Шаг</th>
-                    <th style={{ padding: '8px 10px', width: '32%' }}>1 (Тори — атакующий)</th>
-                    <th style={{ padding: '8px 10px', width: '38%' }}>2 (Укэ — защищающийся)</th>
-                    <th style={{ padding: '8px 10px' }}>Примечания и боевой контакт</th>
+                    <th style={{ padding: '8px 10px', width: '54px' }}>Шаг</th>
+                    <th style={{ padding: '8px 10px', width: '34%' }}>1 (Тори — атакующий)</th>
+                    <th style={{ padding: '8px 10px', width: '40%' }}>2 (Укэ — защищающийся)</th>
+                    <th style={{ padding: '8px 10px' }}>Примечания</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {HEIAN_SHODAN_BUNKAI_18_STEPS.map((step) => (
-                    <tr
-                      key={step.stepNumber}
-                      style={{
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-                        background: step.stepNumber % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'transparent',
-                      }}
-                    >
-                      <td style={{ padding: '10px 10px', fontWeight: 700, color: 'var(--gold)' }}>
-                        {step.stepNumber}
-                      </td>
-                      <td style={{ padding: '10px 10px', color: '#f8fafc' }}>
-                        <div>{step.participants[0]?.clipName ? `${step.description.split('.')[0]}` : step.title}</div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                          {step.participants[0]?.stance && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(255, 255, 255, 0.08)', color: '#cbd5e1' }}>
-                              Стойка: {step.participants[0].stance}
-                            </span>
-                          )}
-                          {step.participants[0]?.finalStance && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(197, 160, 89, 0.15)', color: '#ffd700', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
-                              Приход: {step.participants[0].finalStance}
-                            </span>
-                          )}
-                          {step.participants[0]?.landingMode && step.participants[0]?.landingMode !== 'auto' && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                              {step.participants[0].landingMode === 'forward' ? 'Ногу вперед' : 'Ногу назад'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 10px', color: '#e2e8f0' }}>
-                        <div>{step.description.split('.')[1] || step.description}</div>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                          {step.participants[1]?.stance && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(255, 255, 255, 0.08)', color: '#cbd5e1' }}>
-                              Стойка: {step.participants[1].stance}
-                            </span>
-                          )}
-                          {step.participants[1]?.finalStance && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(197, 160, 89, 0.15)', color: '#ffd700', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
-                              Приход: {step.participants[1].finalStance}
-                            </span>
-                          )}
-                          {step.participants[1]?.landingMode && step.participants[1]?.landingMode !== 'auto' && (
-                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-                              {step.participants[1].landingMode === 'forward' ? 'Ногу вперед' : 'Ногу назад'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 10px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#cbd5e1' }}>
-                            Дистанция: <strong style={{ color: '#fff' }}>{step.optimalDistance.toFixed(2)}м</strong>
-                          </span>
-                          {step.notes && (
-                            <span
-                              style={{
-                                fontSize: '0.76rem',
-                                color: '#e6ca85',
-                                background: 'rgba(197, 160, 89, 0.12)',
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                border: '1px solid rgba(197, 160, 89, 0.28)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                            >
-                              <Shield size={12} color="var(--gold)" /> {step.notes}
-                            </span>
-                          )}
-                          {step.scenarioAngles && (
-                            <span
-                              style={{
-                                fontSize: '0.74rem',
-                                color: '#cbd5e1',
-                                background: 'rgba(255, 255, 255, 0.05)',
-                                padding: '2px 6px',
-                                borderRadius: 4,
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                              }}
-                            >
-                              <Compass size={12} color="#cbd5e1" /> {step.scenarioAngles.label}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {HEIAN_SHODAN_BUNKAI_18_STEPS.map((step, idx) => {
+                    const isActive = idx === activeStepIndex;
+                    const toriText = (step.description.match(/1\s*\(Тори\):\s*([^.]*)/i)?.[1] || step.title).trim();
+                    const ukeText = (step.description.match(/2\s*\(Укэ\):\s*([^.]*)/i)?.[1] || '').trim();
+                    return (
+                      <tr
+                        key={step.stepNumber}
+                        onClick={() => setActiveStepIndex(idx)}
+                        style={{
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                          background: isActive
+                            ? 'rgba(212, 162, 76, 0.14)'
+                            : step.stepNumber % 2 === 0
+                            ? 'rgba(255, 255, 255, 0.02)'
+                            : 'transparent',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <td style={{ padding: '9px 10px', fontWeight: 700, color: 'var(--gold)' }}>
+                          {step.stepNumber}
+                        </td>
+                        <td style={{ padding: '9px 10px', color: '#f8fafc' }}>
+                          {toriText}
+                        </td>
+                        <td style={{ padding: '9px 10px', color: '#e2e8f0' }}>
+                          {ukeText || '—'}
+                        </td>
+                        <td style={{ padding: '9px 10px', color: '#cbd5e1', fontSize: '0.82rem' }}>
+                          {step.notes || '—'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

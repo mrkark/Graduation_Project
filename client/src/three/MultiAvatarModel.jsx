@@ -143,6 +143,15 @@ const ACTION_ALIASES = {
   tech_age_uke: 'age_uke_right',
   tech_age_uke_right: 'age_uke_right',
   tech_age_uke_left: 'age_uke_left',
+  gyaku_age_uke: 'tech_age_uke_right',
+  gyaku_age_uke_right: 'tech_age_uke_right',
+  gyaku_age_uke_left: 'tech_age_uke_left',
+  haivan_uke: 'tech_haishu_uke_left',
+  tech_haivan_uke: 'tech_haishu_uke_left',
+  nagashi_uke: 'tech_uchi_uke_right',
+  ashi_barai: 'kick_nami_gaeshi_left',
+  deashi_harai: 'kick_nami_gaeshi_left',
+  otoshi_zuki: 'tech_tate_zuki_left',
   shuto_uke: 'tech_shuto_uke_left',
   shuto_uke_left: 'tech_shuto_uke_left',
   shuto_uke_right: 'tech_shuto_uke_right',
@@ -462,7 +471,7 @@ export default function MultiAvatarModel({
     const curScrub = scrubProgressRef.current;
 
     const action = mixer.clipAction(playable);
-    const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length >= 3 ? 1.85 : 1.0;
+    const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length === 3 ? 1.9 : clipSequence.length >= 4 ? 2.4 : 1.0;
 
     if (prevAct && prevAct !== action) {
       // Плавный бесшовный переход из предыдущего состояния без дерганий и сброса в bind-pose
@@ -516,7 +525,7 @@ export default function MultiAvatarModel({
   useEffect(() => {
     if (activeActionRef.current) {
       activeActionRef.current.paused = !isPlaying;
-      const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length >= 3 ? 1.85 : 1.0;
+      const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length === 3 ? 1.9 : clipSequence.length >= 4 ? 2.4 : 1.0;
       activeActionRef.current.setEffectiveTimeScale(speed * comboMultiplier);
     }
   }, [isPlaying, speed, clipSequence.length]);
@@ -696,12 +705,12 @@ export default function MultiAvatarModel({
           const liveDist = Math.hypot(odx, odz);
           const isCloseContact = combatOptions?.contactType === 'strike_above_elbow' ||
             combatOptions?.contactType === 'arm_strike' ||
+            combatOptions?.contactType === 'block_gyaku_age_uke' ||
             combatOptions?.contactType === 'joint_lock' ||
-            combatOptions?.stepNumber === 8 ||
-            combatOptions?.stepNumber === 14 ||
-            combatOptions?.stepNumber === 15 ||
             combatOptions?.contactType === 'sweep_fall' ||
-            combatOptions?.contactType === 'ground_finish';
+            combatOptions?.contactType === 'sweep_finish' ||
+            combatOptions?.contactType === 'ground_finish' ||
+            combatOptions?.contactType === 'strike_throat';
           const minSeparation = isCloseContact ? 0.35 : 0.52; // Динамический анатомический зазор
           if (liveDist < minSeparation) {
             const push = (minSeparation - Math.max(0.001, liveDist)) * 0.5;
@@ -856,6 +865,39 @@ export default function MultiAvatarModel({
         }
       } else {
         activeActionRef.current.paused = true;
+      }
+    }
+
+    // Поклон (Рэй) в стойке Мусуби-дати (Шаги 2 и 17)
+    if (combatOptions?.isBow && bonesRef.current) {
+      const bowBone = findRigBone(bonesRef.current, 'spine') || findRigBone(bonesRef.current, 'chest');
+      const neckBone = findRigBone(bonesRef.current, 'neck');
+      if (bowBone && phrase >= 0.15 && phrase <= 0.85) {
+        const k = (phrase - 0.15) / 0.70;
+        const bowAngle = Math.sin(k * Math.PI) * 0.38;
+        bowBone.rotation.x += bowAngle;
+        if (neckBone) neckBone.rotation.x += bowAngle * 0.25;
+      }
+    }
+
+    // Поза Укэми при падении (Шаг 13-14): страховка левой рукой и правая нога скрестно поверх левой
+    if (isGround && role === 'tori' && bonesRef.current) {
+      const isAlreadyFallen = startPosition && startPosition[1] <= 0.12 && position[1] <= 0.12;
+      const fallFactor = isAlreadyFallen ? 1.0 : Math.min(1.0, Math.max(0, (phrase - 0.20) / 0.45));
+      if (fallFactor > 0.05) {
+        const legR = findRigBone(bonesRef.current, 'upperLegR');
+        const shinR = findRigBone(bonesRef.current, 'lowerLegR');
+        const armL = findRigBone(bonesRef.current, 'upperArmL');
+        if (legR) {
+          legR.rotation.z += 0.28 * fallFactor;
+          legR.rotation.x -= 0.35 * fallFactor;
+        }
+        if (shinR) {
+          shinR.rotation.x += 0.55 * fallFactor;
+        }
+        if (armL) {
+          armL.rotation.z -= 0.65 * fallFactor;
+        }
       }
     }
 

@@ -45,7 +45,7 @@ export const BUNKAI_ATTACK_STRIKES = [
 ];
 
 export const BUNKAI_DEFENSE_BLOCKS = [
-  { value: 'age_uke_right', label: 'Агэ-укэ (Верхний восходящий блок)' },
+  { value: 'age_uke_right', label: 'Гяку Агэ-укэ (правой рукой, без захвата)' },
   { value: 'age_uke_left', label: 'Агэ-укэ левой рукой' },
   { value: 'soto_uke', label: 'Сото-укэ (Блок снаружи-внутрь)' },
   { value: 'uchi_uke', label: 'Ути-укэ (Блок изнутри-наружу)' },
@@ -201,13 +201,13 @@ export default function BunkaiMultiAvatarPlayer({
   // Режим отображения панели управления: 'universal' (9 групп настроек) | 'compact' (быстрые карточки)
   const [panelViewMode, setPanelViewMode] = useState('universal');
   const [visualAidSettings, setVisualAidSettings] = useState({
-    showCoordinateSystem: true,
-    showTorsoVector: true,
-    showFootVectors: true,
-    showAttackLine: true,
-    showDistanceLine: true,
+    showCoordinateSystem: false,
+    showTorsoVector: false,
+    showFootVectors: false,
+    showAttackLine: false,
+    showDistanceLine: false,
     showContactPoint: true,
-    showSafeBoundaries: true,
+    showSafeBoundaries: false,
   });
 
   const [replayNonce, setReplayNonce] = useState(0);
@@ -768,6 +768,7 @@ export default function BunkaiMultiAvatarPlayer({
               ikContactTime: currentEpisode?.tContact || 0.48,
               isEvaded: placement.isEvaded,
               attackDirectrix: placement.attackDirectrix,
+              isBow: Boolean(currentEpisode?.isBow),
             }}
           />
 
@@ -805,6 +806,7 @@ export default function BunkaiMultiAvatarPlayer({
               ikContactTime: currentEpisode?.tContact || 0.48,
               isEvaded: placement.isEvaded,
               attackDirectrix: placement.attackDirectrix,
+              isBow: Boolean(currentEpisode?.isBow),
             }}
           />
 
@@ -859,222 +861,29 @@ export default function BunkaiMultiAvatarPlayer({
           />
         </Canvas>
 
-        {/* Плавающий оверлей телеметрии и системы координат Бункай */}
+        {/* Компактный бейдж текущего шага */}
         <div
           style={{
             position: 'absolute',
-            top: 14,
-            right: 14,
+            top: 12,
+            left: 12,
             zIndex: 10,
-            background: 'rgba(15, 23, 42, 0.94)',
-            backdropFilter: 'blur(8px)',
-            border: '1.5px solid rgba(56, 189, 248, 0.4)',
-            borderRadius: 8,
-            padding: '8px 12px',
+            background: 'rgba(10, 10, 14, 0.78)',
+            backdropFilter: 'blur(6px)',
+            border: '1px solid rgba(212, 162, 76, 0.35)',
+            borderRadius: 6,
+            padding: '5px 10px',
             color: '#f8fafc',
-            fontSize: '0.74rem',
-            boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
-            minWidth: 260,
-            maxWidth: 320,
-            pointerEvents: 'auto',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: 4 }}>
-            <span style={{ fontWeight: 700, color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              🧭 Система координат Бункай
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowCoordinateHUD(!showCoordinateHUD)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid #475569',
-                borderRadius: 4,
-                color: '#94a3b8',
-                cursor: 'pointer',
-                padding: '1px 6px',
-                fontSize: '0.68rem',
-              }}
-            >
-              {showCoordinateHUD ? 'Свернуть' : 'Развернуть'}
-            </button>
-          </div>
-
-          {showCoordinateHUD && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {/* Тори (Синий - Атакующий) */}
-              <div style={{ background: 'rgba(37, 99, 235, 0.16)', borderLeft: '3px solid #2563eb', padding: '4px 6px', borderRadius: '0 4px 4px 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#93c5fd' }}>
-                  <span>1 — Тори (Атакующий):</span>
-                  <span style={{ fontFamily: 'monospace' }}>Yaw: {placement.coordinates?.tori?.yawDeg ?? Math.round((placement.rotTori[1] * 180) / Math.PI)}°</span>
-                </div>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.70rem', color: '#cbd5e1' }}>
-                  X: <span style={{ color: '#f87171' }}>{placement.posTori[0].toFixed(2)}м</span> | Y: <span style={{ color: '#4ade80' }}>{placement.posTori[1].toFixed(2)}м</span> | Z: <span style={{ color: '#60a5fa' }}>{placement.posTori[2].toFixed(2)}м</span>
-                </div>
-              </div>
-
-              {/* Укэ (Белый - Защищающийся) */}
-              <div style={{ background: 'rgba(248, 250, 252, 0.12)', borderLeft: '3px solid #f8fafc', padding: '4px 6px', borderRadius: '0 4px 4px 0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#f8fafc' }}>
-                  <span>2 — Укэ (Защищающийся):</span>
-                  <span style={{ fontFamily: 'monospace' }}>Yaw: {placement.coordinates?.uke1?.yawDeg ?? Math.round((placement.rotUke1[1] * 180) / Math.PI)}°</span>
-                </div>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.70rem', color: '#cbd5e1' }}>
-                  X: <span style={{ color: '#f87171' }}>{placement.posUke1[0].toFixed(2)}м</span> | Y: <span style={{ color: '#4ade80' }}>{placement.posUke1[1].toFixed(2)}м</span> | Z: <span style={{ color: '#60a5fa' }}>{placement.posUke1[2].toFixed(2)}м</span>
-                </div>
-                <div style={{ fontSize: '0.68rem', color: placement.coordinates?.uke1?.isFacingOpponent ? '#34d399' : '#f59e0b', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>{placement.coordinates?.uke1?.isFacingOpponent ? '🎯 Развернут к Тори (соосность 100%)' : `Отклонение от Тори: ${placement.coordinates?.uke1?.facingAngleToOpponentDeg || 0}°`}</span>
-                </div>
-              </div>
-
-              {/* Геометрия взаимодействия */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, background: 'rgba(0,0,0,0.3)', padding: '4px 6px', borderRadius: 4, fontSize: '0.68rem' }}>
-                <div>Ма-ай: <strong style={{ color: '#38bdf8' }}>{placement.finalDist?.toFixed(2)}м</strong></div>
-                <div>Тай-сабаки: <strong style={{ color: placement.isEvaded ? '#c084fc' : '#94a3b8' }}>{(placement.lateralOffsetMeters || 0).toFixed(2)}м</strong></div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Нижний статус-бар: контакт и анти-проникновение */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 14,
-            left: 14,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            zIndex: 10,
+            fontSize: '0.78rem',
+            fontWeight: 600,
             pointerEvents: 'none',
+            maxWidth: 'calc(100% - 24px)',
           }}
         >
-          {bodyInteraction.validContact && (
-            <div
-              style={{
-                background: 'rgba(6, 78, 59, 0.90)',
-                color: '#6ee7b7',
-                padding: '5px 12px',
-                borderRadius: 6,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-              }}
-            >
-              <CheckCircle2 size={14} color="#34d399" />
-              <span>Допустимый контакт: {bodyInteraction.statusText || 'Точки взаимодействия согласованы'}</span>
-            </div>
-          )}
-
-          {/* Индикатор живого предпросмотра при изменении параметров */}
-          {hasUnsavedChanges && (
-            <div
-              style={{
-                background: 'rgba(16, 185, 129, 0.20)',
-                color: '#34d399',
-                padding: '5px 12px',
-                borderRadius: 6,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                border: '1px solid rgba(16, 185, 129, 0.5)',
-              }}
-            >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} />
-              <span>Живой предпросмотр: изменения применяются мгновенно</span>
-            </div>
-          )}
-
-          {/* Защита от проникновения моделей друг в друга */}
-          <div
-            style={{
-              background: (placement.hasCollision || bodyInteraction.penetrationPrevented) ? 'rgba(220, 38, 38, 0.20)' : 'rgba(255, 255, 255, 0.08)',
-              color: '#f8fafc',
-              padding: '5px 12px',
-              borderRadius: 6,
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              border: (placement.hasCollision || bodyInteraction.penetrationPrevented) ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255, 255, 255, 0.18)',
-            }}
-          >
-            <Shield size={14} color={(placement.hasCollision || bodyInteraction.penetrationPrevented) ? '#f87171' : '#cbd5e1'} />
-            <span>
-              {(placement.hasCollision || bodyInteraction.penetrationPrevented)
-                ? 'Анти-проникновение активно: дистанция ограничена, контакт поверхностный (без наложения тел)'
-                : 'Анти-проникновение активно: анатомические границы тел защищены от пересечения'}
-            </span>
-          </div>
-
-          {/* Индикатор фиксации взгляда и сохранения директрисы атаки */}
-          {(placement.isEvaded || Math.abs(ukeEvasionAngleDeg) > 0.001) && (
-            <div
-              style={{
-                background: 'rgba(14, 116, 144, 0.90)',
-                color: '#e0f2fe',
-                padding: '5px 12px',
-                borderRadius: 6,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-              }}
-            >
-              <Eye size={14} color="#38bdf8" />
-              <span>Тайсабаки: Укэ (Белый) ушел на {(placement.lateralOffsetMeters || 0).toFixed(2)}м и развернут лицом к Тори | Тори (Синий) сохраняет прямую линию атаки</span>
-            </div>
-          )}
-
-          {/* Индикатор постановки ноги при ударе ногой */}
-          {(isToriKick || isUkeKick) && (
-            <div
-              style={{
-                background: 'rgba(30, 41, 59, 0.92)',
-                color: '#38bdf8',
-                padding: '5px 12px',
-                borderRadius: 6,
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-              }}
-            >
-              <Footprints size={14} color="#38bdf8" />
-              <span>
-                {isToriKick && (
-                  `Удар ногой Тори: ${
-                    (toriLandingMode === 'forward' || (!toriLandingMode && toriPart.landingMode === 'forward'))
-                      ? 'Постановка ноги вперед (+0.65м)'
-                      : 'Возврат ноги назад в исходную стойку'
-                  }`
-                )}
-                {isToriKick && isUkeKick && ' | '}
-                {isUkeKick && (
-                  `Удар ногой Укэ: ${
-                    (ukeLandingMode === 'forward' || (!ukeLandingMode && uke1Part.landingMode === 'forward'))
-                      ? 'Постановка ноги вперед (+0.65м)'
-                      : 'Возврат ноги назад в исходную стойку'
-                  }`
-                )}
-              </span>
-            </div>
-          )}
+          <span style={{ color: 'var(--gold, #d4a24c)', marginRight: 6 }}>
+            Шаг {currentStepIdx + 1}/{chainedEpisodes.length}
+          </span>
+          <span>{currentEpisode.title?.replace(/^Шаг\s*\d+:\s*/i, '') || ''}</span>
         </div>
 
         {/* Баннер обнаруженных отсутствующих клипов */}
@@ -1082,29 +891,28 @@ export default function BunkaiMultiAvatarPlayer({
           <div
             style={{
               position: 'absolute',
-              top: 86,
-              left: 14,
+              top: 48,
+              left: 12,
               background: 'rgba(217, 119, 6, 0.92)',
               color: '#fff',
-              padding: '8px 14px',
-              borderRadius: 8,
-              fontSize: '0.8rem',
-              maxWidth: 480,
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontSize: '0.76rem',
+              maxWidth: 440,
               boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
               zIndex: 10,
             }}
           >
             <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-              <AlertTriangle size={15} color="#f59e0b" /> Зафиксировано отсутствие клипов:
+              <AlertTriangle size={14} color="#f59e0b" /> Отсутствуют клипы:
             </strong> {missingClips.join(', ')}.
           </div>
         )}
       </div>
 
-      {/* Панель управления боевым взаимодействием */}
-      <div style={{ background: 'var(--color-surface)', padding: '12px 14px', borderTop: '1px solid var(--color-border)', overflowX: 'hidden' }}>
-        {/* Верхняя строка: навигация по шагам, плеер, режим и сброс */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      {/* Панель управления воспроизведением */}
+      <div style={{ background: 'var(--color-surface)', padding: '10px 14px', borderTop: '1px solid var(--color-border)', overflowX: 'hidden' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Переключение шагов */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <button
@@ -1115,7 +923,7 @@ export default function BunkaiMultiAvatarPlayer({
             >
               <ChevronLeft size={14} /> Предыдущий
             </button>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', minWidth: 65, textAlign: 'center' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-gold)', minWidth: 56, textAlign: 'center' }}>
               {currentStepIdx + 1} / {chainedEpisodes.length}
             </span>
             <button
@@ -1128,12 +936,12 @@ export default function BunkaiMultiAvatarPlayer({
             </button>
           </div>
 
-          {/* Кнопки плеера и переключения режима */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Основные кнопки плеера */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <button
               className="btn"
               style={{
-                minWidth: 135,
+                minWidth: 130,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1165,84 +973,78 @@ export default function BunkaiMultiAvatarPlayer({
                 gap: '6px',
               }}
               onClick={handlePlayEntireBunkai}
-              title="Запустить непрерывное воспроизведение всего бункая от шага 1 до 18"
+              title="Запустить воспроизведение всего бункая (1–18)"
             >
               <Swords size={14} color="#f8fafc" />
-              Во весь бункай (18 шагов)
+              Во весь бункай
             </button>
             <button
               className="btn"
               onClick={handleReplayStep}
-              title="Повторить выполнение текущего шага"
+              title="Повторить текущий шаг"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
             >
-              <RotateCcw size={13} /> Повторить шаг
+              <RotateCcw size={13} /> Повтор
             </button>
-            <button
-              className="btn"
-              style={{
-                borderColor: isLoopingStep ? '#10b981' : undefined,
-                background: isLoopingStep ? 'rgba(16, 185, 129, 0.22)' : undefined,
-                color: isLoopingStep ? '#6ee7b7' : undefined,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-              onClick={() => {
-                const next = !isLoopingStep;
-                setIsLoopingStep(next);
-                if (next) setAutoAdvance(false);
-              }}
-              title="Зациклить воспроизведение выбранного шага"
-            >
-              <RotateCcw size={13} color={isLoopingStep ? '#34d399' : undefined} />
-              {isLoopingStep ? 'Повтор шага: ВКЛ' : 'Повтор шага: ВЫКЛ'}
-            </button>
-            <button
-              className="btn"
-              style={{
-                borderColor: autoAdvance ? '#10b981' : undefined,
-                background: autoAdvance ? 'rgba(16, 185, 129, 0.20)' : undefined,
-                color: autoAdvance ? '#6ee7b7' : undefined,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-              onClick={() => {
-                const next = !autoAdvance;
-                setAutoAdvance(next);
-                if (next) setIsLoopingStep(false);
-              }}
-              title="Непрерывный авто-бой: автоматический переход к следующему шагу после паузы Дзансин"
-            >
-              <Swords size={13} color={autoAdvance ? '#34d399' : undefined} />
-              {autoAdvance ? 'Авто-бой: ВКЛ' : 'Авто-бой: ВЫКЛ'}
-            </button>
-            <button
-              className="btn"
-              onClick={() => setShowUke2(!showUke2)}
-            >
-              {showUke2 ? '2 Участника (Дуэль)' : '+ Добавить Укэ 2 (Трио)'}
-            </button>
-            <button
-              className="btn"
-              style={{
-                borderColor: stateMode === 'continuous' ? '#e2e8f0' : undefined,
-                background: stateMode === 'continuous' ? 'rgba(255, 255, 255, 0.12)' : undefined,
-                color: stateMode === 'continuous' ? '#ffffff' : undefined,
-              }}
-              onClick={() => setStateMode(stateMode === 'continuous' ? 'standalone' : 'continuous')}
-            >
-              {stateMode === 'continuous' ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={13} /> Непрерывный бой
-                </span>
-              ) : (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <Target size={13} /> Изолированный шаг
-                </span>
-              )}
-            </button>
+            {canEdit && (
+              <>
+                <button
+                  className="btn"
+                  style={{
+                    borderColor: isLoopingStep ? '#10b981' : undefined,
+                    background: isLoopingStep ? 'rgba(16, 185, 129, 0.22)' : undefined,
+                    color: isLoopingStep ? '#6ee7b7' : undefined,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                  onClick={() => {
+                    const next = !isLoopingStep;
+                    setIsLoopingStep(next);
+                    if (next) setAutoAdvance(false);
+                  }}
+                >
+                  <RotateCcw size={13} color={isLoopingStep ? '#34d399' : undefined} />
+                  {isLoopingStep ? 'Цикл: ВКЛ' : 'Цикл: ВЫКЛ'}
+                </button>
+                <button
+                  className="btn"
+                  style={{
+                    borderColor: autoAdvance ? '#10b981' : undefined,
+                    background: autoAdvance ? 'rgba(16, 185, 129, 0.20)' : undefined,
+                    color: autoAdvance ? '#6ee7b7' : undefined,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                  onClick={() => {
+                    const next = !autoAdvance;
+                    setAutoAdvance(next);
+                    if (next) setIsLoopingStep(false);
+                  }}
+                >
+                  <Swords size={13} color={autoAdvance ? '#34d399' : undefined} />
+                  {autoAdvance ? 'Авто: ВКЛ' : 'Авто: ВЫКЛ'}
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => setShowUke2(!showUke2)}
+                >
+                  {showUke2 ? '2 Участника' : '+ Укэ 2'}
+                </button>
+                <button
+                  className="btn"
+                  style={{
+                    borderColor: stateMode === 'continuous' ? '#e2e8f0' : undefined,
+                    background: stateMode === 'continuous' ? 'rgba(255, 255, 255, 0.12)' : undefined,
+                    color: stateMode === 'continuous' ? '#ffffff' : undefined,
+                  }}
+                  onClick={() => setStateMode(stateMode === 'continuous' ? 'standalone' : 'continuous')}
+                >
+                  {stateMode === 'continuous' ? 'Непрерывно' : 'Изолированно'}
+                </button>
+              </>
+            )}
             <button className="btn btn-subtle" onClick={resetCamera} style={{ border: '1px solid #475569', color: '#f8fafc' }}>
               Сброс камеры
             </button>
@@ -1257,24 +1059,23 @@ export default function BunkaiMultiAvatarPlayer({
                 alignItems: 'center',
                 gap: 5,
               }}
-              title="Переключить отображение системы координат (оси X, Y, Z, разметка метров)"
+              title="Показать / скрыть оси координат X/Y/Z"
             >
-              🧭 Оси X/Y/Z
+              🧭 Оси
             </button>
           </div>
 
           {/* Скорость воспроизведения */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600 }}>Скорость:</span>
-            {[0.25, 0.5, 1.0, 1.5].map((s) => {
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            {[0.5, 1.0, 1.5].map((s) => {
               const isActive = speed === s;
               return (
                 <button
                   key={s}
                   type="button"
                   style={{
-                    padding: '5px 10px',
-                    fontSize: '0.8rem',
+                    padding: '5px 9px',
+                    fontSize: '0.78rem',
                     fontWeight: 700,
                     borderRadius: 6,
                     cursor: 'pointer',
@@ -1282,7 +1083,6 @@ export default function BunkaiMultiAvatarPlayer({
                     border: isActive ? '1px solid #ffffff' : '1px solid rgba(255, 255, 255, 0.2)',
                     background: isActive ? '#f8fafc' : 'rgba(255, 255, 255, 0.08)',
                     color: isActive ? '#0f172a' : '#f1f5f9',
-                    boxShadow: isActive ? '0 2px 8px rgba(0, 0, 0, 0.4)' : 'none',
                   }}
                   onClick={() => setSpeed(s)}
                 >
@@ -2109,29 +1909,22 @@ export default function BunkaiMultiAvatarPlayer({
         )}
           </>
         ) : (
-          <div
-            style={{
-              padding: '12px 16px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: 8,
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.82rem',
-              color: '#94a3b8',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-              <Shield size={15} color="#f8fafc" />
-              <span>Режим интерактивного просмотра · <strong style={{ color: '#e2e8f0' }}>Панель изменения движений доступна только создателю бункая</strong></span>
-            </span>
-            <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-              Все анимации, стойки и траектории зафиксированы автором сценария
-            </span>
-          </div>
+          currentEpisode.description && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '8px 12px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: 6,
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                fontSize: '0.82rem',
+                color: '#cbd5e1',
+                lineHeight: 1.45,
+              }}
+            >
+              {currentEpisode.description}
+            </div>
+          )
         )}
       </div>
     </div>
