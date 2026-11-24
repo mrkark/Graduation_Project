@@ -748,6 +748,7 @@ export default function BunkaiMultiAvatarPlayer({
             phraseRef={phraseRef}
             rootsRef={rootsRef}
             speed={speed}
+            stepDuration={currentEpisode.duration || 2.0}
             isPlaying={isPlaying}
             replayTrigger={replayNonce}
             scrubProgress={scrubProgress}
@@ -787,6 +788,7 @@ export default function BunkaiMultiAvatarPlayer({
             phraseRef={phraseRef}
             rootsRef={rootsRef}
             speed={speed}
+            stepDuration={currentEpisode.duration || 2.0}
             isPlaying={isPlaying}
             replayTrigger={replayNonce}
             scrubProgress={scrubProgress}
@@ -973,7 +975,7 @@ export default function BunkaiMultiAvatarPlayer({
                 gap: '6px',
               }}
               onClick={handlePlayEntireBunkai}
-              title="Запустить воспроизведение всего бункая (1–18)"
+              title="Запустить непрерывное воспроизведение всего бункая"
             >
               <Swords size={14} color="#f8fafc" />
               Во весь бункай

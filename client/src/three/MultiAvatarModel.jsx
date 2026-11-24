@@ -249,6 +249,7 @@ export default function MultiAvatarModel({
   startRotation = null,
   isStationary = false,
   speed = 1.0,
+  stepDuration = 2.2,
   isPlaying = true,
   replayTrigger = 0,
   scrubProgress = null,
@@ -448,11 +449,13 @@ export default function MultiAvatarModel({
   isPlayingRef.current = isPlaying;
   const speedRef = useRef(speed);
   speedRef.current = speed;
+  const stepDurationRef = useRef(stepDuration);
+  stepDurationRef.current = stepDuration;
   const scrubProgressRef = useRef(scrubProgress);
   scrubProgressRef.current = scrubProgress;
 
   // Запуск конкретного элемента комбо с плавным переходом из предыдущей стойки/удара
-  const playSubclipAt = useCallback((idx, prevAct = null) => {
+  const playSubclipAt = useCallback((idx, prevAct = null, forceRestart = false) => {
     if (!mixer || !clipSequence[idx]) return;
     const playable = resolveClipByName(clipSequence[idx]);
     if (!playable) {
@@ -469,24 +472,29 @@ export default function MultiAvatarModel({
     const curSpeed = speedRef.current;
     const curIsPlaying = isPlayingRef.current;
     const curScrub = scrubProgressRef.current;
+    const targetSec = Math.max(0.85, (stepDurationRef.current || 2.2) * 0.85);
+    const clipFitScale = clipSequence.length === 1 && playable.duration > targetSec
+      ? Math.min(2.2, playable.duration / targetSec)
+      : 1.0;
 
     const action = mixer.clipAction(playable);
     const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length === 3 ? 1.9 : clipSequence.length >= 4 ? 2.4 : 1.0;
+    const effectiveScale = curSpeed * comboMultiplier * clipFitScale;
 
     if (prevAct && prevAct !== action) {
       // Плавный бесшовный переход из предыдущего состояния без дерганий и сброса в bind-pose
       action.reset();
       action.enabled = true;
-      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
+      action.setEffectiveTimeScale(effectiveScale);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
       action.play();
-      const crossSec = idx === 0 ? 0.28 : 0.20;
+      const crossSec = idx === 0 ? 0.24 : 0.18;
       prevAct.crossFadeTo(action, crossSec, true);
-    } else if (prevAct === action) {
+    } else if (prevAct === action && !forceRestart) {
       // Тот же самый клип/стойка: НЕ сбрасываем в кадр 0, чтобы исключить дергания!
       action.enabled = true;
-      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
+      action.setEffectiveTimeScale(effectiveScale);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
       if (action.time >= (playable.duration - 0.05)) {
@@ -496,7 +504,7 @@ export default function MultiAvatarModel({
     } else {
       action.reset();
       action.enabled = true;
-      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
+      action.setEffectiveTimeScale(effectiveScale);
       action.setEffectiveWeight(1.0);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
@@ -518,17 +526,22 @@ export default function MultiAvatarModel({
   useEffect(() => {
     seqIndexRef.current = 0;
     finalStanceAppliedRef.current = false;
-    playSubclipAt(0, activeActionRef.current);
+    playSubclipAt(0, activeActionRef.current, replayTrigger > 0);
   }, [clipSequenceKey, playSubclipAt, finalStance, landingMode, replayTrigger]);
 
   // Реакция на паузу и изменение скорости
   useEffect(() => {
     if (activeActionRef.current) {
       activeActionRef.current.paused = !isPlaying;
+      const curClip = activeActionRef.current.getClip();
+      const targetSec = Math.max(0.85, (stepDurationRef.current || 2.2) * 0.85);
+      const clipFitScale = clipSequence.length === 1 && curClip && curClip.duration > targetSec
+        ? Math.min(2.2, curClip.duration / targetSec)
+        : 1.0;
       const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length === 3 ? 1.9 : clipSequence.length >= 4 ? 2.4 : 1.0;
-      activeActionRef.current.setEffectiveTimeScale(speed * comboMultiplier);
+      activeActionRef.current.setEffectiveTimeScale(speed * comboMultiplier * clipFitScale);
     }
-  }, [isPlaying, speed, clipSequence.length]);
+  }, [isPlaying, speed, clipSequence.length, stepDuration]);
 
   // По кадровое обновление положения, позы и предотвращение проникновения
   useFrame((_, delta) => {
@@ -622,40 +635,7 @@ export default function MultiAvatarModel({
       const isMovement = clipNames.includes('step') || clipNames.includes('slide') || clipNames.includes('shift');
       const hasActiveAction = isKick || isStrike || isBlock || isMovement || !isStationary;
 
-      if ((isStationary || isZeroDisp) && !isGround && hasActiveAction) {
-        // Полный биомеханический цикл движения (Surge & Return) при совпадении начальной и конечной позиции:
-        // Модель выполняет полноценный динамический выпад центра массы к цели с пиком на акценте удара/блока
-        // и плавный возврат точно в исходную стойку к концу шага (phrase = 1.0).
-        let surgeDist = 0.18;
-        if (isKick) {
-          surgeDist = 0.32; // Удары ногами (Маэ-гэри с возвратом ноги назад)
-        } else if (isStrike) {
-          surgeDist = 0.22; // Прямые и реверсивные удары руками
-        } else if (isBlock) {
-          surgeDist = 0.14; // Блокирующие техники
-        }
-
-        let surge = 0;
-        const startSurge = isDefender ? reactionDelay : 0.08;
-        if (phrase <= startSurge) {
-          surge = 0;
-        } else if (phrase <= contactPhase) {
-          const k = (phrase - startSurge) / Math.max(0.01, contactPhase - startSurge);
-          surge = Math.sin(k * Math.PI * 0.5);
-        } else if (phrase <= 0.95) {
-          const k = (phrase - contactPhase) / Math.max(0.01, 0.95 - contactPhase);
-          surge = Math.cos(k * Math.PI * 0.5);
-        } else {
-          surge = 0;
-        }
-
-        const fwdX = Math.sin(currentYaw);
-        const fwdZ = Math.cos(currentYaw);
-
-        x = end[0] + fwdX * surgeDist * surge;
-        y = end[1];
-        z = end[2] + fwdZ * surgeDist * surge;
-      } else if (isStationary || isZeroDisp) {
+      if (isStationary || isZeroDisp) {
         x = end[0];
         y = end[1];
         z = end[2];
@@ -797,11 +777,13 @@ export default function MultiAvatarModel({
           lastClipInSeq.includes('empi')
         );
 
+        const isRetractingStrike = curClipName.includes('tettsui') || curClipName.includes('shuto_uchi');
+        const kimeHoldFrac = isRetractingStrike ? 0.54 : 0.98;
         const isClipFinished = activeActionRef.current.time >= (curClipDuration - 0.002);
 
-        if (isLastTechnique && (isClipFinished || (isStrikeOrBlockAction && activeActionRef.current.time >= curClipDuration * 0.98))) {
-          // Действие полностью завершено: надежно удерживаем позу (Kime) без сброса
-          activeActionRef.current.time = curClipDuration;
+        if (isLastTechnique && (isClipFinished || (isStrikeOrBlockAction && activeActionRef.current.time >= curClipDuration * kimeHoldFrac))) {
+          // Действие полностью завершено: надежно удерживаем конечную позу (Kime) без возврата в исходную!
+          activeActionRef.current.time = isRetractingStrike ? (curClipDuration * 0.54) : curClipDuration;
           activeActionRef.current.clampWhenFinished = true;
           activeActionRef.current.paused = true;
           mixer.update(0);
@@ -813,22 +795,21 @@ export default function MultiAvatarModel({
         } else {
           activeActionRef.current.paused = false;
           // Для защищающегося слегка масштабируем скорость блока, чтобы он встретил атаку точно в момент контакта
-          const speedMultiplier = (isDefender && seqIndexRef.current === 0) ? 1.25 : 1.0;
+          const speedMultiplier = (isDefender && seqIndexRef.current === 0) ? 1.2 : 1.0;
           mixer.update(delta * speed * speedMultiplier);
         }
 
-        // Продвижение комбо-серий (Маэ-гэри -> Гяку-дзуки -> Тэтцуи и т.д.):
+        // Продвижение комбо-серий
         if (curClip && clipSequence.length > 1 && seqIndexRef.current < clipSequence.length - 1) {
           const curDur = curClip.duration;
-          // При достижении 82% длительности текущей техники начинаем плавный переход к следующей
           if (activeActionRef.current.time >= curDur * 0.82) {
             seqIndexRef.current += 1;
             playSubclipAt(seqIndexRef.current, activeActionRef.current);
           }
         }
 
-        if (phrase >= 0.95 && !finalStanceAppliedRef.current && !isStrikeOrBlockAction && activeActionRef.current) {
-          // Только для чистых перемещений или изолированных ударов ногами (без завершающего удара рукой)
+        if (phrase >= 0.78 && !finalStanceAppliedRef.current && !isStrikeOrBlockAction && activeActionRef.current) {
+          // Переход в конечную стойку (для ударов ногами, шагов и перестроений), чтобы не возвращаться в исходную позу
           let targetStanceName = finalStance;
           const isKick = clipSequence.some((c) => typeof c === 'string' && (c.includes('mae_geri') || c.includes('kick') || c.includes('geri')));
 
@@ -841,7 +822,7 @@ export default function MultiAvatarModel({
           }
 
           if (!targetStanceName) {
-            const isStepMove = clipSequence.some((c) => typeof c === 'string' && (c.includes('step_backward') || c.includes('step_forward') || c.includes('slide_')));
+            const isStepMove = clipSequence.some((c) => typeof c === 'string' && (c.includes('step_backward') || c.includes('step_forward') || c.includes('slide_') || c.includes('enter_') || c.includes('turn_')));
             if (isStepMove && stance && stance !== 'ready' && stance !== 'heiko') {
               targetStanceName = stance === 'zenkutsu' ? 'zenkutsu_dachi_right' : (ACTION_ALIASES[stance] || stance);
             }
@@ -856,7 +837,7 @@ export default function MultiAvatarModel({
               stanceAction.setEffectiveWeight(1.0);
               stanceAction.setLoop(THREE.LoopOnce, 1);
               stanceAction.clampWhenFinished = true;
-              activeActionRef.current.crossFadeTo(stanceAction, 0.24, true);
+              activeActionRef.current.crossFadeTo(stanceAction, 0.22, true);
               stanceAction.play();
               activeActionRef.current = stanceAction;
               finalStanceAppliedRef.current = true;
@@ -946,12 +927,12 @@ export default function MultiAvatarModel({
     }
   });
 
+  const stableScale = useMemo(() => [modelScale, modelScale, modelScale], [modelScale]);
+
   return (
     <group
       ref={groupRef}
-      position={[position[0], position[1] + modelYOffset, position[2]]}
-      rotation={rotation}
-      scale={[modelScale, modelScale, modelScale]}
+      scale={stableScale}
     >
       <primitive object={clonedModel} />
     </group>

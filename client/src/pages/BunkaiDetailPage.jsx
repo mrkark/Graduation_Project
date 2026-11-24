@@ -110,8 +110,8 @@ export default function BunkaiDetailPage() {
   if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
   if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
 
-  // Канонический 18-шаговый сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
-  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 18 && bunkaiSteps[0]?.toriTrajectory)
+  // Канонический 27-шаговый атомарный сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
+  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 27 && bunkaiSteps[0]?.toriTrajectory)
     ? bunkaiSteps
     : HEIAN_SHODAN_BUNKAI_18_STEPS;
 
@@ -280,7 +280,7 @@ export default function BunkaiDetailPage() {
           <div className="bunkai-notes__block" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
               <Swords size={20} color="var(--gold)" />
-              <h3 style={{ margin: 0 }}>Пошаговое описание Бункай (18 шагов)</h3>
+              <h3 style={{ margin: 0 }}>Пошаговое описание Бункай ({HEIAN_SHODAN_BUNKAI_18_STEPS.length} атомарных шагов)</h3>
             </div>
             <p style={{ color: 'var(--text-muted, #a8a29e)', fontSize: '0.86rem', marginBottom: '1rem' }}>
               1 — Тори (атакующий); 2 — Укэ (защищающийся). Нажмите на строку шага для перехода к нему в 3D-плеере.
