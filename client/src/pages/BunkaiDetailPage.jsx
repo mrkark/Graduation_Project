@@ -1,6 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getBunkai, getBunkaiSteps, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
+import { sendFriendRequest, listFriends, listFriendRequests } from '../api/friends';
 import { useAuthStore } from '../store/authStore';
 import { useFavoritesStore } from '../store/favoritesStore';
 import StatusBadge from '../components/StatusBadge';
@@ -8,7 +9,7 @@ import VideoEmbed from '../components/VideoEmbed';
 import Comments from '../components/Comments';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
-import { Heart, MessageSquare, Swords, Shield, Ruler, CheckCircle2 } from 'lucide-react';
+import { Heart, MessageSquare, Swords, Shield, Ruler, CheckCircle2, Compass, UserPlus, UserCheck, Clock } from 'lucide-react';
 import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
 import './BunkaiDetailPage.css';
 
@@ -31,7 +32,16 @@ export default function BunkaiDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [isFriend, setIsFriend] = useState(false);
+  const [isFriendReqPending, setIsFriendReqPending] = useState(false);
+  const [sendingFriendReq, setSendingFriendReq] = useState(false);
+
   const { isBunkaiFavorite, toggle: toggleFavorite, fetchFavorites, loaded: favsLoaded } = useFavoritesStore();
+
+  const currentUserId = user?.User_ID ?? user?.userId ?? user?.id;
+  const authorId = bunkai?.Author_ID ?? bunkai?.Author?.User_ID;
+  const isCreator = Boolean(currentUserId && authorId && Number(currentUserId) === Number(authorId));
+  const isStaff = role === 'admin' || role === 'moderator';
 
   useEffect(() => {
     if (!favsLoaded) fetchFavorites();
@@ -55,17 +65,32 @@ export default function BunkaiDetailPage() {
       .finally(() => setLoading(false));
   }, [id, navigate]);
 
-  if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
-  if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
+  useEffect(() => {
+    if (user && authorId && !isCreator) {
+      Promise.all([
+        listFriends().catch(() => []),
+        listFriendRequests('outgoing').catch(() => []),
+      ]).then(([friends, outgoing]) => {
+        const friendFound = (friends || []).some((f) => Number(f.User_ID) === Number(authorId));
+        const reqFound = (outgoing || []).some((r) => Number(r.Receiver_ID) === Number(authorId) && r.Status === 'pending');
+        setIsFriend(friendFound);
+        setIsFriendReqPending(reqFound);
+      });
+    }
+  }, [user, authorId, isCreator]);
 
-  const isOwner = bunkai.Author_ID === user?.User_ID;
-  const isStaff = role === 'admin' || role === 'moderator';
-  const canEdit = isOwner || isStaff;
-
-  // Канонический 18-шаговый сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
-  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 18 && bunkaiSteps[0]?.toriTrajectory)
-    ? bunkaiSteps
-    : HEIAN_SHODAN_BUNKAI_18_STEPS;
+  async function handleSendFriendRequest() {
+    if (!authorId || sendingFriendReq) return;
+    setSendingFriendReq(true);
+    try {
+      await sendFriendRequest(authorId);
+      setIsFriendReqPending(true);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Ошибка отправки заявки в друзья');
+    } finally {
+      setSendingFriendReq(false);
+    }
+  }
 
   async function onDelete() {
     if (!confirm('Удалить этот бункай?')) return;
@@ -80,6 +105,14 @@ export default function BunkaiDetailPage() {
   async function onReject() {
     setBunkai(await rejectBunkai(id));
   }
+
+  if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
+  if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
+
+  // Канонический 18-шаговый сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
+  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 18 && bunkaiSteps[0]?.toriTrajectory)
+    ? bunkaiSteps
+    : HEIAN_SHODAN_BUNKAI_18_STEPS;
 
   return (
     <div className="bunkai-detail container">
@@ -118,17 +151,44 @@ export default function BunkaiDetailPage() {
             <HankoSeal text="分解" size="md" variant="vermilion" shape="square" />
           </div>
 
-          <p className="bunkai-detail__author-line">
-            Разбор подготовил:{' '}
-            <strong>{bunkai.Author?.Display_Name || bunkai.Author?.Username || 'Сенсей Додзё'}</strong>
-          </p>
+          <div className="bunkai-detail__author-line" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span>
+              Разбор подготовил:{' '}
+              <strong>{bunkai.Author?.Display_Name || bunkai.Author?.Username || 'Сенсей Додзё'}</strong>
+            </span>
+            {currentUserId && authorId && !isCreator && (
+              <span style={{ marginLeft: '4px' }}>
+                {isFriend ? (
+                  <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '3px 8px' }}>
+                    <UserCheck size={14} /> В соратниках
+                  </span>
+                ) : isFriendReqPending ? (
+                  <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', padding: '3px 8px' }}>
+                    <Clock size={14} /> Заявка отправлена
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '3px 10px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    onClick={handleSendFriendRequest}
+                    disabled={sendingFriendReq}
+                  >
+                    <UserPlus size={14} /> Добавить в соратники
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
         </div>
 
-        {canEdit && (
+        {(isCreator || isStaff) && (
           <div className="bunkai-detail__actions">
-            <Link to={`/bunkai/${id}/edit`} className="btn btn-subtle">
-              Редактировать
-            </Link>
+            {isCreator && (
+              <Link to={`/bunkai/${id}/edit`} className="btn btn-subtle">
+                Редактировать
+              </Link>
+            )}
             {isStaff && bunkai.Status !== 'approved' && (
               <button type="button" className="btn btn-primary" onClick={onApprove}>
                 Одобрить
@@ -139,9 +199,11 @@ export default function BunkaiDetailPage() {
                 Отклонить
               </button>
             )}
-            <button type="button" className="btn btn-danger" onClick={onDelete}>
-              Удалить
-            </button>
+            {(isCreator || isStaff) && (
+              <button type="button" className="btn btn-danger" onClick={onDelete}>
+                Удалить
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -189,6 +251,7 @@ export default function BunkaiDetailPage() {
             steps={effectiveSteps}
             defaultParticipantMode="2-person"
             height={540}
+            canEdit={isCreator}
           />
         </Suspense>
       </section>
@@ -244,9 +307,43 @@ export default function BunkaiDetailPage() {
                       </td>
                       <td style={{ padding: '10px 10px', color: '#f8fafc' }}>
                         <div>{step.participants[0]?.clipName ? `${step.description.split('.')[0]}` : step.title}</div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                          {step.participants[0]?.stance && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(255, 255, 255, 0.08)', color: '#cbd5e1' }}>
+                              Стойка: {step.participants[0].stance}
+                            </span>
+                          )}
+                          {step.participants[0]?.finalStance && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(197, 160, 89, 0.15)', color: '#ffd700', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                              Приход: {step.participants[0].finalStance}
+                            </span>
+                          )}
+                          {step.participants[0]?.landingMode && step.participants[0]?.landingMode !== 'auto' && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                              {step.participants[0].landingMode === 'forward' ? 'Ногу вперед' : 'Ногу назад'}
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td style={{ padding: '10px 10px', color: '#93c5fd' }}>
+                      <td style={{ padding: '10px 10px', color: '#e2e8f0' }}>
                         <div>{step.description.split('.')[1] || step.description}</div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                          {step.participants[1]?.stance && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(255, 255, 255, 0.08)', color: '#cbd5e1' }}>
+                              Стойка: {step.participants[1].stance}
+                            </span>
+                          )}
+                          {step.participants[1]?.finalStance && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(197, 160, 89, 0.15)', color: '#ffd700', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                              Приход: {step.participants[1].finalStance}
+                            </span>
+                          )}
+                          {step.participants[1]?.landingMode && step.participants[1]?.landingMode !== 'auto' && (
+                            <span style={{ fontSize: '0.72rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
+                              {step.participants[1].landingMode === 'forward' ? 'Ногу вперед' : 'Ногу назад'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '10px 10px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -257,28 +354,34 @@ export default function BunkaiDetailPage() {
                             <span
                               style={{
                                 fontSize: '0.76rem',
-                                color: '#fbbf24',
-                                background: 'rgba(245, 158, 11, 0.15)',
+                                color: '#e6ca85',
+                                background: 'rgba(197, 160, 89, 0.12)',
                                 padding: '2px 6px',
                                 borderRadius: 4,
-                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                border: '1px solid rgba(197, 160, 89, 0.28)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
                               }}
                             >
-                              🥋 {step.notes}
+                              <Shield size={12} color="var(--gold)" /> {step.notes}
                             </span>
                           )}
                           {step.scenarioAngles && (
                             <span
                               style={{
                                 fontSize: '0.74rem',
-                                color: '#90cdf4',
-                                background: 'rgba(99, 179, 237, 0.15)',
+                                color: '#cbd5e1',
+                                background: 'rgba(255, 255, 255, 0.05)',
                                 padding: '2px 6px',
                                 borderRadius: 4,
-                                border: '1px solid rgba(99, 179, 237, 0.3)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
                               }}
                             >
-                              📐 {step.scenarioAngles.label}
+                              <Compass size={12} color="#cbd5e1" /> {step.scenarioAngles.label}
                             </span>
                           )}
                         </div>

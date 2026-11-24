@@ -34,9 +34,18 @@ async function getUnreadCount(userId) {
   return result[0]?.UnreadCount || 0;
 }
 
+async function deleteNotification(userId, notificationId = null) {
+  const result = await callProcedure('sp_Notification_Delete', {
+    UserId: userId,
+    NotificationId: notificationId,
+  });
+  return result[0];
+}
+
 module.exports = {
   createNotification,
   listNotifications,
   markRead,
   getUnreadCount,
+  deleteNotification,
 };

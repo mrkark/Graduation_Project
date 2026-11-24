@@ -8,6 +8,7 @@ import {
   Swords,
   MessageSquare,
   BookOpen,
+  Film,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import './admin.css';
@@ -65,16 +66,18 @@ export default function AdminLayout() {
               <span className="admin-nav__icon"><Swords size={18} /></span>
               <span className="admin-nav__text">Модерация бункай</span>
             </NavLink>
+            <NavLink to="/admin/kata" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <span className="admin-nav__icon"><BookOpen size={18} /></span>
+              <span className="admin-nav__text">Каталог и модерация ката</span>
+            </NavLink>
             <NavLink to="/admin/comments" className={({ isActive }) => (isActive ? 'active' : '')}>
               <span className="admin-nav__icon"><MessageSquare size={18} /></span>
               <span className="admin-nav__text">Модерация комментариев</span>
             </NavLink>
-            {isAdmin && (
-              <NavLink to="/admin/kata" className={({ isActive }) => (isActive ? 'active' : '')}>
-                <span className="admin-nav__icon"><BookOpen size={18} /></span>
-                <span className="admin-nav__text">Каталог ката</span>
-              </NavLink>
-            )}
+            <NavLink to="/admin/animations" className={({ isActive }) => (isActive ? 'active' : '')}>
+              <span className="admin-nav__icon"><Film size={18} /></span>
+              <span className="admin-nav__text">Реестр 3D-анимаций</span>
+            </NavLink>
           </nav>
         </aside>
 

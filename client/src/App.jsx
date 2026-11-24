@@ -88,26 +88,26 @@ export default function App() {
               <Route
                 path="/kata/create"
                 element={
-                  <RequireAdmin>
+                  <RequireAdminOrModerator>
                     <KataFormPage />
-                  </RequireAdmin>
+                  </RequireAdminOrModerator>
                 }
               />
               <Route
                 path="/kata/new"
                 element={
-                  <RequireAdmin>
+                  <RequireAdminOrModerator>
                     <KataFormPage />
-                  </RequireAdmin>
+                  </RequireAdminOrModerator>
                 }
               />
               <Route path="/kata/:id" element={<KataDetailPage />} />
               <Route
                 path="/kata/:id/edit"
                 element={
-                  <RequireAdmin>
+                  <RequireAdminOrModerator>
                     <KataFormPage />
-                  </RequireAdmin>
+                  </RequireAdminOrModerator>
                 }
               />
 
@@ -135,28 +135,14 @@ export default function App() {
                     }
                   />
                   <Route path="bunkai" element={<AdminBunkaiPage />} />
+                  <Route path="kata" element={<AdminKataPage />} />
                   <Route path="comments" element={<AdminCommentsPage />} />
-                  <Route
-                    path="kata"
-                    element={
-                      <RequireAdmin>
-                        <AdminKataPage />
-                      </RequireAdmin>
-                    }
-                  />
+                  <Route path="animations" element={<AdminAnimationsPage />} />
                   <Route
                     path="logs"
                     element={
                       <RequireAdmin>
                         <AdminLogsPage />
-                      </RequireAdmin>
-                    }
-                  />
-                  <Route
-                    path="animations"
-                    element={
-                      <RequireAdmin>
-                        <AdminAnimationsPage />
                       </RequireAdmin>
                     }
                   />

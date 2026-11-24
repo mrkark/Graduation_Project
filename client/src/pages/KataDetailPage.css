@@ -424,6 +424,16 @@
 .kata-study__tabs {
   justify-content: center;
   margin-bottom: 1.5rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.kata-study__tabs::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .kata-study__tab-content {

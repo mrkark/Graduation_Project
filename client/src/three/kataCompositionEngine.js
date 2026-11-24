@@ -1025,6 +1025,7 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
 
   const composedSteps = stepsList.map((raw, idx) => {
     // 1. Извлечение ориентации и углов
+    const startFacingDeg = prevFacingDeg;
     const rot = parseStepOrientation(raw, prevFacingDeg);
     const facingDeg = rot.targetFacingDeg;
     const deltaYawDeg = rot.deltaYawDeg;
@@ -1034,7 +1035,10 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
     const resolvedClip = resolveComposedClip(raw);
     const trans = parseTransitionCode(raw.S);
 
-    // 3. Расчет позиции шага на татами (эмбусэн)
+    // 3. Начальная позиция шага на татами (откуда начинается перемещение)
+    const startPos = [curX, 0, curZ];
+
+    // 4. Расчет позиции шага на татами (эмбусэн)
     let stepPos = [0, 0, 0];
     if (canonicalPoints && canonicalPoints[idx] && !hasAnyCustomSteps && !raw.isCustomDirection) {
       const cp = canonicalPoints[idx];
@@ -1122,9 +1126,17 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
       clipName: resolvedClip.clipName,
       fallbackClipName: resolvedClip.fallback || 'idle_shizentai',
       transitionClipName: null,
+      stepIndex: idx,
+      index: idx,
+      stepClipName: `${kataSlug}_step_${idx}`,
+      kataStepClip: `${kataSlug}_step_${idx}`,
       displacement: [stepPos[0], 0, stepPos[2]],
       position: stepPos,
       worldPosition: stepPos,
+      startPosition: startPos,
+      endPosition: stepPos,
+      startFacingDeg,
+      startRotation: [0, (startFacingDeg * Math.PI) / 180, 0],
       deltaYawDeg,
       facingDeg,
       targetFacingRad: rot.targetFacingRad,
@@ -1134,8 +1146,8 @@ export function compileKataScenario(rawSteps = [], kataSlug = 'heian_shodan', op
       pivotType: trans.type,
       stateIn: {
         stance: idx === 0 ? 'heisoku' : (stepsList[idx - 1]?.stance || 'zenkutsu'),
-        facingDeg: normalizeAngleDeg(facingDeg - deltaYawDeg),
-        position: idx === 0 ? [0, 0, 0] : (stepsList[idx - 1]?.position || [0, 0, 0]),
+        facingDeg: startFacingDeg,
+        position: startPos,
       },
       stateOut: {
         stance: raw.stance || 'zenkutsu',

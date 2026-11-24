@@ -43,6 +43,8 @@ import {
   Download,
   ZoomIn,
   ZoomOut,
+  Mouse,
+  Info,
 } from 'lucide-react';
 import './modularMotionMixer.css';
 
@@ -389,7 +391,7 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
         if (item.AlreadyExisted) {
           setModalFeedback({
             type: 'info',
-            text: `ℹ️ Такой пресет уже существует в каталоге (автор: ${item.Author_Name}). Он доступен всем!`,
+            text: `Такой пресет уже существует в каталоге (автор: ${item.Author_Name}). Он доступен всем!`,
           });
         } else {
           setModalFeedback({
@@ -652,7 +654,7 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
             onClick={() => setEnableWheelZoom((v) => !v)}
             title={enableWheelZoom ? 'Колесико мыши зумирует 3D сцену (кликните, чтобы колесико скроллило страницу)' : 'Колесико мыши скроллит страницу (кликните, чтобы зумировать 3D)'}
           >
-            <span style={{ fontSize: '10px' }}>{enableWheelZoom ? '🖱️ Зум колесом: ВКЛ' : '🖱️ Зум колесом: ВЫКЛ'}</span>
+            <span style={{ fontSize: '10px' }}>{enableWheelZoom ? <><Mouse size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} />Зум колесом: ВКЛ</> : <><Mouse size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} />Зум колесом: ВЫКЛ</>}</span>
           </button>
         </div>
 
@@ -1090,7 +1092,7 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
                         </span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>
-                            👤 {p.Author_Name}
+                            <><User size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{p.Author_Name}</>
                           </span>
                           {isOwnerOrAdmin && (
                             <button
@@ -1114,10 +1116,10 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
                       <div className="shared-preset-details">
                         {isModular ? (
                           <span>
-                            🥋 {p.Stance_ID?.replace('tech_', '') || 'Стойка'} + {p.Technique_ID?.replace('tech_', '') || 'Техника'}
+                            <><Shield size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{p.Stance_ID?.replace('tech_', '') || 'Стойка'} + {p.Technique_ID?.replace('tech_', '') || 'Техника'}</>
                           </span>
                         ) : (
-                          <span>🔥 {p.Full_Body_Clip || 'Динамика цельного тела'}</span>
+                          <span><Flame size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{p.Full_Body_Clip || 'Динамика цельного тела'}</span>
                         )}
                         <span>· Поворот {p.Turn_Angle}° · {p.Speed}x</span>
                       </div>
@@ -1180,7 +1182,7 @@ export default function ModularMotionMixer({ onSwitchToMocap }) {
                   <div key={take.filename} className="shared-preset-card">
                     <div className="shared-preset-header">
                       <span className="preset-badge preset-badge--mocap">
-                        📹 MoCap телефон
+                        <><Video size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />MoCap телефон</>
                       </span>
                       <span style={{ fontSize: '10.5px', color: '#94a3b8' }}>
                         {take.size_kb} KB

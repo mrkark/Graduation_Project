@@ -115,6 +115,8 @@ async function getStepsWithParticipants(bunkaiId) {
       interactionType: p.Interaction_Type,
       optimalDistance: p.Optimal_Distance,
       initialStance: p.Initial_Stance,
+      finalStance: p.Final_Stance,
+      landingMode: p.Landing_Mode,
       offsetX: p.Offset_X,
       offsetZ: p.Offset_Z,
       rotationY: p.Rotation_Y,

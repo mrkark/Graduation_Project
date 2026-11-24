@@ -126,16 +126,15 @@ function SmoothCameraRig({ targetPosition, avatarRealPosRef, isFullMode, follow,
     const controls = controlsRef.current;
 
     if (hasStarted && follow) {
-      const currentPos = (isFullMode && avatarRealPosRef?.current)
-        ? avatarRealPosRef.current
-        : targetPosition;
+      const currentPos = avatarRealPosRef?.current || targetPosition;
 
       if (currentPos) {
         const tx = currentPos[0];
         const tz = currentPos[2];
         const ty = 0.95;
 
-        const factor = 1.0 - Math.exp(-3.5 * Math.min(delta, 0.1));
+        // Плавное слежение с естественной инерцией, чтобы боковое и продольное перемещение мастера по татами было отчетливо видно
+        const factor = 1.0 - Math.exp(-2.2 * Math.min(delta, 0.1));
         const dx = (tx - controls.target.x) * factor;
         const dy = (ty - controls.target.y) * factor;
         const dz = (tz - controls.target.z) * factor;
@@ -144,9 +143,10 @@ function SmoothCameraRig({ targetPosition, avatarRealPosRef, isFullMode, follow,
         controls.target.y += dy;
         controls.target.z += dz;
 
-        state.camera.position.x += dx;
-        state.camera.position.y += dy;
-        state.camera.position.z += dz;
+        // Позиция камеры следует с мягким отставанием для выразительного параллакса перемещения
+        state.camera.position.x += dx * 0.75;
+        state.camera.position.y += dy * 0.75;
+        state.camera.position.z += dz * 0.75;
       }
     }
 
@@ -181,7 +181,7 @@ export default function KataSequencer({
   const [warningMessage, setWarningMessage] = useState(null);
   const [playbackMode, setPlaybackMode] = useState('steps'); // 'steps' | 'full'
   const kataSlug = useMemo(() => resolveKataSlug(kataTitle), [kataTitle]);
-  const [executionMethod, setExecutionMethod] = useState('mocap'); // 'mocap' канонический режим мастера
+  const [executionMethod, setExecutionMethod] = useState('mocap'); // 'mocap' оригинальная непрерывная MoCap-анимация с каноническими переходами (по умолчанию)
   const [kataJsonData, setKataJsonData] = useState(null);
   const [replayTrigger, setReplayTrigger] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -221,6 +221,14 @@ export default function KataSequencer({
     return compileKataScenario(rawSteps, kataSlug);
   }, [steps, rawJsonSteps, kataSlug]);
 
+  useEffect(() => {
+    if (executionMethod === 'composed' && composedScenario?.totalDuration > 0) {
+      setTotalDuration(composedScenario.totalDuration);
+    } else if (executionMethod === 'mocap') {
+      setTotalDuration(29.48);
+    }
+  }, [executionMethod, composedScenario?.totalDuration]);
+
   const composedSteps = composedScenario.steps;
   const embusenPoints = composedScenario.embusenPoints;
   const totalStepsCount = composedSteps.length || 21;
@@ -233,16 +241,17 @@ export default function KataSequencer({
     ? { position: currentStep.position, rotation: currentStep.rotation }
     : { position: [0, 0, 0], rotation: [0, 0, 0] };
 
-  // Временной диапазон текущего шага в MoCap-анимации Heian Shodan
+  // Временной диапазон текущего шага в канонической MoCap-анимации Ката
   const kataTimeRange = useMemo(() => {
-    if (playbackMode === 'full') return null;
+    // В монолитном мастер-прогоне MoCap не нарезаем тайм-рейндж
+    if (playbackMode === 'full' && executionMethod === 'mocap') return null;
     const sTime = currentStep.mocapStartTime !== undefined ? currentStep.mocapStartTime : currentStep.startTime;
     const eTime = currentStep.mocapEndTime !== undefined ? currentStep.mocapEndTime : currentStep.endTime;
     if (sTime !== undefined && eTime !== undefined) {
       return [sTime, eTime];
     }
     return null;
-  }, [playbackMode, currentStep]);
+  }, [playbackMode, executionMethod, currentStep]);
 
   // Длительность текущего шага в секундах
   const stepDurationSec = useMemo(() => {
@@ -252,14 +261,13 @@ export default function KataSequencer({
     return (currentStep.Duration || 2.0).toFixed(2);
   }, [currentStep]);
 
-  // Режим исполнения: Клипы v4 (библиотека 213 стоек и техник) либо MoCap мастер-клип
+  // Режим исполнения: Клипы v4 (библиотека 213 стоек и техник) для шагов либо полная мастер-анимация формы
   const isMasterAvailable = Boolean(kataSlug === 'heian_shodan');
 
   const effectiveExecutionMode = useMemo(() => {
     if (executionMethod === 'composed') {
       return 'composed';
     }
-    // Для MoCap режима
     if (playbackMode === 'full') {
       return 'full';
     }
@@ -279,7 +287,7 @@ export default function KataSequencer({
     setCurrentIdx(idx);
     setHasStarted(true);
     setIsPlaying(true);
-    if (playbackMode === 'full' && executionMethod !== 'composed') {
+    if (playbackMode === 'full' && executionMethod === 'mocap') {
       const targetStep = composedSteps[idx];
       const targetTime = targetStep?.mocapStartTime !== undefined ? targetStep.mocapStartTime : (targetStep?.startTime || 0);
       setCurrentTime(targetTime);
@@ -292,47 +300,61 @@ export default function KataSequencer({
   }, [playbackMode, executionMethod, composedSteps, totalDuration, onStepChange]);
 
   const handleStepEnd = useCallback(() => {
-    if (playbackMode === 'steps' || (playbackMode === 'full' && executionMethod === 'composed')) {
-      if (!isLooping || playbackMode === 'full') {
+    if (playbackMode === 'full') {
+      if (currentIdx < totalStepsCount - 1) {
+        // Мгновенный бесшовный переход между шагами без искусственных пауз:
+        // создает органичную непрерывную анимацию ката
+        selectStep(currentIdx + 1);
+      } else {
+        setIsPlaying(false);
+        setCurrentTime(totalDuration);
+      }
+    } else if (playbackMode === 'steps') {
+      if (!isLooping) {
         if (currentIdx < totalStepsCount - 1) {
-          const pauseMs = playbackMode === 'full' ? 140 : 300;
+          // При включенном автопереходе в пошаговом режиме выдерживаем естественную паузу фиксации удара (кимэ)
           setTimeout(() => {
             selectStep(currentIdx + 1);
-          }, pauseMs);
+          }, 240);
         } else {
           setIsPlaying(false);
-          if (playbackMode === 'full') {
-            setCurrentTime(totalDuration);
-          }
         }
       }
-    } else if (playbackMode === 'full') {
-      setIsPlaying(false);
-      setCurrentTime(totalDuration);
     }
-  }, [playbackMode, executionMethod, isLooping, currentIdx, totalStepsCount, selectStep, totalDuration]);
+  }, [playbackMode, isLooping, currentIdx, totalStepsCount, selectStep, totalDuration]);
 
   // Синхронизация времени в реальном времени при полном мастер-прогоне
   const handleTimeUpdate = useCallback((time, dur, rootPos) => {
-    setCurrentTime(time);
-    if (dur > 0 && playbackMode === 'full') setTotalDuration(dur);
     if (rootPos) {
       avatarRealPosRef.current = rootPos;
     }
 
     if (playbackMode === 'full') {
-      const activeEvents = composedSteps;
-      const evIdx = activeEvents.findIndex((ev) => {
-        const sTime = ev.mocapStartTime !== undefined ? ev.mocapStartTime : ev.startTime;
-        const eTime = ev.mocapEndTime !== undefined ? ev.mocapEndTime : ev.endTime;
-        return time >= sTime && time <= eTime;
-      });
-      if (evIdx !== -1 && evIdx !== currentIdx) {
-        setCurrentIdx(evIdx);
-        if (onStepChange) onStepChange(evIdx);
+      if (executionMethod === 'mocap') {
+        setCurrentTime(time);
+        if (dur > 0) setTotalDuration(dur);
+        const activeEvents = composedSteps;
+        const evIdx = activeEvents.findIndex((ev) => {
+          const sTime = ev.mocapStartTime !== undefined ? ev.mocapStartTime : ev.startTime;
+          const eTime = ev.mocapEndTime !== undefined ? ev.mocapEndTime : ev.endTime;
+          return time >= sTime && time <= eTime;
+        });
+        if (evIdx !== -1 && evIdx !== currentIdx) {
+          setCurrentIdx(evIdx);
+          if (onStepChange) onStepChange(evIdx);
+        }
+      } else {
+        // Режим клиповой композиции (composed):
+        // time - локальное время клипа текущего шага, суммируем с базовым startTime шага
+        const step = composedSteps[currentIdx];
+        const stepBaseTime = step?.startTime || 0;
+        const globalTime = Math.min(totalDuration, +(stepBaseTime + time).toFixed(2));
+        setCurrentTime(globalTime);
       }
+    } else {
+      setCurrentTime(time);
     }
-  }, [playbackMode, composedSteps, currentIdx, onStepChange]);
+  }, [playbackMode, executionMethod, composedSteps, currentIdx, totalDuration, onStepChange]);
 
   function resetCamera() {
     if (controlsRef.current) {
@@ -384,10 +406,10 @@ export default function KataSequencer({
             kataMode={hasStarted}
             stance={!hasStarted ? 'ready' : (currentStep.stance || 'ready')}
             stepClip={!hasStarted ? null : currentStep.clipName}
-            blendDuration={effectiveExecutionMode === 'mocap' ? 0.04 : (currentStep.blendDuration || 0.14)}
+            blendDuration={0.12}
             kataExecutionMode={effectiveExecutionMode}
             kataClipName={kataSlug}
-            kataTimeRange={effectiveExecutionMode === 'mocap' ? kataTimeRange : null}
+            kataTimeRange={kataTimeRange}
             kataScrubProgress={scrubProgress}
             speed={speed}
             isPlaying={hasStarted && isPlaying}
@@ -395,8 +417,8 @@ export default function KataSequencer({
             replayTrigger={replayTrigger}
             currentStep={currentStep}
             prevStep={composedSteps[currentIdx - 1] || null}
-            position={!hasStarted || effectiveExecutionMode !== 'composed' ? [0, 0, 0] : currentPosData.position}
-            rotation={!hasStarted || effectiveExecutionMode !== 'composed' ? [0, 0, 0] : currentPosData.rotation}
+            position={[0, 0, 0]}
+            rotation={[0, 0, 0]}
             onStepEnd={handleStepEnd}
             onTimeUpdate={handleTimeUpdate}
           />
@@ -485,7 +507,9 @@ export default function KataSequencer({
                   boxShadow: '0 4px 16px rgba(197, 160, 89, 0.4)',
                 }}
               >
-                ▶ Начать изучение (Шаг 1: {composedSteps[1]?.technique?.split(' ')[0] || 'Гэдан-барай'})
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Play size={15} fill="currentColor" /> Начать изучение (Шаг 1: {composedSteps[1]?.technique?.split(' ')[0] || 'Гэдан-барай'})
+                </span>
               </button>
             </div>
           </div>
@@ -519,6 +543,21 @@ export default function KataSequencer({
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-gold, #c5a059)', fontWeight: 700 }}>
                 {kataTitle}
+              </span>
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>•</span>
+              <span
+                style={{
+                  fontSize: '0.66rem',
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                  fontWeight: 700,
+                  letterSpacing: '0.04em',
+                  background: executionMethod === 'composed' ? 'rgba(197, 160, 89, 0.22)' : 'rgba(96, 165, 250, 0.22)',
+                  color: executionMethod === 'composed' ? 'var(--color-gold, #c5a059)' : '#93c5fd',
+                  border: executionMethod === 'composed' ? '1px solid rgba(197, 160, 89, 0.4)' : '1px solid rgba(96, 165, 250, 0.4)',
+                }}
+              >
+                {executionMethod === 'composed' ? 'Клипы v4' : 'MoCap GLB'}
               </span>
               <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.4)' }}>•</span>
               <span style={{ fontSize: '0.76rem', color: (!hasStarted || currentStep.isYoiStart || currentStep.isYoiEnd) ? 'var(--color-gold, #c5a059)' : (playbackMode === 'full' ? '#68d391' : 'var(--color-washi, #f4efe6)'), fontWeight: 600 }}>
@@ -625,50 +664,107 @@ export default function KataSequencer({
       {/* Панель управления 3D-воспроизведением */}
       <div style={{ background: 'var(--color-surface, #141416)', padding: '12px 16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Режимы: Пошагово / Всё ката */}
-          <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
-            <button
-              className="btn"
-              onClick={() => {
-                setPlaybackMode('steps');
-                setHasStarted(true);
-                setIsPlaying(true);
-                setScrubProgress(null);
-                setReplayTrigger((prev) => prev + 1);
-              }}
-              style={{
-                padding: '5px 12px',
-                fontSize: '0.8rem',
-                border: playbackMode === 'steps' ? '1px solid var(--color-gold, #c5a059)' : 'none',
-                background: playbackMode === 'steps' ? 'rgba(197, 160, 89, 0.2)' : 'transparent',
-                color: playbackMode === 'steps' ? 'var(--color-gold, #c5a059)' : 'var(--color-text-muted, #a0a0a0)',
-                fontWeight: playbackMode === 'steps' ? 700 : 500,
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ListOrdered size={13} /> Пошагово</span>
-            </button>
-            <button
-              className="btn"
-              onClick={() => {
-                setPlaybackMode('full');
-                setHasStarted(true);
-                setIsPlaying(true);
-                setCurrentIdx(0);
-                setCurrentTime(0);
-                setScrubProgress(0);
-                setReplayTrigger((prev) => prev + 1);
-              }}
-              style={{
-                padding: '5px 12px',
-                fontSize: '0.8rem',
-                border: playbackMode === 'full' ? '1px solid #68d391' : 'none',
-                background: playbackMode === 'full' ? 'rgba(104, 211, 145, 0.2)' : 'transparent',
-                color: playbackMode === 'full' ? '#68d391' : 'var(--color-text-muted, #a0a0a0)',
-                fontWeight: playbackMode === 'full' ? 700 : 500,
-              }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Zap size={13} /> Всё ката</span>
-            </button>
+          {/* Режимы: Пошагово / Всё ката + Клипы v4 / MoCap GLB */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Режимы воспроизведения: Пошагово / Всё ката */}
+            <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setPlaybackMode('steps');
+                  setHasStarted(true);
+                  setIsPlaying(true);
+                  setScrubProgress(null);
+                  setReplayTrigger((prev) => prev + 1);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '0.8rem',
+                  border: playbackMode === 'steps' ? '1px solid var(--color-gold, #c5a059)' : 'none',
+                  background: playbackMode === 'steps' ? 'rgba(197, 160, 89, 0.2)' : 'transparent',
+                  color: playbackMode === 'steps' ? 'var(--color-gold, #c5a059)' : 'var(--color-text-muted, #a0a0a0)',
+                  fontWeight: playbackMode === 'steps' ? 700 : 500,
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><ListOrdered size={13} /> Пошагово</span>
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setPlaybackMode('full');
+                  setHasStarted(true);
+                  setIsPlaying(true);
+                  setCurrentIdx(0);
+                  setCurrentTime(0);
+                  setScrubProgress(0);
+                  setReplayTrigger((prev) => prev + 1);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '0.8rem',
+                  border: playbackMode === 'full' ? '1px solid #68d391' : 'none',
+                  background: playbackMode === 'full' ? 'rgba(104, 211, 145, 0.2)' : 'transparent',
+                  color: playbackMode === 'full' ? '#68d391' : 'var(--color-text-muted, #a0a0a0)',
+                  fontWeight: playbackMode === 'full' ? 700 : 500,
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Zap size={13} /> Всё ката</span>
+              </button>
+            </div>
+
+            {/* Выбор анимационного движка: MoCap GLB (Плавные переходы) vs Клипы v4 */}
+            <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
+              <button
+                type="button"
+                className="btn"
+                disabled={!isMasterAvailable}
+                onClick={() => {
+                  if (isMasterAvailable) {
+                    setExecutionMethod('mocap');
+                    setReplayTrigger((prev) => prev + 1);
+                  }
+                }}
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.78rem',
+                  opacity: isMasterAvailable ? 1 : 0.4,
+                  border: executionMethod === 'mocap' ? '1px solid #60a5fa' : 'none',
+                  background: executionMethod === 'mocap' ? 'rgba(96, 165, 250, 0.2)' : 'transparent',
+                  color: executionMethod === 'mocap' ? '#60a5fa' : 'var(--color-text-muted, #a0a0a0)',
+                  fontWeight: executionMethod === 'mocap' ? 700 : 500,
+                  cursor: isMasterAvailable ? 'pointer' : 'not-allowed',
+                }}
+                title={isMasterAvailable ? "Оригинальная мастер MoCap-анимация с плавными естественными переходами между техниками" : "Монолитный MoCap доступен только для Хэйан Шодан"}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Activity size={13} /> MoCap GLB (Плавные переходы)
+                </span>
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setExecutionMethod('composed');
+                  setReplayTrigger((prev) => prev + 1);
+                }}
+                style={{
+                  padding: '5px 11px',
+                  fontSize: '0.78rem',
+                  border: executionMethod === 'composed' ? '1px solid var(--color-gold, #c5a059)' : 'none',
+                  background: executionMethod === 'composed' ? 'rgba(197, 160, 89, 0.2)' : 'transparent',
+                  color: executionMethod === 'composed' ? 'var(--color-gold, #c5a059)' : 'var(--color-text-muted, #a0a0a0)',
+                  fontWeight: executionMethod === 'composed' ? 700 : 500,
+                  cursor: 'pointer',
+                }}
+                title="Клиповая анимация: раздельные клипы стоек и ударов по эмбусэну"
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Layers size={13} /> Клипы v4
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Кнопки воспроизведения, паузы и повтора */}
@@ -697,7 +793,19 @@ export default function KataSequencer({
                 }
               }}
             >
-              {!hasStarted ? '▶ Начать изучение' : (isPlaying ? '⏸ Пауза' : '▶ Воспроизвести')}
+              {!hasStarted ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Play size={13} fill="currentColor" /> Начать изучение
+                </span>
+              ) : isPlaying ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Pause size={13} fill="currentColor" /> Пауза
+                </span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Play size={13} fill="currentColor" /> Воспроизвести
+                </span>
+              )}
             </button>
             <button
               className="btn"
@@ -806,7 +914,21 @@ export default function KataSequencer({
               onChange={(e) => {
                 const val = parseFloat(e.target.value);
                 setCurrentTime(val);
-                setScrubProgress(val / totalDuration);
+                if (executionMethod === 'mocap') {
+                  setScrubProgress(val / totalDuration);
+                } else {
+                  // Поиск шага по времени в режиме клиповой композиции
+                  const targetIdx = composedSteps.findIndex((s) => val >= s.startTime && val <= s.endTime);
+                  const activeIdx = targetIdx !== -1 ? targetIdx : (val < (composedSteps[0]?.startTime || 0) ? 0 : composedSteps.length - 1);
+                  if (activeIdx !== currentIdx) {
+                    setCurrentIdx(activeIdx);
+                    if (onStepChange) onStepChange(activeIdx);
+                  }
+                  const activeStep = composedSteps[activeIdx];
+                  const stepDuration = activeStep?.duration || 1.0;
+                  const stepProgress = stepDuration > 0 ? (val - (activeStep.startTime || 0)) / stepDuration : 0;
+                  setScrubProgress(Math.max(0, Math.min(1, stepProgress)));
+                }
               }}
               style={{ flex: 1, accentColor: 'var(--color-gold, #c5a059)', cursor: 'pointer' }}
             />

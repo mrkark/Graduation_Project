@@ -27,7 +27,30 @@ async function markRead(req, res, next) {
   }
 }
 
+async function remove(req, res, next) {
+  try {
+    const notificationId = req.params.id ? Number(req.params.id) : null;
+    const result = await notificationRepo.deleteNotification(req.user.User_ID, notificationId);
+    return ok(res, result);
+  } catch (err) {
+    if (err.status) return fail(res, err.status, err.message, err.code);
+    return next(err);
+  }
+}
+
+async function clearAll(req, res, next) {
+  try {
+    const result = await notificationRepo.deleteNotification(req.user.User_ID, null);
+    return ok(res, result);
+  } catch (err) {
+    if (err.status) return fail(res, err.status, err.message, err.code);
+    return next(err);
+  }
+}
+
 module.exports = {
   list,
   markRead,
+  remove,
+  clearAll,
 };

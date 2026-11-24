@@ -364,14 +364,21 @@ GO
 CREATE TABLE dbo.Favorites (
     Favorite_ID INT IDENTITY(1,1) PRIMARY KEY,
     User_ID     INT NOT NULL,
-    Item_Type   NVARCHAR(20) NOT NULL, -- 'kata' or 'bunkai'
+    Item_Type   NVARCHAR(20) NOT NULL, -- 'kata', 'bunkai', 'preset'
     Item_ID     INT NOT NULL,
+    Kata_ID     INT NULL,
+    Bunkai_ID   INT NULL,
+    Preset_ID   INT NULL,
     Created_At  DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_Favorites_Users FOREIGN KEY (User_ID) REFERENCES dbo.Users(User_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_Favorites_Kata FOREIGN KEY (Kata_ID) REFERENCES dbo.Kata(Kata_ID) ON DELETE CASCADE,
+    CONSTRAINT FK_Favorites_Bunkai FOREIGN KEY (Bunkai_ID) REFERENCES dbo.Bunkai(Bunkai_ID) ON DELETE NO ACTION,
     CONSTRAINT UQ_Favorites_User_Item UNIQUE (User_ID, Item_Type, Item_ID)
 );
 GO
 CREATE INDEX IX_Favorites_User ON dbo.Favorites(User_ID, Item_Type);
+CREATE INDEX IX_Favorites_Kata ON dbo.Favorites(Kata_ID);
+CREATE INDEX IX_Favorites_Bunkai ON dbo.Favorites(Bunkai_ID);
 GO
 
 PRINT 'Схема Bunkai Explorer успешно создана.';

@@ -2095,6 +2095,28 @@ BEGIN
 END;
 GO
 
+-- Удаление уведомления (или всех уведомлений пользователя)
+CREATE OR ALTER PROCEDURE dbo.sp_Notification_Delete
+    @UserId INT,
+    @NotificationId INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @NotificationId IS NOT NULL
+    BEGIN
+        DELETE FROM dbo.Notifications
+        WHERE Notification_ID = @NotificationId AND User_ID = @UserId;
+    END
+    ELSE
+    BEGIN
+        DELETE FROM dbo.Notifications
+        WHERE User_ID = @UserId;
+    END;
+
+    SELECT @@ROWCOUNT AS DeletedCount;
+END;
+GO
+
 -- ============================================================
 -- ИЗБРАННОЕ (Ката и Бункай)
 -- ============================================================

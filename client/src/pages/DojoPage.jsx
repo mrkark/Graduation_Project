@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { listMyDojos, createDojo, getDojoDetails, inviteUserToDojo, respondDojoInvite, updateDojo, deleteDojo } from '../api/dojos';
-import { searchUsers, listFriends } from '../api/friends';
+import { searchUsers, listFriends, sendFriendRequest, listFriendRequests } from '../api/friends';
 import { HankoSeal } from '../components/ui/JapaneseDecor';
-import { Home, Inbox, Plus, MessageSquare, Edit3, Trash2, Check, X, Mail, Users, UserCheck } from 'lucide-react';
+import { Home, Inbox, Plus, MessageSquare, Edit3, Trash2, Check, X, Mail, Users, UserCheck, UserPlus, Clock } from 'lucide-react';
 import './DojoPage.css';
 
 function getSealFontSize(kanji) {
@@ -67,6 +67,7 @@ export default function DojoPage() {
   // Quick invite from friends
   const [friendsList, setFriendsList] = useState([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
+  const [outgoingFriendRequests, setOutgoingFriendRequests] = useState([]);
 
   // Invite search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,18 +100,29 @@ export default function DojoPage() {
     try {
       setLoadingModal(true);
       setLoadingFriends(true);
-      const [details, friends] = await Promise.all([
+      const [details, friends, reqs] = await Promise.all([
         getDojoDetails(id),
         listFriends().catch(() => []),
+        listFriendRequests('outgoing').catch(() => []),
       ]);
       setSelectedDojoData(details);
       setFriendsList(friends || []);
+      setOutgoingFriendRequests((reqs || []).map((r) => r.Receiver_ID));
     } catch (err) {
       alert(extractErrorMessage(err, 'Не удалось открыть информацию о Додзё'));
       setSelectedDojoId(null);
     } finally {
       setLoadingModal(false);
       setLoadingFriends(false);
+    }
+  };
+
+  const handleAddDojoFriend = async (targetUserId) => {
+    try {
+      await sendFriendRequest(targetUserId);
+      setOutgoingFriendRequests((prev) => [...prev, targetUserId]);
+    } catch (err) {
+      alert(extractErrorMessage(err, 'Не удалось отправить заявку в друзья'));
     }
   };
 
@@ -551,29 +563,56 @@ export default function DojoPage() {
 
                   <h4 style={{ color: 'var(--gold)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={16} /> Участники школы ({selectedDojoData.members?.length || 0})</h4>
                   <div className="dojo-members-list">
-                    {selectedDojoData.members?.map((m) => (
-                      <div key={m.User_ID} className="dojo-member-item">
-                        <div className="dojo-member-user">
-                          <div className="dojo-member-avatar">
-                            {(m.Display_Name || m.Username)[0].toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{m.Display_Name || m.Username}</div>
-                          </div>
-                        </div>
+                    {selectedDojoData.members?.map((m) => {
+                      const isCurrentUser = m.User_ID === user?.User_ID;
+                      const isFriend = friendsList.some((f) => f.User_ID === m.User_ID);
+                      const isRequested = outgoingFriendRequests.includes(m.User_ID);
 
-                        <div>
-                          <span className={`dojo-member-role ${m.Role === 'sensei' ? 'dojo-member-role--sensei' : 'dojo-member-role--student'}`}>
-                            {m.Role === 'sensei' ? 'Сэнсэй' : 'Ученик'}
-                          </span>
-                          {m.Status === 'invited' && (
-                            <span className="dojo-member-status--invited" style={{ marginLeft: '0.5rem' }}>
-                              (ожидает ответа)
+                      return (
+                        <div key={m.User_ID} className="dojo-member-item">
+                          <div className="dojo-member-user">
+                            <div className="dojo-member-avatar">
+                              {(m.Display_Name || m.Username)[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{m.Display_Name || m.Username}</div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className={`dojo-member-role ${m.Role === 'sensei' ? 'dojo-member-role--sensei' : 'dojo-member-role--student'}`}>
+                              {m.Role === 'sensei' ? 'Сэнсэй' : 'Ученик'}
                             </span>
-                          )}
+                            {m.Status === 'invited' && (
+                              <span className="dojo-member-status--invited">
+                                (ожидает ответа)
+                              </span>
+                            )}
+                            {!isCurrentUser && (
+                              isFriend ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--gold-soft)', background: 'rgba(212,175,55,0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                                  <UserCheck size={12} /> Соратник
+                                </span>
+                              ) : isRequested ? (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                                  <Clock size={12} /> Заявка отправлена
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddDojoFriend(m.User_ID)}
+                                  className="btn-brush"
+                                  style={{ padding: '2px 8px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Отправить заявку в друзья"
+                                >
+                                  <UserPlus size={12} /> В соратники
+                                </button>
+                              )
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Пригласить пользователя */}

@@ -63,6 +63,16 @@ async function acceptRequest(req, res, next) {
   try {
     const request = await friendRepo.acceptRequest(req.params.id, req.user.User_ID);
     await logActivity({ userId: req.user.User_ID, action: 'accept_friend_request', entityType: 'FriendRequest', entityId: request.Request_ID, ip: req.ip });
+
+    // Отмечаем уведомления о заявках в друзья как прочитанные
+    try {
+      const { poolPromise } = require('../config/database');
+      const pool = await poolPromise;
+      await pool.request()
+        .input('UserId', req.user.User_ID)
+        .query("UPDATE dbo.Notifications SET Is_Read = 1 WHERE User_ID = @UserId AND Type = 'friend_request' AND Is_Read = 0");
+    } catch {}
+
     return ok(res, request);
   } catch (err) {
     return handleError(err, next, res);
@@ -74,6 +84,16 @@ async function rejectRequest(req, res, next) {
   try {
     const request = await friendRepo.rejectRequest(req.params.id, req.user.User_ID);
     await logActivity({ userId: req.user.User_ID, action: 'reject_friend_request', entityType: 'FriendRequest', entityId: request.Request_ID, ip: req.ip });
+
+    // Отмечаем уведомления о заявках в друзья как прочитанные
+    try {
+      const { poolPromise } = require('../config/database');
+      const pool = await poolPromise;
+      await pool.request()
+        .input('UserId', req.user.User_ID)
+        .query("UPDATE dbo.Notifications SET Is_Read = 1 WHERE User_ID = @UserId AND Type = 'friend_request' AND Is_Read = 0");
+    } catch {}
+
     return ok(res, request);
   } catch (err) {
     return handleError(err, next, res);

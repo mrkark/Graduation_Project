@@ -26,19 +26,38 @@ export const LOWER_BODY_BONES = new Set([
   'RightFoot',
   'LeftToeBase',
   'RightToeBase',
+  'UpperLeg.L',
+  'UpperLeg.R',
+  'LowerLeg.L',
+  'LowerLeg.R',
+  'Foot.L',
+  'Foot.R',
+  'Toe.L',
+  'Toe.R',
+  'Toe3.L',
+  'Toe3.R',
   // Mixamo / Blender aliases
   'mixamorig:Hips',
+  'mixamorigHips',
   'mixamorig:LeftUpLeg',
+  'mixamorigLeftUpLeg',
   'mixamorig:RightUpLeg',
+  'mixamorigRightUpLeg',
   'mixamorig:LeftLeg',
+  'mixamorigLeftLeg',
   'mixamorig:RightLeg',
+  'mixamorigRightLeg',
   'mixamorig:LeftFoot',
+  'mixamorigLeftFoot',
   'mixamorig:RightFoot',
+  'mixamorigRightFoot',
   'mixamorig:LeftToeBase',
+  'mixamorigLeftToeBase',
   'mixamorig:RightToeBase',
+  'mixamorigRightToeBase',
 ]);
 
-// Канонические кости верхней половины тела (удары, блоки, плечевой пояс, кисти)
+// Канонические кости верхней половины тела (удары, блоки, плечевой пояс, кисти, все 30 фаланг пальцев)
 export const UPPER_BODY_BONES = new Set([
   'Spine',
   'Spine1',
@@ -49,13 +68,33 @@ export const UPPER_BODY_BONES = new Set([
   'Head',
   'LeftShoulder',
   'RightShoulder',
+  'Shoulder.L',
+  'Shoulder.R',
   'LeftArm',
   'RightArm',
+  'UpperArm.L',
+  'UpperArm.R',
   'LeftForeArm',
   'RightForeArm',
+  'LowerArm.L',
+  'LowerArm.R',
   'LeftHand',
   'RightHand',
-  // Пальцы рук
+  'Hand.L',
+  'Hand.R',
+  // Пальцы рук: левая рука (Blender canonical)
+  'Thumb1.L', 'Thumb2.L', 'Thumb3.L',
+  'Index1.L', 'Index2.L', 'Index3.L',
+  'Middle1.L', 'Middle2.L', 'Middle3.L',
+  'Ring1.L', 'Ring2.L', 'Ring3.L',
+  'Pinky1.L', 'Pinky2.L', 'Pinky3.L',
+  // Пальцы рук: правая рука (Blender canonical)
+  'Thumb1.R', 'Thumb2.R', 'Thumb3.R',
+  'Index1.R', 'Index2.R', 'Index3.R',
+  'Middle1.R', 'Middle2.R', 'Middle3.R',
+  'Ring1.R', 'Ring2.R', 'Ring3.R',
+  'Pinky1.R', 'Pinky2.R', 'Pinky3.R',
+  // Пальцы рук (Mixamo / Web aliases)
   'LeftHandThumb1', 'LeftHandThumb2', 'LeftHandThumb3',
   'LeftHandIndex1', 'LeftHandIndex2', 'LeftHandIndex3',
   'LeftHandMiddle1', 'LeftHandMiddle2', 'LeftHandMiddle3',
@@ -68,11 +107,17 @@ export const UPPER_BODY_BONES = new Set([
   'RightHandPinky1', 'RightHandPinky2', 'RightHandPinky3',
   // Mixamo / Blender aliases
   'mixamorig:Spine', 'mixamorig:Spine1', 'mixamorig:Spine2',
+  'mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2',
   'mixamorig:Neck', 'mixamorig:Head',
+  'mixamorigNeck', 'mixamorigHead',
   'mixamorig:LeftShoulder', 'mixamorig:RightShoulder',
+  'mixamorigLeftShoulder', 'mixamorigRightShoulder',
   'mixamorig:LeftArm', 'mixamorig:RightArm',
+  'mixamorigLeftArm', 'mixamorigRightArm',
   'mixamorig:LeftForeArm', 'mixamorig:RightForeArm',
+  'mixamorigLeftForeArm', 'mixamorigRightForeArm',
   'mixamorig:LeftHand', 'mixamorig:RightHand',
+  'mixamorigLeftHand', 'mixamorigRightHand',
 ]);
 
 /**
@@ -98,7 +143,7 @@ export function isLowerBone(trackName) {
 }
 
 /**
- * Проверка принадлежности кости к верхней половине тела
+ * Проверка принадлежности кости к верхней половине тела (включая все 5 пальцев кисти)
  */
 export function isUpperBone(trackName) {
   try {
@@ -116,7 +161,10 @@ export function isUpperBone(trackName) {
       lower.includes('head') ||
       lower.includes('finger') ||
       lower.includes('thumb') ||
-      lower.includes('index')
+      lower.includes('index') ||
+      lower.includes('middle') ||
+      lower.includes('ring') ||
+      lower.includes('pinky')
     );
   } catch {
     return false;
@@ -131,11 +179,33 @@ export function stabilizeRootPositionTrack(track) {
   if (!track || !track.name.toLowerCase().includes('.position')) return track;
   const values = new Float32Array(track.values);
   for (let i = 0; i < values.length; i += 3) {
-    values[i] = 0; // X
-    // values[i + 1] = values[i + 1]; // сохраняем Y (высоту стойки)
-    values[i + 2] = 0; // Z
+    values[i] = 0; // Полностью обнуляем горизонтальное смещение X для корректного In-Place
+    // values[i + 1] сохраняем Y (высоту стойки, сгибание коленей, вертикальную биомеханику)
+    values[i + 2] = 0; // Полностью обнуляем горизонтальное смещение Z для предотвращения наложения моделей
   }
   return new THREE.VectorKeyframeTrack(track.name, track.times, values);
+}
+
+/**
+ * Проверяет наличие физического горизонтального смещения (Root/Hips displacement) в клипе.
+ * Если смещение присутствует — клип является полноценным шагом/перемещением, а не стационарным упражнением на месте.
+ */
+export function hasRootDisplacement(clip) {
+  if (!clip || !clip.tracks) return false;
+  const track = clip.tracks.find((t) => {
+    const l = t.name.toLowerCase();
+    return l.includes('.position') && (l.includes('hips') || l.includes('root') || l.includes('pelvis'));
+  });
+  if (!track || !track.values || track.values.length < 6) return false;
+  const vals = track.values;
+  const x0 = vals[0];
+  const z0 = vals[2];
+  for (let i = 3; i < vals.length; i += 3) {
+    if (Math.abs(vals[i] - x0) > 0.04 || Math.abs(vals[i + 2] - z0) > 0.04) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -280,7 +350,8 @@ export function synthesizeModularClip({
     }
   }
 
-  const compositeClip = new THREE.AnimationClip(clipName, targetDuration, combinedTracks);
+  const rawComposite = new THREE.AnimationClip(clipName, targetDuration, combinedTracks);
+  const compositeClip = patchAgeUkeClip(rawComposite, clipName);
   modularCompositeCache.set(clipName, compositeClip);
   return compositeClip;
 }
@@ -291,3 +362,15 @@ export function synthesizeModularClip({
 export function clearModularClipCache() {
   modularCompositeCache.clear();
 }
+
+/**
+ * Корректирует ориентацию кисти в блоках Агэ-укэ (Age-uke).
+ * В библиотеке karateka_techniques_v4.glb и в мастер-MoCap анимациях кисть уже ориентирована корректно из Blender.
+ * Ранее применявшийся искусственный доворот на 90° приводил к неестественному перекручиванию запястья.
+ * Возвращаем клип в оригинальном, анатомически выверенном виде без деформации суставов.
+ */
+export function patchAgeUkeClip(clip, clipName = '') {
+  if (!clip || !clip.tracks) return clip;
+  return clip;
+}
+

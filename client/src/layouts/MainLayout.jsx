@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { listFriendRequests } from '../api/friends';
-import { listNotifications, markNotificationRead } from '../api/notifications';
+import { listNotifications, markNotificationRead, deleteNotification, clearAllNotifications } from '../api/notifications';
 import { useChatSocket } from '../hooks/useChatSocket';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import { Bell, MessageSquare, ChevronDown, UserPlus, Home, Layers, Inbox, X } from 'lucide-react';
@@ -36,8 +36,8 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const { socket } = useChatSocket();
 
-  // Первичная подгрузка заявок в соратники и оффлайн/персистентных уведомлений (Задачи 6, 7, 39)
-  useEffect(() => {
+  // Функция синхронизации уведомлений и заявок в соратники
+  const refreshNotificationsAndRequests = useCallback(() => {
     if (!user) return;
     listFriendRequests('incoming')
       .then((reqs) => {
@@ -65,12 +65,27 @@ export default function MainLayout() {
       .catch(() => {});
   }, [user]);
 
-  // Закрывать мобильное меню и выпадающие списки при смене роута
+  // Первичная подгрузка заявок в соратники и оффлайн/персистентных уведомлений (Задачи 6, 7, 39)
+  useEffect(() => {
+    refreshNotificationsAndRequests();
+  }, [refreshNotificationsAndRequests]);
+
+  // Слушаем глобальное событие обновления (например, принятие/отклонение заявки на FriendsPage)
+  useEffect(() => {
+    const handleRefresh = () => {
+      refreshNotificationsAndRequests();
+    };
+    window.addEventListener('notifications:refresh', handleRefresh);
+    return () => window.removeEventListener('notifications:refresh', handleRefresh);
+  }, [refreshNotificationsAndRequests]);
+
+  // Закрывать мобильное меню и выпадающие списки при смене роута + актуализировать уведомления
   useEffect(() => {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
     setNotificationsOpen(false);
-  }, [location.pathname]);
+    refreshNotificationsAndRequests();
+  }, [location.pathname, refreshNotificationsAndRequests]);
 
   // Закрывать выпадающие списки при клике вне их
   useEffect(() => {
@@ -120,10 +135,21 @@ export default function MainLayout() {
     navigate(target);
   };
 
-  const handleClearNotifications = () => {
+  const handleMarkAllRead = () => {
     markNotificationRead(null).catch(() => {});
     setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+  };
+
+  const handleClearNotifications = () => {
+    clearAllNotifications().catch(() => {});
+    setNotifications([]);
     setIncomingRequestsCount(0);
+  };
+
+  const handleDeleteNotification = (e, notifId) => {
+    e.stopPropagation();
+    deleteNotification(notifId).catch(() => {});
+    setNotifications((prev) => prev.filter((item) => item.id !== notifId));
   };
 
   // Обработка real-time уведомлений через сокет (Задачи 6, 7, 39, 44)
@@ -201,8 +227,10 @@ export default function MainLayout() {
   }, [socket, user, location.pathname, navigate]);
 
   const isStaff = role === 'admin' || role === 'moderator';
-  const unreadNotificationsCount = notifications.filter((n) => !n.isRead).length;
-  const totalUnreadCount = incomingRequestsCount + unreadNotificationsCount;
+  const unreadNotifications = notifications.filter((n) => !n.isRead);
+  // Избегаем двойного подсчета: нерассмотренные заявки уже посчитаны в incomingRequestsCount
+  const otherUnreadCount = unreadNotifications.filter((n) => n.type !== 'friend_request').length;
+  const totalUnreadCount = incomingRequestsCount + otherUnreadCount;
 
   return (
     <div className="site-shell">
@@ -263,7 +291,11 @@ export default function MainLayout() {
                   <button
                     type="button"
                     className={`navbar__bell-btn ${totalUnreadCount > 0 ? 'has-unread' : ''}`}
-                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    onClick={() => {
+                      const next = !notificationsOpen;
+                      setNotificationsOpen(next);
+                      if (next) refreshNotificationsAndRequests();
+                    }}
                     aria-expanded={notificationsOpen}
                     aria-label="Уведомления"
                     title="Уведомления Додзё"
@@ -280,15 +312,28 @@ export default function MainLayout() {
                     <div className="navbar__notifications-dropdown">
                       <div className="navbar__notifications-header">
                         <span className="navbar__notifications-title">Уведомления</span>
-                        {totalUnreadCount > 0 && (
-                          <button
-                            type="button"
-                            className="navbar__notifications-clear"
-                            onClick={handleClearNotifications}
-                          >
-                            Сбросить
-                          </button>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {unreadNotifications.length > 0 && (
+                            <button
+                              type="button"
+                              className="navbar__notifications-clear"
+                              onClick={handleMarkAllRead}
+                              title="Отметить все как прочитанные"
+                            >
+                              Прочитать
+                            </button>
+                          )}
+                          {notifications.length > 0 && (
+                            <button
+                              type="button"
+                              className="navbar__notifications-clear"
+                              onClick={handleClearNotifications}
+                              title="Очистить список уведомлений"
+                            >
+                              Очистить
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <div className="navbar__notifications-list">
@@ -297,6 +342,8 @@ export default function MainLayout() {
                             className="navbar__notification-item navbar__notification-item--highlight"
                             onClick={() => {
                               setNotificationsOpen(false);
+                              markNotificationRead(null).catch(() => {});
+                              setNotifications((prev) => prev.map((item) => item.type === 'friend_request' ? { ...item, isRead: true } : item));
                               navigate('/friends?tab=incoming');
                             }}
                           >
@@ -327,6 +374,14 @@ export default function MainLayout() {
                               <div className="navbar__notification-item-text">{n.message}</div>
                               {n.time && <div className="navbar__notification-item-time">{n.time}</div>}
                             </div>
+                            <button
+                              type="button"
+                              className="navbar__notification-delete-btn"
+                              title="Удалить уведомление"
+                              onClick={(e) => handleDeleteNotification(e, n.id)}
+                            >
+                              <X size={13} />
+                            </button>
                           </div>
                         ))}
 

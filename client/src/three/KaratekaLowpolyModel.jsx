@@ -9,13 +9,18 @@ import {
   extractLowerBodyClip,
   extractUpperBodyClip,
   makeClipInPlace,
+  patchAgeUkeClip,
+  hasRootDisplacement,
 } from './modularAnimationEngine.js';
 import { generateUnsuJump360Clip } from './customMotionManager.js';
+import { resolveComposedClip } from './kataCompositionEngine.js';
+import { HEIAN_SHODAN_CANONICAL_EVENTS } from './kataMotionUtils.js';
 
 export {
   synthesizeModularClip,
   extractLowerBodyClip,
   extractUpperBodyClip,
+  hasRootDisplacement,
   registerCustomClip,
   getCachedClips,
   globalClipCache,
@@ -66,6 +71,31 @@ const CLIP_FILES = {
   stance_kiba: '/anims/stance_kiba.json',
   stance_fudo: '/anims/stance_fudo.json',
   stance_gankaku: '/anims/stance_gankaku.json',
+
+  // Отдельные клипы перемещений и техник для Ката (23 шага)
+  heian_shodan_step_0: '/anims/kata_steps/heian_shodan_step_0.json',
+  heian_shodan_step_1: '/anims/kata_steps/heian_shodan_step_1.json',
+  heian_shodan_step_2: '/anims/kata_steps/heian_shodan_step_2.json',
+  heian_shodan_step_3: '/anims/kata_steps/heian_shodan_step_3.json',
+  heian_shodan_step_4: '/anims/kata_steps/heian_shodan_step_4.json',
+  heian_shodan_step_5: '/anims/kata_steps/heian_shodan_step_5.json',
+  heian_shodan_step_6: '/anims/kata_steps/heian_shodan_step_6.json',
+  heian_shodan_step_7: '/anims/kata_steps/heian_shodan_step_7.json',
+  heian_shodan_step_8: '/anims/kata_steps/heian_shodan_step_8.json',
+  heian_shodan_step_9: '/anims/kata_steps/heian_shodan_step_9.json',
+  heian_shodan_step_10: '/anims/kata_steps/heian_shodan_step_10.json',
+  heian_shodan_step_11: '/anims/kata_steps/heian_shodan_step_11.json',
+  heian_shodan_step_12: '/anims/kata_steps/heian_shodan_step_12.json',
+  heian_shodan_step_13: '/anims/kata_steps/heian_shodan_step_13.json',
+  heian_shodan_step_14: '/anims/kata_steps/heian_shodan_step_14.json',
+  heian_shodan_step_15: '/anims/kata_steps/heian_shodan_step_15.json',
+  heian_shodan_step_16: '/anims/kata_steps/heian_shodan_step_16.json',
+  heian_shodan_step_17: '/anims/kata_steps/heian_shodan_step_17.json',
+  heian_shodan_step_18: '/anims/kata_steps/heian_shodan_step_18.json',
+  heian_shodan_step_19: '/anims/kata_steps/heian_shodan_step_19.json',
+  heian_shodan_step_20: '/anims/kata_steps/heian_shodan_step_20.json',
+  heian_shodan_step_21: '/anims/kata_steps/heian_shodan_step_21.json',
+  heian_shodan_step_22: '/anims/kata_steps/heian_shodan_step_22.json',
 };
 
 export const ACTION_ALIASES = {
@@ -124,6 +154,10 @@ export function resolveClip(name) {
     const unsuClip = generateUnsuJump360Clip('jump_turn_360');
     globalClipCache.set('jump_turn_360', unsuClip);
     return unsuClip;
+  }
+  if (name === 'shuto_uke') {
+    if (globalClipCache.has('tech_shuto_uke_left')) return globalClipCache.get('tech_shuto_uke_left');
+    if (globalClipCache.has('tech_shuto_uke_right')) return globalClipCache.get('tech_shuto_uke_right');
   }
   const alias = ACTION_ALIASES[name];
   if (alias && globalClipCache.has(alias)) return globalClipCache.get(alias);
@@ -189,12 +223,31 @@ function registerCustomClip(name, clip) {
 const gltfLoader = new GLTFLoader();
 const loadedKataPromises = new Map();
 
+function populateKataSubclips(kataSlug, masterClip) {
+  if (!masterClip) return;
+  if (kataSlug === 'heian_shodan') {
+    try {
+      HEIAN_SHODAN_CANONICAL_EVENTS.forEach((ev, idx) => {
+        const subName = `heian_shodan_step_${idx}`;
+        if (!globalClipCache.has(subName)) {
+          const sub = getSubclipForRange(masterClip, subName, ev.startTime, ev.endTime, 60);
+          if (sub) globalClipCache.set(subName, sub);
+        }
+      });
+    } catch (_) {}
+  }
+}
+
 /**
  * Динамическая подгрузка мастер-анимации любого из 26 ката Shotokan из /models/katas/kata_${kataSlug}.glb
  */
 export async function ensureKataClipLoaded(kataSlug) {
   if (!kataSlug) return null;
-  if (globalClipCache.has(kataSlug)) return globalClipCache.get(kataSlug);
+  if (globalClipCache.has(kataSlug)) {
+    const cached = globalClipCache.get(kataSlug);
+    populateKataSubclips(kataSlug, cached);
+    return cached;
+  }
   const alias = ACTION_ALIASES[kataSlug];
   if (alias && globalClipCache.has(alias)) return globalClipCache.get(alias);
   if (loadedKataPromises.has(kataSlug)) return loadedKataPromises.get(kataSlug);
@@ -208,6 +261,7 @@ export async function ensureKataClipLoaded(kataSlug) {
           const clip = gltf.animations[0];
           globalClipCache.set(kataSlug, clip);
           globalClipCache.set(clip.name, clip);
+          populateKataSubclips(kataSlug, clip);
           resolve(clip);
         } else {
           resolve(null);
@@ -223,6 +277,7 @@ export async function ensureKataClipLoaded(kataSlug) {
               const clip = gltf2.animations[0];
               globalClipCache.set(kataSlug, clip);
               globalClipCache.set(clip.name, clip);
+              populateKataSubclips(kataSlug, clip);
               resolve(clip);
             } else {
               resolve(null);
@@ -276,8 +331,9 @@ function getSubclipForRange(sourceClip, clipName, startTime, endTime, fps = 60) 
       endFrame,
       fps
     );
-    subclipCache.set(key, sub);
-    return sub;
+    const patched = patchAgeUkeClip(sub, clipName);
+    subclipCache.set(key, patched);
+    return patched;
   } catch (err) {
     console.warn('Ошибка нарезки подклипа ката:', err);
     return null;
@@ -299,19 +355,42 @@ function collectSceneBoneNames(root) {
 /**
  * Фильтрует треки AnimationClip, оставляя только те, чей nodeName
  * реально присутствует в сцене. Предотвращает «взрыв» мешей при
- * конфликте треков на несуществующие кости.
+ * конфликте треков на несуществующие кости, а также автоматически согласовывает
+ * именование костей (UpperArm.L -> UpperArmL) со спецификацией Three.js GLTFLoader.
  */
 function filterClipToScene(clip, sceneNames) {
-  const validTracks = clip.tracks.filter((track) => {
+  if (!clip) return null;
+  const validTracks = [];
+  for (const track of clip.tracks) {
     try {
-      const parsed = THREE.PropertyBinding.parseTrackName(track.name);
-      const nodeName = parsed.nodeName ?? '';
-      // Пустой nodeName = глобальное свойство, всегда разрешаем
-      return nodeName === '' || sceneNames.has(nodeName);
+      let trackNameToUse = track.name;
+      let parsed = THREE.PropertyBinding.parseTrackName(trackNameToUse);
+      let nodeName = parsed.nodeName ?? '';
+      const prop = parsed.propertyName ?? '';
+
+      // Если кость не найдена напрямую (например UpperArm.L при кости UpperArmL),
+      // выполняем санитизацию имени в соответствии с соглашениями Three.js GLTFLoader
+      if (nodeName !== '' && !sceneNames.has(nodeName)) {
+        const sanitized = THREE.PropertyBinding.sanitizeNodeName(nodeName);
+        if (sceneNames.has(sanitized)) {
+          trackNameToUse = `${sanitized}.${prop}`;
+          parsed = THREE.PropertyBinding.parseTrackName(trackNameToUse);
+          nodeName = sanitized;
+        }
+      }
+
+      if (nodeName === '' || sceneNames.has(nodeName)) {
+        if (trackNameToUse !== track.name) {
+          const Cls = track.constructor;
+          validTracks.push(new Cls(trackNameToUse, track.times, track.values));
+        } else {
+          validTracks.push(track.clone());
+        }
+      }
     } catch {
-      return false;
+      // Игнорируем некорректный трек
     }
-  });
+  }
   return new THREE.AnimationClip(clip.name, clip.duration, validTracks);
 }
 
@@ -480,10 +559,9 @@ export default function KaratekaLowpolyModel({
   const activeClipRef = useRef(null);
   const prevReplayTriggerRef = useRef(replayTrigger);
 
-  // Динамическая загрузка GLB мастер-анимации ката при выборе любого из 26 ката Shotokan (только для режима MoCap)
+  // Динамическая загрузка GLB мастер-анимации ката при выборе любого из 26 ката Shotokan
   useEffect(() => {
     if (!kataMode || !kataClipName) return;
-    if (kataExecutionMode === 'composed') return; // В едином композитном режиме не загружаем 26 монолитных GLB!
 
     const existing =
       resolveClip(kataClipName) ||
@@ -492,6 +570,7 @@ export default function KaratekaLowpolyModel({
 
     if (existing) {
       setKataLoadedClip(existing);
+      populateKataSubclips(kataClipName, existing);
       return;
     }
 
@@ -499,6 +578,7 @@ export default function KaratekaLowpolyModel({
     ensureKataClipLoaded(kataClipName).then((clip) => {
       if (isMounted && clip) {
         setKataLoadedClip(clip);
+        populateKataSubclips(kataClipName, clip);
       }
     });
 
@@ -512,7 +592,8 @@ export default function KaratekaLowpolyModel({
     if (animations && animations.length > 0) {
       animations.forEach((clip) => {
         if (clip.name !== 'tech_shuto_uke_left' && clip.name !== 'tech_shuto_uke_right' && clip.name !== 'shuto_uke') {
-          globalClipCache.set(clip.name, clip);
+          const patched = patchAgeUkeClip(clip);
+          globalClipCache.set(clip.name, patched);
         }
       });
       // Привязываем канонические алиасы (например heian_shodan -> heian_shodan_preview)
@@ -718,35 +799,98 @@ export default function KaratekaLowpolyModel({
     if (!kataMode || !clipsLoaded || !mixer) return;
 
     let targetClip = null;
-    const isMasterMocap = kataExecutionMode === 'full' || kataExecutionMode === 'mocap';
+    const sourceName = kataClipName || 'heian_shodan';
+    const rawMaster =
+      globalClipCache.get(sourceName) ||
+      kataLoadedClip ||
+      resolveClip(sourceName) ||
+      globalClipCache.get(`${sourceName}_preview`) ||
+      globalClipCache.get('heian_shodan_preview') ||
+      globalClipCache.get('heian_shodan');
 
-    if (isMasterMocap) {
-      // Вариант 1: Полный мастер-клип ката (heian_shodan для Heian Shodan или /models/katas/kata_${kataSlug}.glb)
-      const sourceName = kataClipName || 'heian_shodan';
-      const rawSource =
-        globalClipCache.get(sourceName) ||
-        kataLoadedClip ||
-        resolveClip(sourceName) ||
-        globalClipCache.get(`${sourceName}_preview`) ||
-        globalClipCache.get('heian_shodan_preview') ||
-        globalClipCache.get('heian_shodan');
+    if (kataExecutionMode === 'composed') {
+      // 1. Полноценная клиповая анимация ката (библиотека 213 техник Шотокан v4 + отдельные клипы перемещений шагов)
+      const stepIdx = currentStep?.stepIndex !== undefined
+        ? currentStep.stepIndex
+        : (currentStep?.index !== undefined
+          ? currentStep.index
+          : (currentStep?.moveNumber !== undefined ? currentStep.moveNumber : null));
 
-      if (rawSource) {
-        if (kataTimeRange && Array.isArray(kataTimeRange) && kataTimeRange.length === 2) {
-          const [startTime, endTime] = kataTimeRange;
-          targetClip = getSubclipForRange(rawSource, sourceName, startTime, endTime, 60);
-        } else {
-          targetClip = rawSource;
+      const candidateNames = [
+        currentStep?.stepClipName,
+        currentStep?.kataStepClip,
+        stepClip,
+        activeClip,
+        stepIdx !== null ? `${sourceName}_step_${stepIdx}` : null,
+        stepIdx !== null ? `heian_shodan_step_${stepIdx}` : null,
+        currentStep?.clipName,
+      ].filter(Boolean);
+
+      let rawClip = null;
+      for (const name of candidateNames) {
+        rawClip = resolveClip(name) || globalClipCache.get(name);
+        if (rawClip) break;
+      }
+
+      // Если отдельный подклип ещё не в кэше, но есть rawMaster и тайминги шага
+      if (!rawClip && rawMaster && currentStep && (currentStep.mocapStartTime !== undefined || currentStep.startTime !== undefined)) {
+        const sTime = currentStep.mocapStartTime !== undefined ? currentStep.mocapStartTime : currentStep.startTime;
+        const eTime = currentStep.mocapEndTime !== undefined ? currentStep.mocapEndTime : currentStep.endTime;
+        if (sTime !== undefined && eTime !== undefined && eTime > sTime) {
+          const num = stepIdx ?? 0;
+          rawClip = getSubclipForRange(
+            rawMaster,
+            `${sourceName}_step_${num}`,
+            sTime,
+            eTime,
+            60
+          );
         }
       }
+
+      if (!rawClip && currentStep) {
+        const resolved = resolveComposedClip(currentStep);
+        if (resolved?.clipName) {
+          rawClip = resolveClip(resolved.clipName) || globalClipCache.get(resolved.clipName);
+        }
+      }
+      if (!rawClip) {
+        const stanceClipName = getStanceClipName(currentStep?.stance || stance || 'ready');
+        rawClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
+      }
+      if (rawClip) {
+        const isStepMovement = hasRootDisplacement(rawClip) || (rawClip.name && rawClip.name.includes('_step_'));
+        targetClip = isStepMovement ? patchAgeUkeClip(rawClip) : makeClipInPlace(rawClip);
+      }
+    } else if (kataExecutionMode === 'full' && rawMaster && !kataTimeRange) {
+      // Монолитная мастер-анимация ката
+      targetClip = rawMaster;
+    } else if (rawMaster && currentStep && (currentStep.mocapStartTime !== undefined || currentStep.startTime !== undefined)) {
+      // Канонический клиповый шаг ката с естественными переходами из стойки в стойку (MoCap нарезка)
+      const sTime = currentStep.mocapStartTime !== undefined ? currentStep.mocapStartTime : currentStep.startTime;
+      const eTime = currentStep.mocapEndTime !== undefined ? currentStep.mocapEndTime : currentStep.endTime;
+      if (sTime !== undefined && eTime !== undefined && eTime > sTime) {
+        const stepNum = currentStep.moveNumber !== undefined ? currentStep.moveNumber : (currentStep.n !== undefined ? currentStep.n : 0);
+        targetClip = getSubclipForRange(
+          rawMaster,
+          `${sourceName}_step_${stepNum}`,
+          sTime,
+          eTime,
+          60
+        );
+      } else {
+        targetClip = rawMaster;
+      }
+    } else if (rawMaster && kataTimeRange && Array.isArray(kataTimeRange) && kataTimeRange.length === 2) {
+      const [startTime, endTime] = kataTimeRange;
+      targetClip = getSubclipForRange(rawMaster, sourceName, startTime, endTime, 60);
     } else {
-      // Вариант 2: Клиповая композиция отдельного шага ката (библиотека переиспользуемых клипов v4)
+      // Fallback на технику или стойку шага
       const clipName = stepClip || activeClip;
       const rawClip = resolveClip(clipName) || globalClipCache.get(clipName);
       if (rawClip) {
-        targetClip = rawClip;
+        targetClip = makeClipInPlace(rawClip);
       } else {
-        // Fallback на стойку шага
         const stanceClipName = getStanceClipName(stance);
         targetClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
       }
@@ -783,18 +927,21 @@ export default function KaratekaLowpolyModel({
 
     if (currentActionRef.current && currentActionRef.current !== action) {
       const prevAction = currentActionRef.current;
-      // Замораживаем предыдущую технику в ее завершенной точке (Киме/Дзансин),
-      // чтобы она не продолжала двигаться и "доделывать" удар в начале нового шага!
-      prevAction.paused = true;
-      if (prevAction.time < prevAction.getClip().duration) {
-        prevAction.time = prevAction.getClip().duration;
-      }
-      // Плавный органичный переход между стойками и техниками (0.24 - 0.35с вместо моментального скачка)
-      const crossFadeSec = Math.max(0.24, Math.min(blendDuration || 0.28, 0.35));
-      action.crossFadeFrom(prevAction, crossFadeSec, false);
+      // Плавный органичный переход между стойками и техниками без резкого скачка по времени:
+      // Не форсируем prevAction.time = duration и не вызываем prevAction.paused = true,
+      // что исключает рывки/дёргания при переходе между шагами!
+      const crossFadeSec = Math.max(0.06, Math.min(blendDuration || 0.12, 0.18));
+      prevAction.fadeOut(crossFadeSec);
+      action.fadeIn(crossFadeSec);
     }
 
-    if (isPlaying) {
+    if (kataScrubProgress !== null) {
+      const clipDuration = clip.duration;
+      action.time = Math.max(0, Math.min(clipDuration, kataScrubProgress * clipDuration));
+      action.play();
+      action.paused = true;
+      mixer.update(0);
+    } else if (isPlaying) {
       action.play();
       action.paused = false;
     } else {
@@ -829,6 +976,7 @@ export default function KaratekaLowpolyModel({
     mixer,
     getFilteredClip,
     replayTrigger,
+    currentStep?.stepId || currentStep?.moveNumber || currentStep?.techniqueNumber,
     speed,
   ]);
 
@@ -869,18 +1017,18 @@ export default function KaratekaLowpolyModel({
         chest: clonedModel.getObjectByName('Chest'),
         neck: clonedModel.getObjectByName('Neck'),
         head: clonedModel.getObjectByName('Head'),
-        upperArmL: clonedModel.getObjectByName('UpperArm.L'),
-        lowerArmL: clonedModel.getObjectByName('LowerArm.L'),
-        handL: clonedModel.getObjectByName('Hand.L'),
-        upperArmR: clonedModel.getObjectByName('UpperArm.R'),
-        lowerArmR: clonedModel.getObjectByName('LowerArm.R'),
-        handR: clonedModel.getObjectByName('Hand.R'),
-        upperLegL: clonedModel.getObjectByName('UpperLeg.L'),
-        lowerLegL: clonedModel.getObjectByName('LowerLeg.L'),
-        footL: clonedModel.getObjectByName('Foot.L'),
-        upperLegR: clonedModel.getObjectByName('UpperLeg.R'),
-        lowerLegR: clonedModel.getObjectByName('LowerLeg.R'),
-        footR: clonedModel.getObjectByName('Foot.R'),
+        upperArmL: clonedModel.getObjectByName('UpperArm.L') || clonedModel.getObjectByName('UpperArmL'),
+        lowerArmL: clonedModel.getObjectByName('LowerArm.L') || clonedModel.getObjectByName('LowerArmL'),
+        handL: clonedModel.getObjectByName('Hand.L') || clonedModel.getObjectByName('HandL'),
+        upperArmR: clonedModel.getObjectByName('UpperArm.R') || clonedModel.getObjectByName('UpperArmR'),
+        lowerArmR: clonedModel.getObjectByName('LowerArm.R') || clonedModel.getObjectByName('LowerArmR'),
+        handR: clonedModel.getObjectByName('Hand.R') || clonedModel.getObjectByName('HandR'),
+        upperLegL: clonedModel.getObjectByName('UpperLeg.L') || clonedModel.getObjectByName('UpperLegL'),
+        lowerLegL: clonedModel.getObjectByName('LowerLeg.L') || clonedModel.getObjectByName('LowerLegL'),
+        footL: clonedModel.getObjectByName('Foot.L') || clonedModel.getObjectByName('FootL'),
+        upperLegR: clonedModel.getObjectByName('UpperLeg.R') || clonedModel.getObjectByName('UpperLegR'),
+        lowerLegR: clonedModel.getObjectByName('LowerLeg.R') || clonedModel.getObjectByName('LowerLegR'),
+        footR: clonedModel.getObjectByName('Foot.R') || clonedModel.getObjectByName('FootR'),
       };
     }
   }, [clonedModel]);
@@ -911,71 +1059,137 @@ export default function KaratekaLowpolyModel({
         }
       }
     }
-    if (currentActionRef.current) {
-        let avatarWorldPos = null;
-        if (hipsBoneRef.current) {
-          const v = new THREE.Vector3();
-          hipsBoneRef.current.getWorldPosition(v);
-          avatarWorldPos = [v.x, v.y, v.z];
-        }
-        if (kataMode && onTimeUpdate) {
-          onTimeUpdate(currentActionRef.current.time, currentActionRef.current.getClip().duration, avatarWorldPos);
-        }
-        if (onRootMove && avatarWorldPos) {
-          onRootMove(avatarWorldPos);
-        }
+    // Позиционирование и ориентация модели на татами
+    if (groupRef.current && kataMode) {
+      if (kataExecutionMode === 'composed') {
+        const action = currentActionRef.current;
+        const clip = action ? action.getClip() : null;
+        const isStepMovement = clip && (hasRootDisplacement(clip) || (clip.name && clip.name.includes('_step_')));
 
-        // --- ТОЧНАЯ ФИКСАЦИЯ ПОЗИЦИИ И ПЛАВНЫЙ КАНОНИЧЕСКИЙ ПОВОРОТ КОРПУСА ---
-        if (groupRef.current && kataMode) {
-          const clipDuration = currentActionRef.current.getClip().duration || 1.0;
-          const animTime = currentActionRef.current.time;
-          const progress = Math.max(0, Math.min(1, animTime / clipDuration));
-
-          if (kataExecutionMode === 'composed' && currentStep) {
-            // 1. Позиция аватара строго зафиксирована в точке шага эмбусэн (исключает проскальзывание стоп по полу)
-            groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
-
-            // 2. Плавная каноническая угловая ориентация при развороте (Root Motion Yaw Rotation)
-            const targetYaw = rotation[1];
-            const startYaw = prevStep
-              ? prevStep.rotation[1]
-              : (currentStep.stateIn ? (currentStep.stateIn.facingDeg * Math.PI / 180) : targetYaw);
-
-            let diff = 0;
-            const R = currentStep.R;
-            if (R === 'R_p270') diff = (3 * Math.PI) / 2;
-            else if (R === 'R_m270') diff = (-3 * Math.PI) / 2;
-            else if (R === 'R_p180') diff = Math.PI;
-            else if (R === 'R_m180') diff = -Math.PI;
-            else if (R === 'R_p135') diff = (3 * Math.PI) / 4;
-            else if (R === 'R_m135') diff = (-3 * Math.PI) / 4;
-            else if (R === 'R_p90') diff = Math.PI / 2;
-            else if (R === 'R_m90') diff = -Math.PI / 2;
-            else if (R === 'R_p45') diff = Math.PI / 4;
-            else if (R === 'R_m45') diff = -Math.PI / 4;
-            else {
-              diff = targetYaw - startYaw;
-              while (diff > Math.PI) diff -= 2 * Math.PI;
-              while (diff < -Math.PI) diff += 2 * Math.PI;
+        if (isStepMovement) {
+          // Отдельный клип перемещения уже содержит естественную мировую траекторию эмбусэн и перемещение таза (как в GLB)
+          groupRef.current.position.set(0, modelYOffset, 0);
+          groupRef.current.rotation.set(0, 0, 0);
+        } else {
+          let p = 0;
+          if (action) {
+            const dur = clip ? clip.duration : 0;
+            if (dur > 0) {
+              p = Math.min(1, Math.max(0, action.time / dur));
             }
-
-            if (Math.abs(diff) > 0.005) {
-              const turnT = Math.min(1, Math.max(0, progress / 0.65));
-              const easeRot = turnT * turnT * (3 - 2 * turnT);
-              groupRef.current.rotation.y = startYaw + diff * easeRot;
-            } else {
-              groupRef.current.rotation.y = targetYaw;
-            }
-          } else {
-            // В режиме MoCap / мастер-прогона вращением тела полностью и точно управляют треки анимации (Hips.quaternion)
-            groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
-            groupRef.current.rotation.y = rotation[1] || 0;
           }
-        } else if (groupRef.current && !kataMode) {
-          groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
-          groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+
+          // Фазово-синхронизированная весовая кривая (анти-скольжение стоп):
+          // 0.00 .. 0.15: Подготовка / опорная нога зафиксирована на татами (0% смещения)
+          // 0.15 .. 0.75: Перемещение шагающей ноги и перенос веса тела (кубический Hermite / Smoothstep)
+          // 0.75 .. 1.00: Акцент удара / блока (кимэ) и жесткая фиксация конечной стойки (100% смещения)
+          let s = 0;
+          if (p <= 0.15) {
+            s = 0;
+          } else if (p >= 0.75) {
+            s = 1;
+          } else {
+            const u = (p - 0.15) / 0.60;
+            s = u * u * (3 - 2 * u);
+          }
+
+          const startPos = currentStep?.startPosition || prevStep?.position || [0, 0, 0];
+          const endPos = currentStep?.position || currentStep?.endPosition || [0, 0, 0];
+
+          // Ориентация основания (Yaw) с плавной интерполяцией между шагами
+          const startYaw = prevStep?.rotation ? prevStep.rotation[1] : (currentStep?.startRotation ? currentStep.startRotation[1] : (currentStep?.rotation ? currentStep.rotation[1] : 0));
+          const targetYaw = currentStep?.rotation ? currentStep.rotation[1] : startYaw;
+
+          let currentYaw = targetYaw;
+          if (Math.abs(targetYaw - startYaw) > 0.01) {
+            let rProgress = 0;
+            if (p <= 0.15) {
+              rProgress = 0;
+            } else if (p >= 0.75) {
+              rProgress = 1;
+            } else {
+              const k = (p - 0.15) / 0.60;
+              rProgress = k * k * (3 - 2 * k);
+            }
+            let diff = targetYaw - startYaw;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            currentYaw = startYaw + diff * rProgress;
+          }
+
+          let x, y, z;
+          const isZeroStepDisp = Math.abs(endPos[0] - startPos[0]) < 0.005 && Math.abs(endPos[2] - startPos[2]) < 0.005;
+
+          if (isZeroStepDisp) {
+            // КРИТИЧЕСКОЕ ТРЕБОВАНИЕ: модель должна делать полное движение, даже если конечное
+            // положение совпадает с начальным (удары на месте, блоки на месте, маэ-гэри с возвратом назад).
+            const techName = String(clip?.name || currentStep?.technique || currentStep?.name || '').toLowerCase();
+            const isKick = techName.includes('mae_geri') || techName.includes('kick') || techName.includes('geri');
+            const isStrike = techName.includes('zuki') || techName.includes('tsuki') || techName.includes('punch') ||
+              techName.includes('strike') || techName.includes('empi') || techName.includes('tettsui') || techName.includes('uraken');
+            const isBlock = techName.includes('uke') || techName.includes('barai') || techName.includes('shuto');
+
+            let surgeDist = 0.18;
+            if (isKick) {
+              surgeDist = 0.32;
+            } else if (isStrike) {
+              surgeDist = 0.22;
+            } else if (isBlock) {
+              surgeDist = 0.14;
+            }
+
+            let surge = 0;
+            if (p <= 0.08) {
+              surge = 0;
+            } else if (p <= 0.48) {
+              const k = (p - 0.08) / 0.40;
+              surge = Math.sin(k * Math.PI * 0.5);
+            } else if (p <= 0.92) {
+              const k = (p - 0.48) / 0.44;
+              surge = Math.cos(k * Math.PI * 0.5);
+            } else {
+              surge = 0;
+            }
+
+            const fwdX = Math.sin(currentYaw);
+            const fwdZ = Math.cos(currentYaw);
+
+            x = startPos[0] + fwdX * surgeDist * surge;
+            y = startPos[1] + modelYOffset;
+            z = startPos[2] + fwdZ * surgeDist * surge;
+          } else {
+            x = startPos[0] + (endPos[0] - startPos[0]) * s;
+            y = (startPos[1] + (endPos[1] - startPos[1]) * s) + modelYOffset;
+            z = startPos[2] + (endPos[2] - startPos[2]) * s;
+          }
+
+          groupRef.current.position.set(x, y, z);
+          groupRef.current.rotation.set(0, currentYaw, 0);
         }
+      } else {
+        // Режим монолитного MoCap GLB: корневая кость Hips в клипе ката уже содержит мировую траекторию эмбусэн
+        groupRef.current.position.set(0, modelYOffset, 0);
+        groupRef.current.rotation.set(0, 0, 0);
       }
+    } else if (groupRef.current && !kataMode) {
+      groupRef.current.position.set(position[0], position[1] + modelYOffset, position[2]);
+      groupRef.current.rotation.set(rotation[0], rotation[1], rotation[2]);
+    }
+
+    if (currentActionRef.current) {
+      let avatarWorldPos = null;
+      if (hipsBoneRef.current) {
+        const v = new THREE.Vector3();
+        hipsBoneRef.current.getWorldPosition(v);
+        avatarWorldPos = [v.x, v.y, v.z];
+      }
+      if (kataMode && onTimeUpdate) {
+        onTimeUpdate(currentActionRef.current.time, currentActionRef.current.getClip().duration, avatarWorldPos);
+      }
+      if (onRootMove && avatarWorldPos) {
+        onRootMove(avatarWorldPos);
+      }
+    }
   });
 
   return (

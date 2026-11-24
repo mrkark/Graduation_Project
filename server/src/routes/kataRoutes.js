@@ -1,7 +1,7 @@
 const express = require('express');
 const kataController = require('../controllers/kataController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const { adminMiddleware } = require('../middlewares/roleMiddleware');
+const { adminMiddleware, moderatorMiddleware } = require('../middlewares/roleMiddleware');
 const validateRequest = require('../middlewares/validateRequest');
 const {
   createKataValidator,
@@ -21,7 +21,8 @@ router.post('/', adminMiddleware, createKataValidator, validateRequest, kataCont
 router.put('/:id', updateKataValidator, validateRequest, kataController.update);
 router.delete('/:id', adminMiddleware, idParamValidator, validateRequest, kataController.remove);
 
-router.post('/:id/approve', idParamValidator, validateRequest, adminMiddleware, kataController.approve);
-router.post('/:id/reject', idParamValidator, validateRequest, adminMiddleware, kataController.reject);
+// Модерация ката разгружена на роль модератора
+router.post('/:id/approve', idParamValidator, validateRequest, moderatorMiddleware, kataController.approve);
+router.post('/:id/reject', idParamValidator, validateRequest, moderatorMiddleware, kataController.reject);
 
 module.exports = router;

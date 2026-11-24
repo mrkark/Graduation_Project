@@ -12,7 +12,7 @@ import {
   BELT_GRADATION,
   getKataBeltInfo,
 } from '../components/ui/JapaneseDecor';
-import { Heart, Star, Video, X, Layers, BookOpen } from 'lucide-react';
+import { Heart, Star, Video, X, Layers, BookOpen, Play } from 'lucide-react';
 import LazySection from '../components/ui/LazySection';
 import './KataListPage.css';
 
@@ -740,7 +740,9 @@ export default function KataListPage() {
                         }
                         title="Смотреть эталонное видео мастеров JKS"
                       >
-                        <span>▶ Видео канона (JKS)</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <Play size={13} fill="currentColor" /> Видео канона (JKS)
+                        </span>
                       </button>
                     )}
                     <Link
@@ -1119,7 +1121,9 @@ export default function KataListPage() {
                           }
                           title="Смотреть эталонное видео мастеров JKS"
                         >
-                          <span>▶ Видео</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Play size={12} fill="currentColor" /> Видео
+                          </span>
                         </button>
                       )}
                       <Link

@@ -68,10 +68,12 @@ export default function FriendsPage() {
   }
   async function onAccept(requestId) {
     await acceptFriendRequest(requestId);
+    window.dispatchEvent(new CustomEvent('notifications:refresh'));
     await loadAll();
   }
   async function onReject(requestId) {
     await rejectFriendRequest(requestId);
+    window.dispatchEvent(new CustomEvent('notifications:refresh'));
     await loadAll();
   }
   async function onRemove(userId) {

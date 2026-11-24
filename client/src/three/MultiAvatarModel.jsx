@@ -5,8 +5,9 @@ import * as THREE from 'three';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { HEIAN_SHODAN_CANONICAL_EVENTS } from './kataMotionUtils';
 import { animationRegistry } from './animationRegistry';
-import { resolveBunkaiClip } from './bunkaiScenarioEngine';
-import { findRigBone, extractAvatarJointPositions } from './bodyColliderSystem';
+import { resolveBunkaiClip, isTechniqueStationary } from './bunkaiScenarioEngine';
+import { findRigBone, extractAvatarJointPositions, applyProceduralCombatIK } from './bodyColliderSystem';
+import { patchAgeUkeClip, makeClipInPlace } from './modularAnimationEngine.js';
 
 /**
  * Аутентичный 3D-аватар каратиста Шотокан для многопользовательских симуляций Бункая.
@@ -58,6 +59,7 @@ const CLIP_FILES = {
   mae_geri_gyaku_zuki: '/anims/mae_geri_gyaku_zuki.json',
   age_uke_gyaku_zuki: '/anims/age_uke_gyaku_zuki.json',
   gankaku_shuto: '/anims/gankaku_shuto.json',
+  strike_above_elbow: '/anims/strike_above_elbow.json',
   stance_ready: '/anims/stance_ready.json',
   stance_zenkutsu: '/anims/stance_zenkutsu.json',
   stance_kokutsu: '/anims/stance_kokutsu.json',
@@ -85,7 +87,23 @@ const ACTION_ALIASES = {
   stance_shiko: 'stance_shiko',
   shiko: 'stance_shiko',
   fudo_dachi: 'fudo_dachi',
+  fudo_dachi_left: 'fudo_dachi',
+  fudo_dachi_right: 'fudo_dachi',
   fudo: 'fudo_dachi',
+  stance_neko_left: 'stance_neko_left',
+  stance_neko_right: 'stance_neko_right',
+  neko_left: 'stance_neko_left',
+  neko_right: 'stance_neko_right',
+  stance_moto_left: 'stance_moto_left',
+  stance_moto_right: 'stance_moto_right',
+  moto_left: 'stance_moto_left',
+  moto_right: 'stance_moto_right',
+  stance_sanchin_left: 'stance_sanchin_left',
+  stance_sanchin_right: 'stance_sanchin_right',
+  stance_hangetsu_left: 'stance_hangetsu_left',
+  stance_hangetsu_right: 'stance_hangetsu_right',
+  stance_kosa_left: 'stance_kosa_left',
+  stance_kosa_right: 'stance_kosa_right',
   stance_musubi: 'stance_musubi',
   musubi: 'stance_musubi',
   stance_heisoku: 'stance_heisoku',
@@ -136,6 +154,9 @@ const ACTION_ALIASES = {
   tetsui_uchi: 'tech_tettsui_right',
   tech_tettsui: 'tech_tettsui_right',
   empi_uchi: 'tech_tate_zuki_left',
+  strike_above_elbow: 'strike_above_elbow',
+  tech_strike_above_elbow: 'strike_above_elbow',
+  arm_strike: 'strike_above_elbow',
   step_backward_right: 'zenkutsu_dachi_right',
   turn_into_zenkutsu_right: 'turn_into_zenkutsu_right',
   turn_and_enter_zenkutsu: 'zenkutsu_dachi_left',
@@ -153,8 +174,10 @@ function getSubclipForRange(sourceClip, clipName, startTime, endTime, fps = 60) 
 
   try {
     const sub = THREE.AnimationUtils.subclip(sourceClip, clipName, startFrame, endFrame, fps);
-    subclipCache.set(key, sub);
-    return sub;
+    const patched = patchAgeUkeClip(sub, clipName);
+    const inPlace = makeClipInPlace(patched);
+    subclipCache.set(key, inPlace);
+    return inPlace;
   } catch {
     return null;
   }
@@ -172,7 +195,8 @@ async function ensureClipsCached() {
           const res = await fetch(url);
           if (!res.ok) return;
           const json = await res.json();
-          const clip = THREE.AnimationClip.parse(json);
+          const parsed = THREE.AnimationClip.parse(json);
+          const clip = makeClipInPlace(patchAgeUkeClip(parsed, key));
           if (!globalClipCache.has(key) || key === 'heian_shodan') {
             globalClipCache.set(key, clip);
           }
@@ -208,6 +232,8 @@ export default function MultiAvatarModel({
   role = 'tori',
   clipName = null,
   stance = 'zenkutsu',
+  finalStance = null,
+  landingMode = 'auto',
   position = [0, 0, 0],
   startPosition = null,
   rotation = [0, 0, 0],
@@ -215,6 +241,7 @@ export default function MultiAvatarModel({
   isStationary = false,
   speed = 1.0,
   isPlaying = true,
+  replayTrigger = 0,
   scrubProgress = null,
   timelineTime = null,
   delaySeconds = 0,
@@ -229,6 +256,8 @@ export default function MultiAvatarModel({
   onTrackJoints = null,
   phraseRef = null,
   rootsRef = null,
+  trackedJointsRef = null,
+  combatOptions = null,
 }) {
   const groupRef = useRef();
   const bonesRef = useRef({});
@@ -246,15 +275,18 @@ export default function MultiAvatarModel({
     const s = size.y > 0 ? 1.78 / size.y : 1.0;
     const yOffset = -bbox.min.y * s;
 
-    let giColor = '#faf9f6'; // Белоснежное доги Тори (атакующий)
-    let beltColor = '#141414'; // Черный пояс 5-й Дан
+    // Назначение цветов согласно канонической спецификации:
+    // СИНИЙ персонаж — атакующий (ТОРИ)
+    // БЕЛЫЙ персонаж — защищающийся (УКЭ)
+    let giColor = '#1e40af'; // Насыщенное синее доги Тори (атакующий)
+    let beltColor = '#111827'; // Черный пояс мастера
 
     if (role === 'uke' || role === 'uke1') {
-      giColor = '#243346'; // Традиционное индиго доги Укэ (защищающийся)
+      giColor = '#faf9f6'; // Белоснежное традиционное доги Укэ (защищающийся)
       beltColor = '#181818';
     } else if (role === 'uke2') {
-      giColor = '#342b2b'; // Графитовое доги флангового нападающего
-      beltColor = '#3a1212';
+      giColor = '#475569'; // Графитовое доги дополнительного участника
+      beltColor = '#2a1212';
     }
 
     clone.traverse((child) => {
@@ -264,19 +296,25 @@ export default function MultiAvatarModel({
         child.receiveShadow = true;
         const matName = child.material.name || '';
         const meshName = child.name || '';
+        // Полное независимое клонирование материалов для каждого экземпляра модели
         const newMat = child.material.clone();
         newMat.side = THREE.DoubleSide;
         newMat.shadowSide = THREE.DoubleSide;
 
-        if (matName.includes('Skin') || meshName.includes('Mesh')) {
-          newMat.color = new THREE.Color(0xffffff);
+        if (matName.includes('Skin') || meshName.includes('Body') || meshName.includes('Head') || meshName.includes('Face')) {
+          newMat.color = new THREE.Color(0xfff1e6);
           newMat.roughness = 0.65;
           newMat.metalness = 0.02;
-        } else if (matName.includes('Belt') || meshName.includes('Belt')) {
+        } else if (matName.includes('Belt') || meshName.includes('Belt') || meshName.includes('Obi')) {
           newMat.color = new THREE.Color(beltColor);
           newMat.roughness = 0.75;
           newMat.metalness = 0.05;
-        } else if (matName.includes('Gi') || meshName.includes('Jacket') || meshName.includes('Pants')) {
+        } else if (matName.includes('Gi') || meshName.includes('Jacket') || meshName.includes('Pants') || meshName.includes('Sleeve') || meshName.includes('Cloth') || meshName.includes('Suit')) {
+          newMat.color = new THREE.Color(giColor);
+          newMat.roughness = 0.85;
+          newMat.metalness = 0.02;
+        } else {
+          // Гарантированное независимое назначение цвета кимоно для любых элементов формы
           newMat.color = new THREE.Color(giColor);
           newMat.roughness = 0.85;
           newMat.metalness = 0.02;
@@ -307,13 +345,17 @@ export default function MultiAvatarModel({
   const mixer = useMemo(() => new THREE.AnimationMixer(clonedModel), [clonedModel]);
   const activeActionRef = useRef(null);
   const lastPhraseRef = useRef(0);
+  const finalStanceAppliedRef = useRef(false);
   const [clipCacheVersion, setClipCacheVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (animations && animations.length > 0) {
-        animations.forEach((c) => globalClipCache.set(c.name, c));
+        animations.forEach((c) => {
+          const patched = makeClipInPlace(patchAgeUkeClip(c, c.name));
+          globalClipCache.set(c.name, patched);
+        });
         Object.entries(ACTION_ALIASES).forEach(([k, v]) => {
           if (globalClipCache.has(v)) globalClipCache.set(k, globalClipCache.get(v));
         });
@@ -392,6 +434,13 @@ export default function MultiAvatarModel({
 
   const seqIndexRef = useRef(0);
   const clipSequenceKey = useMemo(() => clipSequence.join('__'), [clipSequence]);
+  const prevPhraseRef = useRef(0);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+  const scrubProgressRef = useRef(scrubProgress);
+  scrubProgressRef.current = scrubProgress;
 
   // Запуск конкретного элемента комбо с плавным переходом из предыдущей стойки/удара
   const playSubclipAt = useCallback((idx, prevAct = null) => {
@@ -408,50 +457,60 @@ export default function MultiAvatarModel({
       return;
     }
 
-    const action = mixer.clipAction(playable);
-    action.reset();
-    action.enabled = true;
+    const curSpeed = speedRef.current;
+    const curIsPlaying = isPlayingRef.current;
+    const curScrub = scrubProgressRef.current;
 
-    // Для комбо-серий ускоряем выполнение техник, чтобы связка уложилась в длительность шага
+    const action = mixer.clipAction(playable);
     const comboMultiplier = clipSequence.length === 2 ? 1.45 : clipSequence.length >= 3 ? 1.85 : 1.0;
-    action.setEffectiveTimeScale(speed * comboMultiplier);
-    action.setEffectiveWeight(1.0);
-    action.setLoop(THREE.LoopOnce, 1);
-    action.clampWhenFinished = true;
 
     if (prevAct && prevAct !== action) {
+      // Плавный бесшовный переход из предыдущего состояния без дерганий и сброса в bind-pose
       action.reset();
-      action.setEffectiveTimeScale(speed * comboMultiplier);
-      action.setEffectiveWeight(1.0);
+      action.enabled = true;
+      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
-      action.crossFadeFrom(prevAct, 0.25, true);
       action.play();
+      const crossSec = idx === 0 ? 0.28 : 0.20;
+      prevAct.crossFadeTo(action, crossSec, true);
+    } else if (prevAct === action) {
+      // Тот же самый клип/стойка: НЕ сбрасываем в кадр 0, чтобы исключить дергания!
+      action.enabled = true;
+      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+      if (action.time >= (playable.duration - 0.05)) {
+        action.time = playable.duration;
+        action.paused = true;
+      }
     } else {
       action.reset();
-      action.setEffectiveTimeScale(speed * comboMultiplier);
+      action.enabled = true;
+      action.setEffectiveTimeScale(curSpeed * comboMultiplier);
       action.setEffectiveWeight(1.0);
       action.setLoop(THREE.LoopOnce, 1);
       action.clampWhenFinished = true;
       action.play();
     }
 
-    if (scrubProgress !== null) {
-      action.time = scrubProgress * playable.duration;
+    if (curScrub !== null) {
+      action.time = curScrub * playable.duration;
       action.paused = true;
       mixer.update(0);
     } else {
-      action.paused = !isPlaying;
+      action.paused = !curIsPlaying;
     }
 
     activeActionRef.current = action;
-  }, [mixer, clipSequence, resolveClipByName, speed, isPlaying, scrubProgress, role, onMissingClip, clipCacheVersion]);
+  }, [mixer, clipSequenceKey, resolveClipByName, role, onMissingClip, clipCacheVersion]);
 
-  // Запуск первой техники шага с кроссфейдом из предыдущей стойки
+  // Запуск первой техники шага с кроссфейдом из предыдущей стойки или мгновенный повтор
   useEffect(() => {
     seqIndexRef.current = 0;
+    finalStanceAppliedRef.current = false;
     playSubclipAt(0, activeActionRef.current);
-  }, [clipSequenceKey, playSubclipAt]);
+  }, [clipSequenceKey, playSubclipAt, finalStance, landingMode, replayTrigger]);
 
   // Реакция на паузу и изменение скорости
   useEffect(() => {
@@ -464,33 +523,162 @@ export default function MultiAvatarModel({
 
   // По кадровое обновление положения, позы и предотвращение проникновения
   useFrame((_, delta) => {
-    const phrase = phraseRef ? phraseRef.current : 0;
+    const rawPhrase = scrubProgress !== null ? scrubProgress : (phraseRef ? phraseRef.current : 0);
+    const phrase = Math.min(1.0, Math.max(0, rawPhrase));
+    const isDefender = (role === 'uke' || role === 'uke1') && !isGround;
+    const contactPhase = combatOptions?.ikContactTime || ikContactTime || 0.48;
+
+    // Задержка реакции защищающегося (Укэ):
+    // В реальном боевом взаимодействии атакующий (Тори) начинает движение первым.
+    // Защищающийся (Укэ) оценивает атаку и реагирует с естественной задержкой реакции (~0.12-0.18 фазы шага).
+    const reactionDelay = isDefender ? Math.max(0.12, Math.min(0.20, (delaySeconds || 0.16))) : 0.0;
+
+    // Мгновенный перезапуск анимации при циклировании шага или перемотке в начало (0.00с)
+    if (prevPhraseRef.current > 0.70 && phrase < 0.10) {
+      seqIndexRef.current = 0;
+      finalStanceAppliedRef.current = false;
+      playSubclipAt(0, activeActionRef.current);
+    }
+    prevPhraseRef.current = phrase;
+
+    if (phrase < 0.25) {
+      finalStanceAppliedRef.current = false;
+    }
 
     if (groupRef.current) {
       const start = startPosition || position;
       const end = position;
 
+      const clipNames = clipSequence.map((c) => (typeof c === 'string' ? c : c?.name || '')).join(' ').toLowerCase();
+
+      // Точная сценарная ориентация (Yaw) с плавной интерполяцией при поворотах/разворотах
+      const startYaw = (startRotation && startRotation[1] !== undefined)
+        ? startRotation[1]
+        : ((rotation && rotation[1] !== undefined) ? rotation[1] : 0);
+      const endYaw = (rotation && rotation[1] !== undefined) ? rotation[1] : startYaw;
+
+      let currentYaw = endYaw;
+      const angleDelta = Math.atan2(Math.sin(endYaw - startYaw), Math.cos(endYaw - startYaw));
+
+      if (Math.abs(angleDelta) > 0.005) {
+        let rProgress = 0;
+        const isTurnTechnique = clipNames.includes('turn') || Math.abs(angleDelta) > 0.75;
+
+        if (scrubProgress !== null) {
+          // При перемотке таймлайна (scrubbing) вращение строго следует за положением ползунка
+          rProgress = scrubProgress;
+        } else if (phrase >= 1.0) {
+          rProgress = 1.0;
+        } else if (isTurnTechnique) {
+          // Для разворотов тела (Маваттэ / поворот на 90°/180°):
+          // Модель начинает поворот сразу с первого кадра (0.0 .. 0.75) без задержки!
+          const k = Math.min(1.0, Math.max(0, phrase / 0.75));
+          rProgress = k * k * (3 - 2 * k);
+        } else if (isDefender) {
+          // Для защищающегося (Тай-сабаки + блок): поворот тела синхронизируется с шагом ухода
+          // и завершается точно к моменту контакта блока (contactPhase ~0.48), чтобы встретить атаку лицом к противнику
+          if (phrase <= reactionDelay) {
+            rProgress = 0;
+          } else if (phrase >= contactPhase) {
+            rProgress = 1;
+          } else {
+            const k = (phrase - reactionDelay) / Math.max(0.01, contactPhase - reactionDelay);
+            rProgress = k * k * (3 - 2 * k);
+          }
+        } else {
+          if (phrase <= 0.08) {
+            rProgress = 0;
+          } else if (phrase >= 0.65) {
+            rProgress = 1;
+          } else {
+            const k = (phrase - 0.08) / 0.57;
+            rProgress = k * k * (3 - 2 * k);
+          }
+        }
+        currentYaw = startYaw + angleDelta * rProgress;
+      }
+
       let x, y, z;
 
-      // Если техника выполняется на месте (Хэйко-дати, Мусуби-дати, удар на месте)
-      // или смещение отсутствует: фиксируем точную позицию БЕЗ интерполяции по полу
+      // Если смещение отсутствует (техника на месте, Хэйко-дати, удар/блок на месте):
+      // Модель не должна стоять неподвижной статуей! Она должна выполнять полное динамическое
+      // движение (выпад центра массы к цели на моменте кимэ и возврат обратно в стойку).
       const isZeroDisp = Math.abs(end[0] - start[0]) < 0.005 && Math.abs(end[2] - start[2]) < 0.005;
-      if (isStationary || isZeroDisp) {
+
+      const isKick = clipNames.includes('mae_geri') || clipNames.includes('kick') || clipNames.includes('geri');
+      const isStrike = clipNames.includes('zuki') || clipNames.includes('tsuki') || clipNames.includes('punch') ||
+        clipNames.includes('strike') || clipNames.includes('tettsui') || clipNames.includes('shuto') ||
+        clipNames.includes('empi') || clipNames.includes('uraken') || clipNames.includes('tate');
+      const isBlock = clipNames.includes('uke') || clipNames.includes('barai');
+      const isMovement = clipNames.includes('step') || clipNames.includes('slide') || clipNames.includes('shift');
+      const hasActiveAction = isKick || isStrike || isBlock || isMovement || !isStationary;
+
+      if ((isStationary || isZeroDisp) && !isGround && hasActiveAction) {
+        // Полный биомеханический цикл движения (Surge & Return) при совпадении начальной и конечной позиции:
+        // Модель выполняет полноценный динамический выпад центра массы к цели с пиком на акценте удара/блока
+        // и плавный возврат точно в исходную стойку к концу шага (phrase = 1.0).
+        let surgeDist = 0.18;
+        if (isKick) {
+          surgeDist = 0.32; // Удары ногами (Маэ-гэри с возвратом ноги назад)
+        } else if (isStrike) {
+          surgeDist = 0.22; // Прямые и реверсивные удары руками
+        } else if (isBlock) {
+          surgeDist = 0.14; // Блокирующие техники
+        }
+
+        let surge = 0;
+        const startSurge = isDefender ? reactionDelay : 0.08;
+        if (phrase <= startSurge) {
+          surge = 0;
+        } else if (phrase <= contactPhase) {
+          const k = (phrase - startSurge) / Math.max(0.01, contactPhase - startSurge);
+          surge = Math.sin(k * Math.PI * 0.5);
+        } else if (phrase <= 0.95) {
+          const k = (phrase - contactPhase) / Math.max(0.01, 0.95 - contactPhase);
+          surge = Math.cos(k * Math.PI * 0.5);
+        } else {
+          surge = 0;
+        }
+
+        const fwdX = Math.sin(currentYaw);
+        const fwdZ = Math.cos(currentYaw);
+
+        x = end[0] + fwdX * surgeDist * surge;
+        y = end[1];
+        z = end[2] + fwdZ * surgeDist * surge;
+      } else if (isStationary || isZeroDisp) {
         x = end[0];
         y = end[1];
         z = end[2];
-      } else {
-        // Фазово-синхронизированное перемещение шага:
-        // 0.00 .. 0.18: Подготовка / замах — стопы жестко прижаты к татами (0% смещения)
-        // 0.18 .. 0.72: Перенос ноги и перемещение центра тяжести (кубическая кривая эрмита)
-        // 0.72 .. 1.00: Фиксация стойки (кимэ) — модель жестко зафиксирована в конечной точке (100%)
+      } else if (isDefender) {
+        // Перемещение защищающегося (Тай-сабаки):
+        // До момента реакции (phrase <= reactionDelay) Укэ стоит прочно на месте в исходной позиции.
+        // Затем плавно уходит с линии атаки и фиксирует стойку точно к моменту контакта (contactPhase ~0.48).
         let s = 0;
-        if (phrase <= 0.18) {
+        if (scrubProgress !== null) {
+          s = scrubProgress;
+        } else if (phrase <= reactionDelay) {
           s = 0;
-        } else if (phrase >= 0.72) {
+        } else if (phrase >= contactPhase) {
           s = 1;
         } else {
-          const k = (phrase - 0.18) / 0.54;
+          const k = (phrase - reactionDelay) / (contactPhase - reactionDelay);
+          s = k * k * (3 - 2 * k);
+        }
+        x = start[0] + (end[0] - start[0]) * s;
+        y = start[1] + (end[1] - start[1]) * s;
+        z = start[2] + (end[2] - start[2]) * s;
+      } else {
+        // Перемещение атакующего (Тори): начинает выпад после замаха (0.08 .. contactPhase)
+        let s = 0;
+        if (scrubProgress !== null) {
+          s = scrubProgress;
+        } else if (phrase <= 0.08) {
+          s = 0;
+        } else if (phrase >= contactPhase) {
+          s = 1;
+        } else {
+          const k = (phrase - 0.08) / (contactPhase - 0.08);
           s = k * k * (3 - 2 * k);
         }
         x = start[0] + (end[0] - start[0]) * s;
@@ -498,8 +686,31 @@ export default function MultiAvatarModel({
         z = start[2] + (end[2] - start[2]) * s;
       }
 
-      // Экспорт текущей опорной координаты для мониторинга дистанции
-      if (rootsRef && rootsRef.current) {
+      // Реальное динамическое анти-проникновение: модели не проходят сквозь друг друга во время движения
+      if (rootsRef && rootsRef.current && !isGround) {
+        const otherRole = role === 'tori' ? 'uke1' : 'tori';
+        const otherPos = rootsRef.current[otherRole];
+        if (otherPos && Array.isArray(otherPos)) {
+          const odx = x - otherPos[0];
+          const odz = z - otherPos[2];
+          const liveDist = Math.hypot(odx, odz);
+          const isCloseContact = combatOptions?.contactType === 'strike_above_elbow' ||
+            combatOptions?.contactType === 'arm_strike' ||
+            combatOptions?.contactType === 'joint_lock' ||
+            combatOptions?.stepNumber === 8 ||
+            combatOptions?.stepNumber === 14 ||
+            combatOptions?.stepNumber === 15 ||
+            combatOptions?.contactType === 'sweep_fall' ||
+            combatOptions?.contactType === 'ground_finish';
+          const minSeparation = isCloseContact ? 0.35 : 0.52; // Динамический анатомический зазор
+          if (liveDist < minSeparation) {
+            const push = (minSeparation - Math.max(0.001, liveDist)) * 0.5;
+            const dirX = liveDist > 0.001 ? (odx / liveDist) : (role === 'uke1' ? 0.707 : -0.707);
+            const dirZ = liveDist > 0.001 ? (odz / liveDist) : (role === 'uke1' ? 0.707 : -0.707);
+            x += dirX * push;
+            z += dirZ * push;
+          }
+        }
         rootsRef.current[role] = [x, y, z];
       }
 
@@ -536,29 +747,7 @@ export default function MultiAvatarModel({
       groupRef.current.position.set(x, y, z);
       if (rootsRef) rootsRef.current[role] = [x, y, z];
 
-      // Точная сценарная ориентация (Yaw) с плавной интерполяцией при поворотах/разворотах
       if (!isGround || role !== 'tori') {
-        const startYaw = (startRotation && startRotation[1] !== undefined)
-          ? startRotation[1]
-          : ((rotation && rotation[1] !== undefined) ? rotation[1] : 0);
-        const endYaw = (rotation && rotation[1] !== undefined) ? rotation[1] : startYaw;
-
-        let currentYaw = endYaw;
-        if (Math.abs(endYaw - startYaw) > 0.01) {
-          let rProgress = 0;
-          if (phrase <= 0.18) {
-            rProgress = 0;
-          } else if (phrase >= 0.72) {
-            rProgress = 1;
-          } else {
-            const k = (phrase - 0.18) / 0.54;
-            rProgress = k * k * (3 - 2 * k);
-          }
-          let diff = endYaw - startYaw;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          currentYaw = startYaw + diff * rProgress;
-        }
         groupRef.current.rotation.y = currentYaw;
       }
     }
@@ -570,11 +759,56 @@ export default function MultiAvatarModel({
         activeActionRef.current.paused = true;
         mixer.update(0);
       } else if (isPlaying) {
-        activeActionRef.current.paused = false;
-        mixer.update(delta * speed);
+        const curClip = activeActionRef.current.getClip();
+        const curClipDuration = curClip?.duration || 1.0;
+        const curClipName = (curClip?.name || '').toLowerCase();
+        const lastClipInSeq = String(clipSequence[clipSequence.length - 1] || '').toLowerCase();
+        const isLastTechnique = seqIndexRef.current >= clipSequence.length - 1;
+
+        // КРИТИЧЕСКОЕ ТРЕБОВАНИЕ: если модель закончила движение ударом или блоком (например, гяку-дзуки),
+        // НЕ сбрасывать состояние в нейтральную стойку! Модель должна зафиксировать удар (Кимэ) и остаться в нем.
+        const isStrikeOrBlockAction = (
+          curClipName.includes('zuki') ||
+          curClipName.includes('tsuki') ||
+          curClipName.includes('punch') ||
+          curClipName.includes('strike') ||
+          curClipName.includes('tettsui') ||
+          curClipName.includes('shuto') ||
+          curClipName.includes('empi') ||
+          curClipName.includes('uraken') ||
+          curClipName.includes('tate') ||
+          curClipName.includes('uke') ||
+          curClipName.includes('barai') ||
+          lastClipInSeq.includes('zuki') ||
+          lastClipInSeq.includes('tsuki') ||
+          lastClipInSeq.includes('punch') ||
+          lastClipInSeq.includes('strike') ||
+          lastClipInSeq.includes('tettsui') ||
+          lastClipInSeq.includes('shuto') ||
+          lastClipInSeq.includes('empi')
+        );
+
+        const isClipFinished = activeActionRef.current.time >= (curClipDuration - 0.002);
+
+        if (isLastTechnique && (isClipFinished || (isStrikeOrBlockAction && activeActionRef.current.time >= curClipDuration * 0.98))) {
+          // Действие полностью завершено: надежно удерживаем позу (Kime) без сброса
+          activeActionRef.current.time = curClipDuration;
+          activeActionRef.current.clampWhenFinished = true;
+          activeActionRef.current.paused = true;
+          mixer.update(0);
+        } else if (isDefender && phrase < reactionDelay && scrubProgress === null) {
+          // Задержка реакции защищающегося (Укэ):
+          // До наступления reactionDelay защищающийся сохраняет исходную позу без дерганий и преждевременного движения
+          activeActionRef.current.paused = true;
+          mixer.update(0);
+        } else {
+          activeActionRef.current.paused = false;
+          // Для защищающегося слегка масштабируем скорость блока, чтобы он встретил атаку точно в момент контакта
+          const speedMultiplier = (isDefender && seqIndexRef.current === 0) ? 1.25 : 1.0;
+          mixer.update(delta * speed * speedMultiplier);
+        }
 
         // Продвижение комбо-серий (Маэ-гэри -> Гяку-дзуки -> Тэтцуи и т.д.):
-        const curClip = activeActionRef.current.getClip();
         if (curClip && clipSequence.length > 1 && seqIndexRef.current < clipSequence.length - 1) {
           const curDur = curClip.duration;
           // При достижении 82% длительности текущей техники начинаем плавный переход к следующей
@@ -583,14 +817,73 @@ export default function MultiAvatarModel({
             playSubclipAt(seqIndexRef.current, activeActionRef.current);
           }
         }
+
+        if (phrase >= 0.95 && !finalStanceAppliedRef.current && !isStrikeOrBlockAction && activeActionRef.current) {
+          // Только для чистых перемещений или изолированных ударов ногами (без завершающего удара рукой)
+          let targetStanceName = finalStance;
+          const isKick = clipSequence.some((c) => typeof c === 'string' && (c.includes('mae_geri') || c.includes('kick') || c.includes('geri')));
+
+          if (!targetStanceName && isKick) {
+            if (landingMode === 'forward') {
+              targetStanceName = (stance || '').includes('left') ? 'zenkutsu_dachi_right' : 'zenkutsu_dachi_left';
+            } else if (landingMode === 'back') {
+              targetStanceName = stance || 'zenkutsu_dachi_left';
+            }
+          }
+
+          if (!targetStanceName) {
+            const isStepMove = clipSequence.some((c) => typeof c === 'string' && (c.includes('step_backward') || c.includes('step_forward') || c.includes('slide_')));
+            if (isStepMove && stance && stance !== 'ready' && stance !== 'heiko') {
+              targetStanceName = stance === 'zenkutsu' ? 'zenkutsu_dachi_right' : (ACTION_ALIASES[stance] || stance);
+            }
+          }
+
+          if (targetStanceName) {
+            const targetClip = resolveClipByName(targetStanceName);
+            if (targetClip && activeActionRef.current.getClip() !== targetClip) {
+              const stanceAction = mixer.clipAction(targetClip);
+              stanceAction.reset();
+              stanceAction.setEffectiveTimeScale(speed);
+              stanceAction.setEffectiveWeight(1.0);
+              stanceAction.setLoop(THREE.LoopOnce, 1);
+              stanceAction.clampWhenFinished = true;
+              activeActionRef.current.crossFadeTo(stanceAction, 0.24, true);
+              stanceAction.play();
+              activeActionRef.current = stanceAction;
+              finalStanceAppliedRef.current = true;
+            }
+          }
+        }
       } else {
         activeActionRef.current.paused = true;
+      }
+    }
+
+    // Процедурная боевая IK-подстройка: динамическое изменение углов блоков и контакт конечностей
+    if (bonesRef.current && trackedJointsRef && trackedJointsRef.current) {
+      const oppRole = (role === 'tori') ? 'uke1' : 'tori';
+      const oppJoints = trackedJointsRef.current[oppRole];
+      if (oppJoints && oppJoints.isExtracted) {
+        const curClipName = activeActionRef.current?.getClip()?.name || clipSequence[seqIndexRef.current] || clipSequence[0];
+        try {
+          applyProceduralCombatIK(
+            bonesRef.current,
+            role,
+            curClipName,
+            oppJoints,
+            phrase,
+            combatOptions || { ikContactTime, interactionType }
+          );
+        } catch {
+          /* ignore ik frame error */
+        }
       }
     }
 
     // Экспорт сочленений для анатомической системы BodyColliderSystem
     if (onTrackJoints && bonesRef.current && groupRef.current) {
       try {
+        groupRef.current.updateMatrixWorld(true);
         const joints = extractAvatarJointPositions(bonesRef.current, groupRef.current);
         onTrackJoints(role, joints);
       } catch {

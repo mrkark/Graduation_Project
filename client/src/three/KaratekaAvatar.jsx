@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import KarateMasterModel from './KarateMasterModel';
 import TraditionalDojo from './TraditionalDojo';
+import { Pause, RotateCw, RotateCcw } from 'lucide-react';
 
 /**
  * Аутентичные канонические стойки и положения мастера каратэ Шотокан
@@ -68,10 +69,10 @@ export const KARATE_TECHNIQUES = [
   // Защитные блоки
   { id: 'gedan_barai_left',   label: 'Гэдан-барай (Левый смет)', category: 'blocks' },
   { id: 'gedan_barai_right',  label: 'Гэдан-барай (Правый смет)', category: 'blocks' },
-  { id: 'age_uke_left',       label: '️ Агэ-укэ (Левый верхний)', category: 'blocks' },
-  { id: 'age_uke_right',      label: '️ Агэ-укэ (Правый верхний)', category: 'blocks' },
-  { id: 'soto_uke',           label: '️ Сото-укэ (Снаружи-внутрь)', category: 'blocks' },
-  { id: 'uchi_uke',           label: '️ Ути-укэ (Изнутри-наружу)', category: 'blocks' },
+  { id: 'age_uke_left',       label: 'Агэ-укэ (Левый верхний)', category: 'blocks' },
+  { id: 'age_uke_right',      label: 'Агэ-укэ (Правый верхний)', category: 'blocks' },
+  { id: 'soto_uke',           label: 'Сото-укэ (Снаружи-внутрь)', category: 'blocks' },
+  { id: 'uchi_uke',           label: 'Ути-укэ (Изнутри-наружу)', category: 'blocks' },
   { id: 'shuto_uke',          label: 'Сюто-укэ (Ребро ладони)', category: 'blocks' },
 
   // Удары ногами
@@ -98,7 +99,7 @@ export const KARATE_TECHNIQUES = [
   // Хикитэ и взведения
   { id: 'hikite_right',       label: 'Хикитэ правый к ребрам', category: 'moves' },
   { id: 'hikite_left',        label: 'Хикитэ левый к ребрам', category: 'moves' },
-  { id: 'chamber_left',       label: '️ Чембер на блок', category: 'moves' },
+  { id: 'chamber_left',       label: 'Чембер на блок', category: 'moves' },
 
   // Ката целиком
   { id: 'heian_shodan_preview', label: 'Хэйан Шодан (Превью формы)', category: 'moves' },
@@ -261,8 +262,9 @@ export default function KaratekaAvatar({
                 className="btn"
                 onClick={() => setAnimate((a) => !a)}
                 title="Автоматическое вращение камеры 360°"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}
               >
-                {animate ? '⏸ Пауза' : '360°'}
+                {animate ? <><Pause size={13} /> Пауза</> : <><RotateCw size={13} /> 360°</>}
               </button>
               <button
                 type="button"
