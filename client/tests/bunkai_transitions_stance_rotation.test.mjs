@@ -11,6 +11,7 @@ import {
   makeClipInPlace,
   synthesizeJodanOiZukiClip,
   synthesizeHoldExtendedPunchClip,
+  synthesizeReiBowClip,
 } from '../src/three/modularAnimationEngine.js';
 import {
   HEIAN_SHODAN_BUNKAI_18_STEPS,
@@ -169,12 +170,12 @@ const glbClips = loadGlbAnimations('public/models/karateka_techniques_v4.glb');
   assert.ok(!playerSrc.slice(playerSrc.indexOf('else if (autoAdvance)'), playerSrc.indexOf('onAutoAdvance(currentStepIdx')).includes('phraseRef.current = 0'), 'BunkaiPlaybackClock не должен сбрасывать phraseRef до рендера следующего шага');
 
   // Шаг выхода из болевого приёма: Тори сохраняет фронтальный угол без разворота на 180°, Укэ отшагивает на дистанцию боя
-  const chained15 = chainBunkaiEpisodes(HEIAN_SHODAN_BUNKAI_18_STEPS, 'continuous')[14];
-  const p15 = computeAvatarPlacement({ episode: chained15 });
-  const u15Disp = Math.hypot(p15.endPosUke1[0] - p15.startPosUke1[0], p15.endPosUke1[2] - p15.startPosUke1[2]);
-  const t15Turn = Math.abs(Math.atan2(Math.sin(p15.rotTori[1] - p15.startRotTori[1]), Math.cos(p15.rotTori[1] - p15.startRotTori[1])));
-  assert.ok(t15Turn < 0.05, 'Шаг 15: разворот Тори на 180° убран');
-  assert.ok(u15Disp > 0.40, `Шаг 15 Укэ должен плавно разрывать захват (disp=${u15Disp.toFixed(2)}м)`);
+  const chained12 = chainBunkaiEpisodes(HEIAN_SHODAN_BUNKAI_18_STEPS, 'continuous')[11];
+  const p12 = computeAvatarPlacement({ episode: chained12 });
+  const u12Disp = Math.hypot(p12.endPosUke1[0] - p12.startPosUke1[0], p12.endPosUke1[2] - p12.startPosUke1[2]);
+  const t12Turn = Math.abs(Math.atan2(Math.sin(p12.rotTori[1] - p12.startRotTori[1]), Math.cos(p12.rotTori[1] - p12.startRotTori[1])));
+  assert.ok(t12Turn < 0.05, 'Шаг 12: разворот Тори на 180° убран');
+  assert.ok(u12Disp > 0.40, `Шаг 12 Укэ должен плавно разрывать захват (disp=${u12Disp.toFixed(2)}м)`);
   console.log('✓ 5. Единая синхронизация поворота/перемещения, кроссфейды и отсутствие разворота 180° подтверждены.');
 }
 
@@ -303,7 +304,37 @@ const glbClips = loadGlbAnimations('public/models/karateka_techniques_v4.glb');
   holdAct.stop();
   assert.ok(holdHandR.z >= 0.45 && holdHandR.y >= 1.35, `Стойка после удара должна удерживать вытянутую руку (y=${holdHandR.y.toFixed(2)}, z=${holdHandR.z.toFixed(2)})`);
 
-  console.log('✓ 7. Стопы после Маэ-гэри не проваливаются под пол, клипы техник не обрезаются, Дзёдан-цки и удержание руки проверены.');
+  // Проверка единого клипа поклона rei_bow (Хэйко-дати -> Мусуби-дати -> Поклон 30° -> Хэйко-дати)
+  const reiClip = synthesizeReiBowClip({
+    heikoClip: byName.get('heiko_dachi'),
+    musubiClip: byName.get('stance_musubi'),
+    duration: 3.8,
+    name: 't7_rei_bow',
+  });
+  assertNoFloorSink('rei_bow', reiClip);
+  const reiAct = mixer.clipAction(reiClip);
+  reiAct.reset();
+  reiAct.enabled = true;
+  reiAct.setEffectiveWeight(1);
+  reiAct.play();
+
+  const sampleHeadAt = (frac) => {
+    reiAct.time = reiClip.duration * frac;
+    mixer.update(0);
+    gltf.scene.updateMatrixWorld(true);
+    const h = new THREE.Vector3();
+    gltf.scene.getObjectByName('Head')?.getWorldPosition(h);
+    return h;
+  };
+  const hStart = sampleHeadAt(0.05);
+  const hBow = sampleHeadAt(0.54);
+  const hEnd = sampleHeadAt(0.96);
+  reiAct.stop();
+
+  assert.ok(hBow.z > hStart.z + 0.12 && hBow.y < hStart.y - 0.02, `Поклон Рэй должен наклонять корпус вперёд (startZ=${hStart.z.toFixed(3)}, bowZ=${hBow.z.toFixed(3)}, startY=${hStart.y.toFixed(3)}, bowY=${hBow.y.toFixed(3)})`);
+  assert.ok(Math.abs(hEnd.z - hStart.z) < 0.02 && Math.abs(hEnd.y - hStart.y) < 0.02, `В конце rei_bow корпус должен вернуться в Хэйко-дати (endZ=${hEnd.z.toFixed(3)})`);
+
+  console.log('✓ 7. Стопы после Маэ-гэри не проваливаются под пол, клипы техник не обрезаются, Дзёдан-цки, удержание руки и единый клип поклона rei_bow проверены.');
 }
 
 console.log('\nALL TRANSITIONS, STANCE CONTINUITY & SYNCED ROTATION TESTS PASSED!');

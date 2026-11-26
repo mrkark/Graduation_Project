@@ -10,8 +10,8 @@ console.log('=== TEST SUITE: Bunkai Reaction Timing, Strike Hold (Kime) & Contac
 // 1. Тест: Задержка реакции защищающегося (Reaction Delay)
 console.log('--- Тест 1: Задержка реакции защищающегося (Reaction Delay) ---');
 {
-  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[5]; // Шаг 6 (Исх. шаг 5.1)
-  assert.equal(ep5.stepNumber, 6);
+  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[2]; // Шаг 3 (Исх. шаг 5.1)
+  assert.equal(ep5.stepNumber, 3);
 
   const ukePart = ep5.participants.find(p => p.role === 'uke' || p.role === 'uke1');
   assert.ok(ukePart, 'Укэ должен присутствовать на Шаге 5');
@@ -62,11 +62,11 @@ console.log('\n--- Тест 2: Запрет сброса состояния по
   console.log('✓ Все ударные и блокирующие техники надежно защищены от сброса в нейтральную стойку и фиксируют финальную позу.');
 }
 
-// 3. Тест: Калибровка дистанции и директрисы атаки на Шаге 6 и Шаге 7
-console.log('\n--- Тест 3: Калибровка боевой дистанции и оси атаки (Шаг 6 и Шаг 7) ---');
+// 3. Тест: Калибровка дистанции и директрисы атаки на Шаге 3 и Шаге 4 (исх. 5.1 и 5.2)
+console.log('\n--- Тест 3: Калибровка боевой дистанции и оси атаки (Шаг 3 и Шаг 4) ---');
 {
-  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[5];
-  assert.equal(ep5.attackAngleDeg, 0, 'Тори на шаге 6 должен атаковать строго прямо (attackAngleDeg === 0)');
+  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[2];
+  assert.equal(ep5.attackAngleDeg, 0, 'Тори на шаге 3 должен атаковать строго прямо (attackAngleDeg === 0)');
 
   const placement5 = computeAvatarPlacement({
     episode: ep5,
@@ -75,17 +75,17 @@ console.log('\n--- Тест 3: Калибровка боевой дистанц�
     ukeEvasionAngleDeg: undefined,
   });
 
-  // Расчет взаимного расстояния между Тори и Укэ на шаге 6
+  // Расчет взаимного расстояния между Тори и Укэ на шаге 3
   const dist5 = Math.hypot(placement5.posUke1[0] - placement5.posTori[0], placement5.posUke1[2] - placement5.posTori[2]);
-  assert.ok(dist5 >= 1.05 && dist5 <= 1.30, `Боевая дистанция на шаге 6 (${dist5.toFixed(2)}м) должна быть в диапазоне контакта 1.05м-1.30м`);
+  assert.ok(dist5 >= 1.05 && dist5 <= 1.30, `Боевая дистанция на шаге 3 (${dist5.toFixed(2)}м) должна быть в диапазоне контакта 1.05м-1.30м`);
 
   // Боковое смещение (Тай-сабаки) должно быть в пределах 0.30 - 0.40м от центра
   const lateralShift5 = Math.abs(placement5.posUke1[0] - placement5.posTori[0]);
   assert.ok(lateralShift5 >= 0.28 && lateralShift5 <= 0.45, `Смещение Укэ по оси X (${lateralShift5.toFixed(2)}м) обеспечивает прямой физический перехват конечности`);
 
-  // Шаг 7: Контрудар Укэ Гяку-дзуки в корпус
-  const ep6 = HEIAN_SHODAN_BUNKAI_18_STEPS[6];
-  assert.equal(ep6.stepNumber, 7, 'Шаг 7 должен быть контрударом Гяку-дзуки');
+  // Шаг 4: Контрудар Укэ Гяку-дзуки в корпус
+  const ep6 = HEIAN_SHODAN_BUNKAI_18_STEPS[3];
+  assert.equal(ep6.stepNumber, 4, 'Шаг 4 должен быть контрударом Гяку-дзуки');
   assert.equal(ep6.contactType, 'punch_body', 'Контакт на шаге 7 — удар в корпус');
   const placement6 = computeAvatarPlacement({
     episode: ep6,

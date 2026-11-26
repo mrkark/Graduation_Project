@@ -634,6 +634,15 @@ export const TECHNIQUE_REGISTRY = {
     defaultDuration: 1.0,
     heightOffset: 0,
   },
+  rei_bow: {
+    clipLeft: 'rei_bow',
+    clipRight: 'rei_bow',
+    fallback: 'idle_shizentai',
+    title: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+    type: 'stance',
+    defaultDuration: 3.80,
+    heightOffset: 0,
+  },
   ready: {
     clipLeft: 'idle_shizentai',
     clipRight: 'idle_shizentai',
@@ -644,30 +653,30 @@ export const TECHNIQUE_REGISTRY = {
     heightOffset: 0,
   },
   yoi: {
-    clipLeft: 'idle_shizentai',
-    clipRight: 'idle_shizentai',
-    fallback: 'stance_ready',
-    title: 'Стойка готовности Йой (Сидзэнтай)',
+    clipLeft: 'rei_bow',
+    clipRight: 'rei_bow',
+    fallback: 'idle_shizentai',
+    title: 'Поклон Рэй / Йой (Хэйко → Мусуби → Поклон → Хэйко)',
     type: 'stance',
-    defaultDuration: 1.30,
+    defaultDuration: 3.80,
     heightOffset: 0,
   },
   yoi_start: {
-    clipLeft: 'idle_shizentai',
-    clipRight: 'idle_shizentai',
-    fallback: 'stance_ready',
-    title: 'Стойка Йой (Начало формы)',
+    clipLeft: 'rei_bow',
+    clipRight: 'rei_bow',
+    fallback: 'idle_shizentai',
+    title: 'Начало формы — Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
     type: 'stance',
-    defaultDuration: 1.30,
+    defaultDuration: 3.80,
     heightOffset: 0,
   },
   yoi_end: {
-    clipLeft: 'idle_shizentai',
-    clipRight: 'idle_shizentai',
-    fallback: 'stance_ready',
-    title: 'Возвращение в стойку Йой (Завершение формы)',
+    clipLeft: 'rei_bow',
+    clipRight: 'rei_bow',
+    fallback: 'idle_shizentai',
+    title: 'Завершение формы — Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
     type: 'stance',
-    defaultDuration: 1.90,
+    defaultDuration: 3.80,
     heightOffset: 0,
   },
 };
@@ -726,23 +735,23 @@ export function resolveComposedClip(step, availableClips = null) {
     };
   }
 
-  // Явные шаги стойки Йой (в начале и конце формы)
+  // Явные шаги приветствия/Йой (в начале и конце формы): единый клип поклона Рэй
   if (step.isYoiStart || (step.isYoi && (step.moveNumber === 0 || step.stepNumber === 0))) {
     return {
-      clipName: 'idle_shizentai',
-      fallback: 'stance_ready',
-      title: 'Стойка готовности Йой (Сидзэнтай)',
-      duration: 1.30,
+      clipName: 'rei_bow',
+      fallback: 'idle_shizentai',
+      title: 'Начало формы — Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+      duration: 3.80,
       type: 'stance',
       heightOffset: 0,
     };
   }
   if (step.isYoiEnd || (step.isYoi && (step.moveNumber > 1 || step.stepNumber > 1))) {
     return {
-      clipName: 'idle_shizentai',
-      fallback: 'stance_ready',
-      title: 'Возвращение в стойку Йой (Сидзэнтай)',
-      duration: 1.90,
+      clipName: 'rei_bow',
+      fallback: 'idle_shizentai',
+      title: 'Завершение формы — Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+      duration: 3.80,
       type: 'stance',
       heightOffset: 0,
     };

@@ -90,14 +90,14 @@ console.log('=== TEST SUITE: Kata Sideward Motion & Anti-Foot-Sliding Execution 
   const rawData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   const scenario = compileKataScenario(rawData.steps, 'heian_shodan');
 
-  assert.equal(scenario.steps[0].clipName, 'idle_shizentai');
+  assert.equal(scenario.steps[0].clipName, 'rei_bow');
   assert.equal(scenario.steps[1].clipName, 'gedan_barai_left');
   assert.equal(scenario.steps[2].clipName, 'oi_zuki_right');
   assert.equal(scenario.steps[3].clipName, 'gedan_barai_right');
   assert.equal(scenario.steps[7].clipName, 'age_uke_right');
   assert.equal(scenario.steps[8].clipName, 'age_uke_left');
   assert.equal(scenario.steps[18].clipName, 'shuto_uke');
-  assert.equal(scenario.steps[22].clipName, 'idle_shizentai');
+  assert.equal(scenario.steps[22].clipName, 'rei_bow');
 
   console.log('  PASSED: Canonical technique clips mapped to individual reusable clips\n');
 }

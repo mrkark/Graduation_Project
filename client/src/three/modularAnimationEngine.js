@@ -884,3 +884,134 @@ export function synthesizeHoldExtendedPunchClip({
   return result;
 }
 
+/**
+ * Создаёт единый составной клип ритуального поклона Рэй (объединение 4 фаз):
+ * 1) Хэйко-дати (стойка готовности)
+ * 2) Сведение пяток в Мусуби-дати
+ * 3) Наклон корпуса 30° вперёд (Рэй) с фиксацией и выпрямлением
+ * 4) Возврат в Хэйко-дати (Сидзэнтай)
+ * Используется как в Ката (начало и завершение формы), так и в Бункай.
+ */
+export function synthesizeReiBowClip({
+  heikoClip,
+  musubiClip = null,
+  duration = 3.8,
+  name = 'rei_bow',
+}) {
+  const baseStance = heikoClip || musubiClip;
+  if (!baseStance || !baseStance.tracks) return null;
+
+  const clipName = name || 'rei_bow';
+  if (modularCompositeCache.has(clipName)) {
+    return modularCompositeCache.get(clipName);
+  }
+
+  const targetDur = Math.max(2.0, Number(duration) || 3.8);
+  const hClip = heikoClip || musubiClip;
+  const mClip = musubiClip || heikoClip;
+  const hMap = new Map(hClip.tracks.map((t) => [t.name, t]));
+  const mMap = new Map(mClip.tracks.map((t) => [t.name, t]));
+  const allNames = new Set([...hMap.keys(), ...mMap.keys()]);
+
+  const sampleCount = 48;
+  const times = new Float32Array(sampleCount + 1);
+  for (let i = 0; i <= sampleCount; i++) {
+    times[i] = (i / sampleCount) * targetDur;
+  }
+
+  const smoothstep01 = (x) => {
+    const t = Math.max(0, Math.min(1, x));
+    return t * t * (3 - 2 * t);
+  };
+
+  // Фазы клипа (0..1):
+  // [0.00..0.14] Хэйко-дати
+  // [0.14..0.30] Переход Хэйко-дати -> Мусуби-дати
+  // [0.30..0.78] Мусуби-дати + Поклон Рэй 30° (наклон 0.30..0.48, пауза 0.48..0.60, возврат 0.60..0.78)
+  // [0.78..0.93] Переход Мусуби-дати -> Хэйко-дати
+  // [0.93..1.00] Фиксация в Хэйко-дати
+  const getMusubiWeight = (f) => {
+    if (f <= 0.14) return 0;
+    if (f < 0.30) return smoothstep01((f - 0.14) / 0.16);
+    if (f <= 0.78) return 1;
+    if (f < 0.93) return 1 - smoothstep01((f - 0.78) / 0.15);
+    return 0;
+  };
+
+  const getBowWeight = (f) => {
+    if (f <= 0.30 || f >= 0.78) return 0;
+    if (f < 0.48) return smoothstep01((f - 0.30) / 0.18);
+    if (f <= 0.60) return 1;
+    return 1 - smoothstep01((f - 0.60) / 0.18);
+  };
+
+  const spineAxis = new THREE.Vector3(1, 0, 0);
+  const tracks = [];
+
+  for (const tName of allNames) {
+    // Базовая верхняя часть тела берётся из Хэйко-дати (руки спокойно опущены вдоль корпуса)
+    const tUpper = hMap.get(tName) || mMap.get(tName);
+    const tLowerH = hMap.get(tName) || mMap.get(tName);
+    const tLowerM = mMap.get(tName) || hMap.get(tName);
+
+    const lower = tName.toLowerCase();
+    const isQuat = lower.endsWith('.quaternion');
+    const isHipsPos = lower.includes('hips.position');
+    const isLower = isLowerBone(tName);
+
+    // Распределение угла поклона ~30° (0.52 рад) по позвоночнику
+    const nodeBase = lower.split('.')[0];
+    let bowPitchRad = 0;
+    if (isQuat) {
+      if (nodeBase === 'spine') bowPitchRad = 0.30;
+      else if (nodeBase === 'spine1') bowPitchRad = 0.12;
+      else if (nodeBase === 'chest') bowPitchRad = 0.10;
+    }
+
+    const stride = isQuat ? 4 : 3;
+    const vH = sampleTrackAtTime(isLower ? tLowerH : tUpper, 0);
+    const vM = sampleTrackAtTime(isLower ? tLowerM : tUpper, 0);
+    const values = new Float32Array((sampleCount + 1) * stride);
+
+    for (let i = 0; i <= sampleCount; i++) {
+      const f = i / sampleCount;
+      const musubiW = isLower ? getMusubiWeight(f) : 0;
+      const bowW = getBowWeight(f);
+
+      if (isQuat) {
+        const q = new THREE.Quaternion(vH[0], vH[1], vH[2], vH[3]);
+        if (isLower && musubiW > 0.0001) {
+          const qM = new THREE.Quaternion(vM[0], vM[1], vM[2], vM[3]);
+          q.slerp(qM, musubiW);
+        }
+        if (bowPitchRad > 0 && bowW > 0.0001) {
+          const qBow = new THREE.Quaternion().setFromAxisAngle(spineAxis, bowPitchRad * bowW);
+          q.multiply(qBow);
+        }
+        values[i * 4] = q.x;
+        values[i * 4 + 1] = q.y;
+        values[i * 4 + 2] = q.z;
+        values[i * 4 + 3] = q.w;
+      } else {
+        for (let k = 0; k < stride; k++) {
+          let val = vH[k] + (vM[k] - vH[k]) * musubiW;
+          if (isHipsPos && (k === 0 || k === 2)) {
+            val = 0;
+          }
+          values[i * stride + k] = val;
+        }
+      }
+    }
+
+    tracks.push(
+      isQuat
+        ? new THREE.QuaternionKeyframeTrack(tName, times, values)
+        : new THREE.VectorKeyframeTrack(tName, times, values)
+    );
+  }
+
+  const clip = new THREE.AnimationClip(clipName, targetDur, tracks);
+  modularCompositeCache.set(clipName, clip);
+  return clip;
+}
+

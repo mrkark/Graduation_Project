@@ -183,13 +183,13 @@ export default function KataDetailPage() {
       Step_Number: 0,
       stepNumber: 0,
       moveNumber: 0,
-      Title: 'Начало формы — Сидзэнтай',
-      Technique: 'Начало формы (Сидзэнтай)',
-      technique: 'Начало формы (Сидзэнтай)',
+      Title: 'Начало формы — Поклон Рэй',
+      Technique: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+      technique: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
       Direction: 'Прямо вперед (0°)',
       direction: 'Прямо вперед (0°)',
-      Duration: existingStartJson?.duration || (isHs ? 1.30 : 2.0),
-      duration: existingStartJson?.duration || (isHs ? 1.30 : 2.0),
+      Duration: 3.80,
+      duration: 3.80,
       stance: 'ready',
       kiai: false,
       facingDeg: 0,
@@ -199,21 +199,21 @@ export default function KataDetailPage() {
       R: null,
       T: 'T_ready',
       S: 'S_ready',
-      clipName: 'idle_shizentai',
-      fallbackClipName: 'stance_ready',
+      clipName: 'rei_bow',
+      fallbackClipName: 'idle_shizentai',
       startTime: 0.0,
-      endTime: existingStartJson?.endTime || (isHs ? 1.30 : 2.0),
+      endTime: 3.80,
       mocapStartTime: 0.0,
       mocapEndTime: isHs ? 1.30 : 2.0,
-      Description: 'Начало формы: исходная стойка Сидзэнтай (Хатидзи-дати). Взгляд вперед, дыхание спокойное, концентрация внимания (дзансин) перед выполнением формы.',
-      note: 'Начало формы: исходная стойка Сидзэнтай. Концентрация внимания (дзансин).',
+      Description: 'Начало формы: Хэйко-дати, переход в Мусуби-дати, ритуальный поклон (Рэй) и возврат в Хэйко-дати / Сидзэнтай перед выполнением формы.',
+      note: 'Начало формы: Поклон Рэй (Хэйко-дати → Мусуби-дати → Поклон 30° → Хэйко-дати).',
     };
 
     // Шаг стойки Йой в конце ката
     const lastMid = middleSteps[middleSteps.length - 1];
     const lastEndTime = lastMid?.endTime || (isHs ? 27.63 : 28.0);
-    const endDuration = isHs ? 1.90 : 2.0;
-    const finalEndTime = isHs ? 29.53 : +(lastEndTime + endDuration).toFixed(2);
+    const endDuration = 3.80;
+    const finalEndTime = +(lastEndTime + endDuration).toFixed(2);
 
     const yoiEndStep = {
       ...(existingEndJson || {}),
@@ -223,13 +223,13 @@ export default function KataDetailPage() {
       Step_Number: techCount + 1,
       stepNumber: techCount + 1,
       moveNumber: techCount + 1,
-      Title: 'Завершение формы — Сидзэнтай',
-      Technique: 'Завершение формы (Сидзэнтай)',
-      technique: 'Завершение формы (Сидзэнтай)',
+      Title: 'Завершение формы — Поклон Рэй',
+      Technique: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+      technique: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
       Direction: 'Прямо вперед (0°)',
       direction: 'Прямо вперед (0°)',
-      Duration: existingEndJson?.duration || endDuration,
-      duration: existingEndJson?.duration || endDuration,
+      Duration: endDuration,
+      duration: endDuration,
       stance: 'ready',
       kiai: false,
       facingDeg: 0,
@@ -239,14 +239,14 @@ export default function KataDetailPage() {
       R: null,
       T: 'T_ready',
       S: 'S_ready',
-      clipName: 'idle_shizentai',
-      fallbackClipName: 'stance_ready',
+      clipName: 'rei_bow',
+      fallbackClipName: 'idle_shizentai',
       startTime: lastEndTime,
       endTime: finalEndTime,
       mocapStartTime: 27.63,
       mocapEndTime: 29.53,
-      Description: 'Завершение формы: возвращение передней ноги на центральную линию, выход в стойку Сидзэнтай, поклон (рэй) и фиксация состояния дзансин.',
-      note: 'Завершение формы: возвращение на центральную линию, стойка Сидзэнтай, поклон (рэй) и дзансин.',
+      Description: 'Завершение формы: возвращение передней ноги на центральную линию в Хэйко-дати, сведение пяток в Мусуби-дати, поклон (Рэй) и возврат в Хэйко-дати (дзансин).',
+      note: 'Завершение формы: возвращение на центральную линию и полный поклон Рэй.',
     };
 
     return [yoiStartStep, ...middleSteps, yoiEndStep];

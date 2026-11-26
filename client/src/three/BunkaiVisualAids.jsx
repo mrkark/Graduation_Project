@@ -422,18 +422,6 @@ export default function BunkaiVisualAids({
 
   // Линия смещения ухода Тай-сабаки (если Укэ сошел с линии атаки)
   const isEvaded = Boolean(placement.isEvaded);
-  const evasionPoints = useMemo(() => {
-    if (!isEvaded || !directrix) return null;
-    // Ближайшая точка на линии атаки к позиции Укэ
-    const p1 = new THREE.Vector3(directrix.start[0], 0.03, posUke[2]);
-    const p2 = new THREE.Vector3(posUke[0], 0.03, posUke[2]);
-    return [p1, p2];
-  }, [isEvaded, directrix, posUke]);
-
-  const evasionLineGeo = useMemo(() => {
-    if (!evasionPoints) return null;
-    return new THREE.BufferGeometry().setFromPoints(evasionPoints);
-  }, [evasionPoints]);
 
   // Линия боевой дистанции на полу
   const distPoints = useMemo(() => {
@@ -447,15 +435,6 @@ export default function BunkaiVisualAids({
     const geo = new THREE.BufferGeometry().setFromPoints(distPoints);
     return geo;
   }, [distPoints]);
-
-  // Определение цвета точки контакта:
-  // Зеленый: блок перехватил атаку
-  // Красный: удар нанесен в корпус/голову
-  // Янтарный: в процессе сближения / подготовке
-  const isBlock = bodyInteraction?.isBlockIntercept;
-  const isHit = bodyInteraction?.isStrikeHit;
-  const contactColor = isBlock ? '#22c55e' : (isHit ? '#ef4444' : (isContactActive ? '#f59e0b' : '#38bdf8'));
-  const contactEmissive = isBlock ? '#15803d' : (isHit ? '#b91c1c' : (isContactActive ? '#d97706' : '#0284c7'));
 
   return (
     <group name="bunkai-visual-aids">
@@ -540,32 +519,6 @@ export default function BunkaiVisualAids({
         </group>
       )}
 
-      {/* Линия смещения ухода Тай-сабаки */}
-      {isEvaded && evasionLineGeo && (
-        <group>
-          <line geometry={evasionLineGeo}>
-            <lineBasicMaterial color="#a855f7" linewidth={2} transparent opacity={0.80} />
-          </line>
-          <Html position={[(posUke[0] + (directrix?.start?.[0] || 0)) / 2, 0.06, posUke[2]]} center distanceFactor={8} zIndexRange={[10, 0]}>
-            <div
-              style={{
-                background: 'rgba(88, 28, 135, 0.90)',
-                color: '#f3e8ff',
-                border: '1px solid #a855f7',
-                padding: '1px 6px',
-                borderRadius: 4,
-                fontSize: '10px',
-                fontWeight: 700,
-                whiteSpace: 'nowrap',
-                pointerEvents: 'none',
-              }}
-            >
-              Тай-сабаки: смещение {(placement.lateralOffsetMeters || 0).toFixed(2)}м
-            </div>
-          </Html>
-        </group>
-      )}
-
       {/* 4. Линия боевой дистанции с бейджем на татами */}
       {showDistanceLine && (
         <group>
@@ -590,43 +543,6 @@ export default function BunkaiVisualAids({
               Дистанция Ма-ай: {distMeters.toFixed(2)} м
             </div>
           </Html>
-        </group>
-      )}
-
-      {/* 5. Точка физического контакта с эффектом импакта */}
-      {showContactPoint && (isContactActive || bodyInteraction?.validContact) && contactPoint && (
-        <group position={contactPoint}>
-          {/* Яркая сфера соприкосновения */}
-          <mesh>
-            <sphereGeometry args={[0.055, 16, 16]} />
-            <meshStandardMaterial
-              color={contactColor}
-              emissive={contactEmissive}
-              emissiveIntensity={1.25}
-              roughness={0.2}
-              metalness={0.8}
-            />
-          </mesh>
-          {/* Горизонтальное кольцо импакта */}
-          <mesh rotation={[Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[0.07, 0.12, 24]} />
-            <meshBasicMaterial
-              color={contactColor}
-              transparent
-              opacity={0.85}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-          {/* Вертикальное кольцо импакта */}
-          <mesh rotation={[0, 0, 0]}>
-            <ringGeometry args={[0.06, 0.10, 24]} />
-            <meshBasicMaterial
-              color={contactColor}
-              transparent
-              opacity={0.70}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
         </group>
       )}
 

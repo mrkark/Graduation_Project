@@ -130,143 +130,231 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Karate Motion Studio — Мобильная Камера</title>
+  <meta name="theme-color" content="#0c0a09">
+  <title>Bunkai Explorer — Камера Додзё</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=Noto+Serif+JP:wght@600;700&display=swap">
   <style>
     :root {
-      --bg: #090a0f;
-      --card-bg: rgba(18, 22, 32, 0.92);
-      --border: #232a3b;
-      --text: #f1f2f6;
-      --text-muted: #8b95a8;
-      --theme-color: #10b981; /* Emerald default for Cam1 */
-      --theme-glow: rgba(16, 185, 129, 0.28);
-      --danger: #ef4444;
-      --danger-glow: rgba(239, 68, 68, 0.35);
+      --bg-canvas: #0c0a09;
+      --bg-surface: #151310;
+      --bg-subtle: #1c1814;
+      --bg-hover: #26211c;
+      --border: #2e261f;
+      --border-subtle: #231c16;
+      --wood-border: #352b22;
+
+      --text: #f6f3ec;
+      --text-secondary: #cec7b9;
+      --text-muted: #91897c;
+
+      --gold: #c29f55;
+      --gold-soft: #d4b778;
+      --gold-bright: #e4ce95;
+      --gold-dark: #8a6c2f;
+      --gold-border: #52432e;
+      --gold-glow: rgba(194, 159, 85, 0.25);
+
+      --accent-red: #ba1d1d;
+      --accent-red-hover: #d32f2f;
+      --hanko-bg: #a81c1c;
+      --hanko-border: #dc2626;
+      --crimson-glow: rgba(186, 29, 29, 0.35);
+
+      --success: #318a5d;
+      --theme-color: #c29f55;
+      --theme-glow: rgba(194, 159, 85, 0.26);
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-display: 'Cinzel', 'Noto Serif JP', Georgia, serif;
+      --font-kanji: 'Noto Serif JP', serif;
     }
     body[data-role="cam2"] {
-      --theme-color: #06b6d4; /* Cyan for Cam2 */
-      --theme-glow: rgba(6, 182, 212, 0.28);
+      --theme-color: #5b8fd9;
+      --theme-glow: rgba(91, 143, 217, 0.28);
     }
     body[data-role="cam3"] {
-      --theme-color: #a855f7; /* Purple for Cam3 */
-      --theme-glow: rgba(168, 85, 247, 0.28);
+      --theme-color: #d96b43;
+      --theme-glow: rgba(217, 107, 67, 0.28);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body {
-      background: var(--bg);
+      background: var(--bg-canvas);
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(194, 159, 85, 0.045) 0%, transparent 70%),
+        linear-gradient(180deg, #0e0c0a 0%, #0c0a09 100%);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: var(--font-sans);
       overflow: hidden;
       height: 100%;
       width: 100%;
       display: flex;
       flex-direction: column;
       touch-action: manipulation;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Top Navigation Bar */
+    /* Top Navigation Bar (Dojo Header Style) */
     header {
-      background: rgba(13, 16, 24, 0.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: max(8px, env(safe-area-inset-top)) 14px 8px;
+      position: relative;
+      background: rgba(18, 15, 12, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: max(10px, env(safe-area-inset-top)) 14px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
       z-index: 40;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--gold-border) 20%, var(--gold) 50%, var(--gold-border) 80%, transparent 100%);
+      opacity: 0.85;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
+      min-width: 0;
     }
-    .brand-logo {
-      font-size: 20px;
+    .brand-seal {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1f1a14 0%, #14110d 100%);
+      border: 1px solid var(--gold-border);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55), 0 0 10px rgba(194, 159, 85, 0.16);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .brand-hanko {
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      background: linear-gradient(135deg, var(--hanko-bg) 0%, var(--accent-red) 100%);
+      border: 1px solid rgba(228, 206, 149, 0.45);
+      color: #ffffff;
+      font-family: var(--font-kanji);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
     .brand-text {
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
     .brand-title {
-      font-size: 14px;
+      font-family: var(--font-display);
+      font-size: 13.5px;
       font-weight: 700;
-      letter-spacing: 0.4px;
-      color: #fff;
+      letter-spacing: 0.06em;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .brand-subtitle {
-      font-size: 10px;
-      color: var(--text-muted);
+      font-size: 9.5px;
+      color: var(--gold-soft);
       text-transform: uppercase;
-      letter-spacing: 0.6px;
+      letter-spacing: 0.1em;
+      font-weight: 600;
     }
 
     .header-pills {
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-shrink: 0;
     }
     .role-pill {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 700;
       padding: 4px 9px;
-      border-radius: 20px;
-      background: rgba(0, 0, 0, 0.5);
+      border-radius: 4px;
+      background: var(--bg-subtle);
       border: 1px solid var(--theme-color);
-      color: var(--theme-color);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: var(--text);
+      letter-spacing: 0.03em;
       display: flex;
       align-items: center;
-      gap: 4px;
-      box-shadow: 0 0 10px var(--theme-glow);
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+    .role-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--theme-color);
+      box-shadow: 0 0 6px var(--theme-color);
+      flex-shrink: 0;
     }
     .status-badge {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 600;
       padding: 4px 9px;
-      border-radius: 20px;
-      background: #272d3d;
-      color: #cbd5e1;
+      border-radius: 4px;
+      background: var(--bg-surface);
+      border: 1px solid var(--wood-border);
+      color: var(--text-secondary);
       display: flex;
       align-items: center;
       gap: 5px;
       transition: all 0.25s ease;
     }
     .status-badge.live {
-      background: var(--danger);
+      background: linear-gradient(135deg, var(--hanko-bg) 0%, var(--accent-red) 100%);
+      border-color: var(--hanko-border);
       color: #ffffff;
-      box-shadow: 0 0 12px var(--danger-glow);
+      box-shadow: 0 0 12px var(--crimson-glow);
       animation: pulseLive 1.8s infinite;
     }
     .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
-      background: currentColor;
+      background: var(--gold);
+    }
+    .status-badge.live .status-dot {
+      background: #ffffff;
     }
 
     @keyframes pulseLive {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.85; transform: scale(0.96); }
+      50% { opacity: 0.88; transform: scale(0.97); }
     }
 
     /* Warning banner for HTTP vs HTTPS */
     .insecure-alert {
-      background: linear-gradient(135deg, #ef4444, #b91c1c);
-      color: #fff;
+      background: linear-gradient(135deg, #8b1616 0%, #ba1d1d 100%);
+      color: #f6f3ec;
       padding: 10px 14px;
-      font-size: 12.5px;
+      font-size: 12px;
       text-align: center;
       display: none;
       font-weight: 500;
-      line-height: 1.4;
+      line-height: 1.45;
       z-index: 50;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      border-bottom: 1px solid var(--gold-border);
     }
     .insecure-alert a {
-      color: #fef08a;
+      color: var(--gold-bright);
       font-weight: 700;
       text-decoration: underline;
     }
@@ -275,17 +363,17 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     .viewport {
       flex: 1;
       position: relative;
-      background: #000;
+      background: #080706;
       display: flex;
       justify-content: center;
       align-items: center;
       overflow: hidden;
       border-left: 2px solid transparent;
       border-right: 2px solid transparent;
-      transition: border-color 0.3s;
+      transition: border-color 0.3s ease;
     }
     body.is-live .viewport {
-      border-color: var(--theme-color);
+      border-color: var(--gold-border);
     }
     video {
       width: 100%;
@@ -298,7 +386,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     }
     canvas { display: none; }
 
-    /* Stance Alignment Grid Overlay */
+    /* Stance Alignment Grid Overlay (Shoji / Kumiko subtle grid) */
     .grid-overlay {
       position: absolute;
       inset: 0;
@@ -306,22 +394,22 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       grid-template-rows: 1fr 1fr 1fr;
-      opacity: 0.22;
+      opacity: 0.24;
       transition: opacity 0.2s;
     }
     .grid-overlay.hidden { display: none; }
     .grid-overlay div {
-      border: 1px dashed #ffffff;
+      border: 1px dashed rgba(194, 159, 85, 0.55);
     }
-    /* Central stance crosshair */
     .crosshair-center {
       position: absolute;
-      width: 60px;
-      height: 60px;
-      border: 1px solid var(--theme-color);
+      width: 58px;
+      height: 58px;
+      border: 1px solid var(--gold);
       border-radius: 50%;
-      opacity: 0.45;
+      opacity: 0.42;
       pointer-events: none;
+      box-shadow: inset 0 0 8px rgba(194, 159, 85, 0.15);
     }
 
     /* Floating On-Screen HUD */
@@ -342,19 +430,24 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       gap: 5px;
     }
     .hud-chip {
-      background: rgba(10, 14, 22, 0.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 4px 8px;
-      border-radius: 6px;
+      background: rgba(18, 15, 12, 0.84);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: 4px 9px;
+      border-radius: 4px;
       font-size: 11px;
       font-weight: 600;
-      color: #e2e8f0;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+      border: 1px solid var(--wood-border);
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      font-family: monospace;
+      gap: 5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    }
+    .hud-chip strong {
+      color: var(--gold-soft);
+      font-weight: 700;
     }
 
     .quick-actions {
@@ -366,28 +459,37 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     .circle-btn {
       width: 40px;
       height: 40px;
-      border-radius: 50%;
-      background: rgba(18, 22, 32, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      color: #ffffff;
+      border-radius: 6px;
+      background: rgba(21, 19, 16, 0.88);
+      border: 1px solid var(--wood-border);
+      color: var(--text);
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 17px;
       cursor: pointer;
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-      transition: all 0.15s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.18s ease;
+    }
+    .circle-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .circle-btn:active {
-      transform: scale(0.92);
-      background: rgba(30, 38, 54, 0.95);
+      transform: scale(0.93);
+      background: var(--bg-hover);
     }
     .circle-btn.active {
-      background: var(--theme-color);
-      color: #000;
-      border-color: #fff;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+      color: #120e0b;
+      border-color: var(--gold-bright);
+      box-shadow: 0 2px 12px var(--gold-glow);
     }
 
     /* Role Guidance Banner at bottom of viewport */
@@ -396,30 +498,33 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       bottom: 10px;
       left: 12px;
       right: 12px;
-      background: rgba(12, 16, 26, 0.82);
+      background: rgba(21, 19, 16, 0.90);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
-      border: 1px solid var(--theme-color);
-      border-radius: 10px;
-      padding: 7px 12px;
+      border: 1px solid var(--gold-border);
+      border-left: 3px solid var(--theme-color);
+      border-radius: 6px;
+      padding: 8px 12px;
       font-size: 11.5px;
-      color: #e2e8f0;
+      color: var(--text-secondary);
       text-align: center;
       pointer-events: none;
       z-index: 15;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+      line-height: 1.4;
     }
     .role-guide-banner b {
-      color: var(--theme-color);
+      color: var(--gold-soft);
+      font-weight: 700;
     }
 
     /* Camera Permission Card */
     .permission-card {
       position: absolute;
       inset: 12px;
-      background: rgba(15, 18, 26, 0.97);
-      border: 1px solid #3b4254;
-      border-radius: 14px;
+      background: rgba(21, 19, 16, 0.98);
+      border: 1px solid var(--gold-border);
+      border-radius: 8px;
       padding: 20px 16px;
       display: none;
       flex-direction: column;
@@ -430,31 +535,46 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       z-index: 35;
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85);
+    }
+    .permission-icon-wrap {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: rgba(186, 29, 29, 0.14);
+      border: 1px solid rgba(220, 38, 38, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold-soft);
     }
     .permission-card h3 {
-      color: #ff6b81;
-      font-size: 17px;
+      color: var(--text);
+      font-family: var(--font-display);
+      font-size: 16.5px;
       margin: 0;
       font-weight: 700;
     }
     .permission-card p {
       font-size: 13px;
-      color: #cbd5e1;
+      color: var(--text-secondary);
       margin: 0;
-      line-height: 1.45;
+      line-height: 1.48;
     }
     .guide-box {
-      background: #0d1017;
-      border: 1px solid #282f42;
-      border-radius: 8px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border);
+      border-radius: 6px;
       padding: 10px 12px;
       text-align: left;
       font-size: 11.5px;
-      color: #94a3b8;
+      color: var(--text-muted);
       width: 100%;
       box-sizing: border-box;
-      line-height: 1.4;
+      line-height: 1.45;
+    }
+    .guide-box b {
+      color: var(--text-secondary);
     }
     .guide-box ol {
       margin: 6px 0 0 16px;
@@ -464,25 +584,25 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       margin-bottom: 4px;
     }
     .btn-grant {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: #ffffff;
-      border: none;
-      border-radius: 10px;
-      padding: 13px 20px;
-      font-size: 15px;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+      color: #120e0b;
+      border: 1px solid var(--gold-bright);
+      border-radius: 6px;
+      padding: 12px 20px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       width: 100%;
-      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
-      transition: opacity 0.2s;
+      box-shadow: 0 4px 16px var(--gold-glow);
+      transition: all 0.2s ease;
     }
-    .btn-grant:active { opacity: 0.85; }
+    .btn-grant:active { opacity: 0.88; transform: scale(0.99); }
 
     /* Tap to start camera overlay (solves mobile autoplay gesture policy) */
     .tap-start-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(11, 15, 23, 0.88);
+      background: rgba(12, 10, 9, 0.90);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       display: flex;
@@ -500,50 +620,49 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       display: none !important;
     }
     .tap-icon-ring {
-      width: 70px;
-      height: 70px;
+      width: 72px;
+      height: 72px;
       border-radius: 50%;
-      background: rgba(16, 185, 129, 0.15);
-      border: 2px solid var(--theme-color);
+      background: linear-gradient(135deg, #1f1a14 0%, #14110d 100%);
+      border: 1.5px solid var(--gold);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 32px;
-      box-shadow: 0 0 24px var(--theme-glow);
-      animation: pulseTap 2s infinite ease-in-out;
+      color: var(--gold-bright);
+      box-shadow: 0 0 26px var(--gold-glow), inset 0 0 12px rgba(194, 159, 85, 0.14);
+      animation: pulseTap 2.2s infinite ease-in-out;
     }
     @keyframes pulseTap {
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.08); }
+      50% { transform: scale(1.06); }
     }
     .tap-title {
+      font-family: var(--font-display);
       font-size: 17px;
       font-weight: 700;
-      color: #ffffff;
+      color: var(--text);
       margin: 0;
+      letter-spacing: 0.02em;
     }
     .tap-sub {
       font-size: 12.5px;
-      color: #94a3b8;
+      color: var(--text-muted);
       max-width: 280px;
-      line-height: 1.4;
+      line-height: 1.45;
       margin: 0;
     }
     .tap-btn {
-      background: linear-gradient(135deg, var(--theme-color), #059669);
-      color: #000000;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+      color: #120e0b;
       font-weight: 800;
-      font-size: 14px;
+      font-size: 13.5px;
+      letter-spacing: 0.04em;
       padding: 12px 24px;
-      border: none;
-      border-radius: 24px;
+      border: 1px solid var(--gold-bright);
+      border-radius: 6px;
       cursor: pointer;
-      box-shadow: 0 4px 16px var(--theme-glow);
+      box-shadow: 0 4px 18px var(--gold-glow);
       margin-top: 4px;
-    }
-    body[data-role="cam2"] .tap-btn {
-      background: linear-gradient(135deg, var(--theme-color), #0284c7);
-      color: #ffffff;
     }
     .perm-action-group {
       display: flex;
@@ -552,32 +671,45 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       width: 100%;
     }
     .btn-subtle {
-      background: #1e2433;
-      color: #cbd5e1;
-      border: 1px solid #374151;
-      border-radius: 10px;
-      padding: 11px 16px;
-      font-size: 13.5px;
+      background: var(--bg-subtle);
+      color: var(--text);
+      border: 1px solid var(--wood-border);
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       width: 100%;
-      transition: background 0.2s;
+      transition: all 0.2s ease;
     }
     .btn-subtle:active {
-      background: #283044;
+      background: var(--bg-hover);
+      border-color: var(--gold-border);
     }
 
-    /* Bottom Control Deck */
+    /* Bottom Control Deck (Hinoki Wood & Brass Console) */
     .controls-deck {
-      background: rgba(13, 16, 24, 0.96);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+      position: relative;
+      background: rgba(21, 19, 16, 0.98);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      padding: 11px 14px max(11px, env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       gap: 10px;
       border-top: 1px solid var(--border);
+      box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.55);
       z-index: 40;
+    }
+    .controls-deck::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(194, 159, 85, 0.32) 50%, transparent 100%);
+      pointer-events: none;
     }
 
     .main-action-row {
@@ -587,36 +719,36 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
     .btn-record-anim {
       flex: 1.5;
-      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      background: linear-gradient(135deg, var(--hanko-bg) 0%, var(--accent-red) 100%);
       color: #ffffff;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      padding: 13px 14px;
-      font-size: 14.5px;
-      font-weight: 800;
+      border: 1px solid var(--hanko-border);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 13.5px;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 8px;
-      letter-spacing: 0.3px;
-      box-shadow: 0 4px 18px rgba(239, 68, 68, 0.45);
+      letter-spacing: 0.03em;
+      box-shadow: 0 3px 14px var(--crimson-glow);
       transition: all 0.2s ease;
     }
     .btn-record-anim:active {
-      transform: scale(0.97);
+      transform: scale(0.98);
     }
     .btn-record-anim.recording {
-      background: #11141d;
-      border: 2px solid #ef4444;
-      color: #ef4444;
-      box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+      background: #1a1210;
+      border: 1.5px solid var(--hanko-border);
+      color: #fca5a5;
+      box-shadow: 0 0 18px var(--crimson-glow);
       animation: pulseRedRecord 1.2s infinite;
     }
 
     @keyframes pulseRedRecord {
-      0%, 100% { box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); transform: scale(1); }
-      50% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.3); transform: scale(0.985); }
+      0%, 100% { box-shadow: 0 0 16px rgba(220, 38, 38, 0.65); transform: scale(1); }
+      50% { box-shadow: 0 0 6px rgba(220, 38, 38, 0.28); transform: scale(0.99); }
     }
 
     .rec-live-badge {
@@ -624,32 +756,33 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       top: 14px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(220, 38, 38, 0.94);
+      background: rgba(168, 28, 28, 0.94);
+      border: 1px solid var(--hanko-border);
       color: #ffffff;
       font-weight: 800;
-      font-size: 12.5px;
+      font-size: 12px;
       padding: 5px 14px;
-      border-radius: 20px;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       gap: 8px;
       z-index: 30;
-      box-shadow: 0 4px 16px rgba(220, 38, 38, 0.6);
-      letter-spacing: 0.5px;
+      box-shadow: 0 4px 16px rgba(186, 29, 29, 0.55);
+      letter-spacing: 0.06em;
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
     }
     .rec-live-badge.hidden { display: none !important; }
     .rec-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: #ffffff;
       animation: blinkDot 0.9s infinite alternate;
     }
     @keyframes blinkDot {
       0% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0.2; transform: scale(0.7); }
+      100% { opacity: 0.25; transform: scale(0.7); }
     }
 
     .rec-toast {
@@ -657,59 +790,82 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       bottom: 20px;
       left: 14px;
       right: 14px;
-      background: rgba(15, 23, 42, 0.97);
-      border: 2px solid #10b981;
-      border-radius: 14px;
+      background: rgba(21, 19, 16, 0.97);
+      border: 1.5px solid var(--gold);
+      border-radius: 8px;
       padding: 16px;
       text-align: center;
       z-index: 55;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.85);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
     }
     .rec-toast.hidden { display: none !important; }
-    .rec-toast-icon { font-size: 30px; margin-bottom: 4px; }
-    .rec-toast-title { font-size: 16px; font-weight: 800; color: #10b981; margin-bottom: 4px; }
-    .rec-toast-desc { font-size: 12.5px; color: #cbd5e1; line-height: 1.45; margin-bottom: 10px; }
+    .rec-toast-seal {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 4px;
+      background: var(--hanko-bg);
+      border: 1px solid var(--gold-border);
+      color: #fff;
+      font-family: var(--font-kanji);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .rec-toast-title {
+      font-family: var(--font-display);
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--gold-bright);
+      margin-bottom: 4px;
+    }
+    .rec-toast-desc {
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
     .toast-close-btn {
-      background: #10b981;
-      color: #000;
-      font-weight: 800;
-      border: none;
-      border-radius: 8px;
-      padding: 8px 20px;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+      color: #120e0b;
+      font-weight: 700;
+      border: 1px solid var(--gold-bright);
+      border-radius: 6px;
+      padding: 8px 22px;
       cursor: pointer;
       font-size: 13px;
     }
 
     .btn-stream {
-      flex: 0.9;
-      background: linear-gradient(135deg, var(--theme-color), #059669);
-      color: #ffffff;
-      border: none;
-      border-radius: 12px;
-      padding: 13px 12px;
-      font-size: 13.5px;
+      flex: 0.95;
+      background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 100%);
+      color: #120e0b;
+      border: 1px solid var(--gold-bright);
+      border-radius: 6px;
+      padding: 12px 12px;
+      font-size: 13px;
       font-weight: 800;
       cursor: pointer;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 6px;
-      letter-spacing: 0.4px;
-      box-shadow: 0 4px 16px var(--theme-glow);
+      letter-spacing: 0.04em;
+      box-shadow: 0 3px 14px var(--gold-glow);
       transition: all 0.2s ease;
-    }
-    body[data-role="cam2"] .btn-stream {
-      background: linear-gradient(135deg, var(--theme-color), #0284c7);
     }
     .btn-stream:active {
       transform: scale(0.98);
     }
     .btn-stream.streaming {
-      background: linear-gradient(135deg, #475569, #334155);
+      background: var(--bg-subtle);
+      border: 1px solid var(--wood-border);
       box-shadow: none;
-      color: #94a3b8;
+      color: var(--text-secondary);
     }
 
     .settings-row {
@@ -724,24 +880,26 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       width: 100%;
       appearance: none;
       -webkit-appearance: none;
-      background: #1b202e;
-      color: #e2e8f0;
-      border: 1px solid #2e374d;
-      border-radius: 8px;
+      background-color: var(--bg-canvas);
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 2L6 6.5L10.5 2' stroke='%23c29f55' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      color: var(--text);
+      border: 1px solid var(--wood-border);
+      border-radius: 6px;
       padding: 9px 28px 9px 10px;
-      font-size: 12.5px;
+      font-family: var(--font-sans);
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       outline: none;
+      transition: border-color 0.18s ease;
+    }
+    select:focus {
+      border-color: var(--gold);
     }
     .select-arrow {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      pointer-events: none;
-      font-size: 10px;
-      color: #94a3b8;
+      display: none;
     }
 
     .footer-telemetry {
@@ -756,7 +914,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 4px;
-      color: #10b981;
+      color: var(--gold-soft);
+      font-weight: 500;
     }
     .wakelock-indicator.off {
       color: var(--text-muted);
@@ -765,21 +924,23 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 </head>
 <body data-role="cam1">
   <div id="insecureBanner" class="insecure-alert">
-    ⚠️ Камера заблокирована браузером по HTTP.<br>
-    <a id="httpsSwitchLink" href="#">Нажмите здесь для перехода на защищенный HTTPS ➔</a>
+    Камера заблокирована браузером по HTTP.<br>
+    <a id="httpsSwitchLink" href="#">Перейти на защищенный HTTPS ➔</a>
   </div>
 
   <header>
     <div class="brand">
-      <span class="brand-logo">🥋</span>
+      <div class="brand-seal" aria-hidden="true">
+        <span class="brand-hanko">空</span>
+      </div>
       <div class="brand-text">
-        <span class="brand-title">Karate Motion Cam</span>
-        <span class="brand-subtitle">Shotokan Wireless HD</span>
+        <span class="brand-title">BUNKAI EXPLORER</span>
+        <span class="brand-subtitle">Камера Додзё · MoCap</span>
       </div>
     </div>
     <div class="header-pills">
       <div id="rolePill" class="role-pill">
-        <span id="roleIcon">🟢</span>
+        <span id="roleIcon" class="role-dot"></span>
         <span id="roleText">Камера 1 (Фронт)</span>
       </div>
       <div id="statusBadge" class="status-badge">
@@ -801,9 +962,9 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
 
     <!-- Success Toast on Recording Complete -->
     <div id="recToast" class="rec-toast hidden">
-      <div class="rec-toast-icon">🥋✨</div>
-      <div class="rec-toast-title">Анимация успешно сохранена!</div>
-      <div id="recToastDesc" class="rec-toast-desc">Записано кадров. Перейдите к ноутбуку — 3D аватар уже воспроизводит вашу технику!</div>
+      <div class="rec-toast-seal">完</div>
+      <div class="rec-toast-title">Анимация успешно сохранена</div>
+      <div id="recToastDesc" class="rec-toast-desc">Записано кадров. Перейдите к компьютеру — 3D аватар уже воспроизводит вашу технику!</div>
       <button id="toastCloseBtn" class="toast-close-btn" type="button">Понятно</button>
     </div>
 
@@ -818,48 +979,60 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     <!-- On-Screen Floating HUD -->
     <div class="floating-hud">
       <div class="hud-chips">
-        <span class="hud-chip" id="chipRes">📏 --x--</span>
-        <span class="hud-chip" id="chipFps">⚡ 0.0 FPS</span>
-        <span class="hud-chip" id="chipCount">📦 0 кадров</span>
+        <span class="hud-chip" id="chipRes"><strong>RES</strong> --x--</span>
+        <span class="hud-chip" id="chipFps"><strong>FPS</strong> 0.0</span>
+        <span class="hud-chip" id="chipCount"><strong>BUF</strong> 0 кадр.</span>
       </div>
 
       <div class="quick-actions">
-        <button id="btnFlipCam" class="circle-btn" type="button" title="Переключить камеру">🔄</button>
-        <button id="btnTorch" class="circle-btn" type="button" title="Фонарик / Подсветка" style="display:none;">💡</button>
-        <button id="btnToggleGrid" class="circle-btn active" type="button" title="Сетка калибровки">▦</button>
-        <button id="btnFullscreen" class="circle-btn" type="button" title="Полноэкранный режим">⛶</button>
+        <button id="btnFlipCam" class="circle-btn" type="button" title="Переключить камеру" aria-label="Переключить камеру">
+          <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+        </button>
+        <button id="btnTorch" class="circle-btn" type="button" title="Фонарик / Подсветка" aria-label="Подсветка" style="display:none;">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </button>
+        <button id="btnToggleGrid" class="circle-btn active" type="button" title="Сетка калибровки" aria-label="Сетка калибровки">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>
+        </button>
+        <button id="btnFullscreen" class="circle-btn" type="button" title="Полноэкранный режим" aria-label="Полноэкранный режим">
+          <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
       </div>
     </div>
 
     <!-- Dynamic Role Guidance Banner -->
     <div class="role-guide-banner" id="roleGuide">
-      <b>КАМЕРА 1 (ФРОНТ):</b> Установите телефон спереди во весь рост (2-3 метра).
+      <b>КАМЕРА 1 (ФРОНТ):</b> Установите телефон спереди во весь рост (2–3 метра).
     </div>
 
     <!-- Tap to Start Camera Overlay (Bypasses Mobile Autoplay Blocks) -->
     <div id="tapStartOverlay" class="tap-start-overlay">
-      <div class="tap-icon-ring">📹</div>
-      <div class="tap-title">Нажмите для включения камеры</div>
-      <div class="tap-sub">Браузер требует касания экрана для активации видеопотока</div>
+      <div class="tap-icon-ring">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      </div>
+      <div class="tap-title">Активация камеры Додзё</div>
+      <div class="tap-sub">Коснитесь экрана, чтобы запустить видеопоток и синхронизацию с 3D-аватаром</div>
       <button id="tapStartBtn" class="tap-btn" type="button">ВКЛЮЧИТЬ КАМЕРУ</button>
     </div>
 
     <!-- Permission & Camera Error Card -->
     <div id="permissionCard" class="permission-card">
-      <div style="font-size: 38px;">📷🔒</div>
+      <div class="permission-icon-wrap">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
       <h3 id="permTitle">Доступ к камере смартфона</h3>
-      <p id="permDesc">Для передачи видео на ПК необходимо предоставить доступ к камере.</p>
+      <p id="permDesc">Для передачи видео на компьютер необходимо предоставить доступ к камере.</p>
       <div class="perm-action-group">
-        <button id="grantCameraBtn" class="btn-grant" type="button">🔓 Разрешить доступ к камере</button>
-        <button id="btnTryFrontCam" class="btn-subtle" type="button">🔄 Переключить на селфи-камеру</button>
+        <button id="grantCameraBtn" class="btn-grant" type="button">Разрешить доступ к камере</button>
+        <button id="btnTryFrontCam" class="btn-subtle" type="button">Переключить на фронтальную камеру</button>
       </div>
       <div class="guide-box">
         <b>Если камера не включается:</b>
         <ol>
-          <li>Убедитесь, что страница открыта по <b><a id="permHttpsLink" href="#" style="color:#ff6b81;">HTTPS</a></b>.</li>
+          <li>Убедитесь, что страница открыта по <b><a id="permHttpsLink" href="#" style="color:#e4ce95;">HTTPS</a></b>.</li>
           <li>При предупреждении сертификата нажмите <b>«Дополнительно» → «Перейти на сайт»</b> (Safari: <b>«Показать подробности» → «Посетить этот веб-сайт»</b>).</li>
-          <li>В адресной строке нажмите значок 🔒 или ⚙️ / aA и выберите <b>«Камера: Разрешить»</b>.</li>
-          <li>Закройте другие приложения (Instagram, WhatsApp, системную камеру), которые могут занимать объектив.</li>
+          <li>В адресной строке выберите <b>«Камера: Разрешить»</b>.</li>
+          <li>Закройте другие приложения, которые могут занимать объектив камеры.</li>
         </ol>
       </div>
     </div>
@@ -868,7 +1041,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
   <div class="controls-deck">
     <div class="main-action-row">
       <button id="btnRecordAnim" class="btn-record-anim" type="button">
-        <span id="btnRecordIcon">🎬</span>
+        <span id="btnRecordIcon">●</span>
         <span id="btnRecordText">ЗАПИСАТЬ АНИМАЦИЮ</span>
       </button>
       <button id="streamBtn" class="btn-stream" type="button">
@@ -880,16 +1053,16 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     <div class="settings-row">
       <div class="select-wrapper">
         <select id="roleSelect">
-          <option value="cam1" selected>📱 Камера 1 (Фронт)</option>
-          <option value="cam2">📱 Камера 2 (Сбоку)</option>
-          <option value="cam3">📱 Камера 3 (Диагональ)</option>
+          <option value="cam1" selected>Камера 1 (Фронт)</option>
+          <option value="cam2">Камера 2 (Сбоку)</option>
+          <option value="cam3">Камера 3 (Диагональ)</option>
         </select>
         <div class="select-arrow">▼</div>
       </div>
 
       <div class="select-wrapper">
         <select id="resSelect">
-          <option value="480p" selected>⚡ Турбо 480p (Мин. задержка, рекомендуем)</option>
+          <option value="480p" selected>Турбо 480p (Мин. задержка)</option>
           <option value="540p">540p (Баланс)</option>
           <option value="720p">HD 720p (Детализация)</option>
           <option value="1080p">Full HD 1080p</option>
@@ -901,7 +1074,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     <div class="footer-telemetry">
       <span id="statusHost">Сервер: Подключение...</span>
       <span id="wakeLockStatus" class="wakelock-indicator">
-        <span>☀️</span>
+        <span>●</span>
         <span id="wakeLockText">Экран активен</span>
       </span>
     </div>
@@ -966,7 +1139,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       isRecordingAnim = active;
       if (active) {
         btnRecordAnim.classList.add('recording');
-        btnRecordIcon.textContent = '⏹';
+        btnRecordIcon.textContent = '■';
         btnRecordText.textContent = 'СТОП (REC)';
         recLiveBadge.classList.remove('hidden');
         if (!recTimerInterval) {
@@ -980,7 +1153,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         }
       } else {
         btnRecordAnim.classList.remove('recording');
-        btnRecordIcon.textContent = '🎬';
+        btnRecordIcon.textContent = '●';
         btnRecordText.textContent = 'ЗАПИСАТЬ АНИМАЦИЮ';
         recLiveBadge.classList.add('hidden');
         if (recTimerInterval) {
@@ -988,7 +1161,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
           recTimerInterval = null;
         }
         if (savedFrames && savedFrames > 0) {
-          recToastDesc.textContent = `Записано ${savedFrames} кадров движения. Перейдите к ноутбуку — 3D аватар уже воспроизводит вашу технику!`;
+          recToastDesc.textContent = `Записано ${savedFrames} кадров движения. Перейдите к компьютеру — 3D аватар уже воспроизводит вашу технику!`;
           recToast.classList.remove('hidden');
           setTimeout(() => { recToast.classList.add('hidden'); }, 7000);
         }
@@ -1057,15 +1230,12 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
     function applyRoleTheme(role) {
       document.body.setAttribute('data-role', role);
       if (role === 'cam1') {
-        roleIcon.textContent = '🟢';
         roleText.textContent = 'Камера 1 (Фронт)';
-        roleGuide.innerHTML = '<b>КАМЕРА 1 (ФРОНТ):</b> Установите телефон спереди во весь рост (2-3 метра).';
+        roleGuide.innerHTML = '<b>КАМЕРА 1 (ФРОНТ):</b> Установите телефон спереди во весь рост (2–3 метра).';
       } else if (role === 'cam2') {
-        roleIcon.textContent = '🔵';
         roleText.textContent = 'Камера 2 (Сбоку)';
         roleGuide.innerHTML = '<b>КАМЕРА 2 (СБОКУ):</b> Установите сбоку под углом 90° для точной глубины стоек.';
       } else {
-        roleIcon.textContent = '🟣';
         roleText.textContent = 'Камера 3 (Угол)';
         roleGuide.innerHTML = '<b>КАМЕРА 3 (УГОЛ):</b> Диагональный ракурс 45° для детального захвата ударов.';
       }
@@ -1258,7 +1428,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         }
         canvas.width = cWidth;
         canvas.height = cHeight;
-        chipRes.textContent = `📏 ${canvas.width}x${canvas.height}`;
+        chipRes.innerHTML = `<strong>RES</strong> ${canvas.width}x${canvas.height}`;
 
         // Check torch capabilities
         const capabilities = track.getCapabilities ? track.getCapabilities() : {};
@@ -1284,19 +1454,19 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
       const desc = document.getElementById('permDesc');
 
       if (errName === 'SECURE_CONTEXT_REQUIRED' || window.location.protocol !== 'https:') {
-        title.textContent = '🔒 Требуется защищенный HTTPS';
-        desc.innerHTML = `Мобильные браузеры (Safari / Chrome) блокируют доступ к камере по HTTP.<br><br><a href="${httpsUrl}" style="display:inline-block; background:#10b981; color:#fff; padding:10px 16px; border-radius:8px; font-weight:bold; text-decoration:none;">Перейти на HTTPS ➔</a>`;
+        title.textContent = 'Требуется защищенный HTTPS';
+        desc.innerHTML = `Мобильные браузеры (Safari / Chrome) блокируют доступ к камере по HTTP.<br><br><a href="${httpsUrl}" style="display:inline-block; background:linear-gradient(135deg, #8a6c2f, #c29f55); color:#120e0b; padding:10px 16px; border-radius:6px; font-weight:700; text-decoration:none; border:1px solid #e4ce95;">Перейти на HTTPS ➔</a>`;
       } else if (errName === 'NotAllowedError' || errName === 'PermissionDeniedError') {
-        title.textContent = '🚫 Доступ к камере ожидает подтверждения';
-        desc.textContent = 'Браузер ожидает разрешения на использование камеры. Нажмите кнопку «Разрешить» ниже или проверьте значок 🔒 в адресной строке.';
+        title.textContent = 'Доступ к камере ожидает подтверждения';
+        desc.textContent = 'Браузер ожидает разрешения на использование камеры. Нажмите кнопку ниже или проверьте значок замка в адресной строке.';
       } else if (errName === 'NotFoundError' || errName === 'DevicesNotFoundError') {
-        title.textContent = '📷 Камера не обнаружена';
-        desc.textContent = 'Запрашиваемый модуль камеры не найден на устройстве. Попробуйте переключиться на селфи-камеру.';
+        title.textContent = 'Камера не обнаружена';
+        desc.textContent = 'Запрашиваемый модуль камеры не найден на устройстве. Попробуйте переключиться на фронтальную камеру.';
       } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
-        title.textContent = '⚠️ Камера занята другим приложением';
-        desc.textContent = 'Камера используется другим приложением (Instagram, WhatsApp, встроенная камера). Закройте их и повторите.';
+        title.textContent = 'Камера занята другим приложением';
+        desc.textContent = 'Камера используется другим приложением. Закройте их и повторите попытку.';
       } else {
-        title.textContent = '📷 Ошибка доступа к камере';
+        title.textContent = 'Ошибка доступа к камере';
         desc.textContent = errMsg || 'Не удалось активировать видеопоток с камеры смартфона.';
       }
     }
@@ -1396,8 +1566,8 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         statusBadge.classList.add('live');
         statusText.textContent = 'В ЭФИРЕ';
         streamBtn.classList.add('streaming');
-        streamBtnIcon.textContent = '⏹';
-        streamBtnText.textContent = 'ОСТАНОВИТЬ ЭФИР';
+        streamBtnIcon.textContent = '■';
+        streamBtnText.textContent = 'ОСТАНОВИТЬ';
         document.body.classList.add('is-live');
         isStreaming = true;
         isEncoding = false;
@@ -1419,12 +1589,12 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
           statusText.textContent = 'Готов';
           streamBtn.classList.remove('streaming');
           streamBtnIcon.textContent = '▶';
-          streamBtnText.textContent = 'НАЧАТЬ ЭФИР';
+          streamBtnText.textContent = 'ЭФИР';
         } else {
           // Unexpected drop / Wi-Fi jitter: Auto-reconnect seamlessly!
-          statusText.textContent = 'Переподключение...';
-          streamBtnIcon.textContent = '🔄';
-          streamBtnText.textContent = 'ПЕРЕПОДКЛЮЧЕНИЕ...';
+          statusText.textContent = 'Связь...';
+          streamBtnIcon.textContent = '↻';
+          streamBtnText.textContent = 'ПОДКЛЮЧЕНИЕ...';
           reconnectTimeout = setTimeout(() => {
             if (!userStoppedStreaming) {
               connectWebSocket();
@@ -1438,7 +1608,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
         inFlightCount = Math.max(0, inFlightCount - 1);
         if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
           const rtt = Math.round(performance.now() - frameSendTime);
-          chipCount.textContent = '📶 ' + rtt + ' ms · ' + totalFramesSent + ' кадр.';
+          chipCount.innerHTML = '<strong>RTT</strong> ' + rtt + ' ms · ' + totalFramesSent + ' к.';
           return;
         }
         try {
@@ -1446,7 +1616,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
             const msg = JSON.parse(event.data);
             if (msg.type === 'ack') {
               const rtt = Math.round(performance.now() - frameSendTime);
-              chipCount.textContent = '📶 ' + rtt + ' ms · ' + totalFramesSent + ' кадр.';
+              chipCount.innerHTML = '<strong>RTT</strong> ' + rtt + ' ms · ' + totalFramesSent + ' к.';
               return;
             }
             if (msg.type === 'record_status') {
@@ -1535,7 +1705,7 @@ MOBILE_CLIENT_HTML = """<!DOCTYPE html>
                   const t_fps = performance.now();
                   if (t_fps - fpsTimer >= 1000) {
                     const fps = (frameCount * 1000) / (t_fps - fpsTimer);
-                    chipFps.textContent = '⚡ ' + fps.toFixed(1) + ' FPS';
+                    chipFps.innerHTML = '<strong>FPS</strong> ' + fps.toFixed(1);
                     frameCount = 0;
                     fpsTimer = t_fps;
                   }

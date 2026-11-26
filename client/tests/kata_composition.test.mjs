@@ -29,7 +29,7 @@ console.log('Test 1: Reusable technique clip resolution');
 
   const yoiStep = { isYoi: true, isYoiStart: true };
   const resYoi = resolveComposedClip(yoiStep);
-  assert.equal(resYoi.clipName, 'idle_shizentai', 'Стойка Йой должна разрешаться в idle_shizentai');
+  assert.equal(resYoi.clipName, 'rei_bow', 'Начальный Йой должен разрешаться в единый клип поклона rei_bow');
 
   const kickStep = { S: 'S_kick_mae_geri_R_zenkutsuL', stance: 'zenkutsu' };
   const resKick = resolveComposedClip(kickStep);
@@ -91,11 +91,11 @@ console.log('\nTest 4: Compilation of Heian Shodan into unified scenario (23 ste
   assert.equal(scenario.embusenPoints.length, 23, 'Эмбусэн должен содержать 23 точки');
   assert.deepEqual(scenario.meta.kiaiSteps, [9, 17], 'КИАЙ должен быть строго на шагах 9 и 17');
 
-  // Шаг 0 (Стойка готовности Йой)
+  // Шаг 0 (Начало формы — Поклон Рэй)
   const step0 = scenario.steps[0];
   assert.equal(step0.moveNumber, 0);
   assert.equal(step0.facingDeg, 0);
-  assert.equal(step0.clipName, 'idle_shizentai');
+  assert.equal(step0.clipName, 'rei_bow');
   assert.equal(step0.stance, 'ready');
   assert.equal(step0.startTime, 0);
 
@@ -120,11 +120,11 @@ console.log('\nTest 4: Compilation of Heian Shodan into unified scenario (23 ste
   assert(step18.clipName === 'shuto_uke' || step18.clipName === 'turn_into_kokutsu_left' || step18.clipName === 'tech_shuto_uke_left');
   assert.equal(step18.stance, 'kokutsu');
 
-  // Шаг 22 (возвращение в стойку Йой)
+  // Шаг 22 (завершение формы — Поклон Рэй)
   const step22 = scenario.steps[22];
   assert.equal(step22.moveNumber, 22);
   assert.equal(step22.facingDeg, 0);
-  assert.equal(step22.clipName, 'idle_shizentai');
+  assert.equal(step22.clipName, 'rei_bow');
 
   console.log('  PASSED: Heian Shodan compiled into complete 23-step composed sequence (with opening & closing Yoi)');
 }

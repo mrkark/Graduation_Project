@@ -13,9 +13,9 @@ import {
 
 console.log('=== TEST SUITE: 34-Step Bunkai Plan & Editor/Demonstration Sync ===\n');
 
-// 1. Проверка структуры 25 шагов из плана
-assert.equal(HEIAN_SHODAN_BUNKAI_18_STEPS.length, 25, 'Должно быть ровно 25 шагов');
-assert.equal(HEIAN_SHODAN_BUNKAI_34_STEPS.length, 25);
+// 1. Проверка структуры 22 шагов плана (первые 4 шага поклона объединены в Шаг 1 с rei_bow)
+assert.equal(HEIAN_SHODAN_BUNKAI_18_STEPS.length, 22, 'Должно быть ровно 22 шага');
+assert.equal(HEIAN_SHODAN_BUNKAI_34_STEPS.length, 22);
 
 HEIAN_SHODAN_BUNKAI_18_STEPS.forEach((step, idx) => {
   assert.equal(step.stepNumber, idx + 1, `stepNumber должен быть ${idx + 1}`);
@@ -33,94 +33,100 @@ HEIAN_SHODAN_BUNKAI_18_STEPS.forEach((step, idx) => {
 });
 
 // Проверка ключевых шагов плана
+const s1 = HEIAN_SHODAN_BUNKAI_18_STEPS[0];
+assert.equal(s1.participants[0].clipName, 'rei_bow', 'Шаг 1 должен использовать единый клип поклона rei_bow');
+assert.equal(s1.participants[1].clipName, 'rei_bow', 'Шаг 1 Укэ должен использовать единый клип поклона rei_bow');
+assert.equal(s1.participants[0].stance, 'heiko_dachi');
+assert.equal(s1.participants[0].finalStance, 'heiko_dachi');
+
+const s2 = HEIAN_SHODAN_BUNKAI_18_STEPS[1];
+assert.equal(s2.optimalDistance, 1.50);
+assert.equal(s2.participants[0].finalStance, 'zenkutsu_dachi_left');
+assert.equal(s2.participants[1].finalStance, 'zenkutsu_dachi_right');
+
+const s3 = HEIAN_SHODAN_BUNKAI_18_STEPS[2];
+assert.equal(s3.optimalDistance, 1.05);
+assert.equal(s3.contactType, 'block_gedan');
+assert.equal(s3.participants[0].landingMode, 'forward');
+assert.equal(s3.participants[1].delaySeconds, 0.16);
+
 const s5 = HEIAN_SHODAN_BUNKAI_18_STEPS[4];
-assert.equal(s5.optimalDistance, 1.50);
-assert.equal(s5.participants[0].finalStance, 'zenkutsu_dachi_left');
-assert.equal(s5.participants[1].finalStance, 'zenkutsu_dachi_right');
+assert.equal(s5.attackAngleDeg, 12.5);
+assert.equal(s5.participants[0].clipName, 'mae_geri_left');
+assert.equal(s5.participants[1].clipName, 'gedan_barai_right');
 
 const s6 = HEIAN_SHODAN_BUNKAI_18_STEPS[5];
-assert.equal(s6.optimalDistance, 1.05);
-assert.equal(s6.contactType, 'block_gedan');
-assert.equal(s6.participants[0].landingMode, 'forward');
-assert.equal(s6.participants[1].delaySeconds, 0.16);
+assert.equal(s6.participants[1].clipName, 'tech_tettsui_right');
 
 const s8 = HEIAN_SHODAN_BUNKAI_18_STEPS[7];
-assert.equal(s8.attackAngleDeg, 12.5);
-assert.equal(s8.participants[0].clipName, 'mae_geri_left');
-assert.equal(s8.participants[1].clipName, 'gedan_barai_right');
+assert.equal(s8.participants[0].stance, 'zenkutsu_dachi_left');
+assert.equal(s8.participants[0].finalStance, 'zenkutsu_dachi_left');
 
 const s9 = HEIAN_SHODAN_BUNKAI_18_STEPS[8];
-assert.equal(s9.participants[1].clipName, 'tech_tettsui_right');
+assert.equal(s9.participants[0].clipName, 'mae_geri_right');
+
+const s10 = HEIAN_SHODAN_BUNKAI_18_STEPS[9];
+assert.equal(s10.participants[0].clipName, 'tech_jodan_zuki_right');
 
 const s11 = HEIAN_SHODAN_BUNKAI_18_STEPS[10];
-assert.equal(s11.participants[0].stance, 'zenkutsu_dachi_left');
-assert.equal(s11.participants[0].finalStance, 'zenkutsu_dachi_left');
-
-const s12 = HEIAN_SHODAN_BUNKAI_18_STEPS[11];
-assert.equal(s12.participants[0].clipName, 'mae_geri_right');
+assert.equal(s11.contactType, 'joint_lock');
+assert.equal(s11.optimalDistance, 0.65);
 
 const s13 = HEIAN_SHODAN_BUNKAI_18_STEPS[12];
-assert.equal(s13.participants[0].clipName, 'tech_jodan_zuki_right');
+assert.equal(s13.participants[0].clipName, 'mae_geri_left');
+assert.equal(s13.participants[0].landingMode, 'back');
+assert.equal(s13.participants[0].delaySeconds, 0.22);
+assert.equal(s13.participants[1].clipName, 'gedan_barai_right');
+assert.equal(s13.participants[1].delaySeconds, 0.0);
+assert.equal(s13.participants[1].finalStance, 'zenkutsu_dachi_right');
+assert.equal(s13.ukeFullTurn, true);
 
-const s14 = HEIAN_SHODAN_BUNKAI_18_STEPS[13];
-assert.equal(s14.contactType, 'joint_lock');
-assert.equal(s14.optimalDistance, 0.65);
+const s15 = HEIAN_SHODAN_BUNKAI_18_STEPS[14];
+assert.equal(s15.participants[0].clipName, 'step_backward_right');
+assert.equal(s15.participants[1].clipName, 'gyaku_zuki_right');
+assert.equal(s15.participants[1].stance, 'zenkutsu_dachi_right');
+assert.equal(s15.participants[1].finalStance, 'zenkutsu_dachi_left');
 
 const s16 = HEIAN_SHODAN_BUNKAI_18_STEPS[15];
-assert.equal(s16.participants[0].clipName, 'mae_geri_left');
-assert.equal(s16.participants[0].landingMode, 'back');
-assert.equal(s16.participants[0].delaySeconds, 0.22);
-assert.equal(s16.participants[1].clipName, 'gedan_barai_right');
-assert.equal(s16.participants[1].delaySeconds, 0.0);
-assert.equal(s16.participants[1].finalStance, 'zenkutsu_dachi_right');
-assert.equal(s16.ukeFullTurn, true);
+assert.equal(s16.participants[0].clipName, 'oi_zuki_jodan_right');
+assert.equal(s16.participants[1].clipName, 'tech_shuto_uke_right');
+assert.equal(s16.participants[1].finalStance, 'kokutsu_dachi_right');
+assert.ok(s16.ukeTrajectory.end[2] > s16.toriTrajectory.end[2], 'Шаг 16: Укэ остаётся спереди-слева (+Z), не заходя за спину');
+assert.ok(s16.ukeTrajectory.end[0] < s16.toriTrajectory.end[0], 'Шаг 16: Укэ уходит с линии атаки влево (-X)');
+assert.equal(s16.scenarioAngles.retreatAngleDeg, -30);
+assert.equal(s16.ukeTurnDir, 0);
+
+const s17 = HEIAN_SHODAN_BUNKAI_18_STEPS[16];
+assert.equal(s17.contactType, 'punch_body');
+assert.equal(s17.isGround, true);
+assert.equal(s17.participants[1].clipName, 'tech_shuto_uke_left');
+assert.equal(s17.participants[1].finalStance, 'kokutsu_dachi_left');
+assert.equal(s17.participants[0].finalStance, 'fallen_ukemi');
 
 const s18 = HEIAN_SHODAN_BUNKAI_18_STEPS[17];
-assert.equal(s18.participants[0].clipName, 'step_backward_right');
-assert.equal(s18.participants[1].clipName, 'gyaku_zuki_right');
-assert.equal(s18.participants[1].stance, 'zenkutsu_dachi_right');
-assert.equal(s18.participants[1].finalStance, 'zenkutsu_dachi_left');
-
-const s19 = HEIAN_SHODAN_BUNKAI_18_STEPS[18];
-assert.equal(s19.participants[0].clipName, 'oi_zuki_jodan_right');
-assert.equal(s19.participants[1].clipName, 'tech_shuto_uke_right');
-assert.equal(s19.participants[1].finalStance, 'kokutsu_dachi_right');
-assert.ok(s19.ukeTrajectory.end[2] > s19.toriTrajectory.end[2], 'Шаг 19: Укэ остаётся спереди-слева (+Z), не заходя за спину');
-assert.ok(s19.ukeTrajectory.end[0] < s19.toriTrajectory.end[0], 'Шаг 19: Укэ уходит с линии атаки влево (-X)');
-assert.equal(s19.scenarioAngles.retreatAngleDeg, -30);
-assert.equal(s19.ukeTurnDir, 0);
-
-const s20 = HEIAN_SHODAN_BUNKAI_18_STEPS[19];
-assert.equal(s20.contactType, 'punch_body');
-assert.equal(s20.isGround, true);
-assert.equal(s20.participants[1].clipName, 'tech_shuto_uke_left');
-assert.equal(s20.participants[1].finalStance, 'kokutsu_dachi_left');
-assert.equal(s20.participants[0].finalStance, 'fallen_ukemi');
+assert.equal(s18.contactType, 'ground_finish');
+assert.equal(s18.isGround, true);
+assert.equal(s18.participants[1].clipName, 'tech_tate_zuki_right');
+assert.equal(s18.participants[1].finalStance, 'stance_shiko');
 
 const s21 = HEIAN_SHODAN_BUNKAI_18_STEPS[20];
-assert.equal(s21.contactType, 'ground_finish');
+assert.equal(s21.isBow, true);
 assert.equal(s21.isGround, true);
-assert.equal(s21.participants[1].clipName, 'tech_tate_zuki_right');
-assert.equal(s21.participants[1].finalStance, 'stance_shiko');
+assert.equal(s21.participants[0].finalStance, 'fallen_ukemi');
+assert.equal(s21.participants[1].clipName, 'stance_musubi');
 
-const s24 = HEIAN_SHODAN_BUNKAI_18_STEPS[23];
-assert.equal(s24.isBow, true);
-assert.equal(s24.isGround, true);
-assert.equal(s24.participants[0].finalStance, 'fallen_ukemi');
-assert.equal(s24.participants[1].clipName, 'stance_musubi');
-
-console.log('✓ Проверка всех 25 шагов плана (стойки, клипы, Ма-ай, контакты, тайминги) пройдена.');
+console.log('✓ Проверка всех 22 шагов плана (включая объединённый поклон rei_bow, стойки, клипы, Ма-ай, контакты, тайминги) пройдена.');
 
 // 2. Проверка непрерывности позиций и удержания вытянутой руки в chainBunkaiEpisodes
-const chained25 = chainBunkaiEpisodes(HEIAN_SHODAN_BUNKAI_18_STEPS, 'continuous');
-assert.equal(chained25[13].participants[0].holdPunchClip, 'tech_jodan_zuki_right', 'После Дзёдан-дзуки Тори удерживает правую руку вытянутой на шаге болевого приёма');
-for (let i = 1; i < chained25.length; i++) {
-  const prev = chained25[i - 1];
-  const cur = chained25[i];
+const chained22 = chainBunkaiEpisodes(HEIAN_SHODAN_BUNKAI_18_STEPS, 'continuous');
+assert.equal(chained22[10].participants[0].holdPunchClip, 'tech_jodan_zuki_right', 'После Дзёдан-дзуки Тори удерживает правую руку вытянутой на шаге болевого приёма');
+for (let i = 1; i < chained22.length; i++) {
+  const prev = chained22[i - 1];
+  const cur = chained22[i];
   assert.deepEqual(cur.toriStartPos, prev.toriEndPos, `Шаг ${i + 1}: toriStartPos должен совпадать с prev.toriEndPos`);
   assert.deepEqual(cur.ukeStartPos, prev.ukeEndPos, `Шаг ${i + 1}: ukeStartPos должен совпадать с prev.ukeEndPos`);
 }
-console.log('✓ Непрерывность цепочки позиций и удержание вытянутой руки на всех 25 шагах подтверждена.');
+console.log('✓ Непрерывность цепочки позиций и удержание вытянутой руки на всех 22 шагах подтверждена.');
 
 // 3. Проверка 100% совпадения Редактора и Демонстрации (Roundtrip Editor -> DB -> Demonstration)
 function toFormEpLike(st) {
@@ -181,7 +187,7 @@ const demoSteps = buildStepsFromDb(dbPayload);
 const chainedEditor = chainBunkaiEpisodes(editorPreviewSteps, 'continuous');
 const chainedDemo = chainBunkaiEpisodes(demoSteps, 'continuous');
 
-for (let i = 0; i < 25; i++) {
+for (let i = 0; i < 22; i++) {
   const plEditor = computeAvatarPlacement({ episode: chainedEditor[i] });
   const plDemo = computeAvatarPlacement({ episode: chainedDemo[i] });
 
@@ -200,20 +206,20 @@ for (let i = 0; i < 25; i++) {
   assert.equal(chainedEditor[i].participants[0].delaySeconds, chainedDemo[i].participants[0].delaySeconds);
   assert.equal(chainedEditor[i].participants[1].delaySeconds, chainedDemo[i].participants[1].delaySeconds);
 }
-console.log('✓ 100% совпадение 3D-движений Редактора и Демонстрации на всех 25 шагах подтверждено.');
+console.log('✓ 100% совпадение 3D-движений Редактора и Демонстрации на всех 22 шагах подтверждено.');
 
 // 3.1 Проверка, что редактирование дистанции, углов и конечного положения в редакторе применяется и сохраняется в БД
 {
-  const edited = toFormEpLike(HEIAN_SHODAN_BUNKAI_18_STEPS[18]);
+  const edited = toFormEpLike(HEIAN_SHODAN_BUNKAI_18_STEPS[15]);
   edited.combatDistance = 1.65;
   edited.isCustomDistance = true;
   edited.ukeEndAngleDeg = -45;
   edited.orientationModeUke = 'mode1_free';
-  const stepPreview = formEpisodeToEngineStep(edited, 18, 25);
-  const dbRows25 = editorFormEps.map((e, i) =>
-    episodeToDbStep(i === 18 ? edited : e, i, new Map(), false, 25)
+  const stepPreview = formEpisodeToEngineStep(edited, 15, 22);
+  const dbRows22 = editorFormEps.map((e, i) =>
+    episodeToDbStep(i === 15 ? edited : e, i, new Map(), false, 22)
   );
-  const stepDemo = buildStepsFromDb(dbRows25)[18];
+  const stepDemo = buildStepsFromDb(dbRows22)[15];
   const pPrev = computeAvatarPlacement({ episode: stepPreview });
   const pDemo = computeAvatarPlacement({ episode: stepDemo });
   assert.ok(Math.abs(pPrev.finalDist - 1.65) < 0.02, 'Пользовательская дистанция должна применяться в предпросмотре');
@@ -221,10 +227,10 @@ console.log('✓ 100% совпадение 3D-движений Редактор�
   assert.ok(Math.abs(pPrev.rotUke1[1] - (-Math.PI / 4)) < 0.01, 'Пользовательский угол поворота Укэ должен применяться без перезаписи');
   assert.deepEqual(pPrev.rotUke1, pDemo.rotUke1, 'Угол поворота должен совпадать между Редактором и Демонстрацией');
 
-  const withCustomXZ = toFormEpLike(HEIAN_SHODAN_BUNKAI_18_STEPS[18]);
+  const withCustomXZ = toFormEpLike(HEIAN_SHODAN_BUNKAI_18_STEPS[15]);
   withCustomXZ.customUkePosX = -0.85;
   withCustomXZ.customUkePosZ = 0.25;
-  const pXZ = computeAvatarPlacement({ episode: formEpisodeToEngineStep(withCustomXZ, 18, 25) });
+  const pXZ = computeAvatarPlacement({ episode: formEpisodeToEngineStep(withCustomXZ, 15, 22) });
   assert.ok(Math.abs(pXZ.endPosUke1[0] - (-0.85)) < 0.01 && Math.abs(pXZ.endPosUke1[2] - 0.25) < 0.01, 'Конечное положение X/Z должно применяться напрямую');
   console.log('✓ Переопределение дистанции, углов поворота и конечного положения X/Z в редакторе подтверждено.');
 }

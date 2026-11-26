@@ -1,5 +1,5 @@
-require('dotenv').config();
 const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const { pathToFileURL } = require('url');
 const { poolPromise, sql } = require('../src/config/database');
 
@@ -91,7 +91,7 @@ async function seedBunkaiHeianShodan() {
       for (const p of step.participants) {
         const cn = p.clipName;
         if (cn && !clipsMap.has(cn)) {
-          const cat = cn.includes('dachi') || cn.includes('stance') || cn.includes('shizentai')
+          const cat = cn.includes('dachi') || cn.includes('stance') || cn.includes('shizentai') || cn.includes('rei')
             ? 'stance'
             : cn.includes('uke') || cn.includes('barai')
             ? 'block'
@@ -132,6 +132,7 @@ async function seedBunkaiHeianShodan() {
           interactionType: step.interactionType,
           tContact: step.tContact,
           isGround: Boolean(step.isGround),
+          ukeIsGround: Boolean(step.participants?.find((p) => p.role === 'uke1')?.isGround),
           isRising: Boolean(step.isRising),
           isBow: Boolean(step.isBow),
           backToOpponent: Boolean(step.backToOpponent),

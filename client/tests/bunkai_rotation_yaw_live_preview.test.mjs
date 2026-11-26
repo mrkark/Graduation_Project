@@ -52,7 +52,7 @@ const testAngles = [
 
 testAngles.forEach(({ tori, uke }) => {
   const p = computeAvatarPlacement({
-    episode: HEIAN_SHODAN_BUNKAI_18_STEPS[2],
+    episode: HEIAN_SHODAN_BUNKAI_18_STEPS[0],
     customToriYawDeg: tori,
     customUkeYawDeg: uke,
   });

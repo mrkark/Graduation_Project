@@ -11,6 +11,7 @@ import {
   makeClipInPlace,
   patchAgeUkeClip,
   hasRootDisplacement,
+  synthesizeReiBowClip,
 } from './modularAnimationEngine.js';
 import { generateUnsuJump360Clip } from './customMotionManager.js';
 import { resolveComposedClip } from './kataCompositionEngine.js';
@@ -136,6 +137,11 @@ export const ACTION_ALIASES = {
   // Стойки (Дати)
   ready: 'idle_shizentai',
   shizentai: 'idle_shizentai',
+  rei_bow: 'rei_bow',
+  bow_rei: 'rei_bow',
+  rei: 'rei_bow',
+  musubi: 'stance_musubi',
+  stance_musubi: 'stance_musubi',
   zenkutsu: 'zenkutsu_dachi_left',
   kokutsu: 'kokutsu_dachi_left',
   heiko: 'heiko_dachi',
@@ -596,6 +602,28 @@ export default function KaratekaLowpolyModel({
           globalClipCache.set(clip.name, patched);
         }
       });
+      // В Мусуби-дати руки опущены вдоль корпуса (как в Хэйко-дати)
+      if (globalClipCache.has('stance_musubi') && globalClipCache.has('heiko_dachi')) {
+        globalClipCache.set(
+          'stance_musubi',
+          synthesizeModularClip({
+            lowerClip: globalClipCache.get('stance_musubi'),
+            upperClip: globalClipCache.get('heiko_dachi'),
+            name: 'stance_musubi',
+            bypassCache: true,
+          })
+        );
+      }
+      // Единый клип поклона Рэй (Хэйко -> Мусуби -> Поклон -> Хэйко)
+      if (globalClipCache.has('heiko_dachi') && globalClipCache.has('stance_musubi')) {
+        const reiBowClip = synthesizeReiBowClip({
+          heikoClip: globalClipCache.get('heiko_dachi'),
+          musubiClip: globalClipCache.get('stance_musubi'),
+          duration: 3.8,
+          name: 'rei_bow',
+        });
+        if (reiBowClip) globalClipCache.set('rei_bow', reiBowClip);
+      }
       // Привязываем канонические алиасы (например heian_shodan -> heian_shodan_preview)
       Object.entries(ACTION_ALIASES).forEach(([aliasKey, targetName]) => {
         if (aliasKey !== 'shuto_uke' && globalClipCache.has(targetName)) {
@@ -808,6 +836,15 @@ export default function KaratekaLowpolyModel({
       globalClipCache.get('heian_shodan_preview') ||
       globalClipCache.get('heian_shodan');
 
+    const isBowStep = Boolean(
+      currentStep?.isYoi ||
+      currentStep?.isYoiStart ||
+      currentStep?.isYoiEnd ||
+      currentStep?.clipName === 'rei_bow' ||
+      stepClip === 'rei_bow' ||
+      activeClip === 'rei_bow'
+    );
+
     if (kataExecutionMode === 'composed') {
       // 1. Полноценная клиповая анимация ката (библиотека 213 техник Шотокан v4 + отдельные клипы перемещений шагов)
       const stepIdx = currentStep?.stepIndex !== undefined
@@ -817,6 +854,7 @@ export default function KaratekaLowpolyModel({
           : (currentStep?.moveNumber !== undefined ? currentStep.moveNumber : null));
 
       const candidateNames = [
+        isBowStep ? 'rei_bow' : null,
         currentStep?.stepClipName,
         currentStep?.kataStepClip,
         stepClip,
@@ -859,12 +897,14 @@ export default function KaratekaLowpolyModel({
         rawClip = resolveClip(stanceClipName) || globalClipCache.get(stanceClipName);
       }
       if (rawClip) {
-        const isStepMovement = hasRootDisplacement(rawClip) || (rawClip.name && rawClip.name.includes('_step_'));
+        const isStepMovement = !isBowStep && (hasRootDisplacement(rawClip) || (rawClip.name && rawClip.name.includes('_step_')));
         targetClip = isStepMovement ? patchAgeUkeClip(rawClip) : makeClipInPlace(rawClip);
       }
     } else if (kataExecutionMode === 'full' && rawMaster && !kataTimeRange) {
       // Монолитная мастер-анимация ката
       targetClip = rawMaster;
+    } else if (isBowStep && (resolveClip('rei_bow') || globalClipCache.get('rei_bow'))) {
+      targetClip = makeClipInPlace(resolveClip('rei_bow') || globalClipCache.get('rei_bow'));
     } else if (rawMaster && currentStep && (currentStep.mocapStartTime !== undefined || currentStep.startTime !== undefined)) {
       // Канонический клиповый шаг ката с естественными переходами из стойки в стойку (MoCap нарезка)
       const sTime = currentStep.mocapStartTime !== undefined ? currentStep.mocapStartTime : currentStep.startTime;
@@ -1061,10 +1101,17 @@ export default function KaratekaLowpolyModel({
     }
     // Позиционирование и ориентация модели на татами
     if (groupRef.current && kataMode) {
-      if (kataExecutionMode === 'composed') {
-        const action = currentActionRef.current;
-        const clip = action ? action.getClip() : null;
-        const isStepMovement = clip && (hasRootDisplacement(clip) || (clip.name && clip.name.includes('_step_')));
+      const action = currentActionRef.current;
+      const clip = action ? action.getClip() : null;
+      const isBowFrame = Boolean(
+        clip?.name === 'rei_bow' ||
+        currentStep?.clipName === 'rei_bow' ||
+        currentStep?.isYoi ||
+        currentStep?.isYoiStart ||
+        currentStep?.isYoiEnd
+      );
+      if (kataExecutionMode === 'composed' || (isBowFrame && kataExecutionMode !== 'full')) {
+        const isStepMovement = !isBowFrame && clip && (hasRootDisplacement(clip) || (clip.name && clip.name.includes('_step_')));
 
         if (isStepMovement) {
           // Отдельный клип перемещения уже содержит естественную мировую траекторию эмбусэн и перемещение таза (как в GLB)
@@ -1079,12 +1126,13 @@ export default function KaratekaLowpolyModel({
             }
           }
 
-          // Фазово-синхронизированная весовая кривая (анти-скольжение стоп):
-          // 0.00 .. 0.15: Подготовка / опорная нога зафиксирована на татами (0% смещения)
-          // 0.15 .. 0.75: Перемещение шагающей ноги и перенос веса тела (кубический Hermite / Smoothstep)
-          // 0.75 .. 1.00: Акцент удара / блока (кимэ) и жесткая фиксация конечной стойки (100% смещения)
+          // Для завершения формы (isYoiEnd) возврат в исходную точку [0,0,0] и угол 0° выполняется
+          // в фазе [0.00..0.24], до начала наклона поклона Рэй (0.30).
           let s = 0;
-          if (p <= 0.15) {
+          if (isBowFrame) {
+            const u = Math.min(1, p / 0.24);
+            s = u * u * (3 - 2 * u);
+          } else if (p <= 0.15) {
             s = 0;
           } else if (p >= 0.75) {
             s = 1;
@@ -1103,7 +1151,9 @@ export default function KaratekaLowpolyModel({
           let currentYaw = targetYaw;
           if (Math.abs(targetYaw - startYaw) > 0.01) {
             let rProgress = 0;
-            if (p <= 0.15) {
+            if (isBowFrame) {
+              rProgress = s;
+            } else if (p <= 0.15) {
               rProgress = 0;
             } else if (p >= 0.75) {
               rProgress = 1;
@@ -1120,7 +1170,7 @@ export default function KaratekaLowpolyModel({
           let x, y, z;
           const isZeroStepDisp = Math.abs(endPos[0] - startPos[0]) < 0.005 && Math.abs(endPos[2] - startPos[2]) < 0.005;
 
-          if (isZeroStepDisp) {
+          if (isZeroStepDisp && !isBowFrame) {
             // КРИТИЧЕСКОЕ ТРЕБОВАНИЕ: модель должна делать полное движение, даже если конечное
             // положение совпадает с начальным (удары на месте, блоки на месте, маэ-гэри с возвратом назад).
             const techName = String(clip?.name || currentStep?.technique || currentStep?.name || '').toLowerCase();

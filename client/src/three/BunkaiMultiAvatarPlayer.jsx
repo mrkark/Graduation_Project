@@ -1,7 +1,7 @@
 import {
   Trophy, Swords, MapPin, Target, Shield, AlertTriangle,
   Ruler, Compass, CheckCircle2, RotateCcw, Play, Pause,
-  ChevronLeft, ChevronRight, Zap, Eye, Footprints, Sliders
+  ChevronLeft, ChevronRight, Zap, Eye, Footprints, Sliders, ListOrdered
 } from 'lucide-react';
 import React, { useState, useRef, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
@@ -42,6 +42,7 @@ export const BUNKAI_ATTACK_STRIKES = [
   { value: 'hook', label: 'Хук / Боковой с размаха' },
   { value: 'ren_zuki', label: 'Рэн-цуки (Двойка кулаками)' },
   { value: 'sanbon_zuki', label: 'Санбон-цуки (Тройной пробивающий)' },
+  { value: 'rei_bow', label: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)' },
 ];
 
 export const BUNKAI_DEFENSE_BLOCKS = [
@@ -59,6 +60,7 @@ export const BUNKAI_DEFENSE_BLOCKS = [
   { value: 'uraken_uchi', label: 'Контрудар Уракэн-учи (Бэкфист)' },
   { value: 'deashi_harai', label: 'Дэаси-харай (Сметающая подсечка)' },
   { value: 'ippon_seoi_nage', label: 'Иппон Сэои-нагэ (Бросок через плечо)' },
+  { value: 'rei_bow', label: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)' },
 ];
 
 // Физические границы Додзё в симуляции бункай
@@ -344,7 +346,7 @@ export default function BunkaiMultiAvatarPlayer({
     showFootVectors: false,
     showAttackLine: false,
     showDistanceLine: false,
-    showContactPoint: true,
+    showContactPoint: false,
     showSafeBoundaries: false,
   });
 
@@ -1146,23 +1148,56 @@ export default function BunkaiMultiAvatarPlayer({
                 <><Play size={13} fill="currentColor" /> Воспроизведение</>
               )}
             </button>
-            <button
-              className="btn"
-              style={{
-                borderColor: '#475569',
-                background: 'rgba(255, 255, 255, 0.08)',
-                color: '#f8fafc',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-              onClick={handlePlayEntireBunkai}
-              title="Запустить непрерывное воспроизведение всего бункая"
-            >
-              <Swords size={14} color="#f8fafc" />
-              Во весь бункай
-            </button>
+            {/* Режимы демонстрации: Пошагово / Цельно (Весь бункай) */}
+            <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,0.3)', padding: 3, borderRadius: 6 }}>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setAutoAdvance(false);
+                  setScrubProgress(null);
+                  setStepCompleted(false);
+                  zanshinTimerRef.current = 0;
+                  setIsPlaying(true);
+                  setReplayNonce((n) => n + 1);
+                }}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '0.8rem',
+                  border: !autoAdvance ? '1px solid var(--gold, #c29f55)' : '1px solid transparent',
+                  background: !autoAdvance ? 'rgba(194, 159, 85, 0.2)' : 'transparent',
+                  color: !autoAdvance ? 'var(--gold-soft, #d4b778)' : '#a0a0a0',
+                  fontWeight: !autoAdvance ? 700 : 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                title="Пошаговая демонстрация (по одному шагу)"
+              >
+                <ListOrdered size={13} />
+                Пошагово
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handlePlayEntireBunkai}
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '0.8rem',
+                  border: autoAdvance ? '1px solid #68d391' : '1px solid transparent',
+                  background: autoAdvance ? 'rgba(104, 211, 145, 0.2)' : 'transparent',
+                  color: autoAdvance ? '#68d391' : '#a0a0a0',
+                  fontWeight: autoAdvance ? 700 : 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                title="Цельная демонстрация всего бункая"
+              >
+                <Swords size={13} />
+                Весь бункай
+              </button>
+            </div>
             <button
               className="btn"
               onClick={handleReplayStep}
@@ -1233,26 +1268,11 @@ export default function BunkaiMultiAvatarPlayer({
             <button className="btn btn-subtle" onClick={resetCamera} style={{ border: '1px solid #475569', color: '#f8fafc' }}>
               Сброс камеры
             </button>
-            <button
-              className="btn btn-subtle"
-              onClick={() => handleVisualAidToggle('showCoordinateSystem', !visualAidSettings.showCoordinateSystem)}
-              style={{
-                border: visualAidSettings.showCoordinateSystem ? '1px solid #38bdf8' : '1px solid #475569',
-                color: visualAidSettings.showCoordinateSystem ? '#38bdf8' : '#94a3b8',
-                background: visualAidSettings.showCoordinateSystem ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-              title="Показать / скрыть оси координат X/Y/Z"
-            >
-              🧭 Оси
-            </button>
           </div>
 
           {/* Скорость воспроизведения */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            {[0.5, 1.0, 1.5].map((s) => {
+            {[0.5, 1.0, 1.5, 2.0].map((s) => {
               const isActive = speed === s;
               return (
                 <button

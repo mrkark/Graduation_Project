@@ -404,111 +404,35 @@ export function validateBunkaiBiomechanics({
  * 1 — Тори (синий, атакующий), 2 — Укэ (белый, защищающийся).
  */
 export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
-  // 1 (Исх. шаг 1): Начало комплекса — Хэйко-дати
+  // 1 (Объединены шаги 1–4): Хэйко-дати → Мусуби-дати → Поклон Рэй → Хэйко-дати
   {
     stepNumber: 1,
-    title: 'Шаг 1: Хэйко-дати (Исх. шаг 1)',
-    description: '1 (Тори): Хэйко-дати (стойка готовности). 2 (Укэ): Хэйко-дати (стойка готовности).',
-    notes: 'Исходная стойка готовности (2.00м, То-ма) · Кимэ: стойка',
+    title: 'Шаг 1: Начальный поклон Рэй (Хэйко-дати → Мусуби-дати → Рэй → Хэйко-дати)',
+    description: '1 (Тори): Из Хэйко-дати сведение пяток в Мусуби-дати, поклон Рэй 30° и возврат в Хэйко-дати (Сидзэнтай). 2 (Укэ): Синхронное приветствие и поклон Рэй.',
+    notes: 'Полный ритуал приветствия в 1 клипе: Хэйко-дати → Мусуби-дати → Поклон 30° → Хэйко-дати (2.00м, То-ма) · Кимэ: стойка готовности',
     optimalDistance: 2.00,
     attackAngleDeg: 0,
     contactType: 'none',
     interactionType: 'distance_only',
     tContact: 0.50,
-    duration: 1.2,
+    duration: 3.8,
     toriActionType: 'stance',
     ukeActionType: 'stance',
-    scenarioAngles: { label: 'Осевая линия 0° · 2.00м (То-ма)', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    scenarioAngles: { label: 'Поклон Рэй · 2.00м (То-ма)', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
     toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
     ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
     displacementTori: [0, 0, 0],
     displacementUke: [0, 0, 0],
     participants: [
-      { role: 'tori', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'tori', clipName: 'rei_bow', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'rei_bow', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 2 (Исх. шаг 2.1): Переход в стойку Мусуби-дати
+  // 2 (Исх. шаг 4): Вход в боевые стойки (Ма-ай) — Синхронное сближение
   {
     stepNumber: 2,
-    title: 'Шаг 2: Переход в стойку Мусуби-дати (Исх. шаг 2.1)',
-    description: '1 (Тори): Сведение пяток в Мусуби-дати. 2 (Укэ): Сведение пяток в Мусуби-дати.',
-    notes: 'Подготовка к начальному поклону (2.00м, То-ма) · Кимэ: стойка',
-    optimalDistance: 2.00,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    tContact: 0.50,
-    duration: 1.2,
-    toriActionType: 'stance',
-    ukeActionType: 'stance',
-    scenarioAngles: { label: 'Мусуби-дати · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
-    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
-    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 3 (Исх. шаг 2.2): Начальный поклон (Рэй)
-  {
-    stepNumber: 3,
-    title: 'Шаг 3: Начальный поклон Рэй (Исх. шаг 2.2)',
-    description: '1 (Тори): Наклон корпуса 30° вперёд и возврат в Мусуби-дати. 2 (Укэ): Синхронный поклон Рэй 30°.',
-    notes: 'Ритуальное приветствие перед боем (2.00м, То-ма) · Кимэ: стойка',
-    optimalDistance: 2.00,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    isBow: true,
-    tContact: 0.50,
-    duration: 1.8,
-    toriActionType: 'stance',
-    ukeActionType: 'stance',
-    scenarioAngles: { label: 'Поклон Рэй · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
-    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
-    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 4 (Исх. шаг 3): Возврат в Хэйко-дати (Сидзэнтай)
-  {
-    stepNumber: 4,
-    title: 'Шаг 4: Стойка готовности Хэйко-дати (Исх. шаг 3)',
-    description: '1 (Тори): Переход в Хэйко-дати (Сидзэнтай). 2 (Укэ): Переход в Хэйко-дати (Сидзэнтай).',
-    notes: 'Стойка готовности перед началом схватки (2.00м, То-ма) · Кимэ: стойка',
-    optimalDistance: 2.00,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    tContact: 0.50,
-    duration: 1.4,
-    toriActionType: 'stance',
-    ukeActionType: 'stance',
-    scenarioAngles: { label: 'Хэйко-дати · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
-    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
-    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 5 (Исх. шаг 4): Вход в боевые стойки (Ма-ай) — Синхронное сближение
-  {
-    stepNumber: 5,
-    title: 'Шаг 5: Вход в боевые стойки (Ма-ай) (Исх. шаг 4)',
+    title: 'Шаг 2: Вход в боевые стойки (Ма-ай) (Исх. шаг 4)',
     description: '1 (Тори): Шаг левой ногой вперёд в Хидари дзэнкуцу-дати (+0.70м по Z). 2 (Укэ): Шаг левой ногой назад в Миги дзэнкуцу-дати (камаэ, +0.20м).',
     notes: 'Синхронное сближение на дистанцию удара ногой (1.50м Иссоку-итто) · Кимэ: стойка',
     optimalDistance: 1.50,
@@ -530,10 +454,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 6 (Исх. шаг 5.1): Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай
+  // 3 (Исх. шаг 5.1): Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай
   {
-    stepNumber: 6,
-    title: 'Шаг 6: Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай (Исх. шаг 5.1)',
+    stepNumber: 3,
+    title: 'Шаг 3: Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай (Исх. шаг 5.1)',
     description: '1 (Тори): Маэ-гэри правой (Тюдан) с приходом вперёд в Миги дзэнкуцу-дати (+0.60м). 2 (Укэ): Гэдан-барай левой с уходом вправо +35° (юри-аси) в Хидари дзэнкуцу-дати.',
     notes: 'Уход челноком (юри-аси) · Предплечье левой руки Укэ сбивает голень правой ноги Тори (1.05м) · Кимэ: блок и стойка',
     optimalDistance: 1.05,
@@ -555,10 +479,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 7 (Исх. шаг 5.2): Контрудар Гяку-дзуки в корпус
+  // 4 (Исх. шаг 5.2): Контрудар Гяку-дзуки в корпус
   {
-    stepNumber: 7,
-    title: 'Шаг 7: Контрудар Гяку-дзуки в корпус (Исх. шаг 5.2)',
+    stepNumber: 4,
+    title: 'Шаг 4: Контрудар Гяку-дзуки в корпус (Исх. шаг 5.2)',
     description: '1 (Тори): Фиксация Миги дзэнкуцу-дати после выпада (стационарно). 2 (Укэ): Гяку-дзуки правой в корпус (Тюдан) под углом +35° с подачей таза вперёд.',
     notes: 'Реверсивная атака с фланга · Правый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
     optimalDistance: 0.76,
@@ -580,10 +504,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 8 (Исх. шаг 6.1): Маэ-гэри под 12.5° vs возврат на ось
+  // 5 (Исх. шаг 6.1): Маэ-гэри под 12.5° vs возврат на ось
   {
-    stepNumber: 8,
-    title: 'Шаг 8: Маэ-гэри под 12.5° vs возврат на ось (Исх. шаг 6.1)',
+    stepNumber: 5,
+    title: 'Шаг 5: Маэ-гэри под 12.5° vs возврат на ось (Исх. шаг 6.1)',
     description: '1 (Тори): Маэ-гэри левой (Тюдан) с доворотом +12.5° и приходом вперёд в Хидари дзэнкуцу-дати. 2 (Укэ): Шаг левой назад на ось X=0.00м в Миги дзэнкуцу-дати и Гэдан-барай правой.',
     notes: 'Смена направления атаки (+12.5°) и Гэдан-барай · Предплечье правой руки Укэ сбивает голень левой ноги Тори (1.05м)',
     optimalDistance: 1.05,
@@ -605,10 +529,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 9 (Исх. шаг 6.3): Контрудар Тэтцуи (рука-молот) (шаг с Хайван-укэ убран)
+  // 6 (Исх. шаг 6.3): Контрудар Тэтцуи (рука-молот) (шаг с Хайван-укэ убран)
   {
-    stepNumber: 9,
-    title: 'Шаг 9: Контрудар Тэтцуи (рука-молот) (Исх. шаг 6.3)',
+    stepNumber: 6,
+    title: 'Шаг 6: Контрудар Тэтцуи (рука-молот) (Исх. шаг 6.3)',
     description: '1 (Тори): Удержание Хидари дзэнкуцу-дати (стационарно). 2 (Укэ): Контрудар Тэтцуи-учи правой в голову (Дзёдан) в Миги дзэнкуцу-дати.',
     notes: 'Основание правого кулака Укэ в область виска/ключицы Тори (контакт 0.62м) · Кимэ: фиксация удара',
     optimalDistance: 0.62,
@@ -630,10 +554,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 10 (Исх. шаг 6.4): Добивающий Гяку-дзуки левой
+  // 7 (Исх. шаг 6.4): Добивающий Гяку-дзуки левой
   {
-    stepNumber: 10,
-    title: 'Шаг 10: Добивающий Гяку-дзуки левой (Исх. шаг 6.4)',
+    stepNumber: 7,
+    title: 'Шаг 7: Добивающий Гяку-дзуки левой (Исх. шаг 6.4)',
     description: '1 (Тори): Удержание Хидари дзэнкуцу-дати (стационарно). 2 (Укэ): Гяку-дзуки левой в корпус (Тюдан) с разворотом бёдер (коши).',
     notes: 'Завершение серии Укэ · Левый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
     optimalDistance: 0.76,
@@ -655,10 +579,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 11 (Исх. шаг 7.1): Отход/докручивание угла правой ногой, оставаясь в Хидари дзэнкуцу-дати
+  // 8 (Исх. шаг 7.1): Отход/докручивание угла правой ногой, оставаясь в Хидари дзэнкуцу-дати
   {
-    stepNumber: 11,
-    title: 'Шаг 11: Докручивание угла правой ногой в Хидари дзэнкуцу (Исх. шаг 7.1)',
+    stepNumber: 8,
+    title: 'Шаг 8: Докручивание угла правой ногой в Хидари дзэнкуцу (Исх. шаг 7.1)',
     description: '1 (Тори): Правой ногой подшаг назад и доворот угла на ось атаки, оставаясь в Хидари дзэнкуцу-дати. 2 (Укэ): Боевой контроль в Миги дзэнкуцу-дати.',
     notes: 'Сохранение Хидари дзэнкуцу-дати (левая впереди, правая докручивает угол) перед ударом Миги маэ-гэри (1.15м)',
     optimalDistance: 1.15,
@@ -680,10 +604,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 12 (Исх. шаг 7.2): Атака Миги Маэ-гэри (правой ногой) — Отход Укэ и блок Гэдан-барай
+  // 9 (Исх. шаг 7.2): Атака Миги Маэ-гэри (правой ногой) — Отход Укэ и блок Гэдан-барай
   {
-    stepNumber: 12,
-    title: 'Шаг 12: Атака Миги Маэ-гэри (правой ногой) (Исх. шаг 7.2)',
+    stepNumber: 9,
+    title: 'Шаг 9: Атака Миги Маэ-гэри (правой ногой) (Исх. шаг 7.2)',
     description: '1 (Тори): Маэ-гэри правой (Миги Маэ-гэри, Тюдан) из Хидари дзэнкуцу-дати с возвратом ноги назад в Хидари дзэнкуцу-дати. 2 (Укэ): Шаг правой ногой назад в Хидари дзэнкуцу-дати и Гэдан-барай левой.',
     notes: 'Миги Маэ-гэри и блок Гэдан-барай · Левое предплечье Укэ сбивает голень правой ноги Тори (1.07м) · Кимэ: блок Гэдан-барай',
     optimalDistance: 1.07,
@@ -705,10 +629,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 13 (Исх. шаг 7.3): Выпад Ой-дзуки в голову (Дзёдан) — Встречный блок Агэ-укэ
+  // 10 (Исх. шаг 7.3): Выпад Ой-дзуки в голову (Дзёдан) — Встречный блок Агэ-укэ
   {
-    stepNumber: 13,
-    title: 'Шаг 13: Выпад Ой-дзуки в голову (Дзёдан) (Исх. шаг 7.3)',
+    stepNumber: 10,
+    title: 'Шаг 10: Выпад Ой-дзуки в голову (Дзёдан) (Исх. шаг 7.3)',
     description: '1 (Тори): Шаг правой ногой вперёд с ударом Ой-дзуки в голову (Дзёдан) в Миги дзэнкуцу-дати. 2 (Укэ): Восходящий блок Агэ-укэ левой (Дзёдан) с упором на переднюю ногу.',
     notes: 'Встречный блок Агэ-укэ · Левое предплечье Укэ перехватывает правую руку Тори на уровне головы (0.86м) · Кимэ: верхний блок',
     optimalDistance: 0.86,
@@ -730,10 +654,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 14 (Исх. шаг 7.4): Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Ваки-гатамэ)
+  // 11 (Исх. шаг 7.4): Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Ваки-гатамэ)
   {
-    stepNumber: 14,
-    title: 'Шаг 14: Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Исх. шаг 7.4)',
+    stepNumber: 11,
+    title: 'Шаг 11: Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Исх. шаг 7.4)',
     description: '1 (Тори): Выпрямленная правая рука остаётся вытянутой в захвате Укэ (стационарно). 2 (Укэ): Захват запястья левой + выпад Гяку Агэ-укэ правой точно по локтю/предплечью Тори (Чика-ма 0.65м).',
     notes: 'Захват запястья и рычаг локтя (Ваки-гатамэ, угол 30°) · Прямой контакт правым предплечьем по правой руке Тори (0.65м Чика-ма) · Кимэ: удержание замка',
     optimalDistance: 0.65,
@@ -755,10 +679,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 15 (Исх. шаг 8): Разрыв болевого приёма и выход на боевую дистанцию (без разворота на 180°)
+  // 12 (Исх. шаг 8): Разрыв болевого приёма и выход на боевую дистанцию (без разворота на 180°)
   {
-    stepNumber: 15,
-    title: 'Шаг 15: Выход из болевого и перестроение в Хидари дзэнкуцу (Исх. шаг 8)',
+    stepNumber: 12,
+    title: 'Шаг 12: Выход из болевого и перестроение в Хидари дзэнкуцу (Исх. шаг 8)',
     description: '1 (Тори): Фиксация Миги дзэнкуцу-дати лицом к Укэ (без разворота на 180°). 2 (Укэ): Разрыв замка и отшаг в Хидари дзэнкуцу-дати лицом к Тори.',
     notes: 'Сохранение фронтального направления после болевого приёма и выход на дистанцию Маэ-гэри (1.15м) · Кимэ: стойка',
     optimalDistance: 1.15,
@@ -780,10 +704,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 16 (Исх. шаги 9.1–9.2 объединены): Полный разворот 360° Укэ с Гэдан-барай vs Хидари Маэ-гэри
+  // 13 (Исх. шаги 9.1–9.2 объединены): Полный разворот 360° Укэ с Гэдан-барай vs Хидари Маэ-гэри
   {
-    stepNumber: 16,
-    title: 'Шаг 16: Полный разворот Укэ с Гэдан-барай vs Хидари Маэ-гэри (Исх. шаг 9.1–9.2)',
+    stepNumber: 13,
+    title: 'Шаг 13: Полный разворот Укэ с Гэдан-барай vs Хидари Маэ-гэри (Исх. шаг 9.1–9.2)',
     description: '1 (Тори): Через паузу (после начала разворота Укэ) Хидари Маэ-гэри с возвратом назад в Миги дзэнкуцу-дати (опорная правая стопа плотно на татами). 2 (Укэ): Полный разворот на 360° в Миги дзэнкуцу-дати и Гэдан-барай правой.',
     notes: 'Укэ выполняет полный оборот на 360° и встречает Хидари Маэ-гэри сметным блоком Гэдан-барай (0.95м) · Кимэ: блок и стойка',
     optimalDistance: 0.95,
@@ -807,10 +731,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 17 (Исх. шаг 9.3): Контрудар Укэ Гяку-дзуки левой
+  // 14 (Исх. шаг 9.3): Контрудар Укэ Гяку-дзуки левой
   {
-    stepNumber: 17,
-    title: 'Шаг 17: Контрудар Укэ Гяку-дзуки левой (Исх. шаг 9.3)',
+    stepNumber: 14,
+    title: 'Шаг 14: Контрудар Укэ Гяку-дзуки левой (Исх. шаг 9.3)',
     description: '1 (Тори): Фиксация Миги дзэнкуцу-дати (стационарно). 2 (Укэ): Гяку-дзуки левой в корпус (Тюдан) с дожимом бёдрами вперёд.',
     notes: 'Реверсивный удар в корпус · Левый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
     optimalDistance: 0.76,
@@ -832,10 +756,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 18 (Исх. шаг 10): Отход Тори (руки опущены) и шаг Укэ вперёд в Хидари дзэнкуцу с Гяку-дзуки правой
+  // 15 (Исх. шаг 10): Отход Тори (руки опущены) и шаг Укэ вперёд в Хидари дзэнкуцу с Гяку-дзуки правой
   {
-    stepNumber: 18,
-    title: 'Шаг 18: Отход Тори и шаг Укэ в Хидари дзэнкуцу с Гяку-дзуки (Исх. шаг 10)',
+    stepNumber: 15,
+    title: 'Шаг 15: Отход Тори и шаг Укэ в Хидари дзэнкуцу с Гяку-дзуки (Исх. шаг 10)',
     description: '1 (Тори): Отшаг назад (юри-аси, -0.40м) в Миги дзэнкуцу-дати (руки свободно опущены вдоль корпуса). 2 (Укэ): Шаг левой вперёд в Хидари дзэнкуцу-дати и Гяку-дзуки правой в корпус.',
     notes: 'Преследование отступающего противника с переходом в Хидари дзэнкуцу-дати и ударом правым кулаком Укэ в корпус Тори (0.76м) · Кимэ: фиксация удара',
     optimalDistance: 0.76,
@@ -857,10 +781,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 19 (Исх. шаги 11.1–11.2 объединены): Дзёдан-цки с выпадом vs Уход влево 30° с линии атаки и Сюто-укэ в Миги кокуцу-дати
+  // 16 (Исх. шаги 11.1–11.2 объединены): Дзёдан-цки с выпадом vs Уход влево 30° с линии атаки и Сюто-укэ в Миги кокуцу-дати
   {
-    stepNumber: 19,
-    title: 'Шаг 19: Дзёдан-цки vs Уход влево 30° с линии атаки и Сюто-укэ (Исх. шаг 11)',
+    stepNumber: 16,
+    title: 'Шаг 16: Дзёдан-цки vs Уход влево 30° с линии атаки и Сюто-укэ (Исх. шаг 11)',
     description: '1 (Тори): Скользящий выпад вперёд (+0.40м) и удар правой в голову (Дзёдан-цки на базе Ой-дзуки). 2 (Укэ): Уход с линии атаки влево под углом 30° в Миги кокуцу-дати со сбивающим блоком Сюто-укэ правой.',
     notes: 'Укэ отходит с линии атаки влево под 30° (не заходя за спину), фиксирует Миги кокуцу-дати и блок Сюто-укэ (0.88м) · Кимэ: блок Сюто-укэ',
     optimalDistance: 0.88,
@@ -883,10 +807,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 20 (Исх. шаги 12–13.2 объединены): Шаг вперёд в Хидари кокуцу-дати, Сюто-укэ левой в корпус Тори и падение Тори Укэми
+  // 17 (Исх. шаги 12–13.2 объединены): Шаг вперёд в Хидари кокуцу-дати, Сюто-укэ левой в корпус Тори и падение Тори Укэми
   {
-    stepNumber: 20,
-    title: 'Шаг 20: Шаг в Хидари кокуцу-дати — Сюто-укэ левой в корпус и падение Тори',
+    stepNumber: 17,
+    title: 'Шаг 17: Шаг в Хидари кокуцу-дати — Сюто-укэ левой в корпус и падение Тори',
     description: '1 (Тори): После удара левой рукой Укэ в корпус падает на татами со страховкой Укэми. 2 (Укэ): Шаг вперёд в Хидари кокуцу-дати и удар Сюто-укэ левой рукой по корпусу Тори.',
     notes: 'Контакт левой рукой Укэ по корпусу Тори (tContact=0.36), затем падение Тори на татами (Y=0.08м, 0.65м) · Кимэ: Хидари кокуцу-дати',
     optimalDistance: 0.65,
@@ -909,10 +833,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 21 (Исх. шаг 13.3): Добивающий удар Отоши-дзуки в лежащего Тори (рука остаётся внизу)
+  // 18 (Исх. шаг 13.3): Добивающий удар Отоши-дзуки в лежащего Тори (рука остаётся внизу)
   {
-    stepNumber: 21,
-    title: 'Шаг 21: Добивающий удар Отоши-дзуки в лежащего Тори',
+    stepNumber: 18,
+    title: 'Шаг 18: Добивающий удар Отоши-дзуки в лежащего Тори',
     description: '1 (Тори): Лежит на татами (Укэми). 2 (Укэ): Переход в Сико-дати рядом с грудью лежащего Тори и добивающий удар Отоши-дзуки правой сверху вниз с удержанием руки внизу.',
     notes: 'Вертикальный добивающий удар правым кулаком сверху вниз в грудь лежащего Тори, спина и рука удерживаются внизу в точке кимэ · Кимэ: Сико-дати',
     optimalDistance: 1.08,
@@ -936,10 +860,10 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 22 (Исх. шаг 14/16): Отход и подъём Укэ в Хэйко-дати (Тори остаётся лежать)
+  // 19 (Исх. шаг 14/16): Отход и подъём Укэ в Хэйко-дати (Тори остаётся лежать)
   {
-    stepNumber: 22,
-    title: 'Шаг 22: Отход Укэ и переход в Хэйко-дати (Тори лежит на татами)',
+    stepNumber: 19,
+    title: 'Шаг 19: Отход Укэ и переход в Хэйко-дати (Тори лежит на татами)',
     description: '1 (Тори): Продолжает лежать на татами без движения. 2 (Укэ): Разрыв дистанции, встаёт в стойку Хэйко-дати лицом к завершению.',
     notes: 'После добивания встаёт только Укэ, Тори остаётся лежать на татами · Выход на дистанцию поклона · Кимэ: Хэйко-дати',
     optimalDistance: 1.40,
@@ -963,39 +887,12 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 23: Переход Укэ в стойку Мусуби-дати (Тори лежит на татами)
+  // 20 (Объединены шаги 20–22): Завершающий поклон Укэ (Хэйко-дати → Мусуби-дати → Рэй → Хэйко-дати), Тори лежит на татами
   {
-    stepNumber: 23,
-    title: 'Шаг 23: Переход Укэ в Мусуби-дати (Тори лежит)',
-    description: '1 (Тори): Остаётся лежать на татами. 2 (Укэ): Сведение пяток в Мусуби-дати перед поклоном.',
-    notes: 'Подготовка Укэ к завершающему поклону, Тори остаётся лежать · Кимэ: Мусуби-дати',
-    optimalDistance: 1.40,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    preserveScenarioYaw: true,
-    isGround: true,
-    tContact: 0.50,
-    duration: 1.2,
-    toriActionType: 'hold',
-    ukeActionType: 'stance',
-    scenarioAngles: { label: 'Укэ Мусуби-дати · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
-    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
-    ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
-      { role: 'uke1', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 24: Завершающий поклон (Рэй) делает только Укэ, Тори остаётся лежать
-  {
-    stepNumber: 24,
-    title: 'Шаг 24: Завершающий поклон Укэ (Рэй) — Тори лежит',
-    description: '1 (Тори): Продолжает лежать на татами без поклона. 2 (Укэ): Завершающий поклон 30° в Мусуби-дати.',
-    notes: 'Поклон после победы выполняет только Укэ, Тори продолжает лежать на татами · Кимэ: стойка',
+    stepNumber: 20,
+    title: 'Шаг 20: Завершающий поклон Укэ (Рэй) — Тори лежит',
+    description: '1 (Тори): Продолжает лежать на татами без поклона. 2 (Укэ): Из Хэйко-дати сведение пяток в Мусуби-дати, завершающий поклон Рэй 30° и возврат в Хэйко-дати (Сидзэнтай).',
+    notes: 'Финал комплекса Бункай в 1 клипе: Хэйко-дати → Мусуби-дати → Поклон 30° → Хэйко-дати выполняет только Укэ, Тори лежит на татами · Кимэ: стойка готовности',
     optimalDistance: 1.40,
     attackAngleDeg: 0,
     contactType: 'none',
@@ -1004,44 +901,17 @@ export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
     isGround: true,
     isBow: true,
     tContact: 0.50,
-    duration: 1.8,
+    duration: 3.8,
     toriActionType: 'hold',
     ukeActionType: 'stance',
-    scenarioAngles: { label: 'Поклон Укэ Рэй · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
+    scenarioAngles: { label: 'Завершающий поклон Укэ Рэй · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
     toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
     ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
     displacementTori: [0, 0, 0],
     displacementUke: [0, 0, 0],
     participants: [
       { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
-      { role: 'uke1', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 25: Завершение комплекса — Укэ в Хэйко-дати, Тори лежит
-  {
-    stepNumber: 25,
-    title: 'Шаг 25: Завершение — Укэ в Хэйко-дати (Тори лежит)',
-    description: '1 (Тори): Остаётся лежать на татами. 2 (Укэ): Переход в Хэйко-дати (Сидзэнтай).',
-    notes: 'Финал комплекса Бункай: Укэ в стойке готовности, Тори лежит на татами · Кимэ: стойка',
-    optimalDistance: 1.40,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    preserveScenarioYaw: true,
-    isGround: true,
-    tContact: 0.50,
-    duration: 1.6,
-    toriActionType: 'hold',
-    ukeActionType: 'stance',
-    scenarioAngles: { label: 'Финал: Укэ Хэйко-дати · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
-    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
-    ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
-      { role: 'uke1', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'rei_bow', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
@@ -1301,6 +1171,17 @@ export const BUNKAI_TECHNIQUE_METADATA = {
     defaultDuration: 1.45,
     stepForwardDist: 0.60,
   },
+  rei_bow: {
+    clipName: 'rei_bow',
+    altClips: ['bow_rei', 'rei'],
+    titleRu: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+    role: 'both',
+    type: 'stance',
+    optimalDistance: 2.00,
+    tContact: 0.50,
+    defaultDuration: 3.80,
+    stepForwardDist: 0.0,
+  },
   idle_shizentai: {
     clipName: 'idle_shizentai',
     altClips: ['stance_ready'],
@@ -1498,6 +1379,9 @@ const FIGHT_CLIP_MAP = {
   tech_shuto_uchi_right: 'tech_shuto_uchi_right',
   heiko_dachi: 'heiko_dachi',
   stance_musubi: 'stance_musubi',
+  rei_bow: 'rei_bow',
+  bow_rei: 'rei_bow',
+  rei: 'rei_bow',
   stance_heisoku: 'stance_heisoku',
   stance_shiko: 'stance_shiko',
   mae_geri: 'mae_geri_right',

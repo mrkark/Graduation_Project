@@ -389,6 +389,19 @@ const DEFAULT_CLIP_METADATA = {
   },
 
   // --- БАЗОВЫЕ СТОЙКИ ШОТОКАН ---
+  rei_bow: {
+    clipName: 'rei_bow',
+    titleRu: 'Поклон Рэй (Хэйко → Мусуби → Поклон → Хэйко)',
+    role: 'both',
+    stanceIn: 'heiko_dachi',
+    stanceOut: 'heiko_dachi',
+    interactionType: 'non_contact',
+    optimalDistance: 2.00,
+    tolerance: 1.00,
+    contactWindow: 0,
+    tContact: 0.50,
+    duration: 3.8,
+  },
   idle_shizentai: {
     clipName: 'idle_shizentai',
     titleRu: 'Сидзэнтай (Естественная стойка готовности)',

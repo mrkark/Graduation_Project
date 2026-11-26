@@ -1,63 +1,65 @@
+require('../server/node_modules/dotenv').config({ path: require('path').resolve(__dirname, '../server/.env') });
 const { poolPromise } = require('../server/src/config/database');
 
-// Эталонные видеоролики мастеров JKS (Japan Karate Shoto Federation)
-// Шеф-инструктор Масао Кагава (9 Дан), мастера Асаи, Ямагути, Уэда и сборная JKS
+// Эталонные видеоролики Ката и Бункай Шотокан с официальных японских каналов
+// (全日本空手道連盟 JKF, 日本空手松涛連盟総本部 JKS Headquarters, BUDO JAPAN CHANNEL, kuro-obi world,
+//  松濤空手道飛翔館, JKA-Ueda Dojo, 岡本拳 OkaKen, 大阪谷町58, shotokankaratedo0) и JKS Belarus
 const JKS_KATA_VIDEOS = {
-  1: 'https://www.youtube.com/watch?v=lXjKpXSg4pQ',  // Heian Shodan (Masao Kagawa & Takumi Sugino, JKS)
-  2: 'https://www.youtube.com/watch?v=xE4t0EN53TQ',  // Heian Nidan (Masao Kagawa & Takato Soma, JKS)
-  3: 'https://www.youtube.com/watch?v=WP3WJ1wwh80',  // Heian Sandan (Masao Kagawa & Koji Arimoto, JKS)
-  4: 'https://www.youtube.com/watch?v=s6uwERgsTJY',  // Heian Yondan (Masao Kagawa & Takato Soma, JKS)
-  5: 'https://www.youtube.com/watch?v=_v_raqRVkXs',  // Heian Godan (Masao Kagawa & Koji Arimoto, JKS)
-  6: 'https://www.youtube.com/watch?v=KFKEJb4_qYI',  // Tekki Shodan (Masao Kagawa, JKS)
-  7: 'https://www.youtube.com/watch?v=83n7vjW9KjM',  // Tekki Nidan (Masao Kagawa, JKS)
-  8: 'https://www.youtube.com/watch?v=N4tG8kL9v3a',  // Tekki Sandan (Masao Kagawa, JKS)
-  9: 'https://www.youtube.com/watch?v=a1_W_zM3v4k',  // Bassai Dai (Masao Kagawa, JKS)
-  10: 'https://www.youtube.com/watch?v=8e9h7K4bV2a', // Bassai Sho (Masao Kagawa, JKS)
-  11: 'https://www.youtube.com/watch?v=J3bN4x7kL9m', // Kanku Dai (Masao Kagawa, JKS)
-  12: 'https://www.youtube.com/watch?v=9v8mK3p9jF1', // Kanku Sho (Masao Kagawa, JKS)
-  13: 'https://www.youtube.com/watch?v=m4x7K2p9jF3', // Jion (Masao Kagawa, JKS)
-  14: 'https://www.youtube.com/watch?v=n7mK2p9jF4a', // Jiin (Masao Kagawa, JKS)
-  15: 'https://www.youtube.com/watch?v=w9xK2m7jL4t', // Jitte (Masao Kagawa, JKS)
-  16: 'https://www.youtube.com/watch?v=t7mK3p9jF2a', // Empi (Masao Kagawa, JKS)
-  17: 'https://www.youtube.com/watch?v=k5mP9l2jF3a', // Hangetsu (Masao Kagawa, JKS)
-  18: 'https://www.youtube.com/watch?v=j4Y2v9N1x7Q', // Gankaku (Masao Kagawa, JKS)
-  19: 'https://www.youtube.com/watch?v=9aX2m8K4j1s', // Sochin (Masao Kagawa, JKS)
-  20: 'https://www.youtube.com/watch?v=2vK8m3Y9x1a', // Nijushiho (Masao Kagawa, JKS)
-  21: 'https://www.youtube.com/watch?v=7bN1x9m3Y2k', // Meikyo (Masao Kagawa, JKS)
-  22: 'https://www.youtube.com/watch?v=OztWOFMSNbo', // Unsu (Masao Kagawa / JKS Championship)
-  23: 'https://www.youtube.com/watch?v=3xK9m2Y1a7v', // Wankan (Masao Kagawa, JKS)
-  24: 'https://www.youtube.com/watch?v=8mY1x3K9v2a', // Gojushiho Dai (Masao Kagawa, JKS)
-  25: 'https://www.youtube.com/watch?v=4vK2m9Y1x7a', // Gojushiho Sho (Masao Kagawa, JKS)
-  26: 'https://www.youtube.com/watch?v=6xY9m1K3v7a', // Chinte (Masao Kagawa, JKS)
+  1: 'https://www.youtube.com/watch?v=_TKccmdk-wc',  // Heian Shodan (全日本空手道連盟 JKF 公式チャンネル)
+  2: 'https://www.youtube.com/watch?v=Ol2a-k-jaPQ',  // Heian Nidan (全日本空手道連盟 JKF 公式チャンネル)
+  3: 'https://www.youtube.com/watch?v=6J5aPAWWHZg',  // Heian Sandan (全日本空手道連盟 JKF 公式チャンネル)
+  4: 'https://www.youtube.com/watch?v=JHmsIaJP7RI',  // Heian Yondan (全日本空手道連盟 JKF 公式チャンネル)
+  5: 'https://www.youtube.com/watch?v=h1XeDIABQNc',  // Heian Godan (全日本空手道連盟 JKF 公式チャンネル)
+  6: 'https://www.youtube.com/watch?v=yfAkPxIvY34',  // Tekki Shodan (kuro-obi world)
+  7: 'https://www.youtube.com/watch?v=R21PpYpQTmc',  // Tekki Nidan (shotokankaratedo0 - JKA Shotokan)
+  8: 'https://www.youtube.com/watch?v=gdYEUhGFM8Q',  // Tekki Sandan (shotokankaratedo0 - JKA Shotokan)
+  9: 'https://www.youtube.com/watch?v=Ws6IuLfONYg',  // Bassai Dai (BUDO JAPAN CHANNEL - Масао Кагава, JKS)
+  10: 'https://www.youtube.com/watch?v=eC7d_m8pwyM', // Bassai Sho (JKA-Ueda Dojo-空手道ちゃんねる)
+  11: 'https://www.youtube.com/watch?v=q4CirEcx5bc', // Kanku Dai (全日本空手道連盟 JKF 公式チャンネル)
+  12: 'https://www.youtube.com/watch?v=h5Gg8gXzjpk', // Kanku Sho (全日本空手道連盟 JKF 公式チャンネル)
+  13: 'https://www.youtube.com/watch?v=R_fH5ABmi84', // Jion (全日本空手道連盟 JKF 公式チャンネル)
+  14: 'https://www.youtube.com/watch?v=WoVZeE6Jtnc', // Ji'in (JKS Belarus)
+  15: 'https://www.youtube.com/watch?v=AqkNX7HugT8', // Jitte (kuro-obi world - Кэйсукэ Нэмото, JKA)
+  16: 'https://www.youtube.com/watch?v=6E020F9wPBM', // Empi (全日本空手道連盟 JKF 公式チャンネル)
+  17: 'https://www.youtube.com/watch?v=HuO3Sqyrd_U', // Hangetsu (松濤空手道飛翔館)
+  18: 'https://www.youtube.com/watch?v=3dut0mziO_4', // Gankaku (kuro-obi world)
+  19: 'https://www.youtube.com/watch?v=hEz6LH-uMNw', // Sochin (岡本拳 OkaKen 空手道)
+  20: 'https://www.youtube.com/watch?v=YDSLPJPRfwg', // Nijushiho (大阪谷町58)
+  21: 'https://www.youtube.com/watch?v=HUyLXUagbFs', // Meikyo (JKA-Ueda Dojo-空手道ちゃんねる)
+  22: 'https://www.youtube.com/watch?v=ReiZhF0Reuo', // Unsu (kuro-obi world - JKA World Tournament)
+  23: 'https://www.youtube.com/watch?v=tvAsvziM1LM', // Wankan (Shotokan Karate)
+  24: 'https://www.youtube.com/watch?v=P1jxO5JB-F0', // Gojushiho Dai (岡本拳 OkaKen 空手道)
+  25: 'https://www.youtube.com/watch?v=DZrjy7O_IbU', // Gojushiho Sho (kuro-obi world)
+  26: 'https://www.youtube.com/watch?v=t_iklmO60iA', // Chinte (松濤空手道飛翔館)
 };
 
 const JKS_BUNKAI_VIDEOS = {
-  1: 'https://www.youtube.com/watch?v=7-jOrpcq7hU',
-  2: 'https://www.youtube.com/watch?v=jomn8LmTgmk',
-  3: 'https://www.youtube.com/watch?v=t8O_3-jU-rQ',
-  4: 'https://www.youtube.com/watch?v=dUF5xmozCr4',
-  5: 'https://www.youtube.com/watch?v=t6_UmgtqkMI',
-  6: 'https://www.youtube.com/watch?v=Rh7aHzkrShc',
-  7: 'https://www.youtube.com/watch?v=5zMh9G3y_L4',
-  8: 'https://www.youtube.com/watch?v=nhbyqpKA92E',
-  9: 'https://www.youtube.com/watch?v=AE0MfTUAwfs',
-  10: 'https://www.youtube.com/watch?v=ZfXjGZp1Amo',
-  11: 'https://www.youtube.com/watch?v=bISS0TPpZ0U&t=60s',
-  12: 'https://www.youtube.com/watch?v=p7L9nK2dGfQ',
-  13: 'https://www.youtube.com/watch?v=y3mG8lK2pQo',
-  14: 'https://www.youtube.com/watch?v=m7K2p9jF3tY',
-  15: 'https://www.youtube.com/watch?v=w9xK2m7jL4t',
-  16: 'https://www.youtube.com/watch?v=r3kL9m2pF1j',
-  17: 'https://www.youtube.com/watch?v=h9mK2p7jL1t',
-  18: 'https://www.youtube.com/watch?v=v8mK3p9jF1a&t=120s',
-  19: 'https://www.youtube.com/watch?v=x7mK2p9jF3t',
-  20: 'https://www.youtube.com/watch?v=n7mK2p9jF4a',
-  21: 'https://www.youtube.com/watch?v=m8kL2p9jF1a',
-  22: 'https://www.youtube.com/watch?v=OztWOFMSNbo&t=160s',
-  23: 'https://www.youtube.com/watch?v=w8mK2p9jF2t',
-  24: 'https://www.youtube.com/watch?v=g8mK2p9jF3a&t=140s',
-  25: 'https://www.youtube.com/watch?v=s8mK2p9jF4t',
-  26: 'https://www.youtube.com/watch?v=c8mK2p9jF5a',
+  1: 'https://www.youtube.com/watch?v=9vaFywYXYmA',  // Bunkai Heian Shodan (松濤空手道飛翔館)
+  2: 'https://www.youtube.com/watch?v=gUc_Uebelz4',  // Bunkai Heian Nidan (松濤空手道飛翔館)
+  3: 'https://www.youtube.com/watch?v=42KNm3B-zeo',  // Bunkai Heian Sandan (松濤空手道飛翔館)
+  4: 'https://www.youtube.com/watch?v=jobj555Wc9E',  // Bunkai Heian Yondan (松濤空手道飛翔館)
+  5: 'https://www.youtube.com/watch?v=E0uHPbI7f3M',  // Bunkai Heian Godan (松濤空手道飛翔館)
+  6: 'https://www.youtube.com/watch?v=0Cq93gZI7tI',  // Bunkai Tekki Shodan (JKS Belarus)
+  7: 'https://www.youtube.com/watch?v=F1h4SElvMSA',  // Bunkai Tekki Nidan (JKS Belarus)
+  8: 'https://www.youtube.com/watch?v=GknSP0SOcyE',  // Bunkai Tekki Sandan (JKS Belarus)
+  9: 'https://www.youtube.com/watch?v=ObxoS71MuIo',  // Bunkai Bassai Dai (松濤空手道飛翔館)
+  10: 'https://www.youtube.com/watch?v=iz5J6m9Q5Vs', // Bunkai Bassai Sho (大阪谷町58)
+  11: 'https://www.youtube.com/watch?v=SbXaiyWvmHY', // Bunkai Kanku Dai (日本空手松涛連盟総本部 JKS Headquarters)
+  12: 'https://www.youtube.com/watch?v=01Z_vtsQuk0', // Bunkai Kanku Sho (能登島道場)
+  13: 'https://www.youtube.com/watch?v=L2Sc5nURwh4', // Bunkai Jion (全日本空手道連盟 JKF 公式チャンネル)
+  14: 'https://www.youtube.com/watch?v=nxAaJSViiQc', // Bunkai Ji'in (Karate_GK 空手義気)
+  15: 'https://www.youtube.com/watch?v=_N3VLgs4l64', // Bunkai Jitte (JKA-Ueda Dojo-空手道ちゃんねる)
+  16: 'https://www.youtube.com/watch?v=_-SeAxvVU6Y', // Bunkai Empi (瀬茂内の空手と筋トレ倶楽部)
+  17: 'https://www.youtube.com/watch?v=AxvwVaUtxIY', // Bunkai Hangetsu (tsuruhimeja - Кадзуаки Курихара)
+  18: 'https://www.youtube.com/watch?v=o0sK_azlzXU', // Bunkai Gankaku (BUDO JAPAN CHANNEL)
+  19: 'https://www.youtube.com/watch?v=CvoZBCQO5F8', // Bunkai Sochin (kuro-obi world - Кадзуаки Курихара)
+  20: 'https://www.youtube.com/watch?v=KaOZK00j940', // Bunkai Nijushiho (BUDO JAPAN CHANNEL - Масао Кагава, JKS)
+  21: 'https://www.youtube.com/watch?v=YVTR5z1RIlA', // Bunkai Meikyo (日本空手松涛連盟総本部 JKS Headquarters)
+  22: 'https://www.youtube.com/watch?v=ZFHX0OmjynI', // Bunkai Unsu (BUDO JAPAN CHANNEL - Масао Кагава, JKS)
+  23: 'https://www.youtube.com/watch?v=tvAsvziM1LM', // Bunkai Wankan (Shotokan Karate)
+  24: 'https://www.youtube.com/watch?v=8V9bebLkAOM', // Bunkai Gojushiho Dai (Sakugawa Sanchin)
+  25: 'https://www.youtube.com/watch?v=tVO8oAMYqcI', // Bunkai Gojushiho Sho (kuro-obi world)
+  26: 'https://www.youtube.com/watch?v=4IrHtVXugHs', // Bunkai Chinte (松濤空手道飛翔館)
 };
 
 async function updateToJKSVideos() {

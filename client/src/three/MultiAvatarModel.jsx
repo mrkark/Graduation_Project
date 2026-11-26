@@ -17,6 +17,7 @@ import {
   adaptKickClipToStance,
   synthesizeJodanOiZukiClip,
   synthesizeHoldExtendedPunchClip,
+  synthesizeReiBowClip,
 } from './modularAnimationEngine.js';
 
 /**
@@ -116,6 +117,9 @@ const ACTION_ALIASES = {
   stance_kosa_right: 'stance_kosa_right',
   stance_musubi: 'stance_musubi',
   musubi: 'stance_musubi',
+  rei_bow: 'rei_bow',
+  bow_rei: 'rei_bow',
+  rei: 'rei_bow',
   stance_heisoku: 'stance_heisoku',
   heisoku: 'stance_heisoku',
 
@@ -469,6 +473,15 @@ export default function MultiAvatarModel({
             bypassCache: true,
           })
         );
+      }
+      if (globalClipCache.has('heiko_dachi') && globalClipCache.has('stance_musubi')) {
+        const reiBowClip = synthesizeReiBowClip({
+          heikoClip: globalClipCache.get('heiko_dachi'),
+          musubiClip: globalClipCache.get('stance_musubi'),
+          duration: 3.8,
+          name: 'rei_bow',
+        });
+        if (reiBowClip) globalClipCache.set('rei_bow', reiBowClip);
       }
       Object.entries(ACTION_ALIASES).forEach(([k, v]) => {
         if (!globalClipCache.has(k) && globalClipCache.has(v)) {
@@ -1450,7 +1463,7 @@ export default function MultiAvatarModel({
         );
 
         const isClipFinished = activeActionRef.current.time >= (holdEndTime - 0.005);
-        const alreadyInTargetLowerStance = curClipName.startsWith('mod_tech_tr_') || curClipName.startsWith('mod_sweep_') || curClipName.startsWith('mod_kick_') || curClipName.startsWith('mod_tr_') || curClipName.startsWith('mod_step_') || curClipName.startsWith('mod_hold_punch_');
+        const alreadyInTargetLowerStance = curClipName === 'rei_bow' || curClipName.startsWith('mod_tech_tr_') || curClipName.startsWith('mod_sweep_') || curClipName.startsWith('mod_kick_') || curClipName.startsWith('mod_tr_') || curClipName.startsWith('mod_step_') || curClipName.startsWith('mod_hold_punch_');
         const needsStanceOverride = !alreadyInTargetLowerStance && (
           finalStance === 'stance_heisoku' ||
           finalStance === 'stance_shiko' ||
@@ -1469,7 +1482,7 @@ export default function MultiAvatarModel({
           mixer.update(delta);
         } else {
           activeActionRef.current.paused = false;
-          const speedMultiplier = (isDefender && seqIndexRef.current === 0) ? 1.15 : 1.0;
+          const speedMultiplier = (isDefender && seqIndexRef.current === 0 && curClipName !== 'rei_bow') ? 1.15 : 1.0;
           mixer.update(delta * speed * speedMultiplier);
           if (activeActionRef.current.time > holdEndTime && isLastTechnique && !needsStanceOverride) {
             activeActionRef.current.time = holdEndTime;
@@ -1534,8 +1547,9 @@ export default function MultiAvatarModel({
       }
     };
 
-    // Поклон (Рэй) 30° в стойке Мусуби-дати (только стоящий персонаж, без лежащего Тори)
-    if (combatOptions?.isBow && !isGround && bonesRef.current) {
+    // Поклон (Рэй) 30° в стойке Мусуби-дати (для устаревших шагов без клипа rei_bow)
+    const activeClipLowerForBow = String(activeActionRef.current?.getClip()?.name || clipSequence[0] || '').toLowerCase();
+    if (combatOptions?.isBow && !isGround && bonesRef.current && !activeClipLowerForBow.includes('rei_bow')) {
       const bowBone = findRigBone(bonesRef.current, 'spine') || findRigBone(bonesRef.current, 'chest');
       const neckBone = findRigBone(bonesRef.current, 'neck');
       if (bowBone && phrase >= 0.15 && phrase <= 0.85) {
