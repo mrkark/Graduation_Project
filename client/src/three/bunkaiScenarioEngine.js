@@ -199,6 +199,21 @@ export const SHOTOKAN_STANCES = {
     kneeFlex: 'Колени согнуты наружу',
     description: 'Квадратная стойка. Широкая позиция, носки развернуты наружу под 45°.',
   },
+  stance_neko_left: {
+    id: 'stance_neko_left',
+    nameRu: 'Хидари нэкоаси-дати',
+    kanji: '猫足立ち',
+    side: 'left',
+    sideRu: 'Хидари (левосторонняя)',
+    weightRatio: [10, 90],
+    feetDistance: 0.45,
+    feetWidth: 0.18,
+    leadFootAngle: 0,
+    rearFootAngle: 45,
+    hipAngle: 45,
+    kneeFlex: 'Задняя нога согнута, передняя на носке',
+    description: 'Кошачья стойка (левосторонняя). 90% веса на задней правой ноге, передняя левая касается пола подушечкой стопы.',
+  },
 };
 
 /**
@@ -294,8 +309,8 @@ export const BUNKAI_TURN_MECHANICS = [
 export const BUNKAI_ACTION_TYPES = [
   { id: 'stance', label: 'Стойка (Дати)', icon: 'Footprints' },
   { id: 'locomotion', label: 'Перемещение (Сабаки)', icon: 'Move' },
-  { id: 'turn', label: 'Поворот / Разворот (Тэнсин)', icon: 'RotateCw' },
-  { id: 'strike', label: 'Удар рукой (Цуки / Учи)', icon: 'Zap' },
+  { id: 'turn', label: 'Поворот (Маваттэ)', icon: 'RotateCw' },
+  { id: 'punch', label: 'Удар рукой (Цуки / Учи)', icon: 'Zap' },
   { id: 'kick', label: 'Удар ногой (Гэри)', icon: 'Flame' },
   { id: 'block', label: 'Блок (Укэ)', icon: 'Shield' },
   { id: 'grab', label: 'Захват (Цуками)', icon: 'Hand' },
@@ -385,1145 +400,731 @@ export function validateBunkaiBiomechanics({
 }
 
 /**
- * Полный 18-шаговый сценарий Бункая ката Хэйан Шодан из пошагового описания.
- * 1 — Тори (атакующий), 2 — Укэ (защищающийся).
+ * Полный 34-шаговый канонический сценарий Бункая ката Хэйан Шодан (из эталонного плана).
+ * 1 — Тори (синий, атакующий), 2 — Укэ (белый, защищающийся).
  */
 export const HEIAN_SHODAN_BUNKAI_18_STEPS = [
-  // 1: Хэйко-дати
+  // 1 (Исх. шаг 1): Начало комплекса — Хэйко-дати
   {
     stepNumber: 1,
-    title: 'Шаг 1: Хэйко-дати',
-    description: '1 (Тори): Хейко дати. 2 (Укэ): Хейко дати.',
-    notes: 'Исходная стойка готовности (2.10м)',
-    optimalDistance: 2.10,
+    title: 'Шаг 1: Хэйко-дати (Исх. шаг 1)',
+    description: '1 (Тори): Хэйко-дати (стойка готовности). 2 (Укэ): Хэйко-дати (стойка готовности).',
+    notes: 'Исходная стойка готовности (2.00м, То-ма) · Кимэ: стойка',
+    optimalDistance: 2.00,
     attackAngleDeg: 0,
     contactType: 'none',
     interactionType: 'distance_only',
     tContact: 0.50,
-    duration: 1.6,
-    scenarioAngles: {
-      label: 'Осевая линия 0° · 2.10м',
-      toriAngleDeg: 0,
-      ukeAngleDeg: 180,
-      relativeAngleDeg: 0,
-    },
-    toriTrajectory: {
-      start: [0, 0, -1.05],
-      end: [0, 0, -1.05],
-      startYaw: 0,
-      endYaw: 0,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0, 0, 1.05],
-      end: [0, 0, 1.05],
-      startYaw: Math.PI,
-      endYaw: Math.PI,
-      isStationary: true,
-    },
+    duration: 1.2,
+    toriActionType: 'stance',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Осевая линия 0° · 2.00м (То-ма)', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
+    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
     displacementTori: [0, 0, 0],
     displacementUke: [0, 0, 0],
     participants: [
-      { role: 'tori', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', delaySeconds: 0.0, isGround: false },
+      { role: 'tori', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'heiko_dachi', stance: 'heiko_dachi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 2: Хидари дзэнкуцу дати / Миги дзэнкуцу дати
+  // 2 (Исх. шаг 2.1): Переход в стойку Мусуби-дати
   {
     stepNumber: 2,
-    title: 'Шаг 2: Вход в Дзэнкуцу-дати',
-    description: '1 (Тори): Хидари дзэнкуцу дати. 2 (Укэ): Миги дзэнкуцу дати.',
-    notes: 'Атомарный вход в боевые стойки (1.70м)',
-    optimalDistance: 1.70,
+    title: 'Шаг 2: Переход в стойку Мусуби-дати (Исх. шаг 2.1)',
+    description: '1 (Тори): Сведение пяток в Мусуби-дати. 2 (Укэ): Сведение пяток в Мусуби-дати.',
+    notes: 'Подготовка к начальному поклону (2.00м, То-ма) · Кимэ: стойка',
+    optimalDistance: 2.00,
     attackAngleDeg: 0,
     contactType: 'none',
+    interactionType: 'distance_only',
+    tContact: 0.50,
+    duration: 1.2,
+    toriActionType: 'stance',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Мусуби-дати · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
+    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
+    participants: [
+      { role: 'tori', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 3 (Исх. шаг 2.2): Начальный поклон (Рэй)
+  {
+    stepNumber: 3,
+    title: 'Шаг 3: Начальный поклон Рэй (Исх. шаг 2.2)',
+    description: '1 (Тори): Наклон корпуса 30° вперёд и возврат в Мусуби-дати. 2 (Укэ): Синхронный поклон Рэй 30°.',
+    notes: 'Ритуальное приветствие перед боем (2.00м, То-ма) · Кимэ: стойка',
+    optimalDistance: 2.00,
+    attackAngleDeg: 0,
+    contactType: 'none',
+    interactionType: 'distance_only',
+    isBow: true,
+    tContact: 0.50,
+    duration: 1.8,
+    toriActionType: 'stance',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Поклон Рэй · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
+    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
+    participants: [
+      { role: 'tori', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 4 (Исх. шаг 3): Возврат в Хэйко-дати (Сидзэнтай)
+  {
+    stepNumber: 4,
+    title: 'Шаг 4: Стойка готовности Хэйко-дати (Исх. шаг 3)',
+    description: '1 (Тори): Переход в Хэйко-дати (Сидзэнтай). 2 (Укэ): Переход в Хэйко-дати (Сидзэнтай).',
+    notes: 'Стойка готовности перед началом схватки (2.00м, То-ма) · Кимэ: стойка',
+    optimalDistance: 2.00,
+    attackAngleDeg: 0,
+    contactType: 'none',
+    interactionType: 'distance_only',
+    tContact: 0.50,
+    duration: 1.4,
+    toriActionType: 'stance',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Хэйко-дати · 2.00м', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -1.00], startYaw: 0, endYaw: 0, isStationary: true },
+    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.00], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
+    participants: [
+      { role: 'tori', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 5 (Исх. шаг 4): Вход в боевые стойки (Ма-ай) — Синхронное сближение
+  {
+    stepNumber: 5,
+    title: 'Шаг 5: Вход в боевые стойки (Ма-ай) (Исх. шаг 4)',
+    description: '1 (Тори): Шаг левой ногой вперёд в Хидари дзэнкуцу-дати (+0.70м по Z). 2 (Укэ): Шаг левой ногой назад в Миги дзэнкуцу-дати (камаэ, +0.20м).',
+    notes: 'Синхронное сближение на дистанцию удара ногой (1.50м Иссоку-итто) · Кимэ: стойка',
+    optimalDistance: 1.50,
+    attackAngleDeg: 0,
+    contactType: 'distance_only',
     interactionType: 'distance_only',
     tContact: 0.55,
     duration: 2.0,
-    scenarioAngles: {
-      label: 'Боевые стойки Дзэнкуцу-дати · 1.70м',
-      toriAngleDeg: 0,
-      ukeAngleDeg: 180,
-      relativeAngleDeg: 0,
-    },
-    toriTrajectory: {
-      start: [0, 0, -1.05],
-      end: [0, 0, -0.45],
-      startYaw: 0,
-      endYaw: 0,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0, 0, 1.05],
-      end: [0, 0, 1.25],
-      startYaw: Math.PI,
-      endYaw: Math.PI,
-      isStationary: false,
-    },
-    displacementTori: [0, 0, 0.60],
+    toriActionType: 'locomotion',
+    ukeActionType: 'locomotion',
+    scenarioAngles: { label: 'Вход в Дзэнкуцу-дати · 1.50м (Иссоку-итто)', toriAngleDeg: 0, ukeAngleDeg: 180, relativeAngleDeg: 0 },
+    toriTrajectory: { start: [0, 0, -1.00], end: [0, 0, -0.30], startYaw: 0, endYaw: 0, isStationary: false },
+    ukeTrajectory: { start: [0, 0, 1.00], end: [0, 0, 1.20], startYaw: Math.PI, endYaw: Math.PI, isStationary: false },
+    displacementTori: [0, 0, 0.70],
     displacementUke: [0, 0, 0.20],
     participants: [
-      { role: 'tori', clipName: 'enter_zenkutsu_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'step_backward_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
+      { role: 'tori', clipName: 'enter_zenkutsu_left', stance: 'heiko_dachi', finalStance: 'zenkutsu_dachi_left', actionType: 'locomotion', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'enter_zenkutsu_right', stance: 'heiko_dachi', finalStance: 'zenkutsu_dachi_right', actionType: 'locomotion', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 3: Маэ-гэри приход в дзэнкуцу-дати / Шаг назад 35° (юри-аши) Гэдан-барай
-  {
-    stepNumber: 3,
-    title: 'Шаг 3: Маэ-гэри — уход 35° (юри-аши) и блок Гэдан-барай',
-    description: '1 (Тори): Маэ-гэри приход в дзэнкуцу дати. 2 (Укэ): Шаг назад под углом 30-45 градусов (юри-аши) дзэнкуцу дати гэдан-барай.',
-    notes: 'Атомарная защита: уход с линии атаки и сбив ноги Гэдан-барай',
-    optimalDistance: 1.20,
-    attackAngleDeg: 0,
-    contactType: 'block_gedan',
-    interactionType: 'body_contact',
-    tContact: 0.48,
-    duration: 2.2,
-    scenarioAngles: {
-      label: 'Маэ-гэри 0° · Уход 35° · Гэдан-барай 1.20м',
-      toriAngleDeg: 0,
-      ukeAngleDeg: -163.0,
-      retreatAngleDeg: 35,
-    },
-    toriTrajectory: {
-      start: [0, 0, -0.45],
-      end: [0, 0, 0.20],
-      startYaw: 0,
-      endYaw: 0,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0, 0, 1.25],
-      end: [0.35, 0, 1.35],
-      startYaw: Math.PI,
-      endYaw: -Math.PI + 0.29,
-      isStationary: false,
-    },
-    displacementTori: [0, 0, 0.65],
-    displacementUke: [0.35, 0, 0.10],
-    participants: [
-      { role: 'tori', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', landingMode: 'forward', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gedan_barai_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.12, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 4: Фиксация стойки Тори / Контрудар Укэ Гяку-дзуки
-  {
-    stepNumber: 4,
-    title: 'Шаг 4: Контрудар Укэ Гяку-дзуки в корпус',
-    description: '1 (Тори): Фиксация стойки дзэнкуцу дати. 2 (Укэ): Контрудар гяку-дзуки в корпус.',
-    notes: 'Атомарный контрудар кулаком в солнечное сплетение (1.06м)',
-    optimalDistance: 1.06,
-    attackAngleDeg: 0,
-    contactType: 'strike_chudan',
-    interactionType: 'body_contact',
-    tContact: 0.46,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Контрудар Гяку-дзуки · 1.06м',
-      toriAngleDeg: 0,
-      ukeAngleDeg: -163.0,
-    },
-    toriTrajectory: {
-      start: [0, 0, 0.20],
-      end: [0, 0, 0.20],
-      startYaw: 0,
-      endYaw: 0,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.35, 0, 1.35],
-      end: [0.30, 0, 1.22],
-      startYaw: -Math.PI + 0.29,
-      endYaw: -Math.PI + 0.29,
-      isStationary: false,
-    },
-    displacementTori: [0, 0, 0],
-    displacementUke: [-0.05, 0, -0.13],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gyaku_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.06, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 5: Маэ-гэри (12°) / Шаг назад (возвращение на осевую линию) дзэнкуцу-дати гэдан-барай
-  {
-    stepNumber: 5,
-    title: 'Шаг 5: Маэ-гэри (12°) — возврат на осевую линию и блок Гэдан-барай',
-    description: '1 (Тори): Маэ-гэри под углом 10-15 градусов. 2 (Укэ): Шаг назад (возвращение на осевую линию) дзэнкуцу дати гэдан-барай.',
-    notes: 'Атомарный возврат на ось и нижний смет Гэдан-барай (1.10м)',
-    optimalDistance: 1.10,
-    attackAngleDeg: 12,
-    contactType: 'block_gedan',
-    interactionType: 'body_contact',
-    tContact: 0.48,
-    duration: 2.2,
-    scenarioAngles: {
-      label: 'Атака 12° · Возврат Укэ на ось · Гэдан-барай 1.10м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -176.0,
-    },
-    toriTrajectory: {
-      start: [0, 0, 0.20],
-      end: [0.10, 0, 0.65],
-      startYaw: 0,
-      endYaw: 0.21,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.30, 0, 1.22],
-      end: [0.18, 0, 1.75],
-      startYaw: -Math.PI + 0.29,
-      endYaw: -Math.PI + 0.07,
-      isStationary: false,
-    },
-    displacementTori: [0.10, 0, 0.45],
-    displacementUke: [-0.12, 0, 0.53],
-    participants: [
-      { role: 'tori', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', landingMode: 'forward', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gedan_barai_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.10, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 6: Гяку-дзуки приход в дзэнкуцу дати под углом 10-15° / Фудо дати хайван укэ
+  // 6 (Исх. шаг 5.1): Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай
   {
     stepNumber: 6,
-    title: 'Шаг 6: Гяку-дзуки (12°) — защита Фудо-дати Хайван-укэ',
-    description: '1 (Тори): Гяку-дзуки приход в дзэнкуцу дати под углом 10-15 градусов. 2 (Укэ): Фудо дати хайван укэ.',
-    notes: 'Атомарный блок Хайван-укэ в укорененной стойке Фудо-дати (1.03м)',
-    optimalDistance: 1.03,
-    attackAngleDeg: 12,
-    contactType: 'block_haivan',
-    interactionType: 'body_contact',
-    tContact: 0.46,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Гяку-дзуки 12° · Фудо-дати Хайван-укэ · 1.03м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -177.0,
-    },
-    toriTrajectory: {
-      start: [0.10, 0, 0.65],
-      end: [0.14, 0, 0.85],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, 1.75],
-      end: [0.20, 0, 1.88],
-      startYaw: -Math.PI + 0.07,
-      endYaw: -Math.PI + 0.06,
-      isStationary: false,
-    },
-    displacementTori: [0.04, 0, 0.20],
-    displacementUke: [0.02, 0, 0.13],
-    participants: [
-      { role: 'tori', clipName: 'tech_gyaku_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_haishu_uke_left', stance: 'fudo_dachi', finalStance: 'fudo_dachi', delaySeconds: 0.08, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 7: Дзэнкуцу дати тэтцуи (рука-молот)
-  {
-    stepNumber: 7,
-    title: 'Шаг 7: Контрудар Укэ Тэтцуи (рука-молот)',
-    description: '1 (Тори): Фиксация стойки после удара. 2 (Укэ): Дзэнкуцу дати тэтцуи (рука-молот).',
-    notes: 'Атомарный контрудар основанием кулака Тэтцуи (0.95м)',
-    optimalDistance: 0.95,
-    attackAngleDeg: 12,
-    contactType: 'strike_chudan',
-    interactionType: 'body_contact',
-    tContact: 0.45,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Тэтцуи-учи в Дзэнкуцу-дати · 0.95м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -177.0,
-    },
-    toriTrajectory: {
-      start: [0.14, 0, 0.85],
-      end: [0.14, 0, 0.85],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.20, 0, 1.88],
-      end: [0.18, 0, 1.80],
-      startYaw: -Math.PI + 0.06,
-      endYaw: -Math.PI + 0.04,
-      isStationary: false,
-    },
-    displacementTori: [0, 0, 0],
-    displacementUke: [-0.02, 0, -0.08],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_tettsui_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 8: Гяку-дзуки
-  {
-    stepNumber: 8,
-    title: 'Шаг 8: Контрудар Укэ Гяку-дзуки',
-    description: '1 (Тори): Фиксация стойки. 2 (Укэ): Гяку-дзуки.',
-    notes: 'Атомарный завершающий удар в корпус (0.95м)',
-    optimalDistance: 0.95,
-    attackAngleDeg: 12,
-    contactType: 'strike_chudan',
-    interactionType: 'body_contact',
-    tContact: 0.45,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Гяку-дзуки · 0.95м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -177.0,
-    },
-    toriTrajectory: {
-      start: [0.14, 0, 0.85],
-      end: [0.14, 0, 0.85],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, 1.80],
-      end: [0.18, 0, 1.80],
-      startYaw: -Math.PI + 0.04,
-      endYaw: -Math.PI + 0.04,
-      isStationary: true,
-    },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gyaku_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 9: Шаг назад + вперёд Маэ-гэри / Шаг назад дзэнкуцу дати гэдан-барай
-  {
-    stepNumber: 9,
-    title: 'Шаг 9: Атака Тори Маэ-гэри — шаг назад Укэ и блок Гэдан-барай',
-    description: '1 (Тори): Шаг назад дзэнкуцу дати и удар Маэ-гэри вперёд. 2 (Укэ): Шаг назад дзэнкуцу дати гэдан-барай.',
-    notes: 'Атомарный перехват удара ногой блоком Гэдан-барай (1.05м)',
+    title: 'Шаг 6: Маэ-гэри vs Тай-сабаки 35° и Гэдан-барай (Исх. шаг 5.1)',
+    description: '1 (Тори): Маэ-гэри правой (Тюдан) с приходом вперёд в Миги дзэнкуцу-дати (+0.60м). 2 (Укэ): Гэдан-барай левой с уходом вправо +35° (юри-аси) в Хидари дзэнкуцу-дати.',
+    notes: 'Уход челноком (юри-аси) · Предплечье левой руки Укэ сбивает голень правой ноги Тори (1.05м) · Кимэ: блок и стойка',
     optimalDistance: 1.05,
-    attackAngleDeg: 12,
+    attackAngleDeg: 0,
     contactType: 'block_gedan',
     interactionType: 'body_contact',
     tContact: 0.48,
     duration: 2.2,
-    scenarioAngles: {
-      label: 'Маэ-гэри · Отход и Гэдан-барай · 1.05м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -176.0,
-    },
-    toriTrajectory: {
-      start: [0.14, 0, 0.85],
-      end: [0.18, 0, 1.05],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, 1.80],
-      end: [0.24, 0, 2.10],
-      startYaw: -Math.PI + 0.04,
-      endYaw: -Math.PI + 0.06,
-      isStationary: false,
-    },
-    displacementTori: [0.04, 0, 0.20],
-    displacementUke: [0.06, 0, 0.30],
+    toriActionType: 'kick',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Маэ-гэри 0° · Тай-сабаки +35° · Гэдан-барай 1.05м', toriAngleDeg: 0, ukeAngleDeg: -161, retreatAngleDeg: 35 },
+    toriTrajectory: { start: [0, 0, -0.30], end: [0, 0, 0.30], startYaw: 0, endYaw: 0, isStationary: false },
+    ukeTrajectory: { start: [0, 0, 1.20], end: [0.35, 0, 1.30], startYaw: Math.PI, endYaw: -2.805, isStationary: false },
+    displacementTori: [0, 0, 0.60],
+    displacementUke: [0.35, 0, 0.10],
     participants: [
-      { role: 'tori', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', landingMode: 'forward', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gedan_barai_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.08, isGround: false },
+      { role: 'tori', clipName: 'mae_geri_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_right', landingMode: 'forward', actionType: 'kick', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gedan_barai_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_left', actionType: 'block', delaySeconds: 0.16, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 10: Шаг вперёд Ой-дзуки / Блок Агэ-укэ
+  // 7 (Исх. шаг 5.2): Контрудар Гяку-дзуки в корпус
+  {
+    stepNumber: 7,
+    title: 'Шаг 7: Контрудар Гяку-дзуки в корпус (Исх. шаг 5.2)',
+    description: '1 (Тори): Фиксация Миги дзэнкуцу-дати после выпада (стационарно). 2 (Укэ): Гяку-дзуки правой в корпус (Тюдан) под углом +35° с подачей таза вперёд.',
+    notes: 'Реверсивная атака с фланга · Правый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
+    optimalDistance: 0.76,
+    attackAngleDeg: 0,
+    contactType: 'punch_body',
+    interactionType: 'body_contact',
+    tContact: 0.46,
+    duration: 1.8,
+    toriActionType: 'stance',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Контрудар Гяку-дзуки +35° · 0.76м', toriAngleDeg: 0, ukeAngleDeg: -161 },
+    toriTrajectory: { start: [0, 0, 0.30], end: [0, 0, 0.30], startYaw: 0, endYaw: 0, isStationary: true },
+    ukeTrajectory: { start: [0.35, 0, 1.30], end: [0.24, 0, 1.02], startYaw: -2.805, endYaw: -2.836, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [-0.11, 0, -0.28],
+    participants: [
+      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gyaku_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'punch', delaySeconds: 0.06, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 8 (Исх. шаг 6.1): Маэ-гэри под 12.5° vs возврат на ось
+  {
+    stepNumber: 8,
+    title: 'Шаг 8: Маэ-гэри под 12.5° vs возврат на ось (Исх. шаг 6.1)',
+    description: '1 (Тори): Маэ-гэри левой (Тюдан) с доворотом +12.5° и приходом вперёд в Хидари дзэнкуцу-дати. 2 (Укэ): Шаг левой назад на ось X=0.00м в Миги дзэнкуцу-дати и Гэдан-барай правой.',
+    notes: 'Смена направления атаки (+12.5°) и Гэдан-барай · Предплечье правой руки Укэ сбивает голень левой ноги Тори (1.05м)',
+    optimalDistance: 1.05,
+    attackAngleDeg: 12.5,
+    contactType: 'block_gedan',
+    interactionType: 'body_contact',
+    tContact: 0.48,
+    duration: 2.2,
+    toriActionType: 'kick',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Атака +12.5° · Возврат Укэ на ось · Гэдан-барай 1.05м', toriAngleDeg: 12.5, ukeAngleDeg: -172 },
+    toriTrajectory: { start: [0, 0, 0.30], end: [0.15, 0, 1.00], startYaw: 0, endYaw: 0.218, isStationary: false },
+    ukeTrajectory: { start: [0.24, 0, 1.02], end: [0.00, 0, 2.04], startYaw: -2.836, endYaw: -2.998, isStationary: false },
+    displacementTori: [0.15, 0, 0.70],
+    displacementUke: [-0.24, 0, 1.02],
+    participants: [
+      { role: 'tori', clipName: 'mae_geri_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_left', landingMode: 'forward', actionType: 'kick', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gedan_barai_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_right', actionType: 'block', delaySeconds: 0.14, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 9 (Исх. шаг 6.3): Контрудар Тэтцуи (рука-молот) (шаг с Хайван-укэ убран)
+  {
+    stepNumber: 9,
+    title: 'Шаг 9: Контрудар Тэтцуи (рука-молот) (Исх. шаг 6.3)',
+    description: '1 (Тори): Удержание Хидари дзэнкуцу-дати (стационарно). 2 (Укэ): Контрудар Тэтцуи-учи правой в голову (Дзёдан) в Миги дзэнкуцу-дати.',
+    notes: 'Основание правого кулака Укэ в область виска/ключицы Тори (контакт 0.62м) · Кимэ: фиксация удара',
+    optimalDistance: 0.62,
+    attackAngleDeg: 12.5,
+    contactType: 'punch_head',
+    interactionType: 'body_contact',
+    tContact: 0.45,
+    duration: 1.8,
+    toriActionType: 'stance',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Тэтцуи-учи в Дзёдан · 0.62м', toriAngleDeg: 12.5, ukeAngleDeg: -170 },
+    toriTrajectory: { start: [0.15, 0, 1.00], end: [0.15, 0, 1.00], startYaw: 0.218, endYaw: 0.218, isStationary: true },
+    ukeTrajectory: { start: [0.00, 0, 2.04], end: [0.02, 0, 1.61], startYaw: -2.998, endYaw: -2.93, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0.02, 0, -0.43],
+    participants: [
+      { role: 'tori', clipName: 'zenkutsu_dachi_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'tech_tettsui_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'punch', delaySeconds: 0.06, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 10 (Исх. шаг 6.4): Добивающий Гяку-дзуки левой
   {
     stepNumber: 10,
-    title: 'Шаг 10: Выпад Тори Ой-дзуки — восходящий блок Укэ Агэ-укэ',
-    description: '1 (Тори): Шаг вперёд ой-дзуки (в голову). 2 (Укэ): Восходящий блок агэ-укэ.',
-    notes: 'Атомарный блок левой рукой сверху-вверх (0.99м)',
-    optimalDistance: 0.99,
-    attackAngleDeg: 12,
+    title: 'Шаг 10: Добивающий Гяку-дзуки левой (Исх. шаг 6.4)',
+    description: '1 (Тори): Удержание Хидари дзэнкуцу-дати (стационарно). 2 (Укэ): Гяку-дзуки левой в корпус (Тюдан) с разворотом бёдер (коши).',
+    notes: 'Завершение серии Укэ · Левый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
+    optimalDistance: 0.76,
+    attackAngleDeg: 12.5,
+    contactType: 'punch_body',
+    interactionType: 'body_contact',
+    tContact: 0.45,
+    duration: 1.8,
+    toriActionType: 'stance',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Добивающий Гяку-дзуки левой · 0.76м', toriAngleDeg: 12.5, ukeAngleDeg: -170 },
+    toriTrajectory: { start: [0.15, 0, 1.00], end: [0.15, 0, 1.00], startYaw: 0.218, endYaw: 0.218, isStationary: true },
+    ukeTrajectory: { start: [0.02, 0, 1.61], end: [0.00, 0, 1.75], startYaw: -2.93, endYaw: -2.94, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [-0.02, 0, 0.14],
+    participants: [
+      { role: 'tori', clipName: 'zenkutsu_dachi_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gyaku_zuki_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'punch', delaySeconds: 0.05, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 11 (Исх. шаг 7.1): Отход/докручивание угла правой ногой, оставаясь в Хидари дзэнкуцу-дати
+  {
+    stepNumber: 11,
+    title: 'Шаг 11: Докручивание угла правой ногой в Хидари дзэнкуцу (Исх. шаг 7.1)',
+    description: '1 (Тори): Правой ногой подшаг назад и доворот угла на ось атаки, оставаясь в Хидари дзэнкуцу-дати. 2 (Укэ): Боевой контроль в Миги дзэнкуцу-дати.',
+    notes: 'Сохранение Хидари дзэнкуцу-дати (левая впереди, правая докручивает угол) перед ударом Миги маэ-гэри (1.15м)',
+    optimalDistance: 1.15,
+    attackAngleDeg: 3.0,
+    contactType: 'distance_only',
+    interactionType: 'distance_only',
+    tContact: 0.50,
+    duration: 1.5,
+    toriActionType: 'locomotion',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Доворот правой ногой в Хидари дзэнкуцу · 1.15м', toriAngleDeg: 3, ukeAngleDeg: -178 },
+    toriTrajectory: { start: [0.15, 0, 1.00], end: [0.00, 0, 0.55], startYaw: 0.218, endYaw: 0.05, isStationary: false },
+    ukeTrajectory: { start: [0.00, 0, 1.75], end: [0.03, 0, 1.70], startYaw: -2.94, endYaw: -3.11, isStationary: false },
+    displacementTori: [-0.15, 0, -0.45],
+    displacementUke: [0.03, 0, -0.05],
+    participants: [
+      { role: 'tori', clipName: 'slide_backward', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'locomotion', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 12 (Исх. шаг 7.2): Атака Миги Маэ-гэри (правой ногой) — Отход Укэ и блок Гэдан-барай
+  {
+    stepNumber: 12,
+    title: 'Шаг 12: Атака Миги Маэ-гэри (правой ногой) (Исх. шаг 7.2)',
+    description: '1 (Тори): Маэ-гэри правой (Миги Маэ-гэри, Тюдан) из Хидари дзэнкуцу-дати с возвратом ноги назад в Хидари дзэнкуцу-дати. 2 (Укэ): Шаг правой ногой назад в Хидари дзэнкуцу-дати и Гэдан-барай левой.',
+    notes: 'Миги Маэ-гэри и блок Гэдан-барай · Левое предплечье Укэ сбивает голень правой ноги Тори (1.07м) · Кимэ: блок Гэдан-барай',
+    optimalDistance: 1.07,
+    attackAngleDeg: 3.0,
+    contactType: 'block_gedan',
+    interactionType: 'body_contact',
+    tContact: 0.48,
+    duration: 2.0,
+    toriActionType: 'kick',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Миги Маэ-гэри · Гэдан-барай левой · 1.07м', toriAngleDeg: 3, ukeAngleDeg: -177 },
+    toriTrajectory: { start: [0.00, 0, 0.55], end: [0.00, 0, 0.55], startYaw: 0.05, endYaw: 0.05, isStationary: true },
+    ukeTrajectory: { start: [0.03, 0, 1.70], end: [0.04, 0, 1.62], startYaw: -3.11, endYaw: -3.09, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0.01, 0, -0.08],
+    participants: [
+      { role: 'tori', clipName: 'mae_geri_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', landingMode: 'back', actionType: 'kick', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gedan_barai_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_left', actionType: 'block', delaySeconds: 0.14, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 13 (Исх. шаг 7.3): Выпад Ой-дзуки в голову (Дзёдан) — Встречный блок Агэ-укэ
+  {
+    stepNumber: 13,
+    title: 'Шаг 13: Выпад Ой-дзуки в голову (Дзёдан) (Исх. шаг 7.3)',
+    description: '1 (Тори): Шаг правой ногой вперёд с ударом Ой-дзуки в голову (Дзёдан) в Миги дзэнкуцу-дати. 2 (Укэ): Восходящий блок Агэ-укэ левой (Дзёдан) с упором на переднюю ногу.',
+    notes: 'Встречный блок Агэ-укэ · Левое предплечье Укэ перехватывает правую руку Тори на уровне головы (0.86м) · Кимэ: верхний блок',
+    optimalDistance: 0.86,
+    attackAngleDeg: 5.0,
     contactType: 'block_jodan',
     interactionType: 'body_contact',
     tContact: 0.48,
-    duration: 2.2,
-    scenarioAngles: {
-      label: 'Выпад Ой-дзуки · Блок Агэ-укэ · 0.99м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -171.0,
-    },
-    toriTrajectory: {
-      start: [0.18, 0, 1.05],
-      end: [0.24, 0, 1.32],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.24, 0, 2.10],
-      end: [0.38, 0, 2.30],
-      startYaw: -Math.PI + 0.06,
-      endYaw: -Math.PI + 0.14,
-      isStationary: false,
-    },
-    displacementTori: [0.06, 0, 0.27],
-    displacementUke: [0.14, 0, 0.20],
-    participants: [
-      { role: 'tori', clipName: 'tech_oi_zuki_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_age_uke_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.08, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 11: Гяку Агэ-укэ с выпадом вперёд (вместо захвата руки)
-  {
-    stepNumber: 11,
-    title: 'Шаг 11: Гяку Агэ-укэ с выпадом вперёд (вместо захвата руки)',
-    description: '1 (Тори): Удерживает выпрямленную руку после выпада. 2 (Укэ): Гяку агэ-укэ правой рукой с выпадом вперёд.',
-    notes: 'Захват руки заменён на обратный восходящий блок Гяку Агэ-укэ (0.92м)',
-    optimalDistance: 0.92,
-    attackAngleDeg: 12,
-    contactType: 'block_gyaku_age_uke',
-    interactionType: 'body_contact',
-    tContact: 0.46,
     duration: 2.0,
-    scenarioAngles: {
-      label: 'Гяку Агэ-укэ (без захвата) · 0.92м',
-      toriAngleDeg: 12,
-      ukeAngleDeg: -169.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: 0.21,
-      endYaw: 0.21,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.38, 0, 2.30],
-      end: [0.42, 0, 2.22],
-      startYaw: -Math.PI + 0.14,
-      endYaw: -Math.PI + 0.19,
-      isStationary: false,
-    },
-    displacementTori: [0, 0, 0],
-    displacementUke: [0.04, 0, -0.08],
+    toriActionType: 'punch',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Выпад Ой-дзуки Дзёдан · Агэ-укэ · 0.86м', toriAngleDeg: 5, ukeAngleDeg: -175 },
+    toriTrajectory: { start: [0.00, 0, 0.55], end: [0.06, 0, 1.15], startYaw: 0.05, endYaw: 0.08, isStationary: false },
+    ukeTrajectory: { start: [0.04, 0, 1.62], end: [0.12, 0, 2.01], startYaw: -3.09, endYaw: -3.05, isStationary: false },
+    displacementTori: [0.06, 0, 0.60],
+    displacementUke: [0.08, 0, 0.39],
     participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_age_uke_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.05, isGround: false },
+      { role: 'tori', clipName: 'tech_jodan_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_right', actionType: 'punch', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'age_uke_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'block', delaySeconds: 0.12, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 12: Шаг левой ногой с разворотом на 180° в Миги дзэнкуцу / Шаг Укэ вперёд в сторону под 35° в Миги дзэнкуцу
+  // 14 (Исх. шаг 7.4): Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Ваки-гатамэ)
   {
-    stepNumber: 12,
-    title: 'Шаг 12: Разворот Тори на 180° — смещение Укэ в Миги дзэнкуцу-дати (35°)',
-    description: '1 (Тори): Шаг левой ногой с разворотом в обратную сторону в миги дзэнкуцу дати. 2 (Укэ): Шаг вперёд в сторону миги дзэнкуцу дати угол 30-45 градусов.',
-    notes: 'Атомарный фланговый проход под углом 35° и разворот Тори на 180°',
-    optimalDistance: 1.29,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'tai_sabaki',
-    tContact: 0.50,
+    stepNumber: 14,
+    title: 'Шаг 14: Гяку Агэ-укэ с выпадом и БОЛЕВОЙ ПРИЁМ (Исх. шаг 7.4)',
+    description: '1 (Тори): Выпрямленная правая рука остаётся вытянутой в захвате Укэ (стационарно). 2 (Укэ): Захват запястья левой + выпад Гяку Агэ-укэ правой точно по локтю/предплечью Тори (Чика-ма 0.65м).',
+    notes: 'Захват запястья и рычаг локтя (Ваки-гатамэ, угол 30°) · Прямой контакт правым предплечьем по правой руке Тори (0.65м Чика-ма) · Кимэ: удержание замка',
+    optimalDistance: 0.65,
+    attackAngleDeg: 5.0,
+    contactType: 'joint_lock',
+    interactionType: 'body_contact',
+    tContact: 0.45,
     duration: 2.4,
-    scenarioAngles: {
-      label: 'Разворот 180° · Проход Укэ 35° · 1.29м',
-      toriAngleDeg: -168.0,
-      ukeAngleDeg: 11.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: 0.21,
-      endYaw: -2.93,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.42, 0, 2.22],
-      end: [0.00, 0, 0.05],
-      startYaw: -Math.PI + 0.19,
-      endYaw: 0.19,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [-0.42, 0, -2.17],
+    toriActionType: 'hold',
+    ukeActionType: 'joint_lock',
+    scenarioAngles: { label: 'Ваки-гатамэ · Болевой приём на локоть · 0.65м (Чика-ма)', toriAngleDeg: 5, ukeAngleDeg: -162 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.06, 0, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.12, 0, 2.01], end: [-0.15, 0, 1.77], startYaw: -3.05, endYaw: -2.81, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [-0.27, 0, -0.24],
     participants: [
-      { role: 'tori', clipName: 'turn_into_zenkutsu_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'step_forward_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.05, isGround: false },
+      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'hold', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'age_uke_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'joint_lock', delaySeconds: 0.06, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 13: Последующий разворот Укэ в Хидари дзэнкуцу-дати
+  // 15 (Исх. шаг 8): Разрыв болевого приёма и выход на боевую дистанцию (без разворота на 180°)
   {
-    stepNumber: 13,
-    title: 'Шаг 13: Разворот Укэ в Хидари дзэнкуцу-дати',
-    description: '1 (Тори): Фиксация миги дзэнкуцу дати. 2 (Укэ): Разворот в хидари дзэнкуцу дати лицом к Тори.',
-    notes: 'Атомарное перестроение Укэ в левостороннюю стойку (1.29м)',
-    optimalDistance: 1.29,
+    stepNumber: 15,
+    title: 'Шаг 15: Выход из болевого и перестроение в Хидари дзэнкуцу (Исх. шаг 8)',
+    description: '1 (Тори): Фиксация Миги дзэнкуцу-дати лицом к Укэ (без разворота на 180°). 2 (Укэ): Разрыв замка и отшаг в Хидари дзэнкуцу-дати лицом к Тори.',
+    notes: 'Сохранение фронтального направления после болевого приёма и выход на дистанцию Маэ-гэри (1.15м) · Кимэ: стойка',
+    optimalDistance: 1.15,
     attackAngleDeg: 0,
-    contactType: 'none',
+    contactType: 'distance_only',
     interactionType: 'distance_only',
     tContact: 0.50,
     duration: 1.8,
-    scenarioAngles: {
-      label: 'Разворот в Хидари дзэнкуцу-дати · 1.29м',
-      toriAngleDeg: -168.0,
-      ukeAngleDeg: 11.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: -2.93,
-      endYaw: -2.93,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.00, 0, 0.05],
-      end: [0.00, 0, 0.05],
-      startYaw: 0.19,
-      endYaw: 0.19,
-      isStationary: true,
-    },
+    toriActionType: 'stance',
+    ukeActionType: 'locomotion',
+    scenarioAngles: { label: 'Выход на боевую дистанцию · 1.15м', toriAngleDeg: 5, ukeAngleDeg: -175 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.06, 0, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [-0.15, 0, 1.77], end: [0.15, 0, 2.30], startYaw: -2.81, endYaw: -3.06, isStationary: false },
     displacementTori: [0, 0, 0],
-    displacementUke: [0, 0, 0],
+    displacementUke: [0.30, 0, 0.53],
     participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'turn_into_zenkutsu_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.05, isGround: false },
+      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'step_backward_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', actionType: 'locomotion', delaySeconds: 0.05, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 14: Маэ-гэри / Хидари Хайван-укэ, полшага назад в Хэйсоку-дати (спиной к 1)
+  // 16 (Исх. шаги 9.1–9.2 объединены): Полный разворот 360° Укэ с Гэдан-барай vs Хидари Маэ-гэри
   {
-    stepNumber: 14,
-    title: 'Шаг 14: Маэ-гэри — Хайван-укэ и полшага назад в Хэйсоку-дати (спиной к Тори)',
-    description: '1 (Тори): Маэ-гэри. 2 (Укэ): Хидари хайван укэ, пол шага назад в хейсоку дати (спиной к 1).',
-    notes: 'Атомарный отвод ноги тыльной стороной предплечья с отходом в Хэйсоку-дати (1.12м)',
-    optimalDistance: 1.12,
-    attackAngleDeg: 0,
-    contactType: 'block_haivan',
-    interactionType: 'body_contact',
-    backToOpponent: true,
-    tContact: 0.45,
-    duration: 2.2,
-    scenarioAngles: {
-      label: 'Хайван-укэ в Хэйсоку-дати спиной к 1 · 1.12м',
-      toriAngleDeg: -168.0,
-      ukeAngleDeg: -168.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: -2.93,
-      endYaw: -2.93,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.00, 0, 0.05],
-      end: [0.04, 0, 0.22],
-      startYaw: 0.19,
-      endYaw: -2.93,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.04, 0, 0.17],
-    participants: [
-      { role: 'tori', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', landingMode: 'back', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_haishu_uke_left', stance: 'stance_heisoku', finalStance: 'stance_heisoku', delaySeconds: 0.08, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 15: Разворот в Миги дзэнкуцу-дати с блоком Гэдан-барай
-  {
-    stepNumber: 15,
-    title: 'Шаг 15: Разворот Укэ в Миги дзэнкуцу-дати с блоком Гэдан-барай',
-    description: '1 (Тори): Фиксация стойки после Маэ-гэри. 2 (Укэ): Разворот в миги дзэнкуцу дати гэдан-барай.',
-    notes: 'Атомарный разворот лицом к Тори и сбив Гэдан-барай (1.07м)',
-    optimalDistance: 1.07,
+    stepNumber: 16,
+    title: 'Шаг 16: Полный разворот Укэ с Гэдан-барай vs Хидари Маэ-гэри (Исх. шаг 9.1–9.2)',
+    description: '1 (Тори): Через паузу (после начала разворота Укэ) Хидари Маэ-гэри с возвратом назад в Миги дзэнкуцу-дати (опорная правая стопа плотно на татами). 2 (Укэ): Полный разворот на 360° в Миги дзэнкуцу-дати и Гэдан-барай правой.',
+    notes: 'Укэ выполняет полный оборот на 360° и встречает Хидари Маэ-гэри сметным блоком Гэдан-барай (0.95м) · Кимэ: блок и стойка',
+    optimalDistance: 0.95,
     attackAngleDeg: 0,
     contactType: 'block_gedan',
     interactionType: 'body_contact',
-    tContact: 0.50,
-    duration: 2.2,
-    scenarioAngles: {
-      label: 'Разворот в Миги дзэнкуцу · Гэдан-барай · 1.07м',
-      toriAngleDeg: -168.0,
-      ukeAngleDeg: 10.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: -2.93,
-      endYaw: -2.93,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.04, 0, 0.22],
-      end: [0.06, 0, 0.26],
-      startYaw: -2.93,
-      endYaw: 0.17,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.02, 0, 0.04],
+    ukeFullTurn: true,
+    ukeTurnDir: 1,
+    tContact: 0.56,
+    duration: 2.5,
+    toriActionType: 'kick',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Полный разворот Укэ 360° · Хидари Маэ-гэри · 0.95м', toriAngleDeg: 5, ukeAngleDeg: -175 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.06, 0, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.15, 0, 2.30], end: [0.13, 0, 2.10], startYaw: -3.06, endYaw: -3.06, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [-0.02, 0, -0.20],
     participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gedan_barai_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.05, isGround: false },
+      { role: 'tori', clipName: 'mae_geri_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', landingMode: 'back', actionType: 'kick', delaySeconds: 0.22, isGround: false },
+      { role: 'uke1', clipName: 'gedan_barai_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_right', actionType: 'block', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 16: Контрудар Гяку-дзуки
-  {
-    stepNumber: 16,
-    title: 'Шаг 16: Контрудар Укэ Гяку-дзуки',
-    description: '1 (Тори): Фиксация стойки. 2 (Укэ): Контрудар гяку-дзуки.',
-    notes: 'Атомарный контрудар в корпус после разворота (0.99м)',
-    optimalDistance: 0.99,
-    attackAngleDeg: 0,
-    contactType: 'strike_chudan',
-    interactionType: 'body_contact',
-    tContact: 0.45,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Контрудар Гяку-дзуки · 0.99м',
-      toriAngleDeg: -168.0,
-      ukeAngleDeg: 9.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.24, 0, 1.32],
-      startYaw: -2.93,
-      endYaw: -2.93,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.06, 0, 0.26],
-      end: [0.08, 0, 0.34],
-      startYaw: 0.17,
-      endYaw: 0.16,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.02, 0, 0.08],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gyaku_zuki_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 17: Шаг назад Тори в Миги дзэнкуцу / Первый Гяку-дзуки Укэ
+  // 17 (Исх. шаг 9.3): Контрудар Укэ Гяку-дзуки левой
   {
     stepNumber: 17,
-    title: 'Шаг 17: Шаг назад Тори в Миги дзэнкуцу — первый Гяку-дзуки Укэ',
-    description: '1 (Тори): Шаг назад в миги дзэнкуцу дати. 2 (Укэ): Первый удар гяку-дзуки.',
-    notes: 'Атомарный первый контрудар при отходе Тори (1.07м)',
-    optimalDistance: 1.07,
+    title: 'Шаг 17: Контрудар Укэ Гяку-дзуки левой (Исх. шаг 9.3)',
+    description: '1 (Тори): Фиксация Миги дзэнкуцу-дати (стационарно). 2 (Укэ): Гяку-дзуки левой в корпус (Тюдан) с дожимом бёдрами вперёд.',
+    notes: 'Реверсивный удар в корпус · Левый кулак Укэ в солнечное сплетение Тори (контакт 0.76м) · Кимэ: фиксация кулака',
+    optimalDistance: 0.76,
     attackAngleDeg: 0,
-    contactType: 'strike_chudan',
+    contactType: 'punch_body',
     interactionType: 'body_contact',
-    tContact: 0.46,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Отход в Миги дзэнкуцу · Первый Гяку-дзуки · 1.07м',
-      toriAngleDeg: -170.0,
-      ukeAngleDeg: 8.0,
-    },
-    toriTrajectory: {
-      start: [0.24, 0, 1.32],
-      end: [0.28, 0, 1.56],
-      startYaw: -2.93,
-      endYaw: -2.96,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.08, 0, 0.34],
-      end: [0.12, 0, 0.50],
-      startYaw: 0.16,
-      endYaw: 0.15,
-      isStationary: false,
-    },
-    displacementTori: [0.04, 0, 0.24],
-    displacementUke: [0.04, 0, 0.16],
+    tContact: 0.45,
+    duration: 1.8,
+    toriActionType: 'stance',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Контрудар Гяку-дзуки левой · 0.76м', toriAngleDeg: 5, ukeAngleDeg: -175 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.06, 0, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.13, 0, 2.10], end: [0.12, 0, 1.91], startYaw: -3.06, endYaw: -3.06, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [-0.01, 0, -0.19],
     participants: [
-      { role: 'tori', clipName: 'step_backward_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gyaku_zuki_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.06, isGround: false },
+      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gyaku_zuki_left', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'punch', delaySeconds: 0.05, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 18: Второй Гяку-дзуки с шагом в Хидари дзэнкуцу-дати
+  // 18 (Исх. шаг 10): Отход Тори (руки опущены) и шаг Укэ вперёд в Хидари дзэнкуцу с Гяку-дзуки правой
   {
     stepNumber: 18,
-    title: 'Шаг 18: Второй Гяку-дзуки Укэ с шагом в Хидари дзэнкуцу-дати',
-    description: '1 (Тори): Фиксация миги дзэнкуцу дати. 2 (Укэ): Второй удар гяку-дзуки с шагом в хидари дзэнкуцу дати.',
-    notes: 'Атомарный второй удар Гяку-дзуки с шагом вперёд (0.95м)',
-    optimalDistance: 0.95,
+    title: 'Шаг 18: Отход Тори и шаг Укэ в Хидари дзэнкуцу с Гяку-дзуки (Исх. шаг 10)',
+    description: '1 (Тори): Отшаг назад (юри-аси, -0.40м) в Миги дзэнкуцу-дати (руки свободно опущены вдоль корпуса). 2 (Укэ): Шаг левой вперёд в Хидари дзэнкуцу-дати и Гяку-дзуки правой в корпус.',
+    notes: 'Преследование отступающего противника с переходом в Хидари дзэнкуцу-дати и ударом правым кулаком Укэ в корпус Тори (0.76м) · Кимэ: фиксация удара',
+    optimalDistance: 0.76,
     attackAngleDeg: 0,
-    contactType: 'strike_chudan',
-    interactionType: 'body_contact',
-    tContact: 0.46,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Второй Гяку-дзуки в Хидари дзэнкуцу · 0.95м',
-      toriAngleDeg: -170.0,
-      ukeAngleDeg: 7.0,
-    },
-    toriTrajectory: {
-      start: [0.28, 0, 1.56],
-      end: [0.28, 0, 1.56],
-      startYaw: -2.96,
-      endYaw: -2.96,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.12, 0, 0.50],
-      end: [0.16, 0, 0.62],
-      startYaw: 0.15,
-      endYaw: 0.13,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.04, 0, 0.12],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_gyaku_zuki_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 19: Кидзами-дзуки с выпадом вперёд / Перестроение в Миги кокуцу-дати с Нагаси-укэ
-  {
-    stepNumber: 19,
-    title: 'Шаг 19: Кидзами-дзуки с выпадом — отвод Нагаси-укэ в Миги кокуцу-дати',
-    description: '1 (Тори): Кидзами-дзуки с выпадом вперёд. 2 (Укэ): Перестроение в миги кокуцу дати с выполнением нагаши укэ.',
-    notes: 'Атомарное перестроение в Миги кокуцу-дати с отводом джеба (1.00м)',
-    optimalDistance: 1.00,
-    attackAngleDeg: 0,
-    contactType: 'parry_shuto',
-    interactionType: 'body_contact',
-    tContact: 0.46,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Выпад Кидзами-дзуки · Нагаси-укэ · 1.00м',
-      toriAngleDeg: -175.0,
-      ukeAngleDeg: 5.0,
-    },
-    toriTrajectory: {
-      start: [0.28, 0, 1.56],
-      end: [0.22, 0, 1.34],
-      startYaw: -2.96,
-      endYaw: -3.05,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.16, 0, 0.62],
-      end: [0.14, 0, 0.34],
-      startYaw: 0.13,
-      endYaw: 0.08,
-      isStationary: false,
-    },
-    displacementTori: [-0.06, 0, -0.22],
-    displacementUke: [-0.02, 0, -0.28],
-    participants: [
-      { role: 'tori', clipName: 'jodan_zuki_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_uchi_uke_right', stance: 'kokutsu_dachi_right', finalStance: 'kokutsu_dachi_right', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 20: Блок Сюто-укэ в Миги кокуцу-дати
-  {
-    stepNumber: 20,
-    title: 'Шаг 20: Блок Сюто-укэ в Миги кокуцу-дати',
-    description: '1 (Тори): Раскрытие после выпада. 2 (Укэ): Фиксация блока сюто-укэ в миги кокуцу дати.',
-    notes: 'Атомарный перехват ребром ладони Сюто-укэ (1.00м)',
-    optimalDistance: 1.00,
-    attackAngleDeg: 0,
-    contactType: 'parry_shuto',
+    contactType: 'punch_body',
     interactionType: 'body_contact',
     tContact: 0.46,
     duration: 1.9,
-    scenarioAngles: {
-      label: 'Блок Сюто-укэ в Миги кокуцу-дати · 1.00м',
-      toriAngleDeg: -175.0,
-      ukeAngleDeg: 5.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0, 1.34],
-      end: [0.22, 0, 1.34],
-      startYaw: -3.05,
-      endYaw: -3.05,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.14, 0, 0.34],
-      end: [0.14, 0, 0.34],
-      startYaw: 0.08,
-      endYaw: 0.08,
-      isStationary: true,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.00, 0, 0.00],
+    toriActionType: 'locomotion',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Шаг Укэ в Хидари дзэнкуцу · Гяку-дзуки правой · 0.76м', toriAngleDeg: 5, ukeAngleDeg: -175 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.03, 0, 0.75], startYaw: 0.08, endYaw: 0.08, isStationary: false },
+    ukeTrajectory: { start: [0.12, 0, 1.91], end: [0.09, 0, 1.51], startYaw: -3.06, endYaw: -3.06, isStationary: false },
+    displacementTori: [-0.03, 0, -0.40],
+    displacementUke: [-0.03, 0, -0.40],
     participants: [
-      { role: 'tori', clipName: 'kokutsu_dachi_left', stance: 'kokutsu_dachi_left', finalStance: 'kokutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_shuto_uke_left', stance: 'kokutsu_dachi_right', finalStance: 'kokutsu_dachi_right', delaySeconds: 0.05, isGround: false },
+      { role: 'tori', clipName: 'step_backward_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'locomotion', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'gyaku_zuki_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_left', actionType: 'punch', delaySeconds: 0.05, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 21: Шаг вперёд в кокуцу дати дзёдан сюто-учи (Удар в область горла)
+  // 19 (Исх. шаги 11.1–11.2 объединены): Дзёдан-цки с выпадом vs Уход влево 30° с линии атаки и Сюто-укэ в Миги кокуцу-дати
+  {
+    stepNumber: 19,
+    title: 'Шаг 19: Дзёдан-цки vs Уход влево 30° с линии атаки и Сюто-укэ (Исх. шаг 11)',
+    description: '1 (Тори): Скользящий выпад вперёд (+0.40м) и удар правой в голову (Дзёдан-цки на базе Ой-дзуки). 2 (Укэ): Уход с линии атаки влево под углом 30° в Миги кокуцу-дати со сбивающим блоком Сюто-укэ правой.',
+    notes: 'Укэ отходит с линии атаки влево под 30° (не заходя за спину), фиксирует Миги кокуцу-дати и блок Сюто-укэ (0.88м) · Кимэ: блок Сюто-укэ',
+    optimalDistance: 0.88,
+    attackAngleDeg: 0,
+    contactType: 'block_jodan',
+    interactionType: 'body_contact',
+    ukeTurnDir: 0,
+    tContact: 0.44,
+    duration: 2.2,
+    toriActionType: 'punch',
+    ukeActionType: 'block',
+    scenarioAngles: { label: 'Дзёдан-цки · Уход влево 30° · Сюто-укэ 0.88м', toriAngleDeg: 5, ukeAngleDeg: 150, retreatAngleDeg: -30 },
+    toriTrajectory: { start: [0.03, 0, 0.75], end: [0.06, 0, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: false },
+    ukeTrajectory: { start: [0.09, 0, 1.51], end: [-0.38, 0, 1.91], startYaw: -3.06, endYaw: 2.62, isStationary: false },
+    displacementTori: [0.03, 0, 0.40],
+    displacementUke: [-0.47, 0, 0.40],
+    participants: [
+      { role: 'tori', clipName: 'oi_zuki_jodan_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', actionType: 'punch', delaySeconds: 0.0, isGround: false },
+      { role: 'uke1', clipName: 'tech_shuto_uke_right', stance: 'zenkutsu_dachi_left', finalStance: 'kokutsu_dachi_right', actionType: 'block', delaySeconds: 0.05, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 20 (Исх. шаги 12–13.2 объединены): Шаг вперёд в Хидари кокуцу-дати, Сюто-укэ левой в корпус Тори и падение Тори Укэми
+  {
+    stepNumber: 20,
+    title: 'Шаг 20: Шаг в Хидари кокуцу-дати — Сюто-укэ левой в корпус и падение Тори',
+    description: '1 (Тори): После удара левой рукой Укэ в корпус падает на татами со страховкой Укэми. 2 (Укэ): Шаг вперёд в Хидари кокуцу-дати и удар Сюто-укэ левой рукой по корпусу Тори.',
+    notes: 'Контакт левой рукой Укэ по корпусу Тори (tContact=0.36), затем падение Тори на татами (Y=0.08м, 0.65м) · Кимэ: Хидари кокуцу-дати',
+    optimalDistance: 0.65,
+    attackAngleDeg: 0,
+    contactType: 'punch_body',
+    interactionType: 'body_contact',
+    isGround: true,
+    tContact: 0.36,
+    duration: 2.5,
+    toriActionType: 'fall',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Сюто-укэ левой в Хидари кокуцу-дати и падение Тори · 0.65м', toriAngleDeg: 5, ukeAngleDeg: 150 },
+    toriTrajectory: { start: [0.06, 0, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: false },
+    ukeTrajectory: { start: [-0.38, 0, 1.91], end: [-0.26, 0, 1.71], startYaw: 2.62, endYaw: 2.62, isStationary: false },
+    displacementTori: [0, 0.08, 0],
+    displacementUke: [0.12, 0, -0.20],
+    participants: [
+      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'fallen_ukemi', actionType: 'fall', delaySeconds: 0.40, isGround: true },
+      { role: 'uke1', clipName: 'tech_shuto_uke_left', stance: 'kokutsu_dachi_right', finalStance: 'kokutsu_dachi_left', actionType: 'punch', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 21 (Исх. шаг 13.3): Добивающий удар Отоши-дзуки в лежащего Тори (рука остаётся внизу)
   {
     stepNumber: 21,
-    title: 'Шаг 21: Шаг вперёд в Кокуцу-дати — Дзёдан Сюто-учи в область горла',
-    description: '1 (Тори): Раскрыт в стойке. 2 (Укэ): Шаг вперёд в кокуцу дати дзёдан сюто-учи.',
-    notes: 'Атомарный удар ребром ладони в область горла (0.86м)',
-    optimalDistance: 0.86,
-    attackAngleDeg: 0,
-    contactType: 'strike_throat',
-    interactionType: 'body_contact',
-    tContact: 0.48,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Дзёдан Сюто-учи в область горла · 0.86м',
-      toriAngleDeg: -177.0,
-      ukeAngleDeg: 3.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0, 1.34],
-      end: [0.22, 0, 1.34],
-      startYaw: -3.05,
-      endYaw: -3.10,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.14, 0, 0.34],
-      end: [0.18, 0, 0.48],
-      startYaw: 0.08,
-      endYaw: 0.05,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.04, 0, 0.14],
-    participants: [
-      { role: 'tori', clipName: 'kokutsu_dachi_left', stance: 'kokutsu_dachi_left', finalStance: 'kokutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_shuto_uchi_right', stance: 'kokutsu_dachi_left', finalStance: 'kokutsu_dachi_left', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 22: Гяку Агэ-укэ (вместо захвата за рукав)
-  {
-    stepNumber: 22,
-    title: 'Шаг 22: Гяку Агэ-укэ (вместо захвата за рукав)',
-    description: '1 (Тори): Выпрямленная рука впереди. 2 (Укэ): Гяку агэ-укэ правой рукой (вместо захвата за рукав).',
-    notes: 'Захват руки заменён на обратный восходящий блок Гяку Агэ-укэ (0.76м)',
-    optimalDistance: 0.76,
-    attackAngleDeg: 0,
-    contactType: 'block_gyaku_age_uke',
-    interactionType: 'body_contact',
-    tContact: 0.45,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Гяку Агэ-укэ (без захвата) · 0.76м',
-      toriAngleDeg: -178.0,
-      ukeAngleDeg: 2.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0, 1.34],
-      end: [0.22, 0, 1.34],
-      startYaw: -3.10,
-      endYaw: -3.10,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, 0.48],
-      end: [0.19, 0, 0.58],
-      startYaw: 0.05,
-      endYaw: 0.04,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0, 0.00],
-    displacementUke: [0.01, 0, 0.10],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'tech_age_uke_right', stance: 'kokutsu_dachi_left', finalStance: 'kokutsu_dachi_left', delaySeconds: 0.05, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 23: Аши-барай, постановка ноги в Сико-дати / Падение Тори со страховкой левой рукой, правая нога скрестно поверх левой
-  {
-    stepNumber: 23,
-    title: 'Шаг 23: Подсечка Аши-барай в Сико-дати — падение Тори со страховкой Укэми',
-    description: '1 (Тори): Падает со страховкой левой рукой, правая нога лежит поверх левой скрестно. 2 (Укэ): Аши-барай и постановка ноги в шико дати.',
-    notes: 'Атомарная подсечка стопой и вход в Сико-дати (0.62м)',
-    optimalDistance: 0.62,
-    attackAngleDeg: 0,
-    contactType: 'sweep_fall',
-    interactionType: 'takedown',
-    tContact: 0.44,
-    duration: 2.6,
-    scenarioAngles: {
-      label: 'Аши-барай в Сико-дати и падение Укэми · 0.62м',
-      toriAngleDeg: -178.0,
-      ukeAngleDeg: 2.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0, 1.34],
-      end: [0.22, 0.08, 1.34],
-      startYaw: -3.10,
-      endYaw: -3.10,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.19, 0, 0.58],
-      end: [0.20, 0, 0.72],
-      startYaw: 0.04,
-      endYaw: 0.03,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0.08, 0.00],
-    displacementUke: [0.01, 0, 0.14],
-    participants: [
-      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', delaySeconds: 0.15, isGround: true },
-      { role: 'uke1', clipName: 'kick_nami_gaeshi_left', stance: 'stance_shiko', finalStance: 'stance_shiko', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 24: Добивающий удар Отоши-дзуки в стойке Сико-дати
-  {
-    stepNumber: 24,
-    title: 'Шаг 24: Добивающий удар Отоши-дзуки в стойке Сико-дати',
-    description: '1 (Тори): Лежит на татами в страховке (укэми). 2 (Укэ): Атоши-дзуки (отоши-дзуки) в стойке шико дати.',
-    notes: 'Атомарный вертикальный добивающий удар сверху-вниз (0.62м)',
-    optimalDistance: 0.62,
+    title: 'Шаг 21: Добивающий удар Отоши-дзуки в лежащего Тори',
+    description: '1 (Тори): Лежит на татами (Укэми). 2 (Укэ): Переход в Сико-дати рядом с грудью лежащего Тори и добивающий удар Отоши-дзуки правой сверху вниз с удержанием руки внизу.',
+    notes: 'Вертикальный добивающий удар правым кулаком сверху вниз в грудь лежащего Тори, спина и рука удерживаются внизу в точке кимэ · Кимэ: Сико-дати',
+    optimalDistance: 1.08,
     attackAngleDeg: 0,
     contactType: 'ground_finish',
     interactionType: 'body_contact',
-    tContact: 0.45,
+    preserveScenarioYaw: true,
+    isGround: true,
+    tContact: 0.48,
     duration: 2.0,
-    scenarioAngles: {
-      label: 'Отоши-дзуки в Сико-дати · 0.62м',
-      toriAngleDeg: -178.0,
-      ukeAngleDeg: 2.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0.08, 1.34],
-      end: [0.22, 0.08, 1.34],
-      startYaw: -3.10,
-      endYaw: -3.10,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.20, 0, 0.72],
-      end: [0.20, 0, 0.72],
-      startYaw: 0.03,
-      endYaw: 0.03,
-      isStationary: true,
-    },
-    displacementTori: [0.00, 0.00, 0.00],
-    displacementUke: [0.00, 0.00, 0.00],
+    toriActionType: 'hold',
+    ukeActionType: 'punch',
+    scenarioAngles: { label: 'Добивающий Отоши-дзуки в лежащего Тори', toriAngleDeg: 5, ukeAngleDeg: -104 },
+    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [-0.26, 0, 1.71], waypoint: [-0.82, 0, 0.90], end: [-0.08, 0, 0.12], startYaw: 2.62, endYaw: -1.81, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0.18, 0, -1.59],
     participants: [
-      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', delaySeconds: 0.0, isGround: true },
-      { role: 'uke1', clipName: 'tech_tate_zuki_left', stance: 'stance_shiko', finalStance: 'stance_shiko', delaySeconds: 0.04, isGround: false },
+      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
+      { role: 'uke1', clipName: 'tech_tate_zuki_right', stance: 'kokutsu_dachi_left', finalStance: 'stance_shiko', actionType: 'punch', delaySeconds: 0.05, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
-  // 25: Шаг правой ногой назад в Хидари дзэнкуцу-дати
+  // 22 (Исх. шаг 14/16): Отход и подъём Укэ в Хэйко-дати (Тори остаётся лежать)
+  {
+    stepNumber: 22,
+    title: 'Шаг 22: Отход Укэ и переход в Хэйко-дати (Тори лежит на татами)',
+    description: '1 (Тори): Продолжает лежать на татами без движения. 2 (Укэ): Разрыв дистанции, встаёт в стойку Хэйко-дати лицом к завершению.',
+    notes: 'После добивания встаёт только Укэ, Тори остаётся лежать на татами · Выход на дистанцию поклона · Кимэ: Хэйко-дати',
+    optimalDistance: 1.40,
+    attackAngleDeg: 0,
+    contactType: 'none',
+    interactionType: 'distance_only',
+    preserveScenarioYaw: true,
+    isGround: true,
+    tContact: 0.50,
+    duration: 2.2,
+    toriActionType: 'hold',
+    ukeActionType: 'locomotion',
+    scenarioAngles: { label: 'Отход и подъём Укэ в Хэйко-дати', toriAngleDeg: 5, ukeAngleDeg: 180 },
+    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [-0.08, 0, 0.12], waypoint: [0.68, 0, 1.10], end: [0.00, 0, 2.55], startYaw: -1.81, endYaw: Math.PI, isStationary: false },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0.08, 0, 2.43],
+    participants: [
+      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
+      { role: 'uke1', clipName: 'step_backward', stance: 'stance_shiko', finalStance: 'heiko_dachi', actionType: 'locomotion', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 23: Переход Укэ в стойку Мусуби-дати (Тори лежит на татами)
+  {
+    stepNumber: 23,
+    title: 'Шаг 23: Переход Укэ в Мусуби-дати (Тори лежит)',
+    description: '1 (Тори): Остаётся лежать на татами. 2 (Укэ): Сведение пяток в Мусуби-дати перед поклоном.',
+    notes: 'Подготовка Укэ к завершающему поклону, Тори остаётся лежать · Кимэ: Мусуби-дати',
+    optimalDistance: 1.40,
+    attackAngleDeg: 0,
+    contactType: 'none',
+    interactionType: 'distance_only',
+    preserveScenarioYaw: true,
+    isGround: true,
+    tContact: 0.50,
+    duration: 1.2,
+    toriActionType: 'hold',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Укэ Мусуби-дати · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
+    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
+    participants: [
+      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
+      { role: 'uke1', clipName: 'stance_musubi', stance: 'heiko_dachi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 24: Завершающий поклон (Рэй) делает только Укэ, Тори остаётся лежать
+  {
+    stepNumber: 24,
+    title: 'Шаг 24: Завершающий поклон Укэ (Рэй) — Тори лежит',
+    description: '1 (Тори): Продолжает лежать на татами без поклона. 2 (Укэ): Завершающий поклон 30° в Мусуби-дати.',
+    notes: 'Поклон после победы выполняет только Укэ, Тори продолжает лежать на татами · Кимэ: стойка',
+    optimalDistance: 1.40,
+    attackAngleDeg: 0,
+    contactType: 'none',
+    interactionType: 'distance_only',
+    preserveScenarioYaw: true,
+    isGround: true,
+    isBow: true,
+    tContact: 0.50,
+    duration: 1.8,
+    toriActionType: 'hold',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Поклон Укэ Рэй · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
+    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
+    participants: [
+      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
+      { role: 'uke1', clipName: 'stance_musubi', stance: 'stance_musubi', finalStance: 'stance_musubi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
+      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
+    ],
+  },
+  // 25: Завершение комплекса — Укэ в Хэйко-дати, Тори лежит
   {
     stepNumber: 25,
-    title: 'Шаг 25: Отход Укэ правой ногой назад в Хидари дзэнкуцу-дати',
-    description: '1 (Тори): Остаётся на татами в страховке. 2 (Укэ): Делает шаг правой ногой назад и становится в стойку хидари дзэнкуцу дати.',
-    notes: 'Атомарный разрыв дистанции с контролем (1.59м)',
-    optimalDistance: 1.59,
+    title: 'Шаг 25: Завершение — Укэ в Хэйко-дати (Тори лежит)',
+    description: '1 (Тори): Остаётся лежать на татами. 2 (Укэ): Переход в Хэйко-дати (Сидзэнтай).',
+    notes: 'Финал комплекса Бункай: Укэ в стойке готовности, Тори лежит на татами · Кимэ: стойка',
+    optimalDistance: 1.40,
     attackAngleDeg: 0,
     contactType: 'none',
     interactionType: 'distance_only',
+    preserveScenarioYaw: true,
+    isGround: true,
     tContact: 0.50,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Отход в Хидари дзэнкуцу-дати · 1.59м',
-      toriAngleDeg: -178.0,
-      ukeAngleDeg: 2.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0.08, 1.34],
-      end: [0.22, 0.08, 1.34],
-      startYaw: -3.10,
-      endYaw: -3.10,
-      isStationary: true,
-    },
-    ukeTrajectory: {
-      start: [0.20, 0, 0.72],
-      end: [0.18, 0, -0.25],
-      startYaw: 0.03,
-      endYaw: 0.03,
-      isStationary: false,
-    },
-    displacementTori: [0.00, 0.00, 0.00],
-    displacementUke: [-0.02, 0, -0.97],
+    duration: 1.6,
+    toriActionType: 'hold',
+    ukeActionType: 'stance',
+    scenarioAngles: { label: 'Финал: Укэ Хэйко-дати · Тори лежит', toriAngleDeg: 5, ukeAngleDeg: 180 },
+    toriTrajectory: { start: [0.06, 0.08, 1.15], end: [0.06, 0.08, 1.15], startYaw: 0.08, endYaw: 0.08, isStationary: true },
+    ukeTrajectory: { start: [0.00, 0, 2.55], end: [0.00, 0, 2.55], startYaw: Math.PI, endYaw: Math.PI, isStationary: true },
+    displacementTori: [0, 0, 0],
+    displacementUke: [0, 0, 0],
     participants: [
-      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', delaySeconds: 0.0, isGround: true },
-      { role: 'uke1', clipName: 'step_backward_right', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 26: Через паузу встаёт в Миги дзэнкуцу-дати
-  {
-    stepNumber: 26,
-    title: 'Шаг 26: Подъем Тори через паузу в Миги дзэнкуцу-дати',
-    description: '1 (Тори): Через паузу встаёт в миги дзэнкуцу дати. 2 (Укэ): Контроль в хидари дзэнкуцу дати.',
-    notes: 'Атомарный подъем с татами (1.59м)',
-    optimalDistance: 1.59,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    tContact: 0.50,
-    duration: 2.4,
-    scenarioAngles: {
-      label: 'Подъем Тори в Миги дзэнкуцу-дати · 1.59м',
-      toriAngleDeg: -178.0,
-      ukeAngleDeg: 2.0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0.08, 1.34],
-      end: [0.22, 0.00, 1.34],
-      startYaw: -3.10,
-      endYaw: -3.10,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, -0.25],
-      end: [0.18, 0, -0.25],
-      startYaw: 0.03,
-      endYaw: 0.03,
-      isStationary: true,
-    },
-    displacementTori: [0.00, -0.08, 0.00],
-    displacementUke: [0.00, 0.00, 0.00],
-    participants: [
-      { role: 'tori', clipName: 'zenkutsu_dachi_right', stance: 'zenkutsu_dachi_right', finalStance: 'zenkutsu_dachi_right', delaySeconds: 0.25, isGround: false, isRising: true },
-      { role: 'uke1', clipName: 'zenkutsu_dachi_left', stance: 'zenkutsu_dachi_left', finalStance: 'zenkutsu_dachi_left', delaySeconds: 0.0, isGround: false },
-      { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
-    ],
-  },
-  // 27: Шагом назад оба становятся в Хэйко-дати
-  {
-    stepNumber: 27,
-    title: 'Шаг 27: Возврат шагом назад в Хэйко-дати',
-    description: '1 (Тори): Шагом назад становится в хэйко дати. 2 (Укэ): Шагом назад становится в хэйко дати.',
-    notes: 'Завершение комплекса на исходной дистанции (2.10м)',
-    optimalDistance: 2.10,
-    attackAngleDeg: 0,
-    contactType: 'none',
-    interactionType: 'distance_only',
-    tContact: 0.50,
-    duration: 2.0,
-    scenarioAngles: {
-      label: 'Возврат в Хэйко-дати · 2.10м',
-      toriAngleDeg: 180,
-      ukeAngleDeg: 0,
-    },
-    toriTrajectory: {
-      start: [0.22, 0.00, 1.34],
-      end: [0.00, 0.00, 1.55],
-      startYaw: -3.10,
-      endYaw: -Math.PI,
-      isStationary: false,
-    },
-    ukeTrajectory: {
-      start: [0.18, 0, -0.25],
-      end: [0.00, 0, -0.55],
-      startYaw: 0.03,
-      endYaw: 0.0,
-      isStationary: false,
-    },
-    displacementTori: [-0.22, 0, 0.21],
-    displacementUke: [-0.18, 0, -0.30],
-    participants: [
-      { role: 'tori', clipName: 'step_backward', stance: 'heiko_dachi', finalStance: 'heiko_dachi', delaySeconds: 0.0, isGround: false },
-      { role: 'uke1', clipName: 'step_backward', stance: 'heiko_dachi', finalStance: 'heiko_dachi', delaySeconds: 0.0, isGround: false },
+      { role: 'tori', clipName: 'idle_shizentai', stance: 'fallen_ukemi', finalStance: 'fallen_ukemi', actionType: 'hold', delaySeconds: 0.0, isGround: true },
+      { role: 'uke1', clipName: 'heiko_dachi', stance: 'stance_musubi', finalStance: 'heiko_dachi', actionType: 'stance', delaySeconds: 0.0, isGround: false },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0, isGround: false },
     ],
   },
 ];
 
+export const HEIAN_SHODAN_BUNKAI_34_STEPS = HEIAN_SHODAN_BUNKAI_18_STEPS;
+
 export const CANONICAL_BUNKAI_EPISODES = [
   {
     stepNumber: 1,
     title: 'Защита Сюто-укэ против выпада Ой-цуки',
-    description: 'Укэ 1 атакует мощным выпадом Ой-цуки тюдан. Тори уходит с линии атаки в Кокуцу-дати, сбивает руку блоком Сюто-укэ и контратакует Гяку-цуки в корпус.',
+    description: 'Тори (синий) атакует мощным выпадом Ой-цуки тюдан. Укэ 1 (белый) уходит с линии атаки в Кокуцу-дати и сбивает руку блоком Сюто-укэ.',
     optimalDistance: 1.45,
     attackAngleDeg: 0,
     interactionType: 'local_contact',
     tContact: 0.45,
-    activeAttacker: 'uke1',
+    activeAttacker: 'tori',
     participants: [
-      { role: 'tori', clipName: 'shuto_uke', stance: 'kokutsu', delaySeconds: 0.15 },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu', delaySeconds: 0.0 },
+      { role: 'tori', clipName: 'tech_oi_zuki_right', stance: 'zenkutsu_dachi_right', delaySeconds: 0.0 },
+      { role: 'uke1', clipName: 'tech_shuto_uke_left', stance: 'kokutsu_dachi_right', delaySeconds: 0.12 },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0 },
     ],
   },
   {
     stepNumber: 2,
-    title: 'Восходящий блок Агэ-укэ и сокрушительный локоть Эмпи',
-    description: 'Укэ 1 наносит прямой удар в голову (Дзёдан). Тори встречает атаку блоком Агэ-укэ, смещается в ближнюю дистанцию и пробивает локтем Эмпи-учи.',
+    title: 'Восходящий блок Агэ-укэ против выпада в голову',
+    description: 'Тори (синий) наносит прямой удар в голову (Дзёдан). Укэ 1 (белый) встречает атаку восходящим блоком Агэ-укэ.',
     optimalDistance: 1.20,
     attackAngleDeg: 10,
     interactionType: 'local_contact',
     tContact: 0.42,
-    activeAttacker: 'uke1',
+    activeAttacker: 'tori',
     participants: [
-      { role: 'tori', clipName: 'age_uke_left', stance: 'zenkutsu', delaySeconds: 0.10 },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu', delaySeconds: 0.0 },
+      { role: 'tori', clipName: 'tech_oi_zuki_right', stance: 'zenkutsu_dachi_right', delaySeconds: 0.0 },
+      { role: 'uke1', clipName: 'tech_age_uke_left', stance: 'zenkutsu_dachi_left', delaySeconds: 0.10 },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0 },
     ],
   },
   {
     stepNumber: 3,
     title: 'Нижний смет Гэдан-барай от прямого удара ногой Маэ-гэри',
-    description: 'Укэ 1 атакует ударом ноги Маэ-гэри в живот. Тори сметает голень блоком Гэдан-барай и добивает молотом Тэтцуи-учи.',
-    optimalDistance: 1.65,
+    description: 'Тори (синий) атакует ударом ноги Маэ-гэри в корпус. Укэ 1 (белый) сметает голень нижним блоком Гэдан-барай.',
+    optimalDistance: 1.55,
     attackAngleDeg: -10,
     interactionType: 'local_contact',
     tContact: 0.50,
-    activeAttacker: 'uke1',
+    activeAttacker: 'tori',
     participants: [
-      { role: 'tori', clipName: 'gedan_barai_left', stance: 'zenkutsu', delaySeconds: 0.12 },
-      { role: 'uke1', clipName: 'mae_geri_right', stance: 'zenkutsu', delaySeconds: 0.0 },
+      { role: 'tori', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_left', delaySeconds: 0.0 },
+      { role: 'uke1', clipName: 'tech_gedan_barai_left', stance: 'zenkutsu_dachi_left', delaySeconds: 0.12 },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0 },
     ],
   },
   {
     stepNumber: 4,
-    title: 'Фланговая атака под 45°: уход Сото-укэ и контрудар Уракэн',
-    description: 'Укэ 1 атакует с левого фланга под углом 45°. Тори разворачивается навстречу удару, парирует блоком Сото-укэ и наносит хлесткий Уракэн-учи в висок.',
+    title: 'Фланговая атака под 45° и блок Сото-укэ',
+    description: 'Тори (синий) атакует с фланга под углом 45°. Укэ 1 (белый) разворачивается навстречу удару и парирует блоком Сото-укэ.',
     optimalDistance: 1.25,
     attackAngleDeg: 45,
     interactionType: 'local_contact',
     tContact: 0.44,
-    activeAttacker: 'uke1',
+    activeAttacker: 'tori',
     participants: [
-      { role: 'tori', clipName: 'soto_uke', stance: 'zenkutsu', delaySeconds: 0.10 },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu', delaySeconds: 0.0 },
+      { role: 'tori', clipName: 'tech_oi_zuki_right', stance: 'zenkutsu_dachi_right', delaySeconds: 0.0 },
+      { role: 'uke1', clipName: 'tech_soto_uke_left', stance: 'zenkutsu_dachi_left', delaySeconds: 0.10 },
       { role: 'uke2', clipName: 'idle_shizentai', stance: 'ready', delaySeconds: 0.0 },
     ],
   },
   {
     stepNumber: 5,
-    title: 'Командный бункай (3 бойца): защита от Укэ 1 и разворот к Укэ 2',
-    description: 'Укэ 1 начинает атаку с фронта. Тори защищается Сюто-укэ. В этот момент Укэ 2 атакует с правого фланга (+75°). Тори разворачивается на 75°, сбивает атаку Гэдан-барай и поражает Укэ 2 ударом Гяку-цуки.',
+    title: 'Командный бункай (3 бойца): защита Укэ от Тори и фланговой атаки',
+    description: 'Тори (синий) начинает атаку с фронта, Укэ 2 подключается с правого фланга (+75°). Укэ 1 (белый) защищается блоком Сюто-укэ.',
     optimalDistance: 1.40,
     attackAngleDeg: 0,
     uke2AngleDeg: 75,
     interactionType: 'local_contact',
     tContact: 0.45,
-    activeAttacker: 'sequential',
+    activeAttacker: 'tori',
     switchTime: 1.35,
     participants: [
-      { role: 'tori', clipName: 'shuto_uke', stance: 'kokutsu', delaySeconds: 0.15 },
-      { role: 'uke1', clipName: 'oi_zuki_right', stance: 'zenkutsu', delaySeconds: 0.0 },
-      { role: 'uke2', clipName: 'mae_geri_right', stance: 'zenkutsu', delaySeconds: 1.35 },
+      { role: 'tori', clipName: 'tech_oi_zuki_right', stance: 'zenkutsu_dachi_right', delaySeconds: 0.0 },
+      { role: 'uke1', clipName: 'tech_shuto_uke_left', stance: 'kokutsu_dachi_right', delaySeconds: 0.12 },
+      { role: 'uke2', clipName: 'kick_mae_geri_right', stance: 'zenkutsu_dachi_left', delaySeconds: 1.35 },
     ],
   },
 ];
@@ -1738,8 +1339,30 @@ export function normalizeBunkaiEpisode(raw, index = 0) {
   const atkAngle = Number(raw.Attack_Angle_Degrees ?? raw.targetAngle ?? raw.attackAngleDeg ?? canonical?.attackAngleDeg ?? 0);
   const uke2Angle = Number(raw.uke2AngleDeg ?? canonical?.uke2AngleDeg ?? (atkAngle + 65));
 
-  const toriClip = toriPart.Clip_Name || toriPart.clipName || raw.Clip_Name || raw.clipName || canonical?.participants?.[0]?.clipName || 'heiko_dachi';
-  const uke1Clip = uke1Part.Clip_Name || uke1Part.clipName || canonical?.participants?.[1]?.clipName || 'heiko_dachi';
+  const rawToriClip = toriPart.Clip_Name || toriPart.clipName || raw.Clip_Name || raw.clipName || canonical?.participants?.[0]?.clipName || 'heiko_dachi';
+  const rawUke1Clip = uke1Part.Clip_Name || uke1Part.clipName || canonical?.participants?.[1]?.clipName || 'heiko_dachi';
+  const isLegacyInvertedDb =
+    String(rawToriClip).endsWith('_tori') ||
+    String(rawUke1Clip).endsWith('_uke') ||
+    (!isExplicitHeian && /(shuto_uke|age_uke|gedan_barai|soto_uke|uchi_uke|haishu|haivan)/.test(String(rawToriClip).toLowerCase()) && /(oi_zuki|mae_geri|mawashi|yoko_geri|ushiro|kizami)/.test(String(rawUke1Clip).toLowerCase()));
+
+  const LEGACY_ATTACK_REMAP = {
+    bunkai_shuto_counter_uke: 'tech_oi_zuki_right',
+    bunkai_age_empi_uke: 'tech_oi_zuki_right',
+    bunkai_kuzushi_sweep_uke: 'kick_mae_geri_right',
+  };
+  const LEGACY_DEFENSE_REMAP = {
+    bunkai_shuto_counter_tori: 'tech_shuto_uke_left',
+    bunkai_age_empi_tori: 'tech_age_uke_left',
+    bunkai_kuzushi_sweep_tori: 'tech_gedan_barai_left',
+  };
+
+  const toriClip = isLegacyInvertedDb
+    ? (LEGACY_ATTACK_REMAP[rawUke1Clip] || rawUke1Clip)
+    : rawToriClip;
+  const uke1Clip = isLegacyInvertedDb
+    ? (LEGACY_DEFENSE_REMAP[rawToriClip] || rawToriClip)
+    : rawUke1Clip;
   const uke2Clip = uke2Part.Clip_Name || uke2Part.clipName || canonical?.participants?.[2]?.clipName || 'idle_shizentai';
 
   const toriDelay = Number(toriPart.Delay_Seconds ?? toriPart.delaySeconds ?? canonical?.participants?.[0]?.delaySeconds ?? 0.0);
@@ -1769,17 +1392,33 @@ export function normalizeBunkaiEpisode(raw, index = 0) {
     title: raw.Title || raw.title || canonical?.title || `Шаг ${index + 1}`,
     description: raw.Description || raw.description || canonical?.description || '',
     notes: raw.Notes || raw.notes || canonical?.notes || '',
+    phase: raw.phase || canonical?.phase || null,
+    outcome: raw.outcome || canonical?.outcome || null,
+    toriMovement: raw.toriMovement || canonical?.toriMovement || null,
     optimalDistance: isNaN(optDist) ? (canonical?.optimalDistance ?? 1.45) : optDist,
+    isCustomDistance: Boolean(raw.isCustomDistance),
     attackAngleDeg: isNaN(atkAngle) ? (canonical?.attackAngleDeg ?? 0) : atkAngle,
+    toriAngleOffsetDeg: raw.toriAngleOffsetDeg ?? canonical?.toriAngleOffsetDeg ?? 0,
+    ukeEvasionAngleDeg: raw.ukeEvasionAngleDeg ?? canonical?.ukeEvasionAngleDeg ?? 0,
+    relativeAngleDegTori: raw.relativeAngleDegTori ?? canonical?.relativeAngleDegTori ?? undefined,
+    relativeAngleDegUke: raw.relativeAngleDegUke ?? canonical?.relativeAngleDegUke ?? undefined,
     uke2AngleDeg: isNaN(uke2Angle) ? (canonical?.uke2AngleDeg ?? atkAngle + 65) : uke2Angle,
     toriEndAngleDeg: toriEndAngleDeg !== undefined ? Number(toriEndAngleDeg) : undefined,
     ukeEndAngleDeg: ukeEndAngleDeg !== undefined ? Number(ukeEndAngleDeg) : undefined,
+    orientationModeTori: raw.orientationModeTori ?? canonical?.orientationModeTori ?? undefined,
+    orientationModeUke: raw.orientationModeUke ?? canonical?.orientationModeUke ?? undefined,
+    customToriPosX: raw.customToriPosX ?? canonical?.customToriPosX ?? undefined,
+    customToriPosZ: raw.customToriPosZ ?? canonical?.customToriPosZ ?? undefined,
+    customUkePosX: raw.customUkePosX ?? canonical?.customUkePosX ?? undefined,
+    customUkePosZ: raw.customUkePosZ ?? canonical?.customUkePosZ ?? undefined,
     toriEndYaw,
     ukeEndYaw,
     interactionType: raw.Interaction_Type || raw.interactionType || canonical?.interactionType || 'body_contact',
     contactType: raw.contactType || canonical?.contactType || 'none',
     tContact: Number(raw.tContact || canonical?.tContact || 0.48),
     duration: Number(raw.duration || canonical?.duration || 2.4),
+    toriActionType: raw.toriActionType || toriPart.actionType || canonical?.toriActionType || 'stance',
+    ukeActionType: raw.ukeActionType || uke1Part.actionType || canonical?.ukeActionType || 'stance',
     scenarioAngles: raw.scenarioAngles || canonical?.scenarioAngles || null,
     toriTrajectory: effectiveToriTrajectory,
     ukeTrajectory: effectiveUkeTrajectory,
@@ -1789,27 +1428,35 @@ export function normalizeBunkaiEpisode(raw, index = 0) {
     isRising: Boolean(raw.isRising || toriPart.isRising || canonical?.isRising || canonical?.participants?.[0]?.isRising),
     isBow: Boolean(raw.isBow || canonical?.isBow),
     backToOpponent: Boolean(raw.backToOpponent || canonical?.backToOpponent),
+    ukeFullTurn: Boolean(raw.ukeFullTurn || canonical?.ukeFullTurn),
+    preserveScenarioYaw: Boolean(raw.preserveScenarioYaw || canonical?.preserveScenarioYaw),
+    toriTurnDir: raw.toriTurnDir ?? canonical?.toriTurnDir ?? 0,
+    ukeTurnDir: raw.ukeTurnDir ?? canonical?.ukeTurnDir ?? 0,
     displacementTori: raw.displacementTori || (isExplicitHeian ? canonical?.displacementTori : null) || [0, 0, 0],
     displacementUke: raw.displacementUke || (isExplicitHeian ? canonical?.displacementUke : null) || [0, 0, 0],
     participants: [
       {
         role: 'tori',
         clipName: toriClip,
-        stance: toriPart.Stance_In || toriPart.initialStance || toriPart.stance || canonical?.participants?.[0]?.stance || 'zenkutsu_dachi_left',
-        finalStance: toriPart.Final_Stance || toriPart.Stance_Out || toriPart.finalStance || canonical?.participants?.[0]?.finalStance || null,
-        landingMode: toriPart.Landing_Mode || toriPart.landingMode || canonical?.participants?.[0]?.landingMode || 'auto',
-        delaySeconds: toriDelay,
+        stance: (isLegacyInvertedDb ? uke1Part : toriPart).Stance_In || (isLegacyInvertedDb ? uke1Part : toriPart).initialStance || (isLegacyInvertedDb ? uke1Part : toriPart).stance || canonical?.participants?.[0]?.stance || 'zenkutsu_dachi_left',
+        hasExplicitStance: Boolean((isLegacyInvertedDb ? uke1Part : toriPart).Stance_In || (isLegacyInvertedDb ? uke1Part : toriPart).initialStance || (isLegacyInvertedDb ? uke1Part : toriPart).stance || canonical?.participants?.[0]?.stance),
+        finalStance: (isLegacyInvertedDb ? uke1Part : toriPart).Final_Stance || (isLegacyInvertedDb ? uke1Part : toriPart).Stance_Out || (isLegacyInvertedDb ? uke1Part : toriPart).finalStance || canonical?.participants?.[0]?.finalStance || null,
+        landingMode: (isLegacyInvertedDb ? uke1Part : toriPart).Landing_Mode || (isLegacyInvertedDb ? uke1Part : toriPart).landingMode || canonical?.participants?.[0]?.landingMode || 'auto',
+        actionType: (isLegacyInvertedDb ? uke1Part : toriPart).actionType || raw.toriActionType || canonical?.toriActionType || 'stance',
+        delaySeconds: isLegacyInvertedDb ? 0.0 : toriDelay,
         isGround: Boolean(raw.isGround || toriPart.isGround || canonical?.isGround || canonical?.participants?.[0]?.isGround),
         isRising: Boolean(raw.isRising || toriPart.isRising || canonical?.isRising || canonical?.participants?.[0]?.isRising),
       },
       {
         role: 'uke1',
         clipName: uke1Clip,
-        stance: uke1Part.Stance_In || uke1Part.initialStance || uke1Part.stance || canonical?.participants?.[1]?.stance || 'zenkutsu_dachi_left',
-        finalStance: uke1Part.Final_Stance || uke1Part.Stance_Out || uke1Part.finalStance || canonical?.participants?.[1]?.finalStance || null,
-        landingMode: uke1Part.Landing_Mode || uke1Part.landingMode || canonical?.participants?.[1]?.landingMode || 'auto',
-        delaySeconds: uke1Delay,
-        isGround: false,
+        stance: (isLegacyInvertedDb ? toriPart : uke1Part).Stance_In || (isLegacyInvertedDb ? toriPart : uke1Part).initialStance || (isLegacyInvertedDb ? toriPart : uke1Part).stance || canonical?.participants?.[1]?.stance || 'zenkutsu_dachi_left',
+        hasExplicitStance: Boolean((isLegacyInvertedDb ? toriPart : uke1Part).Stance_In || (isLegacyInvertedDb ? toriPart : uke1Part).initialStance || (isLegacyInvertedDb ? toriPart : uke1Part).stance || canonical?.participants?.[1]?.stance),
+        finalStance: (isLegacyInvertedDb ? toriPart : uke1Part).Final_Stance || (isLegacyInvertedDb ? toriPart : uke1Part).Stance_Out || (isLegacyInvertedDb ? toriPart : uke1Part).finalStance || canonical?.participants?.[1]?.finalStance || null,
+        landingMode: (isLegacyInvertedDb ? toriPart : uke1Part).Landing_Mode || (isLegacyInvertedDb ? toriPart : uke1Part).landingMode || canonical?.participants?.[1]?.landingMode || 'auto',
+        actionType: (isLegacyInvertedDb ? toriPart : uke1Part).actionType || raw.ukeActionType || canonical?.ukeActionType || 'stance',
+        delaySeconds: isLegacyInvertedDb ? 0.12 : uke1Delay,
+        isGround: Boolean(uke1Part.isGround),
       },
       {
         role: 'uke2',
@@ -1829,36 +1476,67 @@ const FIGHT_CLIP_MAP = {
   zenkutsu_dachi_right: 'zenkutsu_dachi_right',
   kokutsu_dachi_left: 'kokutsu_dachi_left',
   kokutsu_dachi_right: 'kokutsu_dachi_right',
+  fudo_dachi: 'fudo_dachi',
+  fudo_dachi_right: 'fudo_dachi',
   stance_kiba: 'stance_shiko',
   kiba_dachi: 'stance_shiko',
+  stance_neko_left: 'stance_neko_left',
   shuto_uke: 'tech_shuto_uke_left',
+  tech_shuto_uke_right: 'tech_shuto_uke_right',
   uchi_uke: 'tech_uchi_uke_left',
+  tech_uchi_uke_left: 'tech_uchi_uke_left',
+  tech_uchi_uke_right: 'tech_uchi_uke_right',
   tetsui_uchi: 'tech_tettsui_right',
+  tech_tettsui_right: 'tech_tettsui_right',
   strike_above_elbow: 'strike_above_elbow',
   tech_strike_above_elbow: 'strike_above_elbow',
   arm_strike: 'strike_above_elbow',
   kizami_zuki: 'jodan_zuki_left',
+  jodan_zuki_right: 'jodan_zuki_right',
+  jodan_zuki_left: 'jodan_zuki_left',
   shuto_uchi: 'tech_shuto_uchi_right',
+  tech_shuto_uchi_right: 'tech_shuto_uchi_right',
   heiko_dachi: 'heiko_dachi',
   stance_musubi: 'stance_musubi',
   stance_heisoku: 'stance_heisoku',
   stance_shiko: 'stance_shiko',
   mae_geri: 'mae_geri_right',
   mae_geri_right: 'mae_geri_right',
+  mae_geri_left: 'mae_geri_left',
   kick_mae_geri_right: 'kick_mae_geri_right',
+  kick_mae_geri_left: 'kick_mae_geri_left',
   gedan_barai: 'gedan_barai_left',
   gedan_barai_left: 'gedan_barai_left',
+  gedan_barai_right: 'gedan_barai_right',
   tech_gedan_barai_left: 'tech_gedan_barai_left',
   age_uke: 'age_uke_left',
   age_uke_left: 'age_uke_left',
+  age_uke_right: 'age_uke_right',
   tech_age_uke_right: 'tech_age_uke_right',
   oi_zuki: 'oi_zuki_right',
   oi_zuki_right: 'oi_zuki_right',
+  oi_zuki_jodan_right: 'oi_zuki_jodan_right',
+  oi_zuki_jodan_left: 'oi_zuki_jodan_left',
   tech_oi_zuki_right: 'tech_oi_zuki_right',
   gyaku_zuki: 'gyaku_zuki_right',
   gyaku_zuki_right: 'gyaku_zuki_right',
+  gyaku_zuki_left: 'gyaku_zuki_left',
   tech_gyaku_zuki_left: 'tech_gyaku_zuki_left',
   ren_zuki: 'tech_gyaku_zuki_left',
+  enter_zenkutsu_left: 'enter_zenkutsu_left',
+  enter_zenkutsu_right: 'enter_zenkutsu_right',
+  turn_into_zenkutsu_right: 'turn_into_zenkutsu_right',
+  turn_into_zenkutsu_left: 'turn_into_zenkutsu_left',
+  step_forward_right: 'step_forward_right',
+  step_backward_left: 'step_backward_left',
+  step_backward_right: 'step_backward_right',
+  step_backward: 'step_backward',
+  tech_haishu_uke_left: 'tech_haishu_uke_left',
+  tech_haishu_uke_right: 'tech_haishu_uke_right',
+  kick_nami_gaeshi_left: 'kick_nami_gaeshi_left',
+  kick_nami_gaeshi_right: 'kick_nami_gaeshi_right',
+  tech_tate_zuki_left: 'tech_tate_zuki_left',
+  tech_tate_zuki_right: 'tech_tate_zuki_right',
 };
 
 /**
@@ -1947,6 +1625,356 @@ export function resolveBunkaiClip(clipName) {
  * Конечная позиция предыдущего действия становится точной начальной позицией следующего шага.
  * Устраняет разрывы, возврат в центр [0,0,0] и искусственные телепортации.
  */
+/**
+ * Единое объединение шагов из БД с каноническими траекториями и параметрами бункай,
+ * чтобы отображение в просмотрщике бункая и в редакторе совпадало 1-в-1.
+ */
+export function buildStepsFromDb(dbSteps = []) {
+  if (!Array.isArray(dbSteps) || dbSteps.length === 0) {
+    return HEIAN_SHODAN_BUNKAI_18_STEPS;
+  }
+  const isCanonical = dbSteps.length === HEIAN_SHODAN_BUNKAI_18_STEPS.length;
+  return dbSteps.map((s, idx) => {
+    const meta = s.metadata && typeof s.metadata === 'object' ? s.metadata : null;
+    const canonical = isCanonical ? HEIAN_SHODAN_BUNKAI_18_STEPS[idx] : null;
+
+    if (!meta && !canonical) {
+      const norm = normalizeBunkaiEpisode(s, idx);
+      const rawParticipants = s.participants || s.Participants || [];
+      const toriP = rawParticipants.find((p) => (p.role || p.Role) === 'tori') || {};
+      const ukeP = rawParticipants.find((p) => {
+        const r = p.role || p.Role;
+        return r === 'uke' || r === 'uke1';
+      }) || {};
+      if (toriP.offsetX !== undefined && toriP.offsetX !== null && Number(toriP.offsetX) !== 0) {
+        norm.customToriPosX = Number(toriP.offsetX);
+      }
+      if (ukeP.offsetX !== undefined && ukeP.offsetX !== null && Number(ukeP.offsetX) !== 0) {
+        norm.customUkePosX = Number(ukeP.offsetX);
+      }
+      return norm;
+    }
+
+    const base = meta || canonical || {};
+    const rawParticipants = s.participants || s.Participants || [];
+    const toriPart = rawParticipants.find((p) => (p.role || p.Role) === 'tori') || {};
+    const ukePart = rawParticipants.find((p) => {
+      const r = p.role || p.Role;
+      return r === 'uke' || r === 'uke1';
+    }) || {};
+    const uke2Part = rawParticipants.find((p) => (p.role || p.Role) === 'uke2') || {};
+
+    const baseTori = (base.participants || []).find((p) => p.role === 'tori') || {};
+    const baseUke = (base.participants || []).find((p) => p.role === 'uke1' || p.role === 'uke') || {};
+    const baseUke2 = (base.participants || []).find((p) => p.role === 'uke2') || {};
+
+    const rawToriClip = toriPart.clipName || toriPart.Clip_Name || baseTori.clipName || 'heiko_dachi';
+    const rawUkeClip = ukePart.clipName || ukePart.Clip_Name || baseUke.clipName || 'heiko_dachi';
+    const isLegacyInvertedDb =
+      !meta &&
+      (String(rawToriClip).endsWith('_tori') || String(rawUkeClip).endsWith('_uke'));
+
+    const effToriPart = isLegacyInvertedDb ? ukePart : toriPart;
+    const effUkePart = isLegacyInvertedDb ? toriPart : ukePart;
+
+    const toriClip = isLegacyInvertedDb ? baseTori.clipName : rawToriClip;
+    const ukeClip = isLegacyInvertedDb ? baseUke.clipName : rawUkeClip;
+    const uke2Clip = uke2Part.clipName || uke2Part.Clip_Name || baseUke2.clipName || 'idle_shizentai';
+
+    const rawToriRotY = effToriPart.rotationY !== undefined ? effToriPart.rotationY : effToriPart.Rotation_Y;
+    const rawUkeRotY = effUkePart.rotationY !== undefined ? effUkePart.rotationY : effUkePart.Rotation_Y;
+
+    const toriYawDeg = (!isLegacyInvertedDb && rawToriRotY !== undefined && rawToriRotY !== null)
+      ? Number(rawToriRotY)
+      : (base.toriEndAngleDeg ?? base.scenarioAngles?.toriAngleDeg ?? (base.toriTrajectory?.endYaw !== undefined ? Math.round((base.toriTrajectory.endYaw * 180) / Math.PI) : 0));
+    const ukeYawDeg = (!isLegacyInvertedDb && rawUkeRotY !== undefined && rawUkeRotY !== null)
+      ? (Math.abs(Number(rawUkeRotY) - Math.PI) < 0.05 ? 180 : Number(rawUkeRotY))
+      : (base.ukeEndAngleDeg ?? base.scenarioAngles?.ukeAngleDeg ?? (base.ukeTrajectory?.endYaw !== undefined ? Math.round((base.ukeTrajectory.endYaw * 180) / Math.PI) : 180));
+
+    return {
+      ...base,
+      stepNumber: s.stepNumber ?? base.stepNumber ?? (idx + 1),
+      title: s.title || base.title || `Шаг ${idx + 1}`,
+      description: s.description || base.description || '',
+      notes: base.notes || s.notes || '',
+      optimalDistance: Number(s.targetDistance ?? base.optimalDistance ?? 1.45),
+      attackAngleDeg: Number(s.targetAngle ?? base.attackAngleDeg ?? 0),
+      duration: Number(s.duration || base.duration || 2.0),
+      toriEndAngleDeg: toriYawDeg,
+      ukeEndAngleDeg: ukeYawDeg,
+      toriEndYaw: (toriYawDeg * Math.PI) / 180,
+      ukeEndYaw: (ukeYawDeg * Math.PI) / 180,
+      toriTrajectory: base.toriTrajectory
+        ? { ...base.toriTrajectory, endYaw: (toriYawDeg * Math.PI) / 180 }
+        : { endYaw: (toriYawDeg * Math.PI) / 180 },
+      ukeTrajectory: base.ukeTrajectory
+        ? { ...base.ukeTrajectory, endYaw: (ukeYawDeg * Math.PI) / 180 }
+        : { endYaw: (ukeYawDeg * Math.PI) / 180 },
+      participants: [
+        {
+          ...baseTori,
+          role: 'tori',
+          clipName: toriClip,
+          stance: effToriPart.initialStance || effToriPart.stance || baseTori.stance || 'zenkutsu_dachi_left',
+          finalStance: effToriPart.finalStance || baseTori.finalStance || null,
+          landingMode: effToriPart.landingMode || baseTori.landingMode || 'auto',
+          actionType: base.toriActionType || baseTori.actionType || 'stance',
+          delaySeconds: effToriPart.delaySeconds ?? baseTori.delaySeconds ?? 0.0,
+          isGround: Boolean(base.toriIsGround ?? base.isGround ?? baseTori.isGround),
+          isRising: Boolean(base.toriIsRising ?? base.isRising ?? baseTori.isRising),
+        },
+        {
+          ...baseUke,
+          role: 'uke1',
+          clipName: ukeClip,
+          stance: effUkePart.initialStance || effUkePart.stance || baseUke.stance || 'zenkutsu_dachi_left',
+          finalStance: effUkePart.finalStance || baseUke.finalStance || null,
+          landingMode: effUkePart.landingMode || baseUke.landingMode || 'auto',
+          actionType: base.ukeActionType || baseUke.actionType || 'stance',
+          delaySeconds: effUkePart.delaySeconds ?? baseUke.delaySeconds ?? 0.08,
+          isGround: Boolean(base.ukeIsGround ?? baseUke.isGround),
+        },
+        {
+          ...baseUke2,
+          role: 'uke2',
+          clipName: uke2Clip,
+          stance: uke2Part.initialStance || uke2Part.stance || baseUke2.stance || 'ready',
+          delaySeconds: uke2Part.delaySeconds ?? baseUke2.delaySeconds ?? 0.0,
+        },
+      ],
+    };
+  });
+}
+
+/**
+ * Единая конвертация эпизода из редактора (BunkaiFormPage) в объект шага для 3D плеера.
+ * Гарантирует 100% совпадение предпросмотра в редакторе с демонстрацией на странице просмотра.
+ */
+export function formEpisodeToEngineStep(ep, idx, totalCount = 0) {
+  const isCanonical = totalCount === HEIAN_SHODAN_BUNKAI_18_STEPS.length;
+  const canonical = isCanonical ? HEIAN_SHODAN_BUNKAI_18_STEPS[idx] : null;
+
+  const toriYawDeg = ep.toriEndAngleDeg !== undefined && ep.toriEndAngleDeg !== null
+    ? Number(ep.toriEndAngleDeg)
+    : (ep.toriTrajectory?.endYaw !== undefined
+      ? Math.round((ep.toriTrajectory.endYaw * 180) / Math.PI)
+      : (canonical?.scenarioAngles?.toriAngleDeg ?? 0));
+  const ukeYawDeg = ep.ukeEndAngleDeg !== undefined && ep.ukeEndAngleDeg !== null
+    ? Number(ep.ukeEndAngleDeg)
+    : (ep.ukeTrajectory?.endYaw !== undefined
+      ? Math.round((ep.ukeTrajectory.endYaw * 180) / Math.PI)
+      : (canonical?.scenarioAngles?.ukeAngleDeg ?? 180));
+
+  const baseToriTraj = ep.toriTrajectory || canonical?.toriTrajectory || null;
+  const effectiveToriTraj = baseToriTraj
+    ? { ...baseToriTraj, endYaw: (toriYawDeg * Math.PI) / 180 }
+    : { endYaw: (toriYawDeg * Math.PI) / 180 };
+
+  const baseUkeTraj = ep.ukeTrajectory || canonical?.ukeTrajectory || null;
+  const effectiveUkeTraj = baseUkeTraj
+    ? { ...baseUkeTraj, endYaw: (ukeYawDeg * Math.PI) / 180 }
+    : { endYaw: (ukeYawDeg * Math.PI) / 180 };
+
+  const inferredContact =
+    ep.contactType ||
+    (ep.phase === 'Залом сустава (Кансэцу)'
+      ? 'joint_lock'
+      : ep.phase === 'Бросок / сваливание (Нагэ)'
+      ? 'sweep_fall'
+      : canonical?.contactType || 'none');
+
+  const inferredInteraction =
+    ep.interactionType ||
+    (ep.phase === 'Бросок / сваливание (Нагэ)'
+      ? 'takedown'
+      : canonical?.interactionType || (inferredContact === 'none' ? 'distance_only' : 'body_contact'));
+
+  const isGround = ep.isGround !== undefined ? Boolean(ep.isGround) : Boolean(canonical?.isGround || canonical?.participants?.[0]?.isGround);
+  const isRising = ep.isRising !== undefined ? Boolean(ep.isRising) : Boolean(canonical?.isRising || canonical?.participants?.[0]?.isRising);
+
+  return {
+    stepNumber: idx + 1,
+    title: ep.attackTechnique || `Шаг ${idx + 1}`,
+    description: ep.toriCounter || ep.outcome || '',
+    notes: ep.outcome || ep.notes || '',
+    phase: ep.phase || canonical?.phase || null,
+    outcome: ep.outcome || null,
+    toriMovement: ep.toriMovement || null,
+    optimalDistance: Number(ep.combatDistance ?? canonical?.optimalDistance ?? 1.45),
+    isCustomDistance: Boolean(ep.isCustomDistance),
+    attackAngleDeg: Number(ep.attackAngleDeg ?? canonical?.attackAngleDeg ?? 0),
+    toriAngleOffsetDeg: Number(ep.toriAngleOffsetDeg ?? canonical?.toriAngleOffsetDeg ?? 0),
+    ukeEvasionAngleDeg: Number(ep.ukeEvasionAngleDeg ?? canonical?.ukeEvasionAngleDeg ?? 0),
+    relativeAngleDegTori: ep.relativeAngleDegTori ?? canonical?.relativeAngleDegTori ?? undefined,
+    relativeAngleDegUke: ep.relativeAngleDegUke ?? canonical?.relativeAngleDegUke ?? undefined,
+    uke2AngleDeg: ep.uke2AngleDeg ?? canonical?.uke2AngleDeg,
+    toriEndAngleDeg: toriYawDeg,
+    ukeEndAngleDeg: ukeYawDeg,
+    toriEndYaw: (toriYawDeg * Math.PI) / 180,
+    ukeEndYaw: (ukeYawDeg * Math.PI) / 180,
+    orientationModeTori: ep.orientationModeTori ?? canonical?.orientationModeTori ?? undefined,
+    orientationModeUke: ep.orientationModeUke ?? canonical?.orientationModeUke ?? undefined,
+    customToriPosX: ep.customToriPosX ?? canonical?.customToriPosX ?? undefined,
+    customToriPosZ: ep.customToriPosZ ?? canonical?.customToriPosZ ?? undefined,
+    customUkePosX: ep.customUkePosX ?? canonical?.customUkePosX ?? undefined,
+    customUkePosZ: ep.customUkePosZ ?? canonical?.customUkePosZ ?? undefined,
+    scenarioAngles: ep.scenarioAngles || canonical?.scenarioAngles || {
+      toriAngleDeg: toriYawDeg,
+      ukeAngleDeg: ukeYawDeg,
+    },
+    contactType: inferredContact,
+    interactionType: inferredInteraction,
+    isGround,
+    isRising,
+    isBow: ep.isBow !== undefined ? Boolean(ep.isBow) : Boolean(canonical?.isBow),
+    backToOpponent: ep.backToOpponent !== undefined ? Boolean(ep.backToOpponent) : Boolean(canonical?.backToOpponent),
+    ukeFullTurn: ep.ukeFullTurn !== undefined ? Boolean(ep.ukeFullTurn) : Boolean(canonical?.ukeFullTurn),
+    preserveScenarioYaw: ep.preserveScenarioYaw !== undefined ? Boolean(ep.preserveScenarioYaw) : Boolean(canonical?.preserveScenarioYaw),
+    toriTurnDir: ep.toriTurnDir ?? canonical?.toriTurnDir ?? 0,
+    ukeTurnDir: ep.ukeTurnDir ?? canonical?.ukeTurnDir ?? 0,
+    toriActionType: ep.toriActionType ?? canonical?.toriActionType ?? 'stance',
+    ukeActionType: ep.ukeActionType ?? canonical?.ukeActionType ?? 'stance',
+    displacementTori: ep.displacementTori || canonical?.displacementTori || [0, 0, 0],
+    displacementUke: ep.displacementUke || canonical?.displacementUke || [0, 0, 0],
+    toriTrajectory: effectiveToriTraj,
+    ukeTrajectory: effectiveUkeTraj,
+    tContact: Number(ep.tContact ?? canonical?.tContact ?? 0.48),
+    duration: Number(ep.duration ?? canonical?.duration ?? 2.2),
+    participants: [
+      {
+        role: 'tori',
+        clipName: ep.toriClip || 'heiko_dachi',
+        stance: ep.toriStance || canonical?.participants?.[0]?.stance || 'zenkutsu_dachi_right',
+        finalStance: ep.toriFinalStance || canonical?.participants?.[0]?.finalStance || null,
+        landingMode: ep.toriLandingMode || canonical?.participants?.[0]?.landingMode || 'auto',
+        actionType: ep.toriActionType ?? canonical?.participants?.[0]?.actionType ?? 'stance',
+        isGround,
+        isRising,
+        delaySeconds: ep.toriDelaySeconds ?? canonical?.participants?.[0]?.delaySeconds ?? 0.0,
+      },
+      {
+        role: 'uke1',
+        clipName: ep.ukeClip || 'heiko_dachi',
+        stance: ep.ukeStance || canonical?.participants?.[1]?.stance || 'zenkutsu_dachi_left',
+        finalStance: ep.ukeFinalStance || canonical?.participants?.[1]?.finalStance || null,
+        landingMode: ep.ukeLandingMode || canonical?.participants?.[1]?.landingMode || 'auto',
+        actionType: ep.ukeActionType ?? canonical?.participants?.[1]?.actionType ?? 'stance',
+        isGround: Boolean(ep.ukeIsGround ?? canonical?.participants?.[1]?.isGround),
+        delaySeconds: ep.ukeDelaySeconds ?? canonical?.participants?.[1]?.delaySeconds ?? 0.08,
+      },
+      {
+        role: 'uke2',
+        clipName: ep.uke2Clip || 'idle_shizentai',
+        stance: 'ready',
+        delaySeconds: 0.0,
+      },
+    ],
+  };
+}
+
+/**
+ * Сериализует эпизод редактора в формат БД (включая metadata JSON),
+ * чтобы при открытии демонстрации воспроизведение совпадало с редактором 1-в-1.
+ */
+export function episodeToDbStep(ep, idx, clipIdMap, is3Person = false, totalCount = 0) {
+  const step = formEpisodeToEngineStep(ep, idx, totalCount);
+  const toriP = step.participants[0];
+  const ukeP = step.participants[1];
+  const uke2P = step.participants[2];
+
+  const participants = [
+    {
+      role: 'tori',
+      clipId: clipIdMap?.get(toriP.clipName) || null,
+      clipName: toriP.clipName,
+      initialStance: toriP.stance,
+      finalStance: toriP.finalStance || null,
+      landingMode: toriP.landingMode || 'auto',
+      offsetX: step.customToriPosX ?? step.toriTrajectory?.end?.[0] ?? 0.0,
+      offsetZ: step.customToriPosZ ?? step.toriTrajectory?.end?.[2] ?? 0.0,
+      rotationY: step.toriEndAngleDeg,
+      delaySeconds: toriP.delaySeconds ?? 0.0,
+    },
+    {
+      role: 'uke1',
+      clipId: clipIdMap?.get(ukeP.clipName) || null,
+      clipName: ukeP.clipName,
+      initialStance: ukeP.stance,
+      finalStance: ukeP.finalStance || null,
+      landingMode: ukeP.landingMode || 'auto',
+      offsetX: step.customUkePosX ?? step.ukeTrajectory?.end?.[0] ?? 0.0,
+      offsetZ: step.customUkePosZ ?? step.ukeTrajectory?.end?.[2] ?? step.optimalDistance ?? 1.45,
+      rotationY: step.ukeEndAngleDeg,
+      delaySeconds: ukeP.delaySeconds ?? 0.08,
+    },
+  ];
+
+  if (is3Person) {
+    participants.push({
+      role: 'uke2',
+      clipId: clipIdMap?.get(uke2P.clipName) || null,
+      clipName: uke2P.clipName || 'idle_shizentai',
+      initialStance: 'idle_shizentai',
+      offsetX: 0.85,
+      offsetZ: (step.optimalDistance || 1.45) + 0.35,
+      rotationY: 155.0,
+      delaySeconds: 0.3,
+    });
+  }
+
+  const metadata = {
+    notes: step.notes,
+    phase: step.phase,
+    outcome: step.outcome,
+    isCustomDistance: Boolean(step.isCustomDistance),
+    toriMovement: step.toriMovement,
+    contactType: step.contactType,
+    interactionType: step.interactionType,
+    tContact: step.tContact,
+    isGround: step.isGround,
+    isRising: step.isRising,
+    isBow: step.isBow,
+    backToOpponent: step.backToOpponent,
+    ukeFullTurn: step.ukeFullTurn,
+    preserveScenarioYaw: step.preserveScenarioYaw,
+    toriTurnDir: step.toriTurnDir,
+    ukeTurnDir: step.ukeTurnDir,
+    toriActionType: step.toriActionType,
+    ukeActionType: step.ukeActionType,
+    toriAngleOffsetDeg: step.toriAngleOffsetDeg,
+    ukeEvasionAngleDeg: step.ukeEvasionAngleDeg,
+    relativeAngleDegTori: step.relativeAngleDegTori,
+    relativeAngleDegUke: step.relativeAngleDegUke,
+    orientationModeTori: step.orientationModeTori,
+    orientationModeUke: step.orientationModeUke,
+    customToriPosX: step.customToriPosX,
+    customToriPosZ: step.customToriPosZ,
+    customUkePosX: step.customUkePosX,
+    customUkePosZ: step.customUkePosZ,
+    displacementTori: step.displacementTori,
+    displacementUke: step.displacementUke,
+    toriTrajectory: step.toriTrajectory,
+    ukeTrajectory: step.ukeTrajectory,
+    scenarioAngles: step.scenarioAngles,
+    toriIsGround: toriP.isGround,
+    toriIsRising: toriP.isRising,
+    ukeIsGround: ukeP.isGround,
+    uke2AngleDeg: step.uke2AngleDeg,
+  };
+
+  return {
+    stepNumber: step.stepNumber,
+    title: step.title,
+    description: step.description,
+    duration: step.duration,
+    participantCount: is3Person ? 3 : 2,
+    targetDistance: step.optimalDistance,
+    targetAngle: step.attackAngleDeg,
+    metadata,
+    participants,
+  };
+}
+
 export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
   const episodes = (Array.isArray(rawEpisodes) && rawEpisodes.length > 0)
     ? rawEpisodes
@@ -1999,6 +2027,37 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
 
   let lastToriFinalStance = null;
   let lastUkeFinalStance = null;
+  let lastToriHandPunchClip = null;
+  let lastUkeHandPunchClip = null;
+
+  const isHandStrikePart = (part, epActionType) => {
+    if (!part) return false;
+    const c = String(part.clipName || '').toLowerCase();
+    const act = String(part.actionType || epActionType || '').toLowerCase();
+    if (act === 'punch') return true;
+    return (
+      c.includes('zuki') ||
+      c.includes('tsuki') ||
+      c.includes('tettsui') ||
+      c.includes('shuto_uchi') ||
+      c.includes('uraken') ||
+      c.includes('empi')
+    );
+  };
+
+  const isStandingHoldPart = (part, epActionType, isBowStep, isGroundStep, isRisingStep) => {
+    if (!part || isBowStep || isGroundStep || isRisingStep || part.isGround || part.isRising) return false;
+    const c = String(part.clipName || '').toLowerCase();
+    const act = String(part.actionType || epActionType || '').toLowerCase();
+    const isStanceClip = (
+      c.startsWith('zenkutsu_dachi') ||
+      c.startsWith('kokutsu_dachi') ||
+      c.startsWith('fudo_dachi') ||
+      c === 'stance_shiko' ||
+      c === 'kiba_dachi'
+    );
+    return isStanceClip && (act === 'stance' || act === 'hold');
+  };
 
   return normalized.map((ep, idx) => {
     let toriStartPos = [...curToriPos];
@@ -2009,10 +2068,30 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
     const toriPart = ep.participants?.[0] || {};
     const ukePart = ep.participants?.[1] || {};
 
-    if (idx > 0 && lastToriFinalStance && toriPart && !toriPart.customStanceApplied) {
+    if (isHandStrikePart(toriPart, ep.toriActionType)) {
+      lastToriHandPunchClip = toriPart.clipName;
+    } else if (isStandingHoldPart(toriPart, ep.toriActionType, ep.isBow, ep.isGround, ep.isRising)) {
+      if (lastToriHandPunchClip && !toriPart.holdPunchClip) {
+        toriPart.holdPunchClip = lastToriHandPunchClip;
+      }
+    } else {
+      lastToriHandPunchClip = null;
+    }
+
+    if (isHandStrikePart(ukePart, ep.ukeActionType)) {
+      lastUkeHandPunchClip = ukePart.clipName;
+    } else if (isStandingHoldPart(ukePart, ep.ukeActionType, ep.isBow, ep.isGround, ep.isRising)) {
+      if (lastUkeHandPunchClip && !ukePart.holdPunchClip) {
+        ukePart.holdPunchClip = lastUkeHandPunchClip;
+      }
+    } else {
+      lastUkeHandPunchClip = null;
+    }
+
+    if (idx > 0 && lastToriFinalStance && toriPart && (!toriPart.stance || !toriPart.hasExplicitStance) && !toriPart.customStanceApplied) {
       toriPart.stance = lastToriFinalStance;
     }
-    if (idx > 0 && lastUkeFinalStance && ukePart && !ukePart.customStanceApplied) {
+    if (idx > 0 && lastUkeFinalStance && ukePart && (!ukePart.stance || !ukePart.hasExplicitStance) && !ukePart.customStanceApplied) {
       ukePart.stance = lastUkeFinalStance;
     }
 
@@ -2039,17 +2118,17 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
     const isToriKick = Boolean(toriPart.clipName && (toriPart.clipName.includes('mae_geri') || toriPart.clipName.includes('kick') || toriPart.clipName.includes('geri')));
     const isUkeKick = Boolean(ukePart.clipName && (ukePart.clipName.includes('mae_geri') || ukePart.clipName.includes('kick') || ukePart.clipName.includes('geri')));
 
-    if (ep.toriTrajectory && ep.ukeTrajectory) {
+    if (ep.toriTrajectory?.end && ep.ukeTrajectory?.end) {
       if (idx === 0) {
         toriStartPos = ep.toriTrajectory.start ? [...ep.toriTrajectory.start] : toriStartPos;
         nextToriPos = [...ep.toriTrajectory.end];
-        toriStartYaw = ep.toriTrajectory.startYaw !== undefined ? ep.toriTrajectory.startYaw : toriStartYaw;
         nextToriYaw = ep.toriTrajectory.endYaw !== undefined ? ep.toriTrajectory.endYaw : toriStartYaw;
+        toriStartYaw = ep.toriTrajectory.startYaw !== undefined ? ep.toriTrajectory.startYaw : nextToriYaw;
 
         ukeStartPos = ep.ukeTrajectory.start ? [...ep.ukeTrajectory.start] : ukeStartPos;
         nextUkePos = [...ep.ukeTrajectory.end];
-        ukeStartYaw = ep.ukeTrajectory.startYaw !== undefined ? ep.ukeTrajectory.startYaw : ukeStartYaw;
         nextUkeYaw = ep.ukeTrajectory.endYaw !== undefined ? ep.ukeTrajectory.endYaw : ukeStartYaw;
+        ukeStartYaw = ep.ukeTrajectory.startYaw !== undefined ? ep.ukeTrajectory.startYaw : nextUkeYaw;
       } else {
         // Непрерывное сохранение состояния (idx > 0):
         // Начальная позиция строго равна конечной позиции предыдущего шага!
@@ -2074,31 +2153,35 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
               ep.ukeTrajectory.end[2] - ep.ukeTrajectory.start[2],
             ];
 
-        if (isToriKick && !ep.displacementTori) {
-          if (toriPart.landingMode === 'forward') {
-            dTor[2] = Math.max(dTor[2], 0.70);
-          } else if (toriPart.landingMode === 'back') {
+        if (isToriKick) {
+          if (toriPart.landingMode === 'back') {
+            dTor[0] = 0.0;
             dTor[2] = 0.0;
+          } else if (toriPart.landingMode === 'forward' && Math.hypot(dTor[0], dTor[2]) < 0.1) {
+            dTor[0] = Math.sin(curToriYaw) * 0.70;
+            dTor[2] = Math.cos(curToriYaw) * 0.70;
           }
         }
 
-        if (isUkeKick && !ep.displacementUke) {
-          if (ukePart.landingMode === 'forward') {
-            dUke[2] = -Math.max(Math.abs(dUke[2]), 0.70);
-          } else if (ukePart.landingMode === 'back') {
+        if (isUkeKick) {
+          if (ukePart.landingMode === 'back') {
+            dUke[0] = 0.0;
             dUke[2] = 0.0;
+          } else if (ukePart.landingMode === 'forward' && Math.hypot(dUke[0], dUke[2]) < 0.1) {
+            dUke[0] = Math.sin(curUkeYaw) * 0.70;
+            dUke[2] = Math.cos(curUkeYaw) * 0.70;
           }
         }
 
         nextToriPos = [
-          toriStartPos[0] + dTor[0],
+          ep.customToriPosX !== undefined && ep.customToriPosX !== null && ep.customToriPosX !== '' ? Number(ep.customToriPosX) : (toriStartPos[0] + dTor[0]),
           toriStartPos[1] + dTor[1],
-          toriStartPos[2] + dTor[2],
+          ep.customToriPosZ !== undefined && ep.customToriPosZ !== null && ep.customToriPosZ !== '' ? Number(ep.customToriPosZ) : (toriStartPos[2] + dTor[2]),
         ];
         nextUkePos = [
-          ukeStartPos[0] + dUke[0],
+          ep.customUkePosX !== undefined && ep.customUkePosX !== null && ep.customUkePosX !== '' ? Number(ep.customUkePosX) : (ukeStartPos[0] + dUke[0]),
           ukeStartPos[1] + dUke[1],
-          ukeStartPos[2] + dUke[2],
+          ep.customUkePosZ !== undefined && ep.customUkePosZ !== null && ep.customUkePosZ !== '' ? Number(ep.customUkePosZ) : (ukeStartPos[2] + dUke[2]),
         ];
 
         nextToriYaw = ep.toriTrajectory.endYaw !== undefined ? ep.toriTrajectory.endYaw : curToriYaw;
@@ -2150,15 +2233,14 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
         nextToriYaw = (uke2Deg * Math.PI) / 180;
         nextUkeYaw = curUkeYaw;
       } else {
-        nextToriYaw = curToriYaw;
-        nextUkeYaw = curUkeYaw;
+        nextToriYaw = ep.toriEndYaw !== undefined ? ep.toriEndYaw : (ep.toriTrajectory?.endYaw !== undefined ? ep.toriTrajectory.endYaw : curToriYaw);
+        nextUkeYaw = ep.ukeEndYaw !== undefined ? ep.ukeEndYaw : (ep.ukeTrajectory?.endYaw !== undefined ? ep.ukeTrajectory.endYaw : curUkeYaw);
+        if (idx === 0) {
+          toriStartYaw = ep.toriTrajectory?.startYaw !== undefined ? ep.toriTrajectory.startYaw : nextToriYaw;
+          ukeStartYaw = ep.ukeTrajectory?.startYaw !== undefined ? ep.ukeTrajectory.startYaw : nextUkeYaw;
+        }
       }
     }
-
-    curToriPos = [...nextToriPos];
-    curUkePos = [...nextUkePos];
-    curToriYaw = nextToriYaw;
-    curUkeYaw = nextUkeYaw;
 
     const isStationaryTori = ep.toriTrajectory?.isStationary ?? (
       Math.hypot(nextToriPos[0] - toriStartPos[0], nextToriPos[2] - toriStartPos[2]) < 0.01
@@ -2167,12 +2249,14 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
       Math.hypot(nextUkePos[0] - ukeStartPos[0], nextUkePos[2] - ukeStartPos[2]) < 0.01
     );
 
-    return {
+    const chainedStep = {
       ...ep,
       toriStartPos,
       toriEndPos: [...nextToriPos],
       ukeStartPos,
       ukeEndPos: [...nextUkePos],
+      toriWaypoint: ep.toriTrajectory?.waypoint ? [...ep.toriTrajectory.waypoint] : null,
+      ukeWaypoint: ep.ukeTrajectory?.waypoint ? [...ep.ukeTrajectory.waypoint] : null,
       toriStartYaw,
       toriEndYaw: nextToriYaw,
       ukeStartYaw,
@@ -2180,6 +2264,23 @@ export function chainBunkaiEpisodes(rawEpisodes = [], mode = 'continuous') {
       isStationaryTori,
       isStationaryUke,
     };
+
+    // Синхронизируем конечную позицию и ориентацию следующего шага строго с тем,
+    // где computeAvatarPlacement реально завершит текущий шаг (исключает скачки 15-24° между шагами).
+    const realized = computeAvatarPlacement({ episode: chainedStep });
+    curToriPos = [...realized.endPosTori];
+    curUkePos = [...realized.endPosUke1];
+    curToriYaw = realized.rotTori[1];
+    curUkeYaw = realized.rotUke1[1];
+
+    chainedStep.toriEndPos = [...realized.endPosTori];
+    chainedStep.ukeEndPos = [...realized.endPosUke1];
+    chainedStep.toriEndYaw = realized.rotTori[1];
+    chainedStep.ukeEndYaw = realized.rotUke1[1];
+    chainedStep.toriStartYaw = realized.startRotTori[1];
+    chainedStep.ukeStartYaw = realized.startRotUke1[1];
+
+    return chainedStep;
   });
 }
 
@@ -2254,14 +2355,23 @@ export function computeAvatarPlacement({
 
   // 2. Исходная линия и угол атаки Синего персонажа (Тори)
   // Направление атаки Тори строго зафиксировано и НЕ зависит от уклонений Укэ!
+  const effToriAngleOffsetDeg = toriAngleOffsetDeg || norm.toriAngleOffsetDeg || 0;
+  const effUkeEvasionAngleDeg = ukeEvasionAngleDeg !== undefined ? ukeEvasionAngleDeg : (norm.ukeEvasionAngleDeg || 0);
+  const effOrientationModeTori = orientationModeTori ?? norm.orientationModeTori;
+  const effOrientationModeUke = orientationModeUke ?? norm.orientationModeUke;
+  const effCustomToriPosX = customToriPosX !== undefined ? customToriPosX : norm.customToriPosX;
+  const effCustomToriPosZ = customToriPosZ !== undefined ? customToriPosZ : norm.customToriPosZ;
+  const effCustomUkePosX = customUkePosX !== undefined ? customUkePosX : norm.customUkePosX;
+  const effCustomUkePosZ = customUkePosZ !== undefined ? customUkePosZ : norm.customUkePosZ;
+
   let attackYaw = 0;
   if (episode.toriTrajectory?.endYaw !== undefined && Math.abs(episode.toriTrajectory.endYaw) > 0.001) {
     attackYaw = episode.toriTrajectory.endYaw;
   } else if (norm.attackAngleDeg !== undefined) {
     attackYaw = (norm.attackAngleDeg * Math.PI) / 180;
   }
-  if (toriAngleOffsetDeg !== undefined && Math.abs(toriAngleOffsetDeg) > 0.001) {
-    attackYaw += (toriAngleOffsetDeg * Math.PI) / 180;
+  if (effToriAngleOffsetDeg !== undefined && Math.abs(effToriAngleOffsetDeg) > 0.001) {
+    attackYaw += (effToriAngleOffsetDeg * Math.PI) / 180;
   }
 
   const attackDirX = Math.sin(attackYaw);
@@ -2278,11 +2388,11 @@ export function computeAvatarPlacement({
     ? [...episode.toriEndPos]
     : (episode.toriTrajectory?.end ? [...episode.toriTrajectory.end] : [...startTori]);
 
-  if (customToriPosX !== undefined && customToriPosX !== null) {
-    endTori[0] = Number(customToriPosX);
+  if (effCustomToriPosX !== undefined && effCustomToriPosX !== null && effCustomToriPosX !== '') {
+    endTori[0] = Number(effCustomToriPosX);
   }
-  if (customToriPosZ !== undefined && customToriPosZ !== null) {
-    endTori[2] = Number(customToriPosZ);
+  if (effCustomToriPosZ !== undefined && effCustomToriPosZ !== null && effCustomToriPosZ !== '') {
+    endTori[2] = Number(effCustomToriPosZ);
   }
 
   const effectiveToriClip = customToriClip || toriPart.clipName;
@@ -2311,15 +2421,19 @@ export function computeAvatarPlacement({
     ? [...episode.ukeEndPos]
     : (episode.ukeTrajectory?.end ? [...episode.ukeTrajectory.end] : [nominalBaseX, 0, nominalBaseZ]);
 
-  if (customUkePosX !== undefined && customUkePosX !== null) {
-    endUke1[0] = Number(customUkePosX);
+  if (effCustomUkePosX !== undefined && effCustomUkePosX !== null && effCustomUkePosX !== '') {
+    endUke1[0] = Number(effCustomUkePosX);
   }
-  if (customUkePosZ !== undefined && customUkePosZ !== null) {
-    endUke1[2] = Number(customUkePosZ);
+  if (effCustomUkePosZ !== undefined && effCustomUkePosZ !== null && effCustomUkePosZ !== '') {
+    endUke1[2] = Number(effCustomUkePosZ);
   }
 
-  // Если дистанция настраивалась вручную пользователем:
-  if (customDistance !== undefined && customDistance !== null) {
+  const hasExplicitCustomUkePos =
+    (effCustomUkePosX !== undefined && effCustomUkePosX !== null && effCustomUkePosX !== '') ||
+    (effCustomUkePosZ !== undefined && effCustomUkePosZ !== null && effCustomUkePosZ !== '');
+
+  // Если дистанция настраивалась вручную пользователем (без явного ручного X/Z):
+  if (!hasExplicitCustomUkePos && ((customDistance !== undefined && customDistance !== null) || episode.isCustomDistance || norm.isCustomDistance)) {
     const dX = endUke1[0] - endTori[0];
     const dZ = endUke1[2] - endTori[2];
     const curLen = Math.hypot(dX, dZ) || 0.001;
@@ -2328,7 +2442,7 @@ export function computeAvatarPlacement({
   }
 
   // Если задан динамический угол ухода тай-сабаки Укэ пользователем:
-  const effectiveUkeEvasionDeg = ukeEvasionAngleDeg !== undefined ? ukeEvasionAngleDeg : 0;
+  const effectiveUkeEvasionDeg = effUkeEvasionAngleDeg;
   if (Math.abs(effectiveUkeEvasionDeg) > 0.001) {
     const evadeRad = (effectiveUkeEvasionDeg * Math.PI) / 180;
     const evadeStepDist = 0.62;
@@ -2367,31 +2481,38 @@ export function computeAvatarPlacement({
     curDist = Math.hypot(dx, dz) || 0.001;
   }
 
-  // 7. Устранение скольжения: для стационарных стоек фиксируем start и end
-  const isStationaryTori = Boolean(episode.isStationaryTori) || (Math.hypot(endTori[0] - startTori[0], endTori[2] - startTori[2]) < 0.01);
-  const isStationaryUke = Boolean(episode.isStationaryUke) || (Math.hypot(endUke1[0] - startUke1[0], endUke1[2] - startUke1[2]) < 0.01);
+  // 7. Устранение скольжения: фиксируем start === end только если смещения действительно нет
+  const hasExplicitChainedToriStart = Boolean(episode.toriStartPos);
+  const hasExplicitChainedUkeStart = Boolean(episode.ukeStartPos);
+  const toriDispLen = Math.hypot(endTori[0] - startTori[0], endTori[2] - startTori[2]);
+  const ukeDispLen = Math.hypot(endUke1[0] - startUke1[0], endUke1[2] - startUke1[2]);
+  const isStationaryTori = Boolean(episode.isStationaryTori) || (toriDispLen < 0.01);
+  const isStationaryUke = Boolean(episode.isStationaryUke) || (ukeDispLen < 0.01);
 
-  if (isStationaryTori && !isToriStep) {
+  if (isStationaryTori && !isToriStep && !hasExplicitChainedToriStart) {
     startTori[0] = endTori[0];
     startTori[2] = endTori[2];
   }
 
   const effectiveUkeClip = customUkeClip || uke1Part.clipName;
   const isUkeStep = effectiveUkeClip?.includes('oi_zuki') || ukeLandingMode === 'forward';
-  if (isStationaryUke && !isUkeStep && Math.abs(effectiveUkeEvasionDeg) < 0.001) {
+  if (isStationaryUke && !isUkeStep && Math.abs(effectiveUkeEvasionDeg) < 0.001 && !hasExplicitChainedUkeStart) {
     startUke1[0] = endUke1[0];
     startUke1[2] = endUke1[2];
   }
 
   // 8. ПРИНЦИП РАЗДЕЛЕНИЯ ОРИЕНТАЦИИ (КЛЮЧЕВОЕ ТРЕБОВАНИЕ):
+  const resolvedToriFreeYawDeg = (customToriYawDeg !== undefined && customToriYawDeg !== null)
+    ? customToriYawDeg
+    : norm.toriEndAngleDeg;
   let endToriYaw;
-  if (orientationModeTori === 'mode1_free' && customToriYawDeg !== undefined && customToriYawDeg !== null) {
-    endToriYaw = (Number(customToriYawDeg) * Math.PI) / 180;
-  } else if (orientationModeTori === 'mode3_relative_angle' && relativeAngleDegTori !== undefined) {
+  if (effOrientationModeTori === 'mode1_free' && resolvedToriFreeYawDeg !== undefined && resolvedToriFreeYawDeg !== null) {
+    endToriYaw = (Number(resolvedToriFreeYawDeg) * Math.PI) / 180;
+  } else if (effOrientationModeTori === 'mode3_relative_angle' && relativeAngleDegTori !== undefined) {
     endToriYaw = attackYaw + (Number(relativeAngleDegTori) * Math.PI) / 180;
-  } else if (orientationModeTori === 'mode4_fixed_direction' && fixedDirectionYawTori !== undefined) {
+  } else if (effOrientationModeTori === 'mode4_fixed_direction' && fixedDirectionYawTori !== undefined) {
     endToriYaw = Number(fixedDirectionYawTori);
-  } else if (orientationModeTori === 'mode2_look_at' || Math.abs(effectiveToriEvasionDeg) > 0.001) {
+  } else if (effOrientationModeTori === 'mode2_look_at' || Math.abs(effectiveToriEvasionDeg) > 0.001) {
     endToriYaw = Math.atan2(dx, dz);
   } else if (customToriYawDeg !== undefined && customToriYawDeg !== null) {
     endToriYaw = (Number(customToriYawDeg) * Math.PI) / 180;
@@ -2409,31 +2530,37 @@ export function computeAvatarPlacement({
     endToriYaw = attackYaw;
   }
 
+  const hasExplicitToriStartYaw = episode.toriStartYaw !== undefined || episode.toriTrajectory?.startYaw !== undefined;
   let startToriYaw = episode.toriStartYaw !== undefined
     ? episode.toriStartYaw
-    : (episode.toriTrajectory?.startYaw !== undefined ? episode.toriTrajectory.startYaw : attackYaw);
+    : (episode.toriTrajectory?.startYaw !== undefined ? episode.toriTrajectory.startYaw : endToriYaw);
 
-  if ((customToriYawDeg !== undefined && customToriYawDeg !== null) || orientationModeTori === 'mode1_free' || isStationaryTori) {
-    if (isStationaryTori || orientationModeTori === 'mode1_free') {
-      startToriYaw = endToriYaw;
-    }
+  if (((customToriYawDeg !== undefined && customToriYawDeg !== null) || effOrientationModeTori === 'mode1_free') && !hasExplicitToriStartYaw) {
+    startToriYaw = endToriYaw;
+  } else if (isStationaryTori && !hasExplicitToriStartYaw) {
+    startToriYaw = endToriYaw;
   }
 
   // Белый персонаж (Укэ) при уходе поворачивается ВСЕМ ТЕЛОМ лицом к Тори!
   const faceToriFromUke = Math.atan2(endTori[0] - endUke1[0], endTori[2] - endUke1[2]);
   const isUkeEvading = Math.abs(effectiveUkeEvasionDeg) > 0.001 || isEvaded || lateralOffsetMeters >= 0.08 || Math.abs(endUke1[0] - startTori[0]) >= 0.08;
 
+  const resolvedUkeFreeYawDeg = (customUkeYawDeg !== undefined && customUkeYawDeg !== null)
+    ? customUkeYawDeg
+    : norm.ukeEndAngleDeg;
   let endUke1Yaw;
-  if (orientationModeUke === 'mode1_free' && customUkeYawDeg !== undefined && customUkeYawDeg !== null) {
-    endUke1Yaw = (Number(customUkeYawDeg) * Math.PI) / 180;
+  if (effOrientationModeUke === 'mode1_free' && resolvedUkeFreeYawDeg !== undefined && resolvedUkeFreeYawDeg !== null) {
+    endUke1Yaw = (Number(resolvedUkeFreeYawDeg) * Math.PI) / 180;
   } else if (norm.backToOpponent) {
     // Позиция спиной к атакующему (например, Хэйсоку-дати с блоком Хайван-укэ)
     endUke1Yaw = Math.atan2(Math.sin(faceToriFromUke + Math.PI), Math.cos(faceToriFromUke + Math.PI));
-  } else if (orientationModeUke === 'mode3_relative_angle' && relativeAngleDegUke !== undefined) {
+  } else if (norm.preserveScenarioYaw && episode.ukeTrajectory?.endYaw !== undefined) {
+    endUke1Yaw = episode.ukeTrajectory.endYaw;
+  } else if (effOrientationModeUke === 'mode3_relative_angle' && relativeAngleDegUke !== undefined) {
     endUke1Yaw = faceToriFromUke + (Number(relativeAngleDegUke) * Math.PI) / 180;
-  } else if (orientationModeUke === 'mode4_fixed_direction' && fixedDirectionYawUke !== undefined) {
+  } else if (effOrientationModeUke === 'mode4_fixed_direction' && fixedDirectionYawUke !== undefined) {
     endUke1Yaw = Number(fixedDirectionYawUke);
-  } else if (orientationModeUke === 'mode2_look_at' || isUkeEvading) {
+  } else if (effOrientationModeUke === 'mode2_look_at' || isUkeEvading) {
     // КРИТИЧЕСКОЕ ТРЕБОВАНИЕ: При блоке с уходом в сторону (Тай-сабаки), смещении с линии атаки
     // или в режиме ориентации на противника (mode2_look_at) — Укэ автоматически разворачивается
     // ВСЕМ ТЕЛОМ прямо на атакующего Тори!
@@ -2455,14 +2582,17 @@ export function computeAvatarPlacement({
   }
 
   const faceToriAtStart = Math.atan2(startTori[0] - startUke1[0], startTori[2] - startUke1[2]);
+  const hasExplicitUkeStartYaw = episode.ukeStartYaw !== undefined || episode.ukeTrajectory?.startYaw !== undefined;
   let startUke1Yaw = episode.ukeStartYaw !== undefined
     ? episode.ukeStartYaw
-    : (episode.ukeTrajectory?.startYaw !== undefined ? episode.ukeTrajectory.startYaw : faceToriAtStart);
+    : (episode.ukeTrajectory?.startYaw !== undefined ? episode.ukeTrajectory.startYaw : endUke1Yaw);
 
-  if (isStationaryUke && !isUkeEvading) {
+  if (((customUkeYawDeg !== undefined && customUkeYawDeg !== null) || effOrientationModeUke === 'mode1_free') && !hasExplicitUkeStartYaw) {
     startUke1Yaw = endUke1Yaw;
-  } else if (orientationModeUke === 'mode1_free' && customUkeYawDeg !== undefined && customUkeYawDeg !== null && isStationaryUke) {
+  } else if (isStationaryUke && !isUkeEvading && !hasExplicitUkeStartYaw) {
     startUke1Yaw = endUke1Yaw;
+  } else if (!hasExplicitUkeStartYaw && !isUkeEvading && !norm.backToOpponent) {
+    startUke1Yaw = faceToriAtStart;
   }
 
   // 9. Расчет положения и углов стоп на татами
@@ -2513,8 +2643,10 @@ export function computeAvatarPlacement({
     posUke2,
     startPosTori: startTori,
     endPosTori: endTori,
+    waypointTori: episode.toriWaypoint || episode.toriTrajectory?.waypoint || null,
     startPosUke1: startUke1,
     endPosUke1: endUke1,
+    waypointUke: episode.ukeWaypoint || episode.ukeTrajectory?.waypoint || null,
     rotTori: [0, endToriYaw, 0],
     startRotTori: [0, startToriYaw, 0],
     rotUke1: [0, endUke1Yaw, 0],

@@ -3,7 +3,7 @@ import {
   Ruler, Compass, CheckCircle2, RotateCcw, Play, Pause,
   ChevronLeft, ChevronRight, Zap, Eye, Footprints, Sliders
 } from 'lucide-react';
-import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
@@ -77,10 +77,126 @@ const BUNKAI_DOJO_LIMITS = {
   targetMaxY: 1.8,
 };
 
-function BunkaiCameraBounds({ controlsRef }) {
-  useFrame((state) => {
-    if (!controlsRef.current) return;
+function BunkaiPlaybackClock({
+  isPlaying,
+  speed,
+  duration,
+  phraseRef,
+  phraseStepRef,
+  zanshinTimerRef,
+  isLoopingStep,
+  autoAdvance,
+  currentStepIdx,
+  totalSteps,
+  replayTrigger,
+  onStepComplete,
+  onLoopRestart,
+  onAutoAdvance,
+}) {
+  const lastStepRef = useRef(currentStepIdx);
+  const lastReplayRef = useRef(replayTrigger);
+
+  // Сброс фазы происходит строго внутри <Canvas> в одном R3F-коммите с MultiAvatarModel,
+  // чтобы модели никогда не читали phrase = 0 со старыми координатами предыдущего шага
+  useLayoutEffect(() => {
+    const stepChanged = lastStepRef.current !== currentStepIdx;
+    const replayChanged = lastReplayRef.current !== replayTrigger;
+    if (stepChanged || replayChanged) {
+      lastStepRef.current = currentStepIdx;
+      lastReplayRef.current = replayTrigger;
+      phraseRef.current = 0;
+      zanshinTimerRef.current = 0;
+      if (phraseStepRef) phraseStepRef.current = currentStepIdx;
+    }
+  }, [currentStepIdx, replayTrigger, phraseRef, phraseStepRef, zanshinTimerRef]);
+
+  useFrame((_, delta) => {
+    if (!isPlaying) return;
+    if (phraseStepRef && phraseStepRef.current !== currentStepIdx) return;
+    const dt = Math.min(Math.max(delta, 0), 0.05);
+    const dur = Math.max(1.8, duration || 2.4);
+
+    if (phraseRef.current < 1.0) {
+      const nextPhrase = Math.min(1.0, phraseRef.current + (dt * speed) / dur);
+      phraseRef.current = nextPhrase;
+      if (nextPhrase >= 1.0) {
+        onStepComplete();
+      }
+    } else if (isLoopingStep) {
+      zanshinTimerRef.current += dt * speed;
+      if (zanshinTimerRef.current >= 0.6) {
+        zanshinTimerRef.current = 0;
+        phraseRef.current = 0;
+        onLoopRestart();
+      }
+    } else if (autoAdvance) {
+      zanshinTimerRef.current += dt * speed;
+      if (zanshinTimerRef.current >= 1.4) {
+        zanshinTimerRef.current = 0;
+        onAutoAdvance(currentStepIdx, totalSteps);
+      }
+    }
+  });
+  return null;
+}
+
+const INITIAL_CAMERA_CONFIG = { position: [2.6, 1.8, 3.0], fov: 42 };
+
+function BunkaiCameraRig({ controlsRef, rootsRef }) {
+  const isUserDraggingRef = useRef(false);
+  const smoothedFocusRef = useRef(new THREE.Vector3(0, 0.95, 0));
+  const initializedRef = useRef(false);
+
+  useEffect(() => {
     const controls = controlsRef.current;
+    if (!controls) return undefined;
+    const onStart = () => { isUserDraggingRef.current = true; };
+    const onEnd = () => {
+      isUserDraggingRef.current = false;
+      smoothedFocusRef.current.copy(controls.target);
+    };
+    controls.addEventListener('start', onStart);
+    controls.addEventListener('end', onEnd);
+    return () => {
+      controls.removeEventListener('start', onStart);
+      controls.removeEventListener('end', onEnd);
+    };
+  }, [controlsRef]);
+
+  useFrame((state, delta) => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    if (rootsRef?.current?.tori && rootsRef?.current?.uke1 && !isUserDraggingRef.current) {
+      const t = rootsRef.current.tori;
+      const u = rootsRef.current.uke1;
+      const midX = (t[0] + u[0]) * 0.5;
+      const midZ = (t[2] + u[2]) * 0.5;
+
+      if (!initializedRef.current) {
+        initializedRef.current = true;
+        const dx = midX - controls.target.x;
+        const dz = midZ - controls.target.z;
+        controls.target.set(midX, 0.95, midZ);
+        state.camera.position.x += dx;
+        state.camera.position.z += dz;
+        smoothedFocusRef.current.set(midX, 0.95, midZ);
+      } else {
+        const dt = Math.min(Math.max(delta, 0), 0.05);
+        const alpha = 1 - Math.exp(-3.0 * dt);
+        const nextX = THREE.MathUtils.lerp(smoothedFocusRef.current.x, midX, alpha);
+        const nextZ = THREE.MathUtils.lerp(smoothedFocusRef.current.z, midZ, alpha);
+        const dx = nextX - controls.target.x;
+        const dz = nextZ - controls.target.z;
+        smoothedFocusRef.current.set(nextX, 0.95, nextZ);
+        if (Math.abs(dx) > 1e-5 || Math.abs(dz) > 1e-5) {
+          controls.target.x += dx;
+          controls.target.z += dz;
+          state.camera.position.x += dx;
+          state.camera.position.z += dz;
+        }
+      }
+    }
 
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, BUNKAI_DOJO_LIMITS.targetMinX, BUNKAI_DOJO_LIMITS.targetMaxX);
     controls.target.y = THREE.MathUtils.clamp(controls.target.y, BUNKAI_DOJO_LIMITS.targetMinY, BUNKAI_DOJO_LIMITS.targetMaxY);
@@ -89,8 +205,6 @@ function BunkaiCameraBounds({ controlsRef }) {
     state.camera.position.x = THREE.MathUtils.clamp(state.camera.position.x, BUNKAI_DOJO_LIMITS.minX, BUNKAI_DOJO_LIMITS.maxX);
     state.camera.position.y = THREE.MathUtils.clamp(state.camera.position.y, BUNKAI_DOJO_LIMITS.minY, BUNKAI_DOJO_LIMITS.maxY);
     state.camera.position.z = THREE.MathUtils.clamp(state.camera.position.z, BUNKAI_DOJO_LIMITS.minZ, BUNKAI_DOJO_LIMITS.maxZ);
-
-    controls.update();
   });
   return null;
 }
@@ -131,16 +245,40 @@ export default function BunkaiMultiAvatarPlayer({
   const [currentStepIdx, setCurrentStepIdx] = useState(activeStepIndex || 0);
   const [showUke2, setShowUke2] = useState(defaultParticipantMode === '3-person');
 
-  useEffect(() => {
+  const resetLocalStepOverrides = useCallback(() => {
+    setStepCompleted(false);
+    zanshinTimerRef.current = 0;
+    setScrubProgress(null);
+    setCustomDistance(null);
+    setToriAngleOffsetDeg(0);
+    setUkeEvasionAngleDeg(0);
+    setCustomUkeClip('');
+    setCustomToriClip('');
+    setCustomToriStance('');
+    setCustomToriFinalStance('');
+    setToriLandingMode('auto');
+    setCustomUkeStance('');
+    setCustomUkeFinalStance('');
+    setUkeLandingMode('auto');
+    setCustomToriEndYawDeg(null);
+    setCustomUkeEndYawDeg(null);
+    setOrientationModeTori(undefined);
+    setOrientationModeUke(undefined);
+    setCustomToriPosX(undefined);
+    setCustomToriPosZ(undefined);
+    setCustomUkePosX(undefined);
+    setCustomUkePosZ(undefined);
+  }, []);
+
+  useLayoutEffect(() => {
     if (activeStepIndex !== undefined && activeStepIndex !== currentStepIdx) {
+      if (lastEmittedStepRef.current === activeStepIndex) return;
+      lastEmittedStepRef.current = activeStepIndex;
+      resetLocalStepOverrides();
       setCurrentStepIdx(activeStepIndex);
-      phraseRef.current = 0;
-      setScrubProgress(null);
-      setStepCompleted(false);
-      zanshinTimerRef.current = 0;
       setIsPlaying(true);
     }
-  }, [activeStepIndex]);
+  }, [activeStepIndex, resetLocalStepOverrides]);
 
   useEffect(() => {
     setShowUke2(defaultParticipantMode === '3-person');
@@ -226,77 +364,82 @@ export default function BunkaiMultiAvatarPlayer({
     setHasUnsavedChanges(true);
     let isRotationOrPositionField = false;
 
+    const isControlledByParent = typeof onStepParamChange === 'function';
+
     if (field === 'combatDistance') {
-      setCustomDistance(value);
+      if (!isControlledByParent) setCustomDistance(value);
       isRotationOrPositionField = true;
     } else if (field === 'toriAngleOffsetDeg' || field === 'attackAngleDeg') {
-      setToriAngleOffsetDeg(value);
+      if (!isControlledByParent) setToriAngleOffsetDeg(value);
       isRotationOrPositionField = true;
     } else if (field === 'ukeEvasionAngleDeg' || field === 'retreatAngleDeg' || field === 'taiSabakiAngleDeg') {
-      setUkeEvasionAngleDeg(value);
+      if (!isControlledByParent) setUkeEvasionAngleDeg(value);
       isRotationOrPositionField = true;
     } else if (field === 'toriEvasionAngleDeg') {
-      setUkeEvasionAngleDeg(value);
+      if (!isControlledByParent) setUkeEvasionAngleDeg(value);
       isRotationOrPositionField = true;
     } else if (field === 'toriEndAngleDeg' || field === 'customToriYawDeg' || field === 'toriYaw' || field === 'toriEndYaw') {
-      setCustomToriEndYawDeg(Number(value));
+      if (!isControlledByParent) setCustomToriEndYawDeg(Number(value));
       isRotationOrPositionField = true;
     } else if (field === 'ukeEndAngleDeg' || field === 'customUkeYawDeg' || field === 'ukeYaw' || field === 'ukeEndYaw') {
-      setCustomUkeEndYawDeg(Number(value));
+      if (!isControlledByParent) setCustomUkeEndYawDeg(Number(value));
       isRotationOrPositionField = true;
     } else if (field === 'orientationModeTori') {
-      setOrientationModeTori(value);
+      if (!isControlledByParent) setOrientationModeTori(value);
       isRotationOrPositionField = true;
     } else if (field === 'orientationModeUke') {
-      setOrientationModeUke(value);
+      if (!isControlledByParent) setOrientationModeUke(value);
       isRotationOrPositionField = true;
     } else if (field === 'customToriPosX') {
-      setCustomToriPosX(value);
+      if (!isControlledByParent) setCustomToriPosX(value);
       isRotationOrPositionField = true;
     } else if (field === 'customToriPosZ') {
-      setCustomToriPosZ(value);
+      if (!isControlledByParent) setCustomToriPosZ(value);
       isRotationOrPositionField = true;
     } else if (field === 'customUkePosX') {
-      setCustomUkePosX(value);
+      if (!isControlledByParent) setCustomUkePosX(value);
       isRotationOrPositionField = true;
     } else if (field === 'customUkePosZ') {
-      setCustomUkePosZ(value);
+      if (!isControlledByParent) setCustomUkePosZ(value);
       isRotationOrPositionField = true;
     } else if (field === 'toriClip') {
-      setCustomToriClip(value);
+      if (!isControlledByParent) setCustomToriClip(value);
     } else if (field === 'ukeClip') {
-      setCustomUkeClip(value);
+      if (!isControlledByParent) setCustomUkeClip(value);
     } else if (field === 'toriStance') {
-      setCustomToriStance(value);
+      if (!isControlledByParent) setCustomToriStance(value);
     } else if (field === 'ukeStance') {
-      setCustomUkeStance(value);
+      if (!isControlledByParent) setCustomUkeStance(value);
     } else if (field === 'toriFinalStance') {
-      setCustomToriFinalStance(value);
+      if (!isControlledByParent) setCustomToriFinalStance(value);
     } else if (field === 'ukeFinalStance') {
-      setCustomUkeFinalStance(value);
+      if (!isControlledByParent) setCustomUkeFinalStance(value);
     } else if (field === 'toriLandingMode') {
-      setToriLandingMode(value);
+      if (!isControlledByParent) setToriLandingMode(value);
     } else if (field === 'ukeLandingMode') {
-      setUkeLandingMode(value);
+      if (!isControlledByParent) setUkeLandingMode(value);
     }
 
     if (isRotationOrPositionField) {
       // При интерактивной регулировке угла поворота (Yaw) и координат модели:
-      // НЕ сбрасываем фазу движения в 0 и не перезапускаем цикл!
-      // Модель мгновенно разворачивается в 3D сцене прямо под курсором ползунка.
+      // НЕ сбрасываем фазу движения в 0; если плеер на паузе в начале шага — сразу показываем конечную позу (phrase=1.0),
+      // чтобы пользователь мгновенно видел поворот/позицию прямо под курсором ползунка.
+      if (!isPlaying && (phraseRef.current < 0.85 || scrubProgress !== null)) {
+        setScrubProgress(1.0);
+        phraseRef.current = 1.0;
+      }
       notifyParamChange(field, value);
       return;
     }
 
     // Быстрый перезапуск движения при смене боевых техник (клипы, стойки)
     setScrubProgress(null);
-    phraseRef.current = 0;
     setStepCompleted(false);
     zanshinTimerRef.current = 0;
     setIsPlaying(true);
     setReplayNonce((n) => n + 1);
     notifyParamChange(field, value);
-  }, [notifyParamChange]);
+  }, [notifyParamChange, onStepParamChange]);
 
   // Трекинг сочленений и коллизий
   const trackedJointsRef = useRef({ tori: null, uke1: null, uke2: null });
@@ -377,6 +520,31 @@ export default function BunkaiMultiAvatarPlayer({
 
   const currentEpisode = chainedEpisodes[currentStepIdx] || chainedEpisodes[0];
 
+  // При работе в режиме редактора (onStepParamChange) родительский steps является единым источником истины
+  useEffect(() => {
+    if (typeof onStepParamChange === 'function') {
+      setCustomDistance(null);
+      setToriAngleOffsetDeg(0);
+      setUkeEvasionAngleDeg(0);
+      setCustomUkeClip('');
+      setCustomToriClip('');
+      setCustomToriStance('');
+      setCustomToriFinalStance('');
+      setToriLandingMode('auto');
+      setCustomUkeStance('');
+      setCustomUkeFinalStance('');
+      setUkeLandingMode('auto');
+      setCustomToriEndYawDeg(null);
+      setCustomUkeEndYawDeg(null);
+      setOrientationModeTori(undefined);
+      setOrientationModeUke(undefined);
+      setCustomToriPosX(undefined);
+      setCustomToriPosZ(undefined);
+      setCustomUkePosX(undefined);
+      setCustomUkePosZ(undefined);
+    }
+  }, [steps, onStepParamChange]);
+
   // Сброс локальных кастомных параметров при смене шага
   useEffect(() => {
     setCustomToriEndYawDeg(null);
@@ -408,6 +576,8 @@ export default function BunkaiMultiAvatarPlayer({
       customUkeYawDeg: customUkeEndYawDeg !== null ? customUkeEndYawDeg : undefined,
       orientationModeTori: orientationModeTori || (customToriEndYawDeg !== null ? 'mode1_free' : undefined),
       orientationModeUke: orientationModeUke || (customUkeEndYawDeg !== null ? 'mode1_free' : undefined),
+      relativeAngleDegTori: currentEpisode.relativeAngleDegTori,
+      relativeAngleDegUke: currentEpisode.relativeAngleDegUke,
       customToriPosX,
       customToriPosZ,
       customUkePosX,
@@ -474,32 +644,40 @@ export default function BunkaiMultiAvatarPlayer({
             attackDirectrix: placement.attackDirectrix,
           }
         );
-        setBodyInteraction(inter);
+        setBodyInteraction((prev) => {
+          if (
+            prev.statusText === inter.statusText &&
+            prev.validContact === inter.validContact &&
+            prev.collided === inter.collided
+          ) {
+            return prev;
+          }
+          return inter;
+        });
       }
     }
   }, [currentEpisode]);
 
   function handlePrevStep() {
-    setScrubProgress(null);
-    setCurrentStepIdx((prev) => {
-      const next = Math.max(0, prev - 1);
-      if (onStepChange) onStepChange(next);
-      return next;
-    });
+    resetLocalStepOverrides();
+    const next = Math.max(0, currentStepIdx - 1);
+    lastEmittedStepRef.current = next;
+    setCurrentStepIdx(next);
+    setIsPlaying(true);
+    if (onStepChange) onStepChange(next);
   }
 
   function handleNextStep() {
-    setScrubProgress(null);
-    setCurrentStepIdx((prev) => {
-      const next = Math.min(chainedEpisodes.length - 1, prev + 1);
-      if (onStepChange) onStepChange(next);
-      return next;
-    });
+    resetLocalStepOverrides();
+    const next = Math.min(chainedEpisodes.length - 1, currentStepIdx + 1);
+    lastEmittedStepRef.current = next;
+    setCurrentStepIdx(next);
+    setIsPlaying(true);
+    if (onStepChange) onStepChange(next);
   }
 
   const handleReplayStep = useCallback(() => {
     setScrubProgress(null);
-    phraseRef.current = 0;
     setStepCompleted(false);
     zanshinTimerRef.current = 0;
     setIsPlaying(true);
@@ -507,34 +685,30 @@ export default function BunkaiMultiAvatarPlayer({
   }, []);
 
   const handlePlayEntireBunkai = useCallback(() => {
-    setScrubProgress(null);
+    resetLocalStepOverrides();
+    lastEmittedStepRef.current = 0;
     setCurrentStepIdx(0);
     if (onStepChange) onStepChange(0);
-    phraseRef.current = 0;
-    setStepCompleted(false);
-    zanshinTimerRef.current = 0;
     setStateMode('continuous');
     setAutoAdvance(true);
     setIsLoopingStep(false);
     setIsPlaying(true);
-    setReplayNonce((n) => n + 1);
-  }, [onStepChange]);
+    if (currentStepIdx === 0) {
+      setReplayNonce((n) => n + 1);
+    }
+  }, [onStepChange, resetLocalStepOverrides, currentStepIdx]);
 
   const handleStepSelect = useCallback((idx) => {
-    setScrubProgress(null);
+    resetLocalStepOverrides();
+    lastEmittedStepRef.current = idx;
     setCurrentStepIdx(idx);
     if (onStepChange) onStepChange(idx);
-    phraseRef.current = 0;
-    setStepCompleted(false);
-    zanshinTimerRef.current = 0;
     setIsPlaying(true);
-    setReplayNonce((n) => n + 1);
-  }, [onStepChange]);
+  }, [onStepChange, resetLocalStepOverrides]);
 
   const handleTogglePlay = useCallback(() => {
     setScrubProgress(null);
-    if (!isPlaying && phraseRef.current >= 1.0) {
-      phraseRef.current = 0;
+    if (!isPlaying && (phraseRef.current >= 0.99 || stepCompleted)) {
       setStepCompleted(false);
       zanshinTimerRef.current = 0;
       setIsPlaying(true);
@@ -542,7 +716,7 @@ export default function BunkaiMultiAvatarPlayer({
     } else {
       setIsPlaying((p) => !p);
     }
-  }, [isPlaying]);
+  }, [isPlaying, stepCompleted]);
 
   // Быстрые горячие клавиши для тестирования: R — повторить шаг, Space — пауза/воспроизведение
   useEffect(() => {
@@ -572,8 +746,46 @@ export default function BunkaiMultiAvatarPlayer({
   }
 
   const toriPart = currentEpisode.participants.find((p) => p.role === 'tori') || {};
+  const sharedCombatOptions = useMemo(() => ({
+    stepNumber: currentEpisode?.stepNumber,
+    contactType: currentEpisode?.contactType,
+    interactionType: currentEpisode?.interactionType,
+    ikContactTime: currentEpisode?.tContact || 0.48,
+    isEvaded: placement.isEvaded,
+    attackDirectrix: placement.attackDirectrix,
+    isBow: Boolean(currentEpisode?.isBow),
+    isGroundStep: Boolean(currentEpisode?.isGround || toriPart.isGround),
+  }), [
+    currentEpisode?.stepNumber,
+    currentEpisode?.contactType,
+    currentEpisode?.interactionType,
+    currentEpisode?.tContact,
+    currentEpisode?.isBow,
+    currentEpisode?.isGround,
+    toriPart.isGround,
+    placement.isEvaded,
+    placement.attackDirectrix,
+  ]);
   const uke1Part = currentEpisode.participants.find((p) => p.role === 'uke1') || {};
   const uke2Part = currentEpisode.participants.find((p) => p.role === 'uke2') || {};
+
+  // При редактировании стойки или клипа на текущем шаге из внешней формы (BunkaiFormPage)
+  // перезапускаем воспроизведение этого шага, чтобы изменения сразу проигрывались в 3D
+  const activeStepVisualKey = `${currentStepIdx}|${toriPart.clipName || ''}|${toriPart.stance || ''}|${toriPart.finalStance || ''}|${toriPart.landingMode || ''}|${uke1Part.clipName || ''}|${uke1Part.stance || ''}|${uke1Part.finalStance || ''}|${uke1Part.landingMode || ''}`;
+  const prevStepVisualKeyRef = useRef(activeStepVisualKey);
+  useEffect(() => {
+    if (prevStepVisualKeyRef.current !== activeStepVisualKey) {
+      const prevIdx = Number(String(prevStepVisualKeyRef.current).split('|')[0]);
+      prevStepVisualKeyRef.current = activeStepVisualKey;
+      if (prevIdx === currentStepIdx) {
+        setScrubProgress(null);
+        setStepCompleted(false);
+        zanshinTimerRef.current = 0;
+        setIsPlaying(true);
+        setReplayNonce((n) => n + 1);
+      }
+    }
+  }, [activeStepVisualKey, currentStepIdx]);
 
   const activeToriClip = customToriClip || toriPart.clipName || '';
   const activeUkeClip = customUkeClip || uke1Part.clipName || '';
@@ -604,75 +816,34 @@ export default function BunkaiMultiAvatarPlayer({
   const isUkeMaeGeri = isUkeKick;
 
   const phraseRef = useRef(0);
+  const phraseStepRef = useRef(currentStepIdx);
+  const lastEmittedStepRef = useRef(activeStepIndex || 0);
   const rootsRef = useRef({ tori: placement.posTori, uke1: placement.posUke1 });
 
-  useEffect(() => {
-    phraseRef.current = 0;
+  const handleClockComplete = useCallback(() => {
+    setStepCompleted(true);
+    if (!isLoopingStep && !autoAdvance) {
+      setIsPlaying(false);
+    }
+  }, [isLoopingStep, autoAdvance]);
+
+  const handleClockLoopRestart = useCallback(() => {
     setStepCompleted(false);
-    zanshinTimerRef.current = 0;
-    setCustomDistance(null);
-    setToriAngleOffsetDeg(0);
-    setUkeEvasionAngleDeg(0);
-    setCustomUkeClip('');
-    setCustomToriClip('');
-    setCustomToriStance('');
-    setCustomToriFinalStance('');
-    setToriLandingMode('auto');
-    setCustomUkeStance('');
-    setCustomUkeFinalStance('');
-    setUkeLandingMode('auto');
-  }, [currentStepIdx]);
+    setReplayNonce((n) => n + 1);
+  }, []);
 
-  useEffect(() => {
-    if (!isPlaying) return undefined;
-    let last = performance.now();
-    let frameId = 0;
-    const dur = Math.max(1.8, currentEpisode.duration || 2.4);
-
-    const tick = (now) => {
-      const dt = (now - last) / 1000;
-      last = now;
-
-      if (phraseRef.current < 1.0) {
-        // Однократное естественное выполнение боевой техники от начала до конца:
-        // Модель наносит удар / ставит блок / входит в стойку и надежно фиксирует позицию (Кимэ)
-        const nextPhrase = Math.min(1.0, phraseRef.current + (dt * speed) / dur);
-        phraseRef.current = nextPhrase;
-        if (nextPhrase >= 1.0) {
-          setStepCompleted(true);
-        }
-      } else if (isLoopingStep) {
-        // Режим зацикливания одного шага: короткая пауза фиксации (0.6с) и повтор
-        zanshinTimerRef.current += dt * speed;
-        if (zanshinTimerRef.current >= 0.6) {
-          zanshinTimerRef.current = 0;
-          phraseRef.current = 0;
-          setStepCompleted(false);
-        }
-      } else if (autoAdvance) {
-        // В режиме непрерывного авто-боя: выдерживаем паузу боевой бдительности (Дзансин 1.4с),
-        // после чего плавно переходим к следующему шагу сценария без скачков и сбросов
-        zanshinTimerRef.current += dt * speed;
-        if (zanshinTimerRef.current >= 1.4) {
-          zanshinTimerRef.current = 0;
-          setCurrentStepIdx((prev) => {
-            if (prev < chainedEpisodes.length - 1) {
-              const next = prev + 1;
-              if (onStepChange) onStepChange(next);
-              return next;
-            }
-            setIsPlaying(false);
-            return prev;
-          });
-        }
-      }
-
-      frameId = requestAnimationFrame(tick);
-    };
-
-    frameId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameId);
-  }, [isPlaying, speed, currentStepIdx, currentEpisode, autoAdvance, isLoopingStep, chainedEpisodes.length, onStepChange]);
+  const handleClockAutoAdvance = useCallback((idx, total) => {
+    setStepCompleted(false);
+    if (idx < total - 1) {
+      resetLocalStepOverrides();
+      const next = idx + 1;
+      lastEmittedStepRef.current = next;
+      setCurrentStepIdx(next);
+      if (onStepChange) onStepChange(next);
+    } else {
+      setIsPlaying(false);
+    }
+  }, [onStepChange, resetLocalStepOverrides]);
 
   // Описание дистанции (Ма-ай)
   const maaiInfo = useMemo(() => {
@@ -702,7 +873,7 @@ export default function BunkaiMultiAvatarPlayer({
       <div style={{ width: '100%', height, position: 'relative' }}>
         <Canvas
           shadows
-          camera={{ position: [placement.posTori[0] + 2.8, 1.8, placement.posTori[2] + 3.2], fov: 42 }}
+          camera={INITIAL_CAMERA_CONFIG}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
           onCreated={({ gl }) => {
             gl.domElement.addEventListener('webglcontextlost', (e) => {
@@ -717,43 +888,66 @@ export default function BunkaiMultiAvatarPlayer({
           <color attach="background" args={['#0e0d0b']} />
           <ambientLight intensity={0.7} />
           <directionalLight
-            position={[placement.posTori[0] + 4, 6, placement.posTori[2] + 4]}
+            position={[4, 6, 4]}
             intensity={1.4}
             castShadow
             shadow-mapSize={[1024, 1024]}
             shadow-camera-near={0.5}
-            shadow-camera-far={15}
-            shadow-camera-left={-4}
-            shadow-camera-right={4}
-            shadow-camera-top={4}
-            shadow-camera-bottom={-4}
+            shadow-camera-far={18}
+            shadow-camera-left={-6}
+            shadow-camera-right={6}
+            shadow-camera-top={6}
+            shadow-camera-bottom={-6}
           />
           <directionalLight position={[-4, 3, -3]} intensity={0.4} color="#f1f5f9" />
 
           {/* Традиционное японское додзё с разметкой татами */}
           <TraditionalDojo />
 
+          {/* Внутрисценовые часы шага: запускаются только после загрузки GLB-моделей */}
+          <BunkaiPlaybackClock
+            isPlaying={isPlaying}
+            speed={speed}
+            duration={currentEpisode.duration || 2.4}
+            phraseRef={phraseRef}
+            phraseStepRef={phraseStepRef}
+            zanshinTimerRef={zanshinTimerRef}
+            isLoopingStep={isLoopingStep}
+            autoAdvance={autoAdvance}
+            currentStepIdx={currentStepIdx}
+            totalSteps={chainedEpisodes.length}
+            replayTrigger={replayNonce}
+            onStepComplete={handleClockComplete}
+            onLoopRestart={handleClockLoopRestart}
+            onAutoAdvance={handleClockAutoAdvance}
+          />
+
           {/* Аватар 1: Тори — Атакующий (Синее доги) */}
           <MultiAvatarModel
             role="tori"
-            clipName={customToriClip || (customToriStance ? null : toriPart.clipName)}
+            clipName={customToriClip || toriPart.clipName}
             stance={customToriStance || toriPart.stance || 'zenkutsu'}
             finalStance={customToriFinalStance || toriPart.finalStance}
             landingMode={toriLandingMode !== 'auto' ? toriLandingMode : (toriPart.landingMode || 'auto')}
             position={placement.endPosTori}
             startPosition={placement.startPosTori}
+            waypoint={placement.waypointTori}
             rotation={placement.rotTori}
             startRotation={placement.startRotTori}
+            turnDirection={currentEpisode.toriTurnDir || 0}
             isStationary={placement.isStationaryTori}
             phraseRef={phraseRef}
+            phraseStepRef={phraseStepRef}
             rootsRef={rootsRef}
             speed={speed}
             stepDuration={currentEpisode.duration || 2.0}
+            stepKey={currentStepIdx}
             isPlaying={isPlaying}
             replayTrigger={replayNonce}
             scrubProgress={scrubProgress}
             timelineTime={null}
             delaySeconds={toriPart.delaySeconds || 0}
+            holdPunchClip={toriPart.holdPunchClip || null}
             ikTarget={bodyInteraction.clampedIkTargetA}
             ikContactTime={currentEpisode.tContact}
             interactionType={currentEpisode.interactionType}
@@ -762,38 +956,36 @@ export default function BunkaiMultiAvatarPlayer({
             onMissingClip={handleMissingClipDetected}
             onTrackJoints={handleTrackJoints}
             trackedJointsRef={trackedJointsRef}
-            combatOptions={{
-              stepNumber: currentEpisode?.stepNumber,
-              contactType: currentEpisode?.contactType,
-              interactionType: currentEpisode?.interactionType,
-              ikContactTime: currentEpisode?.tContact || 0.48,
-              isEvaded: placement.isEvaded,
-              attackDirectrix: placement.attackDirectrix,
-              isBow: Boolean(currentEpisode?.isBow),
-            }}
+            combatOptions={sharedCombatOptions}
           />
 
           {/* Аватар 2: Укэ 1 — Защищающийся (Белое доги) */}
           <MultiAvatarModel
             role="uke1"
-            clipName={customUkeClip || (customUkeStance ? null : uke1Part.clipName)}
+            clipName={customUkeClip || uke1Part.clipName}
             stance={customUkeStance || uke1Part.stance || 'zenkutsu'}
             finalStance={customUkeFinalStance || uke1Part.finalStance}
             landingMode={ukeLandingMode !== 'auto' ? ukeLandingMode : (uke1Part.landingMode || 'auto')}
             position={placement.endPosUke1}
             startPosition={placement.startPosUke1}
+            waypoint={placement.waypointUke}
             rotation={placement.rotUke1}
             startRotation={placement.startRotUke1}
+            turnDirection={currentEpisode.ukeTurnDir || 0}
+            fullTurn={Boolean(currentEpisode.ukeFullTurn)}
             isStationary={placement.isStationaryUke}
             phraseRef={phraseRef}
+            phraseStepRef={phraseStepRef}
             rootsRef={rootsRef}
             speed={speed}
             stepDuration={currentEpisode.duration || 2.0}
+            stepKey={currentStepIdx}
             isPlaying={isPlaying}
             replayTrigger={replayNonce}
             scrubProgress={scrubProgress}
             timelineTime={null}
             delaySeconds={uke1Part.delaySeconds || 0}
+            holdPunchClip={uke1Part.holdPunchClip || null}
             ikTarget={bodyInteraction.clampedIkTargetB}
             ikContactTime={currentEpisode.tContact}
             interactionType={currentEpisode.interactionType}
@@ -801,15 +993,7 @@ export default function BunkaiMultiAvatarPlayer({
             onMissingClip={handleMissingClipDetected}
             onTrackJoints={handleTrackJoints}
             trackedJointsRef={trackedJointsRef}
-            combatOptions={{
-              stepNumber: currentEpisode?.stepNumber,
-              contactType: currentEpisode?.contactType,
-              interactionType: currentEpisode?.interactionType,
-              ikContactTime: currentEpisode?.tContact || 0.48,
-              isEvaded: placement.isEvaded,
-              attackDirectrix: placement.attackDirectrix,
-              isBow: Boolean(currentEpisode?.isBow),
-            }}
+            combatOptions={sharedCombatOptions}
           />
 
           {/* Аватар 3: Укэ 2 (если включен командный режим) */}
@@ -848,11 +1032,10 @@ export default function BunkaiMultiAvatarPlayer({
             bodyInteraction={bodyInteraction}
           />
 
-          <BunkaiCameraBounds controlsRef={controlsRef} />
+          <BunkaiCameraRig controlsRef={controlsRef} rootsRef={rootsRef} />
 
           <OrbitControls
             ref={controlsRef}
-            target={[placement.posTori[0], 0.95, placement.posTori[2]]}
             minDistance={1.2}
             maxDistance={6.4}
             maxPolarAngle={Math.PI / 2 - 0.06}
@@ -1118,7 +1301,7 @@ export default function BunkaiMultiAvatarPlayer({
             }}
           >
             <Sliders size={14} color={panelViewMode === 'universal' ? '#f8fafc' : '#cbd5e1'} />
-            Универсальная панель управления движениями (9 групп)
+            Универсальная панель управления движениями (7 групп)
           </button>
           <button
             type="button"

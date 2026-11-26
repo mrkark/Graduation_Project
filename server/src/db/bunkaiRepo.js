@@ -124,26 +124,90 @@ async function getStepsWithParticipants(bunkaiId) {
     });
   });
 
-  return (stepsRows || []).map((s) => ({
-    stepId: s.Step_ID,
-    bunkaiId: s.Bunkai_ID,
-    stepNumber: s.Step_Number,
-    title: s.Title,
-    description: s.Description,
-    duration: s.Duration,
-    participantCount: s.Participant_Count,
-    targetDistance: s.Target_Distance,
-    targetAngle: s.Target_Angle,
-    participants: participantsByStep.get(s.Step_ID) || [],
+  return (stepsRows || []).map((s) => {
+    let metadata = null;
+    if (s.Metadata_Json) {
+      try {
+        metadata = typeof s.Metadata_Json === 'string' ? JSON.parse(s.Metadata_Json) : s.Metadata_Json;
+      } catch {
+        metadata = null;
+      }
+    }
+    return {
+      stepId: s.Step_ID,
+      bunkaiId: s.Bunkai_ID,
+      stepNumber: s.Step_Number,
+      title: s.Title,
+      description: s.Description,
+      duration: s.Duration,
+      participantCount: s.Participant_Count,
+      targetDistance: s.Target_Distance,
+      targetAngle: s.Target_Angle,
+      metadata,
+      participants: participantsByStep.get(s.Step_ID) || [],
+    };
+  });
+}
+
+async function ensureClipIdsForSteps(steps) {
+  if (!Array.isArray(steps) || steps.length === 0) return steps;
+  const neededNames = new Set();
+  for (const s of steps) {
+    for (const p of (s.participants || [])) {
+      if (!p.clipId && p.clipName) {
+        neededNames.add(String(p.clipName).trim());
+      }
+    }
+  }
+  if (neededNames.size === 0) return steps;
+
+  const { poolPromise, sql } = require('../config/database');
+  const pool = await poolPromise;
+  const clipMap = new Map();
+  const existing = await pool.request().query('SELECT Clip_ID, Clip_Name FROM dbo.AnimationClips');
+  (existing.recordset || []).forEach((r) => clipMap.set(r.Clip_Name, r.Clip_ID));
+
+  for (const name of neededNames) {
+    if (!clipMap.has(name)) {
+      const cat = name.includes('dachi') || name.includes('stance') || name.includes('shizentai')
+        ? 'stance'
+        : name.includes('uke') || name.includes('barai')
+        ? 'block'
+        : name.includes('geri') || name.includes('kick')
+        ? 'kick'
+        : 'punch';
+      const ins = await pool.request()
+        .input('cn', sql.NVarChar(100), name)
+        .input('dn', sql.NVarChar(200), name)
+        .input('cat', sql.NVarChar(50), cat)
+        .query(`
+          IF NOT EXISTS (SELECT 1 FROM dbo.AnimationClips WHERE Clip_Name = @cn)
+            INSERT INTO dbo.AnimationClips (Clip_Name, Display_Name, Category, Duration, Stance_In, Stance_Out, Interaction_Type, Optimal_Distance)
+            VALUES (@cn, @dn, @cat, 1.5, N'zenkutsu_dachi_left', N'zenkutsu_dachi_left', N'body_contact', 1.2);
+          SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = @cn;
+        `);
+      if (ins.recordset?.[0]?.Clip_ID) {
+        clipMap.set(name, ins.recordset[0].Clip_ID);
+      }
+    }
+  }
+
+  return steps.map((s) => ({
+    ...s,
+    participants: (s.participants || []).map((p) => ({
+      ...p,
+      clipId: p.clipId || (p.clipName ? clipMap.get(String(p.clipName).trim()) || null : null),
+    })),
   }));
 }
 
 async function saveSteps(bunkaiId, { userId, userRole }, steps) {
+  const enrichedSteps = await ensureClipIdsForSteps(steps || []);
   await callProcedure('sp_Bunkai_SaveSteps', {
     BunkaiId: bunkaiId,
     UserId: userId,
     UserRole: userRole,
-    StepsJson: JSON.stringify(steps || []),
+    StepsJson: JSON.stringify(enrichedSteps),
   });
   return getStepsWithParticipants(bunkaiId);
 }

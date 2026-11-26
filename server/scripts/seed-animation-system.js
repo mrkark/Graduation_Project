@@ -953,25 +953,29 @@ async function seed() {
     const stepCount = (await pool.request().input('bId', bunkaiId).query('SELECT COUNT(*) AS c FROM dbo.BunkaiSteps WHERE Bunkai_ID = @bId')).recordset[0].c;
 
     if (stepCount === 0) {
-      // Создаем 3 канонических эпизода:
-      // Эпизод 1: Защита Сюто-укэ от выпада Ой-цуки (2 участника)
-      // Эпизод 2: Вход Агэ-укэ и локоть Эмпи (2 участника)
-      // Эпизод 3: Командный соревновательный бункай против двух нападающих (3 участника: Тори, Укэ 1, Укэ 2)
-      const shutoToriClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_shuto_counter_tori'")).recordset[0]?.Clip_ID;
-      const shutoUkeClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_shuto_counter_uke'")).recordset[0]?.Clip_ID;
-      const ageToriClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_age_empi_tori'")).recordset[0]?.Clip_ID;
-      const ageUkeClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_age_empi_uke'")).recordset[0]?.Clip_ID;
-      const uke2FlankClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_flank_distraction_uke2'")).recordset[0]?.Clip_ID;
-      const sweepToriClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_kuzushi_sweep_tori'")).recordset[0]?.Clip_ID;
-      const sweepUkeClip = (await pool.request().query("SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = 'bunkai_kuzushi_sweep_uke'")).recordset[0]?.Clip_ID;
+      // Создаем 3 канонических эпизода (1 — Тори [синий, атакующий], 2 — Укэ [белый, защищающийся]) с готовыми клипами:
+      const getClipId = async (clipNames) => {
+        for (const name of clipNames) {
+          const r = await pool.request().input('cn', name).query('SELECT Clip_ID FROM dbo.AnimationClips WHERE Clip_Name = @cn');
+          if (r.recordset[0]?.Clip_ID) return r.recordset[0].Clip_ID;
+        }
+        return null;
+      };
 
-      // Шаг 1: Защита и контратака Сюто-укэ
+      const oiZukiClip = await getClipId(['tech_oi_zuki_right', 'oi_zuki_right', 'oi_zuki']);
+      const shutoUkeClip = await getClipId(['tech_shuto_uke_left', 'shuto_uke']);
+      const ageUkeClip = await getClipId(['tech_age_uke_left', 'age_uke_left', 'age_uke']);
+      const maeGeriClip = await getClipId(['kick_mae_geri_right', 'mae_geri_right', 'mae_geri']);
+      const gedanBaraiClip = await getClipId(['tech_gedan_barai_left', 'gedan_barai_left', 'gedan_barai']);
+      const uke2FlankClip = await getClipId(['tech_oi_zuki_right', 'oi_zuki_right', 'bunkai_flank_distraction_uke2']);
+
+      // Шаг 1: Атака Тори Ой-цуки — защита Укэ Сюто-укэ
       let s1 = await pool.request()
         .input('bId', bunkaiId)
         .input('num', 1)
-        .input('title', 'Эпизод 1: Сюто-укэ тай-сабаки против выпада Ой-цуки')
-        .input('desc', 'Укэ наносит мощный прямой удар в корпус. Тори уходит с линии атаки в Кокуцу-дати, сбивает предплечье блоком Сюто-укэ и наносит контрудар Гяку-цуки.')
-        .input('dur', 3.2)
+        .input('title', 'Эпизод 1: Выпад Тори Ой-цуки и защита Укэ Сюто-укэ')
+        .input('desc', 'Тори (синий) наносит прямой выпад Ой-цуки в корпус. Укэ (белый) уходит с линии атаки в Кокуцу-дати и сбивает предплечье блоком Сюто-укэ.')
+        .input('dur', 2.4)
         .input('pCount', 2)
         .input('dist', 1.35)
         .input('angle', 0.0)
@@ -983,19 +987,19 @@ async function seed() {
       const s1Id = s1.recordset[0].Id;
 
       await pool.request().query(`
-        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y)
+        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
         VALUES
-          (${s1Id}, 'tori', ${shutoToriClip}, 'shizentai', 0, 0, 0),
-          (${s1Id}, 'uke', ${shutoUkeClip}, 'shizentai', 0, 1.35, 3.14159);
+          (${s1Id}, 'tori', ${oiZukiClip}, 'zenkutsu_dachi_right', 0, 0, 0, 0),
+          (${s1Id}, 'uke1', ${shutoUkeClip}, 'kokutsu_dachi_right', 0, 1.35, 180, 0.12);
       `);
 
-      // Шаг 2: Вход под удар с Агэ-укэ и сокрушительный локоть
+      // Шаг 2: Атака Тори в голову — восходящий блок Укэ Агэ-укэ
       let s2 = await pool.request()
         .input('bId', bunkaiId)
         .input('num', 2)
-        .input('title', 'Эпизод 2: Восходящий блок Агэ-укэ и сокрушительный локоть Эмпи')
-        .input('desc', 'Отражение удара в голову. Тори поднимает Агэ-укэ, закручивает атакующую руку и сближается для удара локтем Эмпи-учи в челюсть.')
-        .input('dur', 3.2)
+        .input('title', 'Эпизод 2: Выпад Тори в голову и блок Укэ Агэ-укэ')
+        .input('desc', 'Тори (синий) атакует прямым ударом в голову. Укэ (белый) встречает атаку восходящим блоком Агэ-укэ.')
+        .input('dur', 2.4)
         .input('pCount', 2)
         .input('dist', 1.15)
         .input('angle', 0.0)
@@ -1007,19 +1011,19 @@ async function seed() {
       const s2Id = s2.recordset[0].Id;
 
       await pool.request().query(`
-        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y)
+        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
         VALUES
-          (${s2Id}, 'tori', ${ageToriClip}, 'shizentai', 0, 0, 0),
-          (${s2Id}, 'uke', ${ageUkeClip}, 'shizentai', 0, 1.15, 3.14159);
+          (${s2Id}, 'tori', ${oiZukiClip}, 'zenkutsu_dachi_right', 0, 0, 0, 0),
+          (${s2Id}, 'uke1', ${ageUkeClip}, 'zenkutsu_dachi_left', 0, 1.15, 180, 0.10);
       `);
 
-      // Шаг 3: Соревновательный командный Бункай (3 бойца: Тори, Укэ 1, Укэ 2)
+      // Шаг 3: Атака Тори Маэ-гэри — защита Укэ Гэдан-барай (3 бойца)
       let s3 = await pool.request()
         .input('bId', bunkaiId)
         .input('num', 3)
-        .input('title', 'Эпизод 3: Командный Бункай — отражение фланговой атаки и бросок Кудзуси')
-        .input('desc', 'Укэ 2 атакует с фланга, Укэ 1 атакует прямо. Тори нейтрализует фланговую атаку, выводит Укэ 1 из равновесия и проводит бросок на татами.')
-        .input('dur', 3.6)
+        .input('title', 'Эпизод 3: Командный Бункай — Маэ-гэри Тори и блок Укэ Гэдан-барай')
+        .input('desc', 'Тори (синий) атакует Маэ-гэри с фронта, Укэ 2 атакует с фланга. Укэ 1 (белый) сбивает ногу нижним блоком Гэдан-барай.')
+        .input('dur', 2.6)
         .input('pCount', 3)
         .input('dist', 1.25)
         .input('angle', 0.0)
@@ -1031,11 +1035,11 @@ async function seed() {
       const s3Id = s3.recordset[0].Id;
 
       await pool.request().query(`
-        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y)
+        INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
         VALUES
-          (${s3Id}, 'tori', ${sweepToriClip}, 'kokutsu_dachi_left', 0, 0, 0),
-          (${s3Id}, 'uke', ${sweepUkeClip}, 'zenkutsu_dachi_right', 0, 1.25, 3.14159),
-          (${s3Id}, 'uke2', ${uke2FlankClip}, 'zenkutsu_dachi_left', -1.3, 0.75, 1.41);
+          (${s3Id}, 'tori', ${maeGeriClip}, 'zenkutsu_dachi_left', 0, 0, 0, 0),
+          (${s3Id}, 'uke1', ${gedanBaraiClip}, 'zenkutsu_dachi_left', 0, 1.25, 180, 0.12),
+          (${s3Id}, 'uke2', ${uke2FlankClip}, 'zenkutsu_dachi_left', -1.3, 0.75, 80, 0.25);
       `);
     }
   }

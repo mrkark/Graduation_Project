@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   User, Shield, Swords, Compass, Ruler, Footprints, Move,
   RotateCw, RotateCcw, Zap, Flame, Hand, Lock, Activity, CornerDownRight,
@@ -99,17 +99,15 @@ export default function BunkaiMotionControlPanel({
   // Активный тип действия участника
   const [activeActionType, setActiveActionType] = useState('stance');
 
-  // Управление раскрытием разделов панели (аккордеон)
+  // Управление раскрытием разделов панели (аккордеон — в редакторе открыты все 7 рабочих групп)
   const [expandedSections, setExpandedSections] = useState({
     spatial: true,
     orientation: true,
     stance: true,
-    locomotion: false,
+    locomotion: true,
     technique: true,
-    interaction: false,
-    timing: false,
-    visuals: true,
-    validation: true,
+    interaction: true,
+    timing: true,
   });
 
   const toggleSection = useCallback((sec) => {
@@ -209,6 +207,25 @@ export default function BunkaiMotionControlPanel({
   const [contactZone, setContactZone] = useState('forearm');
   const [jointAngleDeg, setJointAngleDeg] = useState(25);
 
+  useEffect(() => {
+    setContactType(currentEpisode.contactType || 'none');
+    setOrientationMode(
+      selectedParticipant === 'tori'
+        ? (currentEpisode.orientationModeTori || 'mode2_look_at')
+        : (currentEpisode.orientationModeUke || 'mode2_look_at')
+    );
+    setRelativeAngleDeg(
+      selectedParticipant === 'tori'
+        ? (currentEpisode.toriAngleOffsetDeg ?? currentEpisode.attackAngleDeg ?? 0)
+        : (currentEpisode.ukeEvasionAngleDeg ?? currentEpisode.scenarioAngles?.retreatAngleDeg ?? 0)
+    );
+    setActiveActionType(
+      selectedParticipant === 'tori'
+        ? (currentEpisode.toriActionType || toriPart.actionType || 'stance')
+        : (currentEpisode.ukeActionType || uke1Part.actionType || 'stance')
+    );
+  }, [currentStepIndex, selectedParticipant, currentEpisode]);
+
   // Дистанция боя
   const combatDistance = currentEpisode.optimalDistance || 1.45;
 
@@ -223,11 +240,13 @@ export default function BunkaiMotionControlPanel({
   const handleStanceSideChange = useCallback((side) => {
     let nextStanceId = currentStanceId;
     if (side === 'left') {
-      nextStanceId = currentStanceId.replace('right', 'left');
-      if (nextStanceId === 'fudo_dachi_right') nextStanceId = 'fudo_dachi';
+      if (currentStanceId === 'fudo_dachi_right') nextStanceId = 'fudo_dachi';
+      else if (currentStanceId.includes('right')) nextStanceId = currentStanceId.replace('right', 'left');
+      else if (!currentStanceId.includes('left') && currentStanceId !== 'fudo_dachi') nextStanceId = 'zenkutsu_dachi_left';
     } else if (side === 'right') {
-      nextStanceId = currentStanceId.replace('left', 'right');
-      if (nextStanceId === 'fudo_dachi') nextStanceId = 'fudo_dachi_right';
+      if (currentStanceId === 'fudo_dachi') nextStanceId = 'fudo_dachi_right';
+      else if (currentStanceId.includes('left')) nextStanceId = currentStanceId.replace('left', 'right');
+      else if (!currentStanceId.includes('right')) nextStanceId = 'zenkutsu_dachi_right';
     }
     const fieldName = selectedParticipant === 'tori' ? 'toriStance' : 'ukeStance';
     notify(fieldName, nextStanceId);
@@ -255,9 +274,15 @@ export default function BunkaiMotionControlPanel({
   const handleRelativeAngleChange = useCallback((deg) => {
     setRelativeAngleDeg(deg);
     if (selectedParticipant === 'tori') {
+      setOrientationMode('mode3_relative_angle');
+      notify('orientationModeTori', 'mode3_relative_angle');
+      notify('relativeAngleDegTori', deg);
       notify('toriAngleOffsetDeg', deg);
       notify('attackAngleDeg', deg);
     } else {
+      setOrientationMode('mode3_relative_angle');
+      notify('orientationModeUke', 'mode3_relative_angle');
+      notify('relativeAngleDegUke', deg);
       notify('ukeEvasionAngleDeg', deg);
       notify('taiSabakiAngleDeg', deg);
     }
@@ -269,10 +294,13 @@ export default function BunkaiMotionControlPanel({
     while (normalized > 180) normalized -= 360;
     while (normalized < -180) normalized += 360;
 
+    setOrientationMode('mode1_free');
     if (selectedParticipant === 'tori') {
+      notify('orientationModeTori', 'mode1_free');
       notify('toriEndAngleDeg', normalized);
       notify('customToriYawDeg', normalized);
     } else {
+      notify('orientationModeUke', 'mode1_free');
       notify('ukeEndAngleDeg', normalized);
       notify('customUkeYawDeg', normalized);
     }
@@ -464,7 +492,10 @@ export default function BunkaiMotionControlPanel({
               <button
                 key={act.id}
                 type="button"
-                onClick={() => setActiveActionType(act.id)}
+                onClick={() => {
+                  setActiveActionType(act.id);
+                  notify(selectedParticipant === 'tori' ? 'toriActionType' : 'ukeActionType', act.id);
+                }}
                 style={{
                   padding: '5px 10px',
                   borderRadius: 5,
@@ -512,7 +543,7 @@ export default function BunkaiMotionControlPanel({
                 </div>
                 <input
                   type="range"
-                  min="0.80"
+                  min="0.35"
                   max="2.80"
                   step="0.05"
                   value={combatDistance}
@@ -550,9 +581,11 @@ export default function BunkaiMotionControlPanel({
                   <span>Координаты по осям ({selectedParticipant === 'tori' ? '1 — Тори' : '2 — Укэ'}):</span>
                   <span style={{ fontSize: '0.70rem', color: '#94a3b8' }}>Единицы: метры (м)</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
-                  <div>
-                    <label style={{ fontSize: '0.70rem', color: '#fca5a5', fontWeight: 600 }}>Ось X (Боковой сдвиг):</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, alignItems: 'end' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: '0.70rem', color: '#fca5a5', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      Ось X (сдвиг):
+                    </label>
                     <input
                       type="number"
                       step="0.05"
@@ -561,21 +594,25 @@ export default function BunkaiMotionControlPanel({
                         const val = parseFloat(e.target.value);
                         if (!isNaN(val)) handlePosXChange(val);
                       }}
-                      style={{ width: '100%', padding: '4px 6px', borderRadius: 4, background: '#1a1a24', color: '#f8fafc', border: '1px solid #ef4444', fontSize: '0.75rem', fontFamily: 'monospace' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '5px 6px', borderRadius: 4, background: '#1a1a24', color: '#f8fafc', border: '1px solid #ef4444', fontSize: '0.75rem', fontFamily: 'monospace' }}
                     />
                   </div>
-                  <div>
-                    <label style={{ fontSize: '0.70rem', color: '#86efac', fontWeight: 600 }}>Ось Y (Высота):</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: '0.70rem', color: '#86efac', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      Ось Y (высота):
+                    </label>
                     <input
                       type="number"
                       step="0.05"
                       value={Number(currentPosY).toFixed(2)}
                       readOnly
-                      style={{ width: '100%', padding: '4px 6px', borderRadius: 4, background: '#1a1a24', color: '#86efac', border: '1px solid #22c55e', fontSize: '0.75rem', fontFamily: 'monospace' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '5px 6px', borderRadius: 4, background: '#1a1a24', color: '#86efac', border: '1px solid #22c55e', fontSize: '0.75rem', fontFamily: 'monospace' }}
                     />
                   </div>
-                  <div>
-                    <label style={{ fontSize: '0.70rem', color: '#93c5fd', fontWeight: 600 }}>Ось Z (Дистанция):</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: '0.70rem', color: '#93c5fd', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      Ось Z (глубина):
+                    </label>
                     <input
                       type="number"
                       step="0.05"
@@ -584,7 +621,7 @@ export default function BunkaiMotionControlPanel({
                         const val = parseFloat(e.target.value);
                         if (!isNaN(val)) handlePosZChange(val);
                       }}
-                      style={{ width: '100%', padding: '4px 6px', borderRadius: 4, background: '#1a1a24', color: '#f8fafc', border: '1px solid #3b82f6', fontSize: '0.75rem', fontFamily: 'monospace' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '5px 6px', borderRadius: 4, background: '#1a1a24', color: '#f8fafc', border: '1px solid #3b82f6', fontSize: '0.75rem', fontFamily: 'monospace' }}
                     />
                   </div>
                 </div>
@@ -907,7 +944,11 @@ export default function BunkaiMotionControlPanel({
                 </label>
                 <select
                   value={turnMechanic}
-                  onChange={(e) => setTurnMechanic(e.target.value)}
+                  onChange={(e) => {
+                    const mech = e.target.value;
+                    setTurnMechanic(mech);
+                    notify(selectedParticipant === 'tori' ? 'turnMechanicTori' : 'turnMechanicUke', mech);
+                  }}
                   style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
                 >
                   {BUNKAI_TURN_MECHANICS.map((t) => (
@@ -974,36 +1015,72 @@ export default function BunkaiMotionControlPanel({
                 </div>
               </div>
 
-              {/* Выбор стойки Сётокан */}
-              <div>
-                <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-                  Стойка Сётокан:
-                </label>
-                <select
-                  value={currentStanceId}
-                  onChange={(e) => handleStanceSelect(e.target.value)}
-                  style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
-                >
-                  <optgroup label="Дзэнкуцу-дати (前屈立ち)">
-                    <option value="zenkutsu_dachi_left">Дзэнкуцу-дати (Хидари — левая)</option>
-                    <option value="zenkutsu_dachi_right">Дзэнкуцу-дати (Миги — правая)</option>
-                  </optgroup>
-                  <optgroup label="Кокуцу-дати (後屈立ち)">
-                    <option value="kokutsu_dachi_left">Кокуцу-дати (Хидари — левая)</option>
-                    <option value="kokutsu_dachi_right">Кокуцу-дати (Миги — правая)</option>
-                  </optgroup>
-                  <optgroup label="Фудо-дати (不動立ち)">
-                    <option value="fudo_dachi">Фудо-дати (Хидари — левая)</option>
-                    <option value="fudo_dachi_right">Фудо-дати (Миги — правая)</option>
-                  </optgroup>
-                  <optgroup label="Симметричные">
-                    <option value="kiba_dachi">Киба-дати (Стойка всадника)</option>
-                    <option value="stance_shiko">Сико-дати (Квадратная стойка)</option>
-                    <option value="heiko_dachi">Хэйко-дати (Параллельная стойка)</option>
-                    <option value="stance_musubi">Мусуби-дати (Стойка поклона)</option>
-                    <option value="stance_heisoku">Хэйсоку-дати (Сомкнутая стойка)</option>
-                  </optgroup>
-                </select>
+              {/* Выбор начальной и конечной стоек Сётокан */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                    Нач. стойка:
+                  </label>
+                  <select
+                    value={currentStanceId}
+                    onChange={(e) => handleStanceSelect(e.target.value)}
+                    style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    <optgroup label="Дзэнкуцу-дати (前屈立ち)">
+                      <option value="zenkutsu_dachi_left">Дзэнкуцу-дати (Хидари)</option>
+                      <option value="zenkutsu_dachi_right">Дзэнкуцу-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Кокуцу-дати (後屈立ち)">
+                      <option value="kokutsu_dachi_left">Кокуцу-дати (Хидари)</option>
+                      <option value="kokutsu_dachi_right">Кокуцу-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Фудо-дати (不動立ち)">
+                      <option value="fudo_dachi">Фудо-дати (Хидари)</option>
+                      <option value="fudo_dachi_right">Фудо-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Симметричные и др.">
+                      <option value="kiba_dachi">Киба-дати (Всадник)</option>
+                      <option value="stance_shiko">Сико-дати (Квадрат)</option>
+                      <option value="heiko_dachi">Хэйко-дати (Готовность)</option>
+                      <option value="stance_musubi">Мусуби-дати (Поклон)</option>
+                      <option value="stance_heisoku">Хэйсоку-дати (Сомкнутая)</option>
+                      <option value="stance_neko_left">Нэкоаси-дати (Хидари)</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                    Кон. стойка:
+                  </label>
+                  <select
+                    value={activePart.finalStance || ''}
+                    onChange={(e) => handleFinalStanceSelect(e.target.value)}
+                    style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.75rem', cursor: 'pointer' }}
+                  >
+                    <option value="">Авто (как нач.)</option>
+                    <optgroup label="Дзэнкуцу-дати">
+                      <option value="zenkutsu_dachi_left">Дзэнкуцу-дати (Хидари)</option>
+                      <option value="zenkutsu_dachi_right">Дзэнкуцу-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Кокуцу-дати">
+                      <option value="kokutsu_dachi_left">Кокуцу-дати (Хидари)</option>
+                      <option value="kokutsu_dachi_right">Кокуцу-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Фудо-дати">
+                      <option value="fudo_dachi">Фудо-дати (Хидари)</option>
+                      <option value="fudo_dachi_right">Фудо-дати (Миги)</option>
+                    </optgroup>
+                    <optgroup label="Симметричные и др.">
+                      <option value="kiba_dachi">Киба-дати (Всадник)</option>
+                      <option value="stance_shiko">Сико-дати (Квадрат)</option>
+                      <option value="heiko_dachi">Хэйко-дати (Готовность)</option>
+                      <option value="stance_musubi">Мусуби-дати (Поклон)</option>
+                      <option value="stance_heisoku">Хэйсоку-дати (Сомкнутая)</option>
+                      <option value="stance_neko_left">Нэкоаси-дати (Хидари)</option>
+                    </optgroup>
+                  </select>
+                </div>
               </div>
 
               {/* Анатомическая справка стойки */}
@@ -1035,7 +1112,7 @@ export default function BunkaiMotionControlPanel({
             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.locomotion ? 10 : 0 }}
           >
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fbbf24', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Move size={15} color="#fbbf24" /> 4. Настройка перемещения (Сабаки)
+              <Move size={15} color="#fbbf24" /> 4. Настройка перемещения
             </span>
             {expandedSections.locomotion ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
           </div>
@@ -1222,15 +1299,18 @@ export default function BunkaiMotionControlPanel({
                     style={{ width: '100%', padding: '5px 6px', borderRadius: 6, background: '#1a1a24', color: '#f8fafc', border: '1px solid #334155', fontSize: '0.76rem', cursor: 'pointer' }}
                   >
                     <option value="none">Дистанция (без касания)</option>
-                    <option value="block_haivan">Блок предплечья (Укэ)</option>
-                    <option value="block_gedan">Нижний блок (Гэдан)</option>
-                    <option value="block_jodan">Верхний блок (Агэ-укэ)</option>
-                    <option value="arm_strike">Удар второй рукой выше локтя</option>
-                    <option value="joint_lock">Залом сустава (Кансэцу)</option>
-                    <option value="sweep_fall">Подсечка и падение</option>
+                    <option value="distance_only">Контроль дистанции (distance_only)</option>
+                    <option value="block_gedan">Нижний блок (block_gedan)</option>
+                    <option value="block_jodan">Верхний блок (block_jodan)</option>
+                    <option value="block_haivan">Блок предплечьем (block_haivan)</option>
+                    <option value="punch_body">Удар в корпус (punch_body)</option>
+                    <option value="punch_head">Удар в голову/горло (punch_head)</option>
+                    <option value="joint_lock">Залом сустава / Захват (joint_lock)</option>
+                    <option value="sweep_fall">Подсечка и падение (sweep_fall)</option>
                     <option value="ground_finish">Добивание в партере</option>
-                    <option value="strike_chudan">Удар в корпус</option>
-                    <option value="strike_throat">Удар в горло</option>
+                    <option value="arm_strike">Удар выше локтя</option>
+                    <option value="strike_chudan">Удар в корпус (устар.)</option>
+                    <option value="strike_throat">Удар в горло (устар.)</option>
                   </select>
                 </div>
                 <div>
@@ -1326,69 +1406,6 @@ export default function BunkaiMotionControlPanel({
                   75-100%<br />Дзансин
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* ГРУППА 8: ВИЗУАЛИЗАЦИЯ 3D И МАНИПУЛЯТОРЫ */}
-        <div style={{ background: '#14141c', border: '1px solid #272733', borderRadius: 8, padding: 12 }}>
-          <div
-            onClick={() => toggleSection('visuals')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.visuals ? 10 : 0 }}
-          >
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#06b6d4', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Eye size={15} color="#06b6d4" /> 8. Визуальные индикаторы в 3D сцене
-            </span>
-            {expandedSections.visuals ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-          </div>
-
-          {expandedSections.visuals && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.76rem', color: '#cbd5e1', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={visualAidSettings.showCoordinateSystem !== false}
-                  onChange={(e) => onVisualAidToggle && onVisualAidToggle('showCoordinateSystem', e.target.checked)}
-                />
-                <span style={{ fontWeight: 600, color: '#38bdf8' }}>🧭 Система координат Бункай (оси X, Y, Z и вектор поворотов)</span>
-              </label>
-            </div>
-          )}
-        </div>
-
-        {/* ГРУППА 9: БИОМЕХАНИЧЕСКАЯ ВАЛИДАЦИЯ И ПРЕДУПРЕЖДЕНИЯ */}
-        <div style={{ background: '#14141c', border: '1px solid #272733', borderRadius: 8, padding: 12 }}>
-          <div
-            onClick={() => toggleSection('validation')}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.validation ? 10 : 0 }}
-          >
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: biomechanicsAudit.isValid ? '#10b981' : '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {biomechanicsAudit.isValid ? <CheckCircle2 size={15} color="#10b981" /> : <AlertTriangle size={15} color="#f59e0b" />}
-              9. Проверка биомеханики и безопасности
-            </span>
-            {expandedSections.validation ? <ChevronUp size={16} color="#94a3b8" /> : <ChevronDown size={16} color="#94a3b8" />}
-          </div>
-
-          {expandedSections.validation && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {biomechanicsAudit.isValid && (
-                <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#6ee7b7', padding: '6px 10px', borderRadius: 6, fontSize: '0.74rem', fontWeight: 600 }}>
-                  ✓ Все параметры согласованы: стойка, углы всего тела, безопасная дистанция и контакты корректны.
-                </div>
-              )}
-
-              {biomechanicsAudit.warnings.map((warn, wIdx) => (
-                <div key={wIdx} style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', padding: '6px 10px', borderRadius: 6, fontSize: '0.72rem', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-                  <AlertTriangle size={13} color="#f87171" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <span>{warn}</span>
-                </div>
-              ))}
-
-              {biomechanicsAudit.checks.map((chk, cIdx) => (
-                <div key={cIdx} style={{ fontSize: '0.70rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <CheckCircle2 size={12} color="#10b981" /> {chk}
-                </div>
-              ))}
             </div>
           )}
         </div>

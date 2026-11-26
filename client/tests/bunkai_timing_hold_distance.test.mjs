@@ -10,8 +10,8 @@ console.log('=== TEST SUITE: Bunkai Reaction Timing, Strike Hold (Kime) & Contac
 // 1. Тест: Задержка реакции защищающегося (Reaction Delay)
 console.log('--- Тест 1: Задержка реакции защищающегося (Reaction Delay) ---');
 {
-  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[4]; // Step 5
-  assert.equal(ep5.stepNumber, 5);
+  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[5]; // Шаг 6 (Исх. шаг 5.1)
+  assert.equal(ep5.stepNumber, 6);
 
   const ukePart = ep5.participants.find(p => p.role === 'uke' || p.role === 'uke1');
   assert.ok(ukePart, 'Укэ должен присутствовать на Шаге 5');
@@ -62,11 +62,11 @@ console.log('\n--- Тест 2: Запрет сброса состояния по
   console.log('✓ Все ударные и блокирующие техники надежно защищены от сброса в нейтральную стойку и фиксируют финальную позу.');
 }
 
-// 3. Тест: Калибровка дистанции и директрисы атаки на Шаге 5 и Шаге 6
-console.log('\n--- Тест 3: Калибровка боевой дистанции и оси атаки (Шаг 5 и Шаг 6) ---');
+// 3. Тест: Калибровка дистанции и директрисы атаки на Шаге 6 и Шаге 7
+console.log('\n--- Тест 3: Калибровка боевой дистанции и оси атаки (Шаг 6 и Шаг 7) ---');
 {
-  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[4];
-  assert.equal(ep5.attackAngleDeg, 0, 'Тори на шаге 5 должен атаковать строго прямо (attackAngleDeg === 0)');
+  const ep5 = HEIAN_SHODAN_BUNKAI_18_STEPS[5];
+  assert.equal(ep5.attackAngleDeg, 0, 'Тори на шаге 6 должен атаковать строго прямо (attackAngleDeg === 0)');
 
   const placement5 = computeAvatarPlacement({
     episode: ep5,
@@ -75,18 +75,18 @@ console.log('\n--- Тест 3: Калибровка боевой дистанц�
     ukeEvasionAngleDeg: undefined,
   });
 
-  // Расчет взаимного расстояния между Тори и Укэ на шаге 5
+  // Расчет взаимного расстояния между Тори и Укэ на шаге 6
   const dist5 = Math.hypot(placement5.posUke1[0] - placement5.posTori[0], placement5.posUke1[2] - placement5.posTori[2]);
-  assert.ok(dist5 >= 1.05 && dist5 <= 1.30, `Боевая дистанция на шаге 5 (${dist5.toFixed(2)}м) должна быть в диапазоне контакта 1.05м-1.30м`);
+  assert.ok(dist5 >= 1.05 && dist5 <= 1.30, `Боевая дистанция на шаге 6 (${dist5.toFixed(2)}м) должна быть в диапазоне контакта 1.05м-1.30м`);
 
   // Боковое смещение (Тай-сабаки) должно быть в пределах 0.30 - 0.40м от центра
   const lateralShift5 = Math.abs(placement5.posUke1[0] - placement5.posTori[0]);
   assert.ok(lateralShift5 >= 0.28 && lateralShift5 <= 0.45, `Смещение Укэ по оси X (${lateralShift5.toFixed(2)}м) обеспечивает прямой физический перехват конечности`);
 
-  // Шаг 6: Контрудар Укэ Гяку-дзуки в корпус
-  const ep6 = HEIAN_SHODAN_BUNKAI_18_STEPS[5];
-  assert.equal(ep6.stepNumber, 6, 'Шаг 6 должен быть контрударом Гяку-дзуки');
-  assert.equal(ep6.contactType, 'strike_chudan', 'Контакт на шаге 6 — удар в корпус');
+  // Шаг 7: Контрудар Укэ Гяку-дзуки в корпус
+  const ep6 = HEIAN_SHODAN_BUNKAI_18_STEPS[6];
+  assert.equal(ep6.stepNumber, 7, 'Шаг 7 должен быть контрударом Гяку-дзуки');
+  assert.equal(ep6.contactType, 'punch_body', 'Контакт на шаге 7 — удар в корпус');
   const placement6 = computeAvatarPlacement({
     episode: ep6,
     customDistance: null,
@@ -94,8 +94,8 @@ console.log('\n--- Тест 3: Калибровка боевой дистанц�
     ukeEvasionAngleDeg: undefined,
   });
   const dist6 = Math.hypot(placement6.posUke1[0] - placement6.posTori[0], placement6.posUke1[2] - placement6.posTori[2]);
-  assert.ok(dist6 >= 0.90 && dist6 <= 1.25, `Боевая дистанция на шаге 6 (${dist6.toFixed(2)}м) должна обеспечивать контакт кулака`);
-  console.log(`✓ Дистанция Шага 5: ${dist5.toFixed(2)}м (смещение X=${lateralShift5.toFixed(2)}м). Дистанция Шага 6: ${dist6.toFixed(2)}м. Модели находятся в зоне прямого физического контакта!`);
+  assert.ok(dist6 >= 0.68 && dist6 <= 0.95, `Боевая дистанция на шаге 7 (${dist6.toFixed(2)}м) должна обеспечивать прямой контакт кулака с корпусом`);
+  console.log(`✓ Дистанция Шага 6: ${dist5.toFixed(2)}м (смещение X=${lateralShift5.toFixed(2)}м). Дистанция Шага 7: ${dist6.toFixed(2)}м. Модели находятся в зоне прямого физического контакта!`);
 }
 
 console.log('\n======================================================');

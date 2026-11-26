@@ -1669,7 +1669,8 @@ BEGIN
 
     SELECT
         s.Step_ID, s.Bunkai_ID, s.Step_Number, s.Title, s.Description,
-        s.Duration, s.Participant_Count, s.Target_Distance, s.Target_Angle
+        s.Duration, s.Participant_Count, s.Target_Distance, s.Target_Angle,
+        s.Metadata_Json
     FROM dbo.BunkaiSteps s
     WHERE s.Bunkai_ID = @BunkaiId
     ORDER BY s.Step_Number;
@@ -1678,7 +1679,8 @@ BEGIN
         p.BSP_ID, p.Step_ID, p.Role, p.Clip_ID,
         c.Clip_Name, c.Display_Name AS Clip_Title, c.Duration AS Clip_Duration,
         c.Interaction_Type, c.Optimal_Distance,
-        p.Initial_Stance, p.Offset_X, p.Offset_Z, p.Rotation_Y, p.Delay_Seconds
+        p.Initial_Stance, p.Final_Stance, p.Landing_Mode,
+        p.Offset_X, p.Offset_Z, p.Rotation_Y, p.Delay_Seconds
     FROM dbo.BunkaiStepParticipants p
     JOIN dbo.BunkaiSteps s ON s.Step_ID = p.Step_ID
     LEFT JOIN dbo.AnimationClips c ON c.Clip_ID = p.Clip_ID
@@ -1722,21 +1724,26 @@ BEGIN
         DECLARE @pCount INT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.participantCount') AS INT), 2);
         DECLARE @dist FLOAT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.targetDistance') AS FLOAT), 1.4);
         DECLARE @angle FLOAT = ISNULL(CAST(JSON_VALUE(@StepsJson, @stepPath + '.targetAngle') AS FLOAT), 0.0);
+        DECLARE @metaJson NVARCHAR(MAX) = JSON_QUERY(@StepsJson, @stepPath + '.metadata');
+        IF @metaJson IS NULL
+            SET @metaJson = JSON_VALUE(@StepsJson, @stepPath + '.metadataJson');
 
-        INSERT INTO dbo.BunkaiSteps (Bunkai_ID, Step_Number, Title, Description, Duration, Participant_Count, Target_Distance, Target_Angle)
-        VALUES (@BunkaiId, ISNULL(@stepNum, @i + 1), ISNULL(@title, N'Эпизод ' + CAST(@i + 1 AS NVARCHAR(10))), @desc, @dur, @pCount, @dist, @angle);
+        INSERT INTO dbo.BunkaiSteps (Bunkai_ID, Step_Number, Title, Description, Duration, Participant_Count, Target_Distance, Target_Angle, Metadata_Json)
+        VALUES (@BunkaiId, ISNULL(@stepNum, @i + 1), ISNULL(@title, N'Эпизод ' + CAST(@i + 1 AS NVARCHAR(10))), @desc, @dur, @pCount, @dist, @angle, @metaJson);
 
         DECLARE @newStepId INT = SCOPE_IDENTITY();
 
         DECLARE @partJson NVARCHAR(MAX) = JSON_QUERY(@StepsJson, @stepPath + '.participants');
         IF @partJson IS NOT NULL
         BEGIN
-            INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
+            INSERT INTO dbo.BunkaiStepParticipants (Step_ID, Role, Clip_ID, Initial_Stance, Final_Stance, Landing_Mode, Offset_X, Offset_Z, Rotation_Y, Delay_Seconds)
             SELECT
                 @newStepId,
                 pj.role,
                 pj.clipId,
                 pj.initialStance,
+                pj.finalStance,
+                pj.landingMode,
                 ISNULL(pj.offsetX, 0.0),
                 ISNULL(pj.offsetZ, 0.0),
                 ISNULL(pj.rotationY, 0.0),
@@ -1745,6 +1752,8 @@ BEGIN
                 role NVARCHAR(20) '$.role',
                 clipId INT '$.clipId',
                 initialStance NVARCHAR(50) '$.initialStance',
+                finalStance NVARCHAR(50) '$.finalStance',
+                landingMode NVARCHAR(20) '$.landingMode',
                 offsetX FLOAT '$.offsetX',
                 offsetZ FLOAT '$.offsetZ',
                 rotationY FLOAT '$.rotationY',

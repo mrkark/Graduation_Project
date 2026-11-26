@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useMemo, lazy, Suspense } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getBunkai, getBunkaiSteps, deleteBunkai, approveBunkai, rejectBunkai } from '../api/bunkai';
 import { sendFriendRequest, listFriends, listFriendRequests } from '../api/friends';
@@ -10,7 +10,7 @@ import Comments from '../components/Comments';
 import { HankoSeal, ShotokanTiger } from '../components/ui/JapaneseDecor';
 import '../three/avatarWidget.css';
 import { Heart, MessageSquare, Swords, UserPlus, UserCheck, Clock } from 'lucide-react';
-import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
+import { buildStepsFromDb } from '../three/bunkaiScenarioEngine';
 import './BunkaiDetailPage.css';
 
 // Динамическая отложенная загрузка тяжелого 3D плеера (оптимизация загрузки страниц)
@@ -107,13 +107,12 @@ export default function BunkaiDetailPage() {
     setBunkai(await rejectBunkai(id));
   }
 
+  // Единая сборка шагов из БД + канонических траекторий (совпадает с редактором 1-в-1)
+  // Важно: useMemo вызывается строго до условных return для неизменного порядка хуков
+  const effectiveSteps = useMemo(() => buildStepsFromDb(bunkaiSteps), [bunkaiSteps]);
+
   if (loading) return <p className="loading">Загрузка боевого разбора…</p>;
   if (error || !bunkai) return <p className="empty-state">{error || 'Бункай не найден'}</p>;
-
-  // Канонический 27-шаговый атомарный сценарий Хэйан Шодан с боевыми дистанциями, траекториями и предотвращением проникновения
-  const effectiveSteps = (Array.isArray(bunkaiSteps) && bunkaiSteps.length >= 27 && bunkaiSteps[0]?.toriTrajectory)
-    ? bunkaiSteps
-    : HEIAN_SHODAN_BUNKAI_18_STEPS;
 
   return (
     <div className="bunkai-detail container">
@@ -276,11 +275,11 @@ export default function BunkaiDetailPage() {
             </div>
           )}
 
-          {/* ПОШАГОВОЕ ОПИСАНИЕ БУНКАЙ (18 ШАГОВ) */}
+          {/* ПОШАГОВОЕ ОПИСАНИЕ БУНКАЙ */}
           <div className="bunkai-notes__block" style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
               <Swords size={20} color="var(--gold)" />
-              <h3 style={{ margin: 0 }}>Пошаговое описание Бункай ({HEIAN_SHODAN_BUNKAI_18_STEPS.length} атомарных шагов)</h3>
+              <h3 style={{ margin: 0 }}>Пошаговое описание Бункай ({effectiveSteps.length} шагов)</h3>
             </div>
             <p style={{ color: 'var(--text-muted, #a8a29e)', fontSize: '0.86rem', marginBottom: '1rem' }}>
               1 — Тори (атакующий); 2 — Укэ (защищающийся). Нажмите на строку шага для перехода к нему в 3D-плеере.
@@ -297,26 +296,31 @@ export default function BunkaiDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {HEIAN_SHODAN_BUNKAI_18_STEPS.map((step, idx) => {
+                  {effectiveSteps.map((step, idx) => {
                     const isActive = idx === activeStepIndex;
-                    const toriText = (step.description.match(/1\s*\(Тори\):\s*([^.]*)/i)?.[1] || step.title).trim();
-                    const ukeText = (step.description.match(/2\s*\(Укэ\):\s*([^.]*)/i)?.[1] || '').trim();
+                    const desc = String(step.description || '');
+                    const toriMatch = desc.match(/1\s*\(Тори\):\s*([\s\S]*?)(?=\s*2\s*\(Укэ\):|$)/i);
+                    const ukeMatch = desc.match(/2\s*\(Укэ\):\s*([\s\S]*)/i);
+                    const toriPart = (step.participants || []).find((p) => p.role === 'tori') || {};
+                    const ukePart = (step.participants || []).find((p) => p.role === 'uke1' || p.role === 'uke') || {};
+                    const toriText = (toriMatch?.[1] || step.title || toriPart.clipName || '—').trim();
+                    const ukeText = (ukeMatch?.[1] || ukePart.clipName || '').trim();
                     return (
                       <tr
-                        key={step.stepNumber}
+                        key={step.stepNumber || idx + 1}
                         onClick={() => setActiveStepIndex(idx)}
                         style={{
                           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                           background: isActive
                             ? 'rgba(212, 162, 76, 0.14)'
-                            : step.stepNumber % 2 === 0
+                            : (step.stepNumber || idx + 1) % 2 === 0
                             ? 'rgba(255, 255, 255, 0.02)'
                             : 'transparent',
                           cursor: 'pointer',
                         }}
                       >
                         <td style={{ padding: '9px 10px', fontWeight: 700, color: 'var(--gold)' }}>
-                          {step.stepNumber}
+                          {step.stepNumber || idx + 1}
                         </td>
                         <td style={{ padding: '9px 10px', color: '#f8fafc' }}>
                           {toriText}
@@ -325,7 +329,7 @@ export default function BunkaiDetailPage() {
                           {ukeText || '—'}
                         </td>
                         <td style={{ padding: '9px 10px', color: '#cbd5e1', fontSize: '0.82rem' }}>
-                          {step.notes || '—'}
+                          {step.notes || `${step.optimalDistance || 1.45}м`}
                         </td>
                       </tr>
                     );

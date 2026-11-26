@@ -40,18 +40,18 @@ const RIG_BONE_ALIASES = {
   chest: ['Chest', 'mixamorigSpine2', 'Spine1', 'mixamorigSpine1', 'chest'],
   spine: ['Spine', 'mixamorigSpine', 'spine'],
   hips: ['Hips', 'mixamorigHips', 'Root', 'hips'],
-  upperArmR: ['UpperArm.R', 'mixamorigRightArm', 'RightArm'],
-  foreArmR: ['LowerArm.R', 'mixamorigRightForeArm', 'RightForeArm'],
-  handR: ['Hand.R', 'mixamorigRightHand', 'RightHand'],
-  upperArmL: ['UpperArm.L', 'mixamorigLeftArm', 'LeftArm'],
-  foreArmL: ['LowerArm.L', 'mixamorigLeftForeArm', 'LeftForeArm'],
-  handL: ['Hand.L', 'mixamorigLeftHand', 'LeftHand'],
-  upperLegR: ['UpperLeg.R', 'mixamorigRightUpLeg', 'RightUpLeg'],
-  lowerLegR: ['LowerLeg.R', 'mixamorigRightLeg', 'RightLeg'],
-  footR: ['Foot.R', 'mixamorigRightFoot', 'RightFoot'],
-  upperLegL: ['UpperLeg.L', 'mixamorigLeftUpLeg', 'LeftUpLeg'],
-  lowerLegL: ['LowerLeg.L', 'mixamorigLeftLeg', 'LeftLeg'],
-  footL: ['Foot.L', 'mixamorigLeftFoot', 'LeftFoot'],
+  upperArmR: ['UpperArmR', 'UpperArm.R', 'mixamorigRightArm', 'RightArm'],
+  foreArmR: ['LowerArmR', 'LowerArm.R', 'mixamorigRightForeArm', 'RightForeArm'],
+  handR: ['HandR', 'Hand.R', 'mixamorigRightHand', 'RightHand'],
+  upperArmL: ['UpperArmL', 'UpperArm.L', 'mixamorigLeftArm', 'LeftArm'],
+  foreArmL: ['LowerArmL', 'LowerArm.L', 'mixamorigLeftForeArm', 'LeftForeArm'],
+  handL: ['HandL', 'Hand.L', 'mixamorigLeftHand', 'LeftHand'],
+  upperLegR: ['UpperLegR', 'UpperLeg.R', 'mixamorigRightUpLeg', 'RightUpLeg'],
+  lowerLegR: ['LowerLegR', 'LowerLeg.R', 'mixamorigRightLeg', 'RightLeg'],
+  footR: ['FootR', 'Foot.R', 'mixamorigRightFoot', 'RightFoot'],
+  upperLegL: ['UpperLegL', 'UpperLeg.L', 'mixamorigLeftUpLeg', 'LeftUpLeg'],
+  lowerLegL: ['LowerLegL', 'LowerLeg.L', 'mixamorigLeftLeg', 'LeftLeg'],
+  footL: ['FootL', 'Foot.L', 'mixamorigLeftFoot', 'LeftFoot'],
 };
 
 /**
@@ -237,17 +237,17 @@ export function resolveBodyInteractions(jointsTori, jointsUke, stepOptions = {})
 
   let blockDetected = false;
 
-  // 1. Блокирование в верхней зоне (Агэ-укэ / Гяку Агэ-укэ без захвата руки)
+  // 1. Блокирование в верхней зоне (Агэ-укэ / Гяку Агэ-укэ / Нагаси-укэ / Сюто-укэ)
   if (contactType === 'block_jodan' || contactType === 'block_gyaku_age_uke') {
     blockDetected = true;
     result.validContact = true;
     result.isBlockIntercept = true;
     const blockForearm = contactType === 'block_gyaku_age_uke' ? jointsUke.foreArmR : jointsUke.foreArmL;
     result.contactPoint = new THREE.Vector3().addVectors(blockForearm, jointsTori.foreArmR || jointsTori.handR).multiplyScalar(0.5);
-    result.contactPoint.y = Math.max(result.contactPoint.y, 1.42);
+    result.contactPoint.y = Math.max(result.contactPoint.y, 1.32);
     result.statusText = contactType === 'block_gyaku_age_uke'
       ? 'Гяку Агэ-укэ: восходящий сбив бьющей руки Тори без захвата'
-      : `Блок Агэ-укэ: перехват атакующей руки Тори в зоне Дзёдан`;
+      : 'Блок верхнего/среднего уровня: перехват атакующей руки Тори предплечьем';
   } else if (contactType === 'block_haivan') {
     blockDetected = true;
     result.validContact = true;
@@ -275,8 +275,12 @@ export function resolveBodyInteractions(jointsTori, jointsUke, stepOptions = {})
     blockDetected = true;
     result.validContact = true;
     result.isBlockIntercept = true;
-    result.contactPoint = new THREE.Vector3().addVectors(jointsUke.foreArmL, jointsTori.footR).multiplyScalar(0.5);
-    result.statusText = `Блок Гэдан-барай: сбивание траектории удара Маэ-гэри (зазор ${minKickBlockDist.toFixed(2)}м)`;
+    const ukeFore = jointsUke.foreArmL.distanceTo(jointsTori.footL) < jointsUke.foreArmR.distanceTo(jointsTori.footL)
+      ? jointsUke.foreArmL
+      : jointsUke.foreArmR;
+    const toriLeg = (jointsTori.footL.y > jointsTori.footR.y) ? jointsTori.footL : jointsTori.footR;
+    result.contactPoint = new THREE.Vector3().addVectors(ukeFore || jointsUke.foreArmL, toriLeg || jointsTori.footR).multiplyScalar(0.5);
+    result.statusText = `Блок Гэдан-барай: сбивание траектории удара ногой (зазор ${minKickBlockDist.toFixed(2)}м)`;
   }
 
   // 3. Анализ попадания / промаха ударов Тори по корпусу Укэ
@@ -327,35 +331,63 @@ export function resolveBodyInteractions(jointsTori, jointsUke, stepOptions = {})
     }
   }
 
-  // 4. Проверка контратак и ударов Укэ по Тори (Гяку-дзуки / Тэтцуи / Сюто-учи)
-  const distUkeHandToToriChest = jointsUke.handR.distanceTo(chestTori);
+  // 4. Проверка контратак и ударов Укэ по Тори (Гяку-дзуки / Тэтцуи / Сюто-учи / Отоши-дзуки)
+  const distUkeHandRToToriChest = jointsUke.handR.distanceTo(chestTori);
+  const distUkeHandLToToriChest = jointsUke.handL ? jointsUke.handL.distanceTo(chestTori) : 99;
+  const distUkeHandToToriChest = Math.min(distUkeHandRToToriChest, distUkeHandLToToriChest);
+  const activeUkeHand = distUkeHandLToToriChest < distUkeHandRToToriChest ? jointsUke.handL : jointsUke.handR;
+
   if (
-    contactType === 'strike_chudan' ||
-    contactType === 'block_gedan_counter' ||
-    contactType === 'combo_block_counter' ||
-    distUkeHandToToriChest < rTorsoSurface + 0.18
+    (isGroundStep && (contactType === 'punch_body' || contactType === 'ground_finish'))
   ) {
     result.validContact = true;
     result.isStrikeHit = true;
-    const dir = new THREE.Vector3().subVectors(jointsUke.handR, chestTori).normalize();
+    const groundChestPos = new THREE.Vector3(jointsTori.rootPos.x, 0.22, jointsTori.rootPos.z);
+    result.contactPoint = groundChestPos;
+    result.clampedIkTargetB = groundChestPos.clone();
+    result.statusText = 'Добивающий удар кулаком Отоши-дзуки в корпус лежащего (без проникновения)';
+  } else if (
+    contactType === 'strike_chudan' ||
+    contactType === 'punch_body' ||
+    contactType === 'block_gedan_counter' ||
+    contactType === 'combo_block_counter' ||
+    (!blockDetected && contactType !== 'none' && contactType !== 'distance_only' && contactType !== 'joint_lock' && distUkeHandToToriChest < rTorsoSurface + 0.18)
+  ) {
+    result.validContact = true;
+    result.isStrikeHit = true;
+    const dir = new THREE.Vector3().subVectors(activeUkeHand, chestTori).normalize();
     if (dir.lengthSq() < 0.001) dir.set(0, 0, 1);
     result.penetrationPrevented = true;
     result.clampedIkTargetB = new THREE.Vector3().copy(chestTori).addScaledVector(dir, rTorsoSurface + 0.015);
     result.contactPoint = result.clampedIkTargetB.clone();
-    result.statusText = 'Контратака Укэ точно в корпус Тори (без проникновения)';
+    result.statusText = 'Удар в корпус (Тюдан) с зазором 2 см от доги (без проникновения)';
   }
 
-  // Сюто-учи в область горла (Шаг 12)
+  // Удар в голову / горло (Тэтцуи-учи / Дзёдан Сюто-учи)
   const distShutoToNeck = jointsUke.handR.distanceTo(neckTori);
-  if (contactType === 'strike_throat' || distShutoToNeck < rNeckSurface + 0.18) {
+  if (contactType === 'strike_throat' || contactType === 'punch_head' || (contactType !== 'none' && contactType !== 'distance_only' && !blockDetected && distShutoToNeck < rNeckSurface + 0.14)) {
     result.validContact = true;
     result.isStrikeHit = true;
-    const dir = new THREE.Vector3().subVectors(jointsUke.handR, neckTori).normalize();
+    const targetJoint = contactType === 'punch_head' ? (headTori || neckTori) : neckTori;
+    const dir = new THREE.Vector3().subVectors(jointsUke.handR, targetJoint).normalize();
     if (dir.lengthSq() < 0.001) dir.set(0, 0, 1);
     result.penetrationPrevented = true;
-    result.clampedIkTargetB = new THREE.Vector3().copy(neckTori).addScaledVector(dir, rNeckSurface + 0.01);
+    result.clampedIkTargetB = new THREE.Vector3().copy(targetJoint).addScaledVector(dir, rNeckSurface + 0.015);
     result.contactPoint = result.clampedIkTargetB.clone();
-    result.statusText = 'Дзёдан Сюто-учи: удар ребром ладони в область горла Тори';
+    result.statusText = contactType === 'punch_head'
+      ? 'Удар в область головы / виска / горла (Дзёдан, зазор 2 см)'
+      : 'Дзёдан Сюто-учи: удар ребром ладони в область горла Тори';
+  }
+
+  // Захват запястья / рукава и болевой приём на локоть (Ваки-гатамэ)
+  if (contactType === 'joint_lock') {
+    result.validContact = true;
+    result.isBlockIntercept = true;
+    const elbowTori = jointsTori.foreArmR || jointsTori.upperArmR || jointsTori.handR;
+    const wristTori = jointsTori.handR || elbowTori;
+    result.contactPoint = new THREE.Vector3().addVectors(elbowTori, wristTori).multiplyScalar(0.5);
+    result.clampedIkTargetB = result.contactPoint.clone();
+    result.statusText = 'Захват запястья/рукава левой рукой Укэ и рычаг на локоть правой (угол 30°)';
   }
 
   // Удар выше локтя (если задан вручную)
@@ -414,16 +446,40 @@ export function resolveBodyInteractions(jointsTori, jointsUke, stepOptions = {})
  * @param {number} phrase - Нормализованный прогресс шага (0.0 .. 1.0)
  * @param {Object} options - Дополнительные сценарные параметры
  */
+function applyBoundedWorldAim(bone, currentDir, desiredDir, maxAngleRad, weight) {
+  if (!bone || !bone.parent) return;
+  if (currentDir.lengthSq() < 0.001 || desiredDir.lengthSq() < 0.001) return;
+  const cur = currentDir.clone().normalize();
+  const des = desiredDir.clone().normalize();
+  const angle = cur.angleTo(des);
+  if (angle < 0.01) return;
+
+  const qFull = new THREE.Quaternion().setFromUnitVectors(cur, des);
+  const clampedFrac = Math.min(1.0, maxAngleRad / angle);
+  const qCapped = new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(), qFull, clampedFrac);
+
+  const parentWorldQ = new THREE.Quaternion();
+  bone.parent.getWorldQuaternion(parentWorldQ);
+  const invParentQ = parentWorldQ.clone().invert();
+  const qDeltaLocal = new THREE.Quaternion().copy(invParentQ).multiply(qCapped).multiply(parentWorldQ);
+
+  const targetQ = bone.quaternion.clone().premultiply(qDeltaLocal);
+  bone.quaternion.slerp(targetQ, weight);
+  bone.updateMatrixWorld(true);
+}
+
 export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoints = null, phrase = 0.5, options = {}) {
   if (!bones || !opponentJoints || !opponentJoints.isExtracted) return;
+  if (!options.contactType || options.contactType === 'none' || options.contactType === 'distance_only') return;
 
   const clip = (clipName || '').toLowerCase();
   const effectiveContactTime = options.ikContactTime || options.tContact || 0.48;
 
   // Расчет временного окна контакта (плавная огибающая Эрмита)
+  const isPersistentContact = options.contactType === 'joint_lock' || options.contactType === 'ground_finish';
   const tStart = Math.max(0.18, effectiveContactTime - 0.22);
-  const tHold = effectiveContactTime + 0.14;
-  const tEnd = Math.min(0.88, tHold + 0.20);
+  const tHold = isPersistentContact ? 1.0 : (effectiveContactTime + 0.16);
+  const tEnd = isPersistentContact ? 1.05 : Math.min(0.95, tHold + 0.22);
 
   if (phrase < tStart || phrase > tEnd) return;
 
@@ -434,14 +490,15 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
     const k = (phrase - tStart) / (effectiveContactTime - tStart);
     ikWeight = k * k * (3 - 2 * k);
   } else {
-    const k = (tEnd - phrase) / (tEnd - tHold);
+    const k = (tEnd - phrase) / Math.max(0.01, tEnd - tHold);
     ikWeight = k * k * (3 - 2 * k);
   }
 
   if (ikWeight < 0.01) return;
 
-  // 1. АДАПТАЦИЯ БЛОКОВ И ДИНАМИЧЕСКИХ УГЛОВ (ДЛЯ УКЭ)
-  if (role === 'uke' || role === 'uke1') {
+  // 1. АДАПТАЦИЯ БЛОКОВ И ДИНАМИЧЕСКИХ УГЛОВ (ДЛЯ УКЭ — мягкая доводка не более ~26° поверх готового клипа)
+  const isOffensiveTorsoStrike = options.contactType === 'punch_body' || options.contactType === 'strike_chudan';
+  if ((role === 'uke' || role === 'uke1') && !isPersistentContact && !isOffensiveTorsoStrike) {
     const isGedan = clip.includes('gedan');
     const isAgeUke = clip.includes('age_uke') || clip.includes('gyaku_age_uke');
     const isShuto = clip.includes('shuto_uke');
@@ -452,16 +509,11 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
 
     if (isBlock) {
       const isRightArm = clip.includes('right') && !clip.includes('left');
-      const armKeyUpper = isRightArm ? 'upperArmR' : 'upperArmL';
-      const armKeyFore = isRightArm ? 'foreArmR' : 'foreArmL';
-      const armKeyHand = isRightArm ? 'handR' : 'handL';
-
-      const boneUpper = findRigBone(bones, armKeyUpper);
-      const boneFore = findRigBone(bones, armKeyFore);
-      const boneHand = findRigBone(bones, armKeyHand);
+      const boneUpper = findRigBone(bones, isRightArm ? 'upperArmR' : 'upperArmL');
+      const boneFore = findRigBone(bones, isRightArm ? 'foreArmR' : 'foreArmL');
+      const boneHand = findRigBone(bones, isRightArm ? 'handR' : 'handL');
 
       if (boneUpper && boneFore) {
-        // Определяем атакующую конечность соперника (Тори):
         const isOpponentKick = Boolean(
           (opponentJoints.footR && opponentJoints.footR.y > 0.40) ||
           (opponentJoints.footL && opponentJoints.footL.y > 0.40) ||
@@ -471,143 +523,124 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
 
         let oppAttackPos;
         let oppAttackFore;
-
         if (isOpponentKick) {
           const footRy = opponentJoints.footR ? opponentJoints.footR.y : 0;
           const footLy = opponentJoints.footL ? opponentJoints.footL.y : 0;
-          if (footRy >= footLy) {
-            oppAttackPos = opponentJoints.footR || new THREE.Vector3();
-            oppAttackFore = opponentJoints.lowerLegR || oppAttackPos;
-          } else {
-            oppAttackPos = opponentJoints.footL || new THREE.Vector3();
-            oppAttackFore = opponentJoints.lowerLegL || oppAttackPos;
-          }
+          oppAttackPos = (footRy >= footLy ? opponentJoints.footR : opponentJoints.footL) || new THREE.Vector3();
+          oppAttackFore = (footRy >= footLy ? opponentJoints.lowerLegR : opponentJoints.lowerLegL) || oppAttackPos;
         } else {
-          // Для ударов руками выбираем руку, наиболее выдвинутую вперед
           const distR = opponentJoints.handR ? opponentJoints.handR.distanceTo(opponentJoints.rootPos || new THREE.Vector3()) : 0;
           const distL = opponentJoints.handL ? opponentJoints.handL.distanceTo(opponentJoints.rootPos || new THREE.Vector3()) : 0;
           if (distR >= distL && opponentJoints.handR) {
             oppAttackPos = opponentJoints.handR;
             oppAttackFore = opponentJoints.foreArmR || oppAttackPos;
-          } else if (opponentJoints.handL) {
-            oppAttackPos = opponentJoints.handL;
-            oppAttackFore = opponentJoints.foreArmL || oppAttackPos;
           } else {
-            oppAttackPos = opponentJoints.handR || new THREE.Vector3();
-            oppAttackFore = opponentJoints.foreArmR || oppAttackPos;
+            oppAttackPos = opponentJoints.handL || opponentJoints.handR || new THREE.Vector3();
+            oppAttackFore = opponentJoints.foreArmL || opponentJoints.foreArmR || oppAttackPos;
           }
         }
 
-        // Точка перехвата удара: предплечье защитника встречает атакующую конечность
-        const contactIntercept = new THREE.Vector3().lerpVectors(oppAttackPos, oppAttackFore, 0.45);
-
-        // Локальная адаптивная подстройка высоты и выноса блока в зависимости от уровня атаки:
-        if (isGedan) {
-          contactIntercept.y = THREE.MathUtils.clamp(contactIntercept.y, 0.45, 0.75);
-        } else if (isAgeUke) {
-          contactIntercept.y = Math.max(contactIntercept.y + 0.10, 1.42);
-        } else if (isShuto || isSoto || isUchi) {
-          contactIntercept.y = THREE.MathUtils.clamp(contactIntercept.y, 1.05, 1.25);
-        }
+        const contactIntercept = new THREE.Vector3().lerpVectors(oppAttackPos, oppAttackFore, 0.42);
+        if (isGedan) contactIntercept.y = THREE.MathUtils.clamp(contactIntercept.y, 0.48, 0.76);
+        else if (isAgeUke) contactIntercept.y = THREE.MathUtils.clamp(contactIntercept.y + 0.08, 1.38, 1.62);
+        else if (isShuto || isSoto || isUchi) contactIntercept.y = THREE.MathUtils.clamp(contactIntercept.y, 1.05, 1.30);
 
         const shoulderPos = new THREE.Vector3();
         const elbowPos = new THREE.Vector3();
         const handPos = new THREE.Vector3();
-
         boneUpper.getWorldPosition(shoulderPos);
         boneFore.getWorldPosition(elbowPos);
         if (boneHand) boneHand.getWorldPosition(handPos);
         else handPos.copy(elbowPos).add(new THREE.Vector3(0, 0, 0.25));
 
-        const toContact = new THREE.Vector3().subVectors(contactIntercept, shoulderPos);
-        if (toContact.lengthSq() >= 0.001) {
-          // 1. Адаптация плечевого сустава (UpperArm)
-          const curArmVec = new THREE.Vector3().subVectors(elbowPos, shoulderPos).normalize();
-          const desiredArmVec = toContact.clone().normalize();
-
-          if (curArmVec.lengthSq() > 0.001 && desiredArmVec.lengthSq() > 0.001) {
-            const qDeltaWorld = new THREE.Quaternion().setFromUnitVectors(curArmVec, desiredArmVec);
-            if (boneUpper.parent) {
-              const parentWorldQ = new THREE.Quaternion();
-              boneUpper.parent.getWorldQuaternion(parentWorldQ);
-              const invParentQ = parentWorldQ.clone().invert();
-              const qDeltaLocal = new THREE.Quaternion().copy(invParentQ).multiply(qDeltaWorld).multiply(parentWorldQ);
-
-              const targetUpperQ = boneUpper.quaternion.clone().premultiply(qDeltaLocal);
-              boneUpper.quaternion.slerp(targetUpperQ, ikWeight * 0.88);
-              boneUpper.updateMatrixWorld(true);
-              boneFore.getWorldPosition(elbowPos);
-            }
-          }
-
-          // 2. Адаптация предплечья (ForeArm) — угол сгиба локтя
-          const curForeVec = new THREE.Vector3().subVectors(handPos, elbowPos).normalize();
-          const desiredForeVec = new THREE.Vector3().subVectors(contactIntercept, elbowPos).normalize();
-
-          if (curForeVec.lengthSq() > 0.001 && desiredForeVec.lengthSq() > 0.001) {
-            const qForeDeltaWorld = new THREE.Quaternion().setFromUnitVectors(curForeVec, desiredForeVec);
-            if (boneFore.parent) {
-              const parentWorldQ = new THREE.Quaternion();
-              boneFore.parent.getWorldQuaternion(parentWorldQ);
-              const invParentQ = parentWorldQ.clone().invert();
-              const qForeDeltaLocal = new THREE.Quaternion().copy(invParentQ).multiply(qForeDeltaWorld).multiply(parentWorldQ);
-
-              const targetForeQ = boneFore.quaternion.clone().premultiply(qForeDeltaLocal);
-              boneFore.quaternion.slerp(targetForeQ, ikWeight * 0.82);
-            }
-          }
-
-          // 3. Анатомический разворот предплечья
-          if (isGedan) {
-            boneFore.rotateZ((isRightArm ? 0.22 : -0.22) * ikWeight);
-          } else if (isAgeUke) {
-            boneFore.rotateX(0.18 * ikWeight);
-            boneFore.rotateZ((isRightArm ? -0.20 : 0.20) * ikWeight);
-          } else if (isShuto) {
-            boneFore.rotateY((isRightArm ? 0.25 : -0.25) * ikWeight);
-            boneFore.rotateZ((isRightArm ? 0.15 : -0.15) * ikWeight);
-          }
-        }
+        applyBoundedWorldAim(
+          boneUpper,
+          new THREE.Vector3().subVectors(elbowPos, shoulderPos),
+          new THREE.Vector3().subVectors(contactIntercept, shoulderPos),
+          0.42,
+          ikWeight * 0.48
+        );
+        boneFore.getWorldPosition(elbowPos);
+        applyBoundedWorldAim(
+          boneFore,
+          new THREE.Vector3().subVectors(handPos, elbowPos),
+          new THREE.Vector3().subVectors(contactIntercept, elbowPos),
+          0.45,
+          ikWeight * 0.50
+        );
       }
     }
   }
 
-  // 1.1 КОНТРАТАКИ И УДАРЫ ЗАЩИЩАЮЩЕГОСЯ (ДЛЯ УКЭ)
+  // 1.1 КОНТРАТАКИ, ЗАХВАТЫ И БОЛЕВЫЕ ПРИЁМЫ ЗАЩИЩАЮЩЕГОСЯ (ДЛЯ УКЭ)
   if (role === 'uke' || role === 'uke1') {
+    const isJointLock = options.contactType === 'joint_lock';
     const isArmStrike = clip.includes('strike_above_elbow') || options.contactType === 'strike_above_elbow' || options.contactType === 'arm_strike';
-    const isUkePunch = clip.includes('gyaku_zuki') || clip.includes('tettsui') || options.contactType === 'strike_chudan';
-    const isShutoUchi = clip.includes('shuto_uchi') || options.contactType === 'strike_throat';
-    const isGroundFinish = clip.includes('tate_zuki') || clip.includes('otoshi_zuki') || options.contactType === 'ground_finish' || options.contactType === 'sweep_finish';
+    const isUkePunch = clip.includes('gyaku_zuki') || clip.includes('tettsui') || clip.includes('shuto_uke') || options.contactType === 'strike_chudan' || options.contactType === 'punch_body';
+    const isHeadStrike = clip.includes('shuto_uchi') || options.contactType === 'strike_throat' || options.contactType === 'punch_head';
+    const isGroundFinish = Boolean(options.isGroundStep) && (clip.includes('tate_zuki') || clip.includes('otoshi_zuki') || options.contactType === 'ground_finish' || options.contactType === 'sweep_finish');
 
-    if (isArmStrike || isUkePunch || isShutoUchi || isGroundFinish) {
-      const isLeftArm = clip.includes('left');
-      const armKeyUpper = isLeftArm ? 'upperArmL' : 'upperArmR';
-      const armKeyFore = isLeftArm ? 'foreArmL' : 'foreArmR';
-      const armKeyHand = isLeftArm ? 'handL' : 'handR';
-
-      const boneUpper = findRigBone(bones, armKeyUpper);
-      const boneFore = findRigBone(bones, armKeyFore);
-      const boneHand = findRigBone(bones, armKeyHand);
+    if (isJointLock) {
+      // Мягкая анатомическая наводка правого плеча Укэ на поднятую/блокируемую руку Тори без выламывания левого плеча и локтей
+      const boneUpperR = findRigBone(bones, 'upperArmR');
+      const boneForeR = findRigBone(bones, 'foreArmR');
+      const boneHandR = findRigBone(bones, 'handR');
+      const oppArmBase = opponentJoints.upperArmR || opponentJoints.chest || opponentJoints.handR;
+      const oppFore = opponentJoints.foreArmR || opponentJoints.handR;
+      if (boneUpperR && boneForeR && oppFore) {
+        const elbowTarget = new THREE.Vector3().lerpVectors(oppArmBase, oppFore, 0.78);
+        elbowTarget.y = Math.max(elbowTarget.y + 0.08, 1.48);
+        const shoulderR = new THREE.Vector3();
+        const elbowR = new THREE.Vector3();
+        const handR = new THREE.Vector3();
+        const foreMid = new THREE.Vector3();
+        boneUpperR.getWorldPosition(shoulderR);
+        boneForeR.getWorldPosition(elbowR);
+        if (boneHandR) boneHandR.getWorldPosition(handR);
+        else handR.copy(elbowR);
+        foreMid.lerpVectors(elbowR, handR, 0.50);
+        applyBoundedWorldAim(
+          boneUpperR,
+          new THREE.Vector3().subVectors(foreMid, shoulderR),
+          new THREE.Vector3().subVectors(elbowTarget, shoulderR),
+          0.45,
+          ikWeight * 0.72
+        );
+      }
+    } else if (isArmStrike || isUkePunch || isHeadStrike || isGroundFinish) {
+      const isLeftArm = clip.includes('left') && !clip.includes('right');
+      const boneUpper = findRigBone(bones, isLeftArm ? 'upperArmL' : 'upperArmR');
+      const boneFore = findRigBone(bones, isLeftArm ? 'foreArmL' : 'foreArmR');
+      const boneHand = findRigBone(bones, isLeftArm ? 'handL' : 'handR');
 
       if (boneUpper && boneFore) {
         let strikeTarget;
-        if (isArmStrike) {
-          // Удар выше локтя правой руки Тори (болевой приём)
+        if (isGroundFinish) {
+          const torsoPos = opponentJoints.chest || opponentJoints.spine || opponentJoints.hips || opponentJoints.rootPos;
+          if (torsoPos) {
+            strikeTarget = new THREE.Vector3(torsoPos.x, Math.max(0.24, torsoPos.y + 0.04), torsoPos.z);
+          }
+          // Выраженный наклон корпуса Укэ вперёд-вниз (Отоши-дзуки в лежащего Тори)
+          const spineBone = findRigBone(bones, 'spine');
+          const chestBone = findRigBone(bones, 'chest');
+          if (spineBone) {
+            spineBone.rotation.x += 0.85 * ikWeight;
+            if (chestBone && chestBone !== spineBone) chestBone.rotation.x += 0.35 * ikWeight;
+            spineBone.updateMatrixWorld(true);
+          }
+        } else if (isArmStrike) {
           const oppArm = opponentJoints.upperArmR || opponentJoints.armR || opponentJoints.foreArmR || new THREE.Vector3();
           const oppFore = opponentJoints.foreArmR || oppArm;
           strikeTarget = new THREE.Vector3().lerpVectors(oppArm, oppFore, 0.35);
-          strikeTarget.y = THREE.MathUtils.clamp(strikeTarget.y, 1.30, 1.48);
-        } else if (isUkePunch) {
-          // Контрудар в солнечное сплетение
-          strikeTarget = (opponentJoints.chest || new THREE.Vector3()).clone();
-          strikeTarget.y = 1.18;
-        } else if (isShutoUchi) {
-          // Рубящий удар Сюто-учи в область горла
-          strikeTarget = (opponentJoints.neck || opponentJoints.head || new THREE.Vector3()).clone();
-          strikeTarget.y = 1.42;
-        } else if (isGroundFinish) {
-          // Добивающий удар в партере Отоши-дзуки
-          strikeTarget = new THREE.Vector3(opponentJoints.rootPos.x, 0.22, opponentJoints.rootPos.z);
+          strikeTarget.y = THREE.MathUtils.clamp(strikeTarget.y, 1.28, 1.48);
+        } else if (isHeadStrike && (opponentJoints.neck || opponentJoints.head)) {
+          strikeTarget = (options.contactType === 'punch_head' && opponentJoints.head)
+            ? opponentJoints.head.clone()
+            : (opponentJoints.neck || opponentJoints.head).clone();
+          strikeTarget.y = options.contactType === 'punch_head' ? 1.48 : 1.42;
+        } else if (isUkePunch && opponentJoints.chest) {
+          strikeTarget = opponentJoints.chest.clone();
+          strikeTarget.y = 1.15;
         }
 
         if (strikeTarget) {
@@ -617,20 +650,24 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
           if (boneHand) boneHand.getWorldPosition(handPos);
           else boneFore.getWorldPosition(handPos);
 
-          const curVec = new THREE.Vector3().subVectors(handPos, shoulderPos).normalize();
-          const desiredVec = new THREE.Vector3().subVectors(strikeTarget, shoulderPos).normalize();
-
-          if (curVec.lengthSq() > 0.001 && desiredVec.lengthSq() > 0.001) {
-            const qDeltaWorld = new THREE.Quaternion().setFromUnitVectors(curVec, desiredVec);
-            if (boneUpper.parent) {
-              const parentWorldQ = new THREE.Quaternion();
-              boneUpper.parent.getWorldQuaternion(parentWorldQ);
-              const invParentQ = parentWorldQ.clone().invert();
-              const qDeltaLocal = new THREE.Quaternion().copy(invParentQ).multiply(qDeltaWorld).multiply(parentWorldQ);
-
-              const targetUpperQ = boneUpper.quaternion.clone().premultiply(qDeltaLocal);
-              boneUpper.quaternion.slerp(targetUpperQ, ikWeight * 0.88);
-            }
+          applyBoundedWorldAim(
+            boneUpper,
+            new THREE.Vector3().subVectors(handPos, shoulderPos),
+            new THREE.Vector3().subVectors(strikeTarget, shoulderPos),
+            isGroundFinish ? 1.35 : 0.48,
+            ikWeight * (isGroundFinish ? 1.0 : 0.65)
+          );
+          if (isGroundFinish) {
+            const elbowPos = new THREE.Vector3();
+            boneFore.getWorldPosition(elbowPos);
+            if (boneHand) boneHand.getWorldPosition(handPos);
+            applyBoundedWorldAim(
+              boneFore,
+              new THREE.Vector3().subVectors(handPos, elbowPos),
+              new THREE.Vector3().subVectors(strikeTarget, elbowPos),
+              0.95,
+              ikWeight * 0.95
+            );
           }
         }
       }
@@ -643,7 +680,7 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
     const isKick = clip.includes('mae_geri') || clip.includes('kick') || clip.includes('geri');
 
     if (isPunch) {
-      const isLeftArm = clip.includes('left');
+      const isLeftArm = clip.includes('left') && !clip.includes('right');
       const boneUpper = findRigBone(bones, isLeftArm ? 'upperArmL' : 'upperArmR');
       const boneFore = findRigBone(bones, isLeftArm ? 'foreArmL' : 'foreArmR');
       const boneHand = findRigBone(bones, isLeftArm ? 'handL' : 'handR');
@@ -663,38 +700,34 @@ export function applyProceduralCombatIK(bones, role, clipName = '', opponentJoin
           1.18,
           shoulderPos.z + dir[2] * 0.85
         );
-      } else {
-        const isJodan = clip.includes('jodan');
+      } else if (options.contactType === 'joint_lock' && clip.includes('jodan') && opponentJoints.head) {
+        // При восходящем блоке Агэ-укэ рука Тори слегка приподнимается вверх над головой Укэ, чтобы кулак не попадал в лицо
+        const raisedY = Math.max((opponentJoints.head?.y || 1.38) + 0.28, 1.66);
+        targetPos = new THREE.Vector3(
+          opponentJoints.head.x - 0.05,
+          raisedY,
+          opponentJoints.head.z
+        );
+      } else if (opponentJoints.chest && opponentJoints.head) {
+        const isJodan = clip.includes('jodan') || options.contactType === 'block_jodan';
         targetPos = isJodan
-          ? new THREE.Vector3(opponentJoints.head.x, 1.48, opponentJoints.head.z)
+          ? new THREE.Vector3(opponentJoints.head.x, 1.44, opponentJoints.head.z)
           : new THREE.Vector3(opponentJoints.chest.x, 1.18, opponentJoints.chest.z);
       }
 
-      const curPunchVec = new THREE.Vector3().subVectors(handPos, shoulderPos).normalize();
-      const desiredPunchVec = new THREE.Vector3().subVectors(targetPos, shoulderPos).normalize();
-
-      if (curPunchVec.lengthSq() > 0.001 && desiredPunchVec.lengthSq() > 0.001) {
-        const qDeltaWorld = new THREE.Quaternion().setFromUnitVectors(curPunchVec, desiredPunchVec);
-        if (boneUpper.parent) {
-          const parentWorldQ = new THREE.Quaternion();
-          boneUpper.parent.getWorldQuaternion(parentWorldQ);
-          const invParentQ = parentWorldQ.clone().invert();
-          const qDeltaLocal = new THREE.Quaternion().copy(invParentQ).multiply(qDeltaWorld).multiply(parentWorldQ);
-
-          const targetUpperQ = boneUpper.quaternion.clone().premultiply(qDeltaLocal);
-          boneUpper.quaternion.slerp(targetUpperQ, ikWeight * 0.72);
-        }
+      if (targetPos) {
+        const isLiftedBlock = options.contactType === 'joint_lock' && clip.includes('jodan');
+        applyBoundedWorldAim(
+          boneUpper,
+          new THREE.Vector3().subVectors(handPos, shoulderPos),
+          new THREE.Vector3().subVectors(targetPos, shoulderPos),
+          isLiftedBlock ? 0.50 : 0.42,
+          ikWeight * (isLiftedBlock ? 0.85 : 0.42)
+        );
       }
     } else if (isKick) {
-      const boneLeg = findRigBone(bones, 'upperLegR');
-      const boneFoot = findRigBone(bones, 'footR');
-      if (boneLeg && boneFoot && boneLeg.parent) {
-        const footPos = new THREE.Vector3();
-        boneFoot.getWorldPosition(footPos);
-        if (footPos.y < 0.95 && ikWeight > 0.4) {
-          boneLeg.rotateX(0.12 * ikWeight);
-        }
-      }
+      // Клипы mae_geri_left / mae_geri_right уже содержат корректную высоту удара с опорной стопой на татами;
+      // дополнительный наклон upperLegR убран, чтобы не поднимать опорную ногу над полом.
     }
   }
 }

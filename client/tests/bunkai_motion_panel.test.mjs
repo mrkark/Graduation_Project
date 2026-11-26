@@ -221,7 +221,7 @@ console.log('\nTest 9: 14 Action Types in Universal Motion Panel');
   assert.ok(actionIds.includes('stance'));
   assert.ok(actionIds.includes('locomotion'));
   assert.ok(actionIds.includes('turn'));
-  assert.ok(actionIds.includes('strike'));
+  assert.ok(actionIds.includes('punch'));
   assert.ok(actionIds.includes('kick'));
   assert.ok(actionIds.includes('block'));
   assert.ok(actionIds.includes('grab'));

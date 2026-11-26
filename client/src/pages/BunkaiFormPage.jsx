@@ -6,14 +6,22 @@ import { listClips } from '../api/animations';
 import { useAuthStore } from '../store/authStore';
 import TechniquePicker from '../components/TechniquePicker';
 import { X, Swords, Trophy, Layers, Plus, Trash2, Zap, Shield, BookOpen, Ruler, AlertTriangle, Sparkles, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Copy, ArrowLeft, ArrowRight, Save } from 'lucide-react';
-import { HEIAN_SHODAN_BUNKAI_18_STEPS } from '../three/bunkaiScenarioEngine';
+import { buildStepsFromDb, HEIAN_SHODAN_BUNKAI_18_STEPS, formEpisodeToEngineStep, episodeToDbStep } from '../three/bunkaiScenarioEngine';
 const BunkaiMultiAvatarPlayer = lazy(() => import('../three/BunkaiMultiAvatarPlayer'));
 import './BunkaiEditor.css';
 
 // Атакующие техники Тори (Синее доги — атакующий / нападающий)
 const TORI_CLIPS = [
   { id: 'tech_oi_zuki_right', label: 'Ой-цуки правой (Прямой выпад в голову / Дзёдан)' },
-  { id: 'oi_zuki_right', label: 'Ой-цуки (Прямой выпад кулаком)' },
+  { id: 'oi_zuki_jodan_right', label: 'Ой-цуки Дзёдан правой (удар в голову)' },
+  { id: 'oi_zuki_jodan_left', label: 'Ой-цуки Дзёдан левой (удар в голову)' },
+  { id: 'oi_zuki_right', label: 'Ой-цуки правой (Классический выпад)' },
+  { id: 'oi_zuki_left', label: 'Ой-цуки левой (Классический выпад)' },
+  { id: 'tech_jodan_zuki_right', label: 'Дзёдан-дзуки правой (Полный клип)' },
+  { id: 'gyaku_zuki_left', label: 'Гяку-цуки левой (Реверсивный удар)' },
+  { id: 'gyaku_zuki_right', label: 'Гяку-цуки правой (Реверсивный удар)' },
+  { id: 'jodan_zuki_right', label: 'Кидзами / Дзёдан-дзуки правой' },
+  { id: 'jodan_zuki_left', label: 'Кидзами / Дзёдан-дзуки левой' },
   { id: 'kick_mae_geri_right', label: 'Маэ-гэри правой (Прямой удар ногой)' },
   { id: 'mae_geri_right', label: 'Маэ-гэри правой (Удар ногой)' },
   { id: 'mae_geri_left', label: 'Маэ-гэри левой (Прямой удар ногой)' },
@@ -26,18 +34,51 @@ const TORI_CLIPS = [
   { id: 'kizami_zuki', label: 'Кизами-цуки (Встречный джеб)' },
   { id: 'hook', label: 'Хук / Боковой с размаха' },
   { id: 'enter_zenkutsu_left', label: 'Вход в Хидари Дзэнкуцу-дати' },
+  { id: 'turn_into_zenkutsu_right', label: 'Разворот 180° в Миги Дзэнкуцу-дати' },
+  { id: 'step_backward_left', label: 'Шаг назад левой ногой' },
+  { id: 'step_backward_right', label: 'Шаг назад правой ногой' },
+  { id: 'step_backward', label: 'Отход шагом назад в Хэйко-дати' },
+  { id: 'zenkutsu_dachi_right', label: 'Стойка Миги Дзэнкуцу-дати (Фиксация)' },
+  { id: 'zenkutsu_dachi_left', label: 'Стойка Хидари Дзэнкуцу-дати (Фиксация)' },
+  { id: 'stance_musubi', label: 'Мусуби-дати (Стойка поклона Рэй)' },
   { id: 'heiko_dachi', label: 'Хэйко-дати (Стойка готовности)' },
-  { id: 'idle_shizentai', label: 'Сидзэнтай (Ожидание / финт)' },
+  { id: 'idle_shizentai', label: 'Сидзэнтай / Укэми (Ожидание / партер)' },
 ];
 
 // Защитные блоки и контратаки Укэ (Белое доги — защищающийся / контратакующий)
 const UKE_CLIPS = [
-  { id: 'tech_age_uke_left', label: 'Агэ-укэ левой (Верхний восходящий блок)' },
-  { id: 'tech_gedan_barai_left', label: 'Гэдан-барай левой (Нижний сметяющий блок)' },
+  { id: 'age_uke_left', label: 'Агэ-укэ левой (Верхний восходящий блок)' },
+  { id: 'age_uke_right', label: 'Гяку Агэ-укэ правой (Верхний блок / рычаг локтя)' },
+  { id: 'tech_age_uke_left', label: 'Агэ-укэ левой (Полный клип)' },
+  { id: 'gedan_barai_left', label: 'Гэдан-барай левой (Нижний смет)' },
+  { id: 'gedan_barai_right', label: 'Гэдан-барай правой (Нижний смет)' },
+  { id: 'tech_gedan_barai_left', label: 'Гэдан-барай левой (Полный клип)' },
+  { id: 'tech_haishu_uke_left', label: 'Хайван / Хайсю-укэ левой' },
+  { id: 'tech_uchi_uke_left', label: 'Нагаси / Ути-укэ левой (Отводящий блок)' },
+  { id: 'tech_uchi_uke_right', label: 'Нагаси / Ути-укэ правой (Отводящий блок)' },
+  { id: 'tech_shuto_uke_right', label: 'Сюто-укэ правой (Блок ребром ладони)' },
+  { id: 'tech_shuto_uke_left', label: 'Сюто-укэ левой (Удар/блок ребром ладони)' },
+  { id: 'tech_shuto_uchi_right', label: 'Дзёдан Сюто-учи правой (Удар ребром ладони)' },
+  { id: 'tech_shuto_uchi_left', label: 'Дзёдан Сюто-учи левой (Удар ребром ладони)' },
+  { id: 'tech_haishu_uke_right', label: 'Хайван / Хайсю-укэ правой' },
+  { id: 'tech_tettsui_right', label: 'Тэтцуи правой (Удар основанием кулака)' },
+  { id: 'tech_tate_zuki_right', label: 'Отоши / Татэ-дзуки правой (Добивание в партере)' },
+  { id: 'tech_tate_zuki_left', label: 'Отоши / Татэ-дзуки левой (Добивание)' },
+  { id: 'gyaku_zuki_right', label: 'Гяку-цуки правой (Реверсивный контрудар)' },
+  { id: 'gyaku_zuki_left', label: 'Гяку-цуки левой (Реверсивный контрудар)' },
+  { id: 'tech_gyaku_zuki_right', label: 'Гяку-цуки правой (Полный клип)' },
   { id: 'shuto_uke', label: 'Сюто-укэ (Блок ребром ладони)' },
   { id: 'soto_uke', label: 'Сото-укэ (Блок снаружи-внутрь)' },
   { id: 'uchi_uke', label: 'Ути-укэ (Блок изнутри-наружу)' },
-  { id: 'tech_gyaku_zuki_right', label: 'Гяку-цуки (Реверсивный контрудар кулаком)' },
+  { id: 'kick_nami_gaeshi_right', label: 'Аши-барай (Подсечка правой ногой)' },
+  { id: 'kick_nami_gaeshi_left', label: 'Аши-барай (Подсечка левой ногой)' },
+  { id: 'enter_zenkutsu_right', label: 'Вход в Миги Дзэнкуцу-дати' },
+  { id: 'step_forward_right', label: 'Проход вперёд в Миги Дзэнкуцу-дати' },
+  { id: 'turn_into_zenkutsu_left', label: 'Разворот в Хидари Дзэнкуцу-дати' },
+  { id: 'step_backward_right', label: 'Шаг назад правой ногой' },
+  { id: 'step_backward', label: 'Отход шагом назад в Хэйко-дати' },
+  { id: 'zenkutsu_dachi_left', label: 'Стойка Хидари Дзэнкуцу-дати (Фиксация)' },
+  { id: 'zenkutsu_dachi_right', label: 'Стойка Миги Дзэнкуцу-дати (Фиксация)' },
   { id: 'strike_above_elbow', label: 'Удар выше локтя (Болевой прием на руку)' },
   { id: 'strike_throat_left', label: 'Удар в горло (Атэми в шею)' },
   { id: 'empi_uchi', label: 'Эмпи-учи (Сокрушительный удар локтем)' },
@@ -49,6 +90,7 @@ const UKE_CLIPS = [
   { id: 'standup_to_zenkutsu', label: 'Подъем с татами в Дзэнкуцу-дати' },
   { id: 'ippon_seoi_nage', label: 'Иппон Сэои-нагэ (Бросок через плечо)' },
   { id: 'deashi_harai', label: 'Дэаси-харай (Сметающая подсечка)' },
+  { id: 'stance_musubi', label: 'Мусуби-дати (Стойка поклона Рэй)' },
   { id: 'heiko_dachi', label: 'Хэйко-дати (Стойка готовности)' },
   { id: 'idle_shizentai', label: 'Сидзэнтай (Естественная позиция)' },
 ];
@@ -76,12 +118,15 @@ const STANCE_OPTIONS = [
     ],
   },
   {
-    group: 'Симметричные и подготовительные стойки',
+    group: 'Симметричные и специальные стойки',
     options: [
       { value: 'kiba_dachi', label: 'Киба-дати (Стойка всадника)' },
       { value: 'stance_shiko', label: 'Сико-дати (Квадратная стойка)' },
       { value: 'heiko_dachi', label: 'Хэйко-дати (Параллельная)' },
+      { value: 'stance_heisoku', label: 'Хэйсоку-дати (Сомкнутая спиной)' },
       { value: 'stance_musubi', label: 'Мусуби-дати (Поклон рэй)' },
+      { value: 'stance_neko_left', label: 'Хидари Нэкоаси-дати (Кошачья)' },
+      { value: 'fallen_ukemi', label: 'Партер (Страховка Укэми)' },
       { value: 'idle_shizentai', label: 'Сидзэнтай (Естественная позиция)' },
     ],
   },
@@ -139,6 +184,75 @@ function getMaaiInfo(dist) {
     name: 'То-ма (遠間)',
     desc: 'Дальняя дистанция маневрирования и входа в атаку',
     className: 'maai-zone--toma',
+  };
+}
+
+function engineStepToFormEpisode(st, idx, participantCount = 2) {
+  const toriPart = st.participants?.find((p) => p.role === 'tori') || {};
+  const ukePart = st.participants?.find((p) => p.role === 'uke' || p.role === 'uke1') || {};
+  const uke2Part = st.participants?.find((p) => p.role === 'uke2') || {};
+
+  let phase = st.phase || 'Атака и реакция';
+  if (!st.phase) {
+    if (st.contactType === 'block_gedan' || st.contactType === 'block_haivan' || st.contactType === 'block_jodan' || st.contactType === 'block_gyaku_age_uke') phase = 'Встречный сбив (Укэ)';
+    if (st.contactType === 'joint_lock') phase = 'Залом сустава (Кансэцу)';
+    if (st.contactType === 'sweep_fall') phase = 'Бросок / сваливание (Нагэ)';
+    if (st.contactType === 'strike_chudan' || st.contactType === 'strike_throat' || st.contactType === 'punch_body' || st.contactType === 'punch_head') phase = 'Контрудар (Атэми)';
+  }
+
+  return {
+    attacker: participantCount === 3 ? 'Укэ 1 и Укэ 2' : '1 (Тори — атакующий)',
+    attackAngle: `${st.attackAngleDeg || 0}°`,
+    attackAngleDeg: st.attackAngleDeg || 0,
+    toriAngleOffsetDeg: st.toriAngleOffsetDeg || 0,
+    ukeEvasionAngleDeg: st.ukeEvasionAngleDeg || 0,
+    combatDistance: st.optimalDistance || 1.45,
+    isCustomDistance: Boolean(st.isCustomDistance),
+    toriEndAngleDeg: st.toriEndAngleDeg !== undefined ? st.toriEndAngleDeg : (st.scenarioAngles?.toriAngleDeg ?? (st.toriTrajectory?.endYaw !== undefined ? Math.round((st.toriTrajectory.endYaw * 180) / Math.PI) : 0)),
+    ukeEndAngleDeg: st.ukeEndAngleDeg !== undefined ? st.ukeEndAngleDeg : (st.scenarioAngles?.ukeAngleDeg ?? (st.ukeTrajectory?.endYaw !== undefined ? Math.round((st.ukeTrajectory.endYaw * 180) / Math.PI) : 180)),
+    orientationModeTori: st.orientationModeTori,
+    orientationModeUke: st.orientationModeUke,
+    customToriPosX: st.customToriPosX,
+    customToriPosZ: st.customToriPosZ,
+    customUkePosX: st.customUkePosX,
+    customUkePosZ: st.customUkePosZ,
+    toriClip: toriPart.clipName || 'heiko_dachi',
+    toriStance: toriPart.stance || 'zenkutsu_dachi_right',
+    toriFinalStance: toriPart.finalStance || '',
+    toriLandingMode: toriPart.landingMode || 'auto',
+    toriDelaySeconds: toriPart.delaySeconds ?? 0.0,
+    toriActionType: st.toriActionType || toriPart.actionType || 'stance',
+    ukeClip: ukePart.clipName || 'heiko_dachi',
+    ukeStance: ukePart.stance || 'zenkutsu_dachi_left',
+    ukeFinalStance: ukePart.finalStance || '',
+    ukeLandingMode: ukePart.landingMode || 'auto',
+    ukeDelaySeconds: ukePart.delaySeconds ?? 0.08,
+    ukeActionType: st.ukeActionType || ukePart.actionType || 'stance',
+    ukeIsGround: Boolean(ukePart.isGround),
+    uke2Clip: uke2Part.clipName || 'idle_shizentai',
+    uke2AngleDeg: st.uke2AngleDeg,
+    attackTechnique: st.title || `Шаг ${idx + 1}`,
+    toriMovement: st.toriMovement || (st.displacementTori ? `Смещение: [${st.displacementTori.join(', ')}]` : 'Прямой выпад вперед по оси Z'),
+    toriCounter: st.description || 'Смещение с линии атаки + защита',
+    phase,
+    outcome: st.outcome || st.notes || st.description || 'Выведение из равновесия (Кудзуси)',
+    notes: st.notes || '',
+    duration: st.duration,
+    contactType: st.contactType,
+    interactionType: st.interactionType,
+    tContact: st.tContact,
+    isGround: Boolean(st.isGround || toriPart.isGround),
+    isRising: Boolean(st.isRising || toriPart.isRising),
+    isBow: Boolean(st.isBow),
+    backToOpponent: Boolean(st.backToOpponent),
+    preserveScenarioYaw: Boolean(st.preserveScenarioYaw),
+    toriTurnDir: st.toriTurnDir || 0,
+    ukeTurnDir: st.ukeTurnDir || 0,
+    scenarioAngles: st.scenarioAngles || null,
+    toriTrajectory: st.toriTrajectory || null,
+    ukeTrajectory: st.ukeTrajectory || null,
+    displacementTori: st.displacementTori || null,
+    displacementUke: st.displacementUke || null,
   };
 }
 
@@ -248,41 +362,10 @@ export default function BunkaiFormPage() {
         });
 
         if (Array.isArray(steps) && steps.length > 0) {
-          const loadedEpisodes = steps.map((s, idx) => {
-            const canonical = HEIAN_SHODAN_BUNKAI_18_STEPS[idx];
-            const toriPart = s.participants?.find((p) => p.role === 'tori') || {};
-            const ukePart = s.participants?.find((p) => p.role === 'uke' || p.role === 'uke1') || {};
-            const uke2Part = s.participants?.find((p) => p.role === 'uke2') || {};
-            const canonTori = canonical?.participants?.find((p) => p.role === 'tori');
-            const canonUke = canonical?.participants?.find((p) => p.role === 'uke1' || p.role === 'uke');
-
-            return {
-              attacker: s.participantCount === 3 ? 'Укэ 1 и Укэ 2' : '1 (Тори — атакующий)',
-              attackAngle: `${s.targetAngle !== undefined ? s.targetAngle : (canonical?.attackAngleDeg || 0)}°`,
-              attackAngleDeg: s.targetAngle !== undefined ? s.targetAngle : (canonical?.attackAngleDeg || 0),
-              combatDistance: s.targetDistance || canonical?.optimalDistance || 1.45,
-              toriEndAngleDeg: toriPart.rotationY !== undefined ? toriPart.rotationY : (toriPart.Rotation_Y !== undefined ? toriPart.Rotation_Y : (canonical?.toriTrajectory?.endYaw !== undefined ? Math.round((canonical.toriTrajectory.endYaw * 180) / Math.PI) : 0)),
-              ukeEndAngleDeg: ukePart.rotationY !== undefined ? ukePart.rotationY : (ukePart.Rotation_Y !== undefined ? ukePart.Rotation_Y : (canonical?.ukeTrajectory?.endYaw !== undefined ? Math.round((canonical.ukeTrajectory.endYaw * 180) / Math.PI) : 180)),
-              toriClip: toriPart.clipName || canonTori?.clipName || 'tech_oi_zuki_right',
-              toriStance: toriPart.initialStance || toriPart.stance || canonTori?.stance || 'zenkutsu_dachi_right',
-              toriFinalStance: toriPart.finalStance || canonTori?.finalStance || '',
-              toriLandingMode: toriPart.landingMode || canonTori?.landingMode || 'auto',
-              ukeClip: ukePart.clipName || canonUke?.clipName || 'tech_age_uke_left',
-              ukeStance: ukePart.initialStance || ukePart.stance || canonUke?.stance || 'zenkutsu_dachi_left',
-              ukeFinalStance: ukePart.finalStance || canonUke?.finalStance || '',
-              ukeLandingMode: ukePart.landingMode || canonUke?.landingMode || 'auto',
-              uke2Clip: uke2Part.clipName || 'idle_shizentai',
-              attackTechnique: toriPart.clipTitle || s.title || canonical?.title || 'Ой-цуки дзедан (прямой выпад кулаком Тори)',
-              toriMovement: canonical ? `Смещение: [${canonical.displacementTori.join(', ')}]` : 'Прямой выпад вперед по оси Z',
-              toriCounter: ukePart.clipTitle || s.description || canonical?.description || 'Смещение с линии атаки во внешний угол под 35° (Тай-сабаки) + блок Агэ-укэ',
-              phase: canonical?.contactType === 'block_gedan' ? 'Встречный сбив (Укэ)' : (canonical?.contactType === 'strike_chudan' ? 'Контрудар (Атэми)' : 'Атака и реакция'),
-              outcome: canonical?.notes || s.description || 'Выведение из равновесия (Кудзуси)',
-              toriTrajectory: canonical?.toriTrajectory,
-              ukeTrajectory: canonical?.ukeTrajectory,
-              displacementTori: canonical?.displacementTori,
-              displacementUke: canonical?.displacementUke,
-            };
-          });
+          const unifiedSteps = buildStepsFromDb(steps);
+          const loadedEpisodes = unifiedSteps.map((st, idx) =>
+            engineStepToFormEpisode(st, idx, steps[idx]?.participantCount || 2)
+          );
           setEpisodes(loadedEpisodes);
           setIsDirty(false);
           if (steps.some((s) => s.participantCount === 3 || s.participants?.some((p) => p.role === 'uke2'))) {
@@ -300,10 +383,69 @@ export default function BunkaiFormPage() {
     };
   }
 
+  function isStanceOnlyClip(clip) {
+    const s = String(clip || '').trim().toLowerCase();
+    return (
+      s === 'heiko_dachi' ||
+      s === 'idle_shizentai' ||
+      s === 'kiba_dachi' ||
+      s === 'fudo_dachi' ||
+      s === 'fudo_dachi_right' ||
+      s === 'fallen_ukemi' ||
+      s.startsWith('zenkutsu_dachi') ||
+      s.startsWith('kokutsu_dachi') ||
+      s.startsWith('stance_')
+    );
+  }
+
   function updateEpisode(index, field, value) {
     setIsDirty(true);
+    let normalizedField = field;
+    if (field === 'retreatAngleDeg' || field === 'taiSabakiAngleDeg' || field === 'toriEvasionAngleDeg') {
+      normalizedField = 'ukeEvasionAngleDeg';
+    } else if (field === 'customToriYawDeg' || field === 'toriYaw' || field === 'toriEndYaw') {
+      normalizedField = 'toriEndAngleDeg';
+    } else if (field === 'customUkeYawDeg' || field === 'ukeYaw' || field === 'ukeEndYaw') {
+      normalizedField = 'ukeEndAngleDeg';
+    }
+
     setEpisodes((prev) =>
-      prev.map((ep, idx) => (idx === index ? { ...ep, [field]: value } : ep))
+      prev.map((ep, idx) => {
+        if (idx !== index) return ep;
+        const patch = { [normalizedField]: value };
+        if (normalizedField === 'combatDistance') {
+          patch.isCustomDistance = true;
+        }
+        if (normalizedField === 'toriEndAngleDeg') {
+          patch.orientationModeTori = 'mode1_free';
+        }
+        if (normalizedField === 'ukeEndAngleDeg') {
+          patch.orientationModeUke = 'mode1_free';
+        }
+        if (normalizedField === 'attackAngleDeg') {
+          patch.attackAngle = `${value}°`;
+        }
+        // При смене стойки на шаге со статичной стойкой синхронно обновляем клип и конечную стойку
+        if (normalizedField === 'toriStance' && isStanceOnlyClip(ep.toriClip)) {
+          patch.toriClip = value;
+          if (!ep.toriFinalStance || ep.toriFinalStance === ep.toriStance) {
+            patch.toriFinalStance = value;
+          }
+        }
+        if (normalizedField === 'toriFinalStance' && value && isStanceOnlyClip(ep.toriClip)) {
+          patch.toriClip = value;
+        }
+        if (normalizedField === 'ukeStance' && isStanceOnlyClip(ep.ukeClip)) {
+          patch.ukeClip = value;
+          if (!ep.ukeFinalStance || ep.ukeFinalStance === ep.ukeStance) {
+            patch.ukeFinalStance = value;
+          }
+        }
+        if (normalizedField === 'ukeFinalStance' && value && isStanceOnlyClip(ep.ukeClip)) {
+          patch.ukeClip = value;
+        }
+        return { ...ep, ...patch };
+      })
     );
   }
 
@@ -312,7 +454,7 @@ export default function BunkaiFormPage() {
     setEpisodes((prev) => {
       const nextEp = {
         ...emptyEpisode(),
-        attacker: participantMode === '3-person' && prev.length % 2 !== 0 ? 'Укэ 2 (фланговый)' : 'Укэ 1 (фронтальный)',
+        attacker: participantMode === '3-person' && prev.length % 2 !== 0 ? 'Укэ 2 (фланговый)' : '1 (Тори — атакующий)',
       };
       return [...prev, nextEp];
     });
@@ -392,67 +534,9 @@ export default function BunkaiFormPage() {
     setPickerTarget(null);
   }
 
-  // Генерация шагов для 3D предпросмотра в реальном времени с поддержкой анти-проникновения
+  // Генерация шагов для 3D предпросмотра в реальном времени с использованием единого движка
   const previewSteps = useMemo(() => {
-    return episodes.map((ep, idx) => {
-      const canonical = HEIAN_SHODAN_BUNKAI_18_STEPS[idx];
-      const toriYawDeg = ep.toriEndAngleDeg !== undefined ? ep.toriEndAngleDeg : (ep.toriTrajectory?.endYaw !== undefined ? Math.round((ep.toriTrajectory.endYaw * 180) / Math.PI) : 0);
-      const ukeYawDeg = ep.ukeEndAngleDeg !== undefined ? ep.ukeEndAngleDeg : (ep.ukeTrajectory?.endYaw !== undefined ? Math.round((ep.ukeTrajectory.endYaw * 180) / Math.PI) : 180);
-
-      const baseToriTraj = ep.toriTrajectory || (episodes.length === 18 ? canonical?.toriTrajectory : null);
-      const effectiveToriTraj = baseToriTraj ? {
-        ...baseToriTraj,
-        endYaw: (toriYawDeg * Math.PI) / 180,
-      } : { endYaw: (toriYawDeg * Math.PI) / 180 };
-
-      const baseUkeTraj = ep.ukeTrajectory || (episodes.length === 18 ? canonical?.ukeTrajectory : null);
-      const effectiveUkeTraj = baseUkeTraj ? {
-        ...baseUkeTraj,
-        endYaw: (ukeYawDeg * Math.PI) / 180,
-      } : { endYaw: (ukeYawDeg * Math.PI) / 180 };
-
-      return {
-        stepNumber: idx + 1,
-        title: ep.attackTechnique || `Шаг ${idx + 1}`,
-        description: ep.toriCounter || ep.outcome,
-        notes: ep.outcome,
-        optimalDistance: ep.combatDistance || canonical?.optimalDistance || 1.45,
-        attackAngleDeg: ep.attackAngleDeg !== undefined ? ep.attackAngleDeg : (canonical?.attackAngleDeg || 0),
-        toriEndAngleDeg: toriYawDeg,
-        ukeEndAngleDeg: ukeYawDeg,
-        contactType: ep.phase === 'Залом сустава (Кансэцу)' ? 'joint_lock' : ep.phase === 'Бросок / сваливание (Нагэ)' ? 'sweep_fall' : (canonical?.contactType || 'body_contact'),
-        interactionType: ep.phase === 'Бросок / сваливание (Нагэ)' ? 'takedown' : (canonical?.interactionType || 'body_contact'),
-        isGround: ep.isGround !== undefined ? ep.isGround : Boolean(canonical?.participants?.[0]?.isGround || idx === 12 || idx === 13),
-        isRising: ep.isRising !== undefined ? ep.isRising : Boolean(canonical?.participants?.[0]?.isRising || idx === 14),
-        displacementTori: ep.displacementTori || canonical?.displacementTori || [0, 0, (idx % 2 === 0 ? 0.35 : -0.2)],
-        displacementUke: ep.displacementUke || canonical?.displacementUke || [0, 0, (idx % 2 === 0 ? -0.25 : 0.35)],
-        toriTrajectory: effectiveToriTraj,
-        ukeTrajectory: effectiveUkeTraj,
-        tContact: canonical?.tContact || 0.48,
-        duration: canonical?.duration || 2.4,
-        participants: [
-          {
-            role: 'tori',
-            clipName: ep.toriClip,
-            stance: ep.toriStance || canonical?.participants?.[0]?.stance || 'zenkutsu_dachi_right',
-            finalStance: ep.toriFinalStance || canonical?.participants?.[0]?.finalStance || null,
-            landingMode: ep.toriLandingMode || canonical?.participants?.[0]?.landingMode || 'auto',
-            isGround: Boolean(canonical?.participants?.[0]?.isGround || idx === 12 || idx === 13),
-            isRising: Boolean(canonical?.participants?.[0]?.isRising || idx === 14),
-          },
-          {
-            role: 'uke1',
-            clipName: ep.ukeClip,
-            stance: ep.ukeStance || canonical?.participants?.[1]?.stance || 'zenkutsu_dachi_left',
-            finalStance: ep.ukeFinalStance || canonical?.participants?.[1]?.finalStance || null,
-            landingMode: ep.ukeLandingMode || canonical?.participants?.[1]?.landingMode || 'auto',
-            isGround: Boolean(canonical?.participants?.[1]?.isGround),
-            isRising: Boolean(canonical?.participants?.[1]?.isRising),
-          },
-          { role: 'uke2', clipName: ep.uke2Clip || 'idle_shizentai', stance: 'ready' },
-        ],
-      };
-    });
+    return episodes.map((ep, idx) => formEpisodeToEngineStep(ep, idx, episodes.length));
   }, [episodes]);
 
   function loadHeianShodanCanonicalTemplate() {
@@ -466,51 +550,16 @@ export default function BunkaiFormPage() {
     setForm((f) => ({
       ...f,
       kataId: heianKata ? String(heianKata.Kata_ID) : f.kataId,
-      title: 'Канонический Бункай: Хэйан Шодан (18 шагов)',
-      description: 'Официальный пошаговый бункай ката Хэйан Шодан: 1 — Тори (атакующий), 2 — Укэ (защищающийся). Разбор боевого взаимодействия на реальной боевой дистанции с непрерывными переходами и контролем анти-проникновения.',
+      title: `Канонический Бункай: Хэйан Шодан (${HEIAN_SHODAN_BUNKAI_18_STEPS.length} шага)`,
+      description: 'Официальный пошаговый бункай ката Хэйан Шодан: 1 — Тори (синий, атакующий), 2 — Укэ (белый, защищающийся). Разбор боевого взаимодействия на реальной боевой дистанции с непрерывными переходами и контролем анти-проникновения.',
       difficulty: 'beginner',
     }));
 
     setParticipantMode('2-person');
 
-    const mappedEpisodes = HEIAN_SHODAN_BUNKAI_18_STEPS.map((step) => {
-      const toriP = step.participants.find((p) => p.role === 'tori') || {};
-      const ukeP = step.participants.find((p) => p.role === 'uke' || p.role === 'uke1') || {};
-
-      let phase = 'Атака и реакция';
-      if (step.contactType === 'block_gedan' || step.contactType === 'block_haivan') phase = 'Встречный сбив (Укэ)';
-      if (step.contactType === 'joint_lock') phase = 'Залом сустава (Кансэцу)';
-      if (step.contactType === 'sweep_fall') phase = 'Бросок / сваливание (Нагэ)';
-      if (step.contactType === 'strike_chudan' || step.contactType === 'strike_throat') phase = 'Контрудар (Атэми)';
-      if (step.stepNumber >= 14) phase = 'Фиксация и контроль (Дзансин)';
-
-      return {
-        attacker: '1 (Тори — атакующий)',
-        attackAngle: `${step.attackAngleDeg}°`,
-        attackAngleDeg: step.attackAngleDeg,
-        combatDistance: step.optimalDistance,
-        toriEndAngleDeg: (step.toriTrajectory?.endYaw !== undefined) ? Math.round((step.toriTrajectory.endYaw * 180) / Math.PI) : (step.attackAngleDeg || 0),
-        ukeEndAngleDeg: (step.ukeTrajectory?.endYaw !== undefined) ? Math.round((step.ukeTrajectory.endYaw * 180) / Math.PI) : 180,
-        toriClip: toriP.clipName || 'heiko_dachi',
-        toriStance: toriP.stance || 'zenkutsu_dachi_left',
-        toriFinalStance: toriP.finalStance || '',
-        toriLandingMode: toriP.landingMode || 'auto',
-        ukeClip: ukeP.clipName || 'heiko_dachi',
-        ukeStance: ukeP.stance || 'zenkutsu_dachi_left',
-        ukeFinalStance: ukeP.finalStance || '',
-        ukeLandingMode: ukeP.landingMode || 'auto',
-        uke2Clip: 'idle_shizentai',
-        attackTechnique: step.title,
-        toriMovement: `Смещение: [${step.displacementTori.join(', ')}]`,
-        toriCounter: step.description,
-        phase,
-        outcome: step.notes ? `[${step.notes}] ${step.description}` : step.description,
-        toriTrajectory: step.toriTrajectory,
-        ukeTrajectory: step.ukeTrajectory,
-        displacementTori: step.displacementTori,
-        displacementUke: step.displacementUke,
-      };
-    });
+    const mappedEpisodes = HEIAN_SHODAN_BUNKAI_18_STEPS.map((step, idx) =>
+      engineStepToFormEpisode(step, idx, 2)
+    );
 
     setEpisodes(mappedEpisodes);
     setIsDirty(true);
@@ -570,58 +619,9 @@ export default function BunkaiFormPage() {
       const bunkaiId = bunkai.Bunkai_ID || id;
 
       const is3Person = participantMode === '3-person';
-      const structuredSteps = episodes.map((ep, idx) => {
-        const toriYawDeg = Number(ep.toriEndAngleDeg !== undefined ? ep.toriEndAngleDeg : (ep.toriTrajectory?.endYaw ? Math.round((ep.toriTrajectory.endYaw * 180) / Math.PI) : 0.0));
-        const ukeYawDeg = Number(ep.ukeEndAngleDeg !== undefined ? ep.ukeEndAngleDeg : (ep.ukeTrajectory?.endYaw ? Math.round((ep.ukeTrajectory.endYaw * 180) / Math.PI) : 180.0));
-
-        const participants = [
-          {
-            role: 'tori',
-            clipId: clipIdMap.get(ep.toriClip) || null,
-            initialStance: ep.toriStance || 'zenkutsu_dachi_right',
-            finalStance: ep.toriFinalStance || null,
-            landingMode: ep.toriLandingMode || 'auto',
-            offsetX: 0.0,
-            offsetZ: 0.0,
-            rotationY: toriYawDeg,
-            delaySeconds: 0.0,
-          },
-          {
-            role: 'uke1',
-            clipId: clipIdMap.get(ep.ukeClip) || null,
-            initialStance: ep.ukeStance || 'zenkutsu_dachi_left',
-            finalStance: ep.ukeFinalStance || null,
-            landingMode: ep.ukeLandingMode || 'auto',
-            offsetX: 0.0,
-            offsetZ: ep.combatDistance || 1.45,
-            rotationY: ukeYawDeg,
-            delaySeconds: 0.12,
-          },
-        ];
-
-        if (is3Person) {
-          participants.push({
-            role: 'uke2',
-            clipId: clipIdMap.get(ep.uke2Clip) || null,
-            initialStance: 'idle_shizentai',
-            offsetX: 0.85,
-            offsetZ: (ep.combatDistance || 1.45) + 0.35,
-            rotationY: 155.0,
-            delaySeconds: 0.3,
-          });
-        }
-
-        return {
-          stepNumber: idx + 1,
-          title: `Эпизод ${idx + 1}: ${ep.attackTechnique || ep.toriClip}`,
-          description: `${ep.attackTechnique} -> ${ep.toriCounter}. ${ep.outcome}`,
-          duration: 2.8,
-          participantCount: is3Person ? 3 : 2,
-          targetDistance: ep.combatDistance || 1.45,
-          targetAngle: ep.attackAngleDeg || 0.0,
-          participants,
-        };
-      });
+      const structuredSteps = episodes.map((ep, idx) =>
+        episodeToDbStep(ep, idx, clipIdMap, is3Person, episodes.length)
+      );
 
       await saveBunkaiSteps(bunkaiId, structuredSteps).catch((err) => {
         console.warn('Ошибка сохранения структурированных шагов:', err);
@@ -721,10 +721,10 @@ export default function BunkaiFormPage() {
               type="button"
               className="btn btn-subtle"
               onClick={loadHeianShodanCanonicalTemplate}
-              title="Загрузить официальный 18-шаговый сценарий бункая Хэйан Шодан"
+              title={`Загрузить официальный ${HEIAN_SHODAN_BUNKAI_18_STEPS.length}-шаговый сценарий бункая Хэйан Шодан`}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', border: '1px solid #475569', color: '#f8fafc', background: '#1e293b' }}
             >
-              <Zap size={14} color="#f8fafc" /> Шаблон Хэйан Шодан (18 шагов)
+              <Zap size={14} color="#f8fafc" /> Шаблон Хэйан Шодан ({HEIAN_SHODAN_BUNKAI_18_STEPS.length} шага)
             </button>
           )}
 
@@ -822,7 +822,7 @@ export default function BunkaiFormPage() {
               <div>
                 <strong style={{ color: '#fff', fontSize: '0.92rem' }}>Дуэт (2 участника)</strong>
                 <div style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
-                  Тори (защита/контратака) + Укэ 1 (нападающий)
+                  1 — Тори (синий, атакующий) + 2 — Укэ (белый, защищающийся)
                 </div>
               </div>
             </div>
@@ -1136,11 +1136,24 @@ export default function BunkaiFormPage() {
                 onChange={(e) => updateEpisode(activeEpisodeIdx, 'toriClip', e.target.value)}
                 style={{ width: '100%', marginTop: 4 }}
               >
+                {currentEp.toriClip && !TORI_CLIPS.some((c) => c.id === currentEp.toriClip) && (
+                  <option value={currentEp.toriClip}>{currentEp.toriClip}</option>
+                )}
                 {TORI_CLIPS.map((tc) => (
                   <option key={tc.id} value={tc.id}>
                     {tc.label}
                   </option>
                 ))}
+                {clipsList.length > 0 && (
+                  <optgroup label="Все готовые клипы из библиотеки">
+                    {clipsList
+                      .map((c) => c.Clip_Name)
+                      .filter((name, idx, arr) => name && arr.indexOf(name) === idx && !TORI_CLIPS.some((t) => t.id === name))
+                      .map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
@@ -1319,6 +1332,55 @@ export default function BunkaiFormPage() {
               </div>
             </div>
 
+            {/* Конечное положение Тори (X, Z в метрах) */}
+            <div style={{ padding: '8px 10px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 6, border: '1px solid #334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', marginBottom: 6 }}>
+                <span style={{ color: '#93c5fd', fontWeight: 600 }}>Конечное положение Тори (X / Z, м):</span>
+                {(currentEp.customToriPosX !== undefined || currentEp.customToriPosZ !== undefined) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateEpisode(activeEpisodeIdx, 'customToriPosX', undefined);
+                      updateEpisode(activeEpisodeIdx, 'customToriPosZ', undefined);
+                    }}
+                    style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: '#1e293b', color: '#93c5fd', border: '1px solid #334155', cursor: 'pointer' }}
+                  >
+                    Авто
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--washi-dim)' }}>X (влево-/вправо+)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    placeholder={String(currentEp.toriTrajectory?.end?.[0] ?? 0)}
+                    value={currentEp.customToriPosX !== undefined && currentEp.customToriPosX !== null ? currentEp.customToriPosX : ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateEpisode(activeEpisodeIdx, 'customToriPosX', raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw));
+                    }}
+                    style={{ width: '100%', marginTop: 2, padding: '4px 6px', fontSize: '0.78rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--washi-dim)' }}>Z (назад-/вперёд+)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    placeholder={String(currentEp.toriTrajectory?.end?.[2] ?? 0)}
+                    value={currentEp.customToriPosZ !== undefined && currentEp.customToriPosZ !== null ? currentEp.customToriPosZ : ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateEpisode(activeEpisodeIdx, 'customToriPosZ', raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw));
+                    }}
+                    style={{ width: '100%', marginTop: 2, padding: '4px 6px', fontSize: '0.78rem' }}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               <label style={{ fontSize: '0.76rem', color: 'var(--washi-dim)' }}>
                 Траектория выпада Тори:
@@ -1351,9 +1413,9 @@ export default function BunkaiFormPage() {
 
               <input
                 type="range"
-                min="0.80"
+                min="0.35"
                 max="2.50"
-                step="0.05"
+                step="0.01"
                 value={currentEp.combatDistance}
                 onChange={(e) => updateEpisode(activeEpisodeIdx, 'combatDistance', parseFloat(e.target.value))}
                 style={{ width: '100%', accentColor: 'var(--gold-bright)' }}
@@ -1407,11 +1469,24 @@ export default function BunkaiFormPage() {
                 onChange={(e) => updateEpisode(activeEpisodeIdx, 'ukeClip', e.target.value)}
                 style={{ width: '100%', marginTop: 4 }}
               >
+                {currentEp.ukeClip && !UKE_CLIPS.some((c) => c.id === currentEp.ukeClip) && (
+                  <option value={currentEp.ukeClip}>{currentEp.ukeClip}</option>
+                )}
                 {UKE_CLIPS.map((uc) => (
                   <option key={uc.id} value={uc.id}>
                     {uc.label}
                   </option>
                 ))}
+                {clipsList.length > 0 && (
+                  <optgroup label="Все готовые клипы из библиотеки">
+                    {clipsList
+                      .map((c) => c.Clip_Name)
+                      .filter((name, idx, arr) => name && arr.indexOf(name) === idx && !UKE_CLIPS.some((u) => u.id === name))
+                      .map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
@@ -1561,6 +1636,76 @@ export default function BunkaiFormPage() {
                     {ang}°
                   </button>
                 ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, gap: 6 }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--washi-dim)' }}>
+                  Уход / Тай-сабаки: <strong>{currentEp.ukeEvasionAngleDeg || 0}°</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updateEpisode(activeEpisodeIdx, 'orientationModeUke', 'mode2_look_at')}
+                  style={{ fontSize: '0.68rem', padding: '2px 7px', borderRadius: 4, background: '#1e293b', color: '#e2e8f0', border: '1px solid #475569', cursor: 'pointer' }}
+                >
+                  Авто на Тори
+                </button>
+              </div>
+              <input
+                type="range"
+                min="-90"
+                max="90"
+                step="5"
+                value={currentEp.ukeEvasionAngleDeg || 0}
+                onChange={(e) => updateEpisode(activeEpisodeIdx, 'ukeEvasionAngleDeg', parseInt(e.target.value, 10))}
+                style={{ width: '100%', accentColor: '#f8fafc', marginTop: 2 }}
+              />
+            </div>
+
+            {/* Конечное положение Укэ (X, Z в метрах) */}
+            <div style={{ padding: '8px 10px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 6, border: '1px solid #334155' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.74rem', marginBottom: 6 }}>
+                <span style={{ color: '#f8fafc', fontWeight: 600 }}>Конечное положение Укэ (X / Z, м):</span>
+                {(currentEp.customUkePosX !== undefined || currentEp.customUkePosZ !== undefined) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateEpisode(activeEpisodeIdx, 'customUkePosX', undefined);
+                      updateEpisode(activeEpisodeIdx, 'customUkePosZ', undefined);
+                    }}
+                    style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: 4, background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', cursor: 'pointer' }}
+                  >
+                    Авто
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--washi-dim)' }}>X (влево-/вправо+)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    placeholder={String(currentEp.ukeTrajectory?.end?.[0] ?? 0)}
+                    value={currentEp.customUkePosX !== undefined && currentEp.customUkePosX !== null ? currentEp.customUkePosX : ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateEpisode(activeEpisodeIdx, 'customUkePosX', raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw));
+                    }}
+                    style={{ width: '100%', marginTop: 2, padding: '4px 6px', fontSize: '0.78rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.7rem', color: 'var(--washi-dim)' }}>Z (назад-/вперёд+)</label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    placeholder={String(currentEp.ukeTrajectory?.end?.[2] ?? currentEp.combatDistance ?? 1.45)}
+                    value={currentEp.customUkePosZ !== undefined && currentEp.customUkePosZ !== null ? currentEp.customUkePosZ : ''}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      updateEpisode(activeEpisodeIdx, 'customUkePosZ', raw === '' || Number.isNaN(Number(raw)) ? undefined : Number(raw));
+                    }}
+                    style={{ width: '100%', marginTop: 2, padding: '4px 6px', fontSize: '0.78rem' }}
+                  />
+                </div>
               </div>
             </div>
 
